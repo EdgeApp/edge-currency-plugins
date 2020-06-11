@@ -1,0 +1,59 @@
+{
+  "name": "edge-rest-wallet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A REST API for storing & sending money, powered by Edge",
+  "repository": "https://github.app/EdgeApp/edge-rest-wallet",
+  "license": "MIT",
+  "author": "Airbitz, Inc.",
+  "main": "lib/index.js",
+  "scripts": {
+    "build.lib": "sucrase -q -t typescript,imports,jsx -d ./lib ./src",
+    "build.types": "tsc",
+    "clean": "rimraf lib",
+    "fix": "npm run lint -- --fix",
+    "prepare": "npm-run-all clean -p build.*",
+    "start": "node -r sucrase/register src/index.ts",
+    "test": "mocha -r sucrase/register 'test/**/*.test.ts'",
+    "demo": "parcel serve src/demo/index.html --open",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx ."
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": "eslint"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.8.4",
+    "@babel/preset-react": "^7.8.3",
+    "@types/chai": "^4.2.9",
+    "@types/mocha": "^7.0.1",
+    "@types/react": "^16.9.22",
+    "@types/react-dom": "^16.9.5",
+    "@typescript-eslint/eslint-plugin": ">=2.0.0",
+    "@typescript-eslint/parser": "^2.0.0",
+    "chai": "^4.2.0",
+    "eslint": ">=6.2.2",
+    "eslint-config-standard-kit": ">=0.14.4",
+    "eslint-plugin-import": ">=2.18.0",
+    "eslint-plugin-node": ">=9.1.0",
+    "eslint-plugin-prettier": ">=3.0.0",
+    "eslint-plugin-promise": ">=4.2.1",
+    "eslint-plugin-react": ">=7.14.2",
+    "eslint-plugin-simple-import-sort": ">=4.0.0",
+    "eslint-plugin-standard": ">=4.0.0",
+    "husky": ">=3.0.0",
+    "lint-staged": ">=9.0.0",
+    "mocha": "^7.0.1",
+    "npm-run-all": "^4.1.5",
+    "parcel": "^1.12.4",
+    "prettier": ">=1.0.0",
+    "react": "^16.12.0",
+    "react-dom": "^16.12.0",
+    "sucrase": "^3.12.1",
+    "typescript": "^3.8.2"
+  }
+}

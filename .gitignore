@@ -1,0 +1,16 @@
+# Build output:
+/.cache/
+/dist/
+/lib/
+/config.json
+
+# Package managers:
+node_modules/
+npm-debug.log
+package-lock.json
+yarn-error.log
+
+# Editors:
+.DS_Store
+.idea/
+.vscode/
