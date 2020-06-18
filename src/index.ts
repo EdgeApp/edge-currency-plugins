@@ -96,7 +96,8 @@ export interface PubkeyToScriptPubkeyArgs {
 
 export interface WIFToECPairArgs {
   wifKey: string
-  network?: NetworkEnum
+  network: NetworkEnum
+  coin: Coin
 }
 
 export type ECPair = bitcoin.ECPairInterface
@@ -107,7 +108,7 @@ export interface TxInput {
   index: number
   prev_txout: Buffer // relevant for legacy transactions
   prev_scriptPubkey: Buffer // relevant for segwit transactions, maybe make it optional in the future
-  sequence: number
+  // sequence: number
 }
 
 export interface TxOutput {
@@ -119,8 +120,8 @@ export interface CreateTxArgs {
   network: NetworkEnum
   inputs: TxInput[]
   outputs: TxOutput[]
-  locktime: number
   privateKey: ECPair
+  rbf: boolean
 }
 
 export interface CoinPrefixes {
@@ -419,22 +420,25 @@ export function xprivToPrivateKey(
 
 export function wifToECPair(wifToECPairArgs: WIFToECPairArgs): ECPair {
   // later we can pass in an extra network here
-  return bitcoin.ECPair.fromWIF(
-    'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
+  const network: BIP32Network = bip32NetworkFromCoin(
+    wifToECPairArgs.network,
+    wifToECPairArgs.coin
   )
+  return bitcoin.ECPair.fromWIF(wifToECPairArgs.wifKey, network)
 }
 
 export function createTx(createTxArgs: CreateTxArgs): string {
-  const alice = bitcoin.ECPair.fromWIF(
-    'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
-  )
   const psbt = new bitcoin.Psbt()
+  let sequence: number = 0xffffffff
+  if (createTxArgs.rbf) {
+    sequence -= 2
+  }
   for (let i: number = 0; i < createTxArgs.inputs.length; i++) {
     if (createTxArgs.inputs[i].type === TransactionInputTypeEnum.Legacy) {
       psbt.addInput({
         hash: createTxArgs.inputs[i].prev_txid,
         index: 0,
-        sequence: createTxArgs.inputs[i].sequence,
+        sequence: sequence,
         // non-segwit inputs now require passing the whole previous tx as Buffer
         nonWitnessUtxo: createTxArgs.inputs[i].prev_txout
       })
@@ -442,7 +446,7 @@ export function createTx(createTxArgs: CreateTxArgs): string {
       psbt.addInput({
         hash: createTxArgs.inputs[i].prev_txid,
         index: 0,
-        sequence: createTxArgs.inputs[i].sequence,
+        sequence: sequence,
         // add witnessUtxo for Segwit input type. The scriptPubkey and the value only are needed.
         witnessUtxo: {
           script: createTxArgs.inputs[i].prev_scriptPubkey,
@@ -457,7 +461,7 @@ export function createTx(createTxArgs: CreateTxArgs): string {
       value: 80000
     })
   }
-  psbt.signInput(0, alice)
+  psbt.signInput(0, createTxArgs.privateKey)
   psbt.validateSignaturesOfInput(0)
   psbt.finalizeAllInputs()
   return psbt.extractTransaction().toHex()

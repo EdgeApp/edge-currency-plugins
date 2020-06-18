@@ -309,7 +309,11 @@ describe('xpub to address tests;  generate valid addresses by calling xpubToScri
 describe('transaction creation and signing test', () => {
   // key with control on the unspent output and used to sign the transaction
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
-  const ecKeyPair = wifToECPair({ wifKey })
+  const ecKeyPair = wifToECPair({
+    wifKey,
+    network: NetworkEnum.Mainnet,
+    coin: new Bitcoin()
+  })
   const scriptPubkey = pubkeyToScriptPubkey({
     pubkey: ecKeyPair.publicKey,
     addressType: AddressTypeEnum.p2pkh
@@ -317,6 +321,7 @@ describe('transaction creation and signing test', () => {
   it('Create transaction with one legacy input and one output', () => {
     const hexTx: string = createTx({
       network: NetworkEnum.Mainnet,
+      privateKey: ecKeyPair,
       inputs: [
         {
           type: TransactionInputTypeEnum.Legacy,
@@ -342,7 +347,7 @@ describe('transaction creation and signing test', () => {
           index: 0,
           // prev_scriptPubkey only relevant for Segwit inputs, but keep mandator for now before we start handling errors.
           prev_scriptPubkey: scriptPubkey,
-          sequence: 0xffffffff
+          rbf: false
         }
       ],
       outputs: [
@@ -355,9 +360,7 @@ describe('transaction creation and signing test', () => {
           }),
           amount: 8000
         }
-      ],
-      locktime: 0,
-      privateKey: ecKeyPair
+      ]
     })
     expect(hexTx).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7' +
