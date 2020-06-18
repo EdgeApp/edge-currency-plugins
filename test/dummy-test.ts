@@ -6,6 +6,7 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
+  Bitcoin,
   createTx,
   mnemonicToXPriv,
   NetworkEnum,
@@ -17,65 +18,81 @@ import {
   xpubToScriptHash
 } from '../src/index'
 
-describe('mnemonic to xprv tests', () => {
-  it('bip32 test vectors as collected from BIP84, BIP49 and some generated cases to test xpub prefix bytes', () => {
-    const mnemonic =
-      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+describe('mnemonic to xprv test vectors as collected from BIP84, BIP49 and some generated cases to test xpub prefix bytes', () => {
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+  it('bip84 mnemonic to xpriv mainnet', () => {
     const resultSegwit = mnemonicToXPriv({
       mnemonic: mnemonic,
       path: "m/84'/0'/0'",
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Segwit
+      type: BIP43PurposeTypeEnum.Segwit,
+      coin: new Bitcoin()
     })
     expect(resultSegwit).to.equal(
       'zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE'
     )
+  })
 
+  it('bip84 mnemonic to xpriv testnet', () => {
     const resultSegwitTestnet = mnemonicToXPriv({
       mnemonic: mnemonic,
       path: "m/84'/1'/0'",
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Segwit
+      type: BIP43PurposeTypeEnum.Segwit,
+      coin: new Bitcoin()
     })
     expect(resultSegwitTestnet).to.equal(
       'vprv9K7GLAaERuM58PVvbk1sMo7wzVCoPwzZpVXLRBmum93gL5pSqQCAAvZjtmz93nnnYMr9i2FwG2fqrwYLRgJmDDwFjGiamGsbRMJ5Y6siJ8H'
     )
+  })
 
+  it('bip49 mnemonic to xpriv mainnet', () => {
     const resultWrappedSegwit = mnemonicToXPriv({
       mnemonic: mnemonic,
       path: "m/49'/0'/0'",
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.WrappedSegwit
+      type: BIP43PurposeTypeEnum.WrappedSegwit,
+      coin: new Bitcoin()
     })
     expect(resultWrappedSegwit).to.equal(
       'yprvAHwhK6RbpuS3dgCYHM5jc2ZvEKd7Bi61u9FVhYMpgMSuZS613T1xxQeKTffhrHY79hZ5PsskBjcc6C2V7DrnsMsNaGDaWev3GLRQRgV7hxF'
     )
+  })
 
+  it('bip49 mnemonic to xpriv testnet', () => {
     const resultWrappedSegwitTestnet = mnemonicToXPriv({
       mnemonic: mnemonic,
       path: "m/49'/1'/0'",
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.WrappedSegwit
+      type: BIP43PurposeTypeEnum.WrappedSegwit,
+      coin: new Bitcoin()
     })
     expect(resultWrappedSegwitTestnet).to.equal(
       'uprv91G7gZkzehuMVxDJTYE6tLivdF8e4rvzSu1LFfKw3b2Qx1Aj8vpoFnHdfUZ3hmi9jsvPifmZ24RTN2KhwB8BfMLTVqaBReibyaFFcTP1s9n'
     )
+  })
 
+  it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = mnemonicToXPriv({
       mnemonic: mnemonic,
       path: "m/44'/0'/0'",
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy
+      type: BIP43PurposeTypeEnum.Legacy,
+      coin: new Bitcoin()
     })
     expect(resultLegacy).to.equal(
       'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb'
     )
+  })
 
+  it('bip44 mnemonic to xpriv testnet', () => {
     const resultLegacyTestnet = mnemonicToXPriv({
       mnemonic: mnemonic,
       path: "m/44'/0'/0'",
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy
+      type: BIP43PurposeTypeEnum.Legacy,
+      coin: new Bitcoin()
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fVU32aAEuEPeH1WYx3LhXtSFZTRaFqjbFNPaJZ9R8fCVja44tSaUPZEKGpMK6McUDkWWMvRiVfKR3Wzei6AmLoTNYHMAZ9KtvVTLZZdhvA'
@@ -83,63 +100,79 @@ describe('mnemonic to xprv tests', () => {
   })
 })
 
-describe('xpriv to xpub tests', () => {
-  it('bip32 prefix tests for the conversion from xpriv to xpub', () => {
+describe('bip32 prefix tests for the conversion from xpriv to xpub', () => {
+  it('bip84 xpriv to xpub mainnet', () => {
     const resultSegwit = xprivToXPub({
       xpriv:
         'zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE',
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Segwit
+      type: BIP43PurposeTypeEnum.Segwit,
+      coin: new Bitcoin()
     })
     expect(resultSegwit).to.equals(
       'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs'
     )
+  })
 
+  it('bip84 xpriv to xpub mainnet', () => {
     const resultSegwitTestnet = xprivToXPub({
       xpriv:
         'vprv9K7GLAaERuM58PVvbk1sMo7wzVCoPwzZpVXLRBmum93gL5pSqQCAAvZjtmz93nnnYMr9i2FwG2fqrwYLRgJmDDwFjGiamGsbRMJ5Y6siJ8H',
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Segwit
+      type: BIP43PurposeTypeEnum.Segwit,
+      coin: new Bitcoin()
     })
     expect(resultSegwitTestnet).to.equals(
       'vpub5Y6cjg78GGuNLsaPhmYsiw4gYX3HoQiRBiSwDaBXKUafCt9bNwWQiitDk5VZ5BVxYnQdwoTyXSs2JHRPAgjAvtbBrf8ZhDYe2jWAqvZVnsc'
     )
+  })
 
+  it('bip49 xpriv to xpub mainnet', () => {
     const resultWrappedSegwit = xprivToXPub({
       xpriv:
         'yprvAHwhK6RbpuS3dgCYHM5jc2ZvEKd7Bi61u9FVhYMpgMSuZS613T1xxQeKTffhrHY79hZ5PsskBjcc6C2V7DrnsMsNaGDaWev3GLRQRgV7hxF',
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.WrappedSegwit
+      type: BIP43PurposeTypeEnum.WrappedSegwit,
+      coin: new Bitcoin()
     })
     expect(resultWrappedSegwit).to.equals(
       'ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP'
     )
+  })
 
+  it('bip49 xpriv to xpub testnet', () => {
     const resultWrappedSegwitTestnet = xprivToXPub({
       xpriv:
         'uprv91G7gZkzehuMVxDJTYE6tLivdF8e4rvzSu1LFfKw3b2Qx1Aj8vpoFnHdfUZ3hmi9jsvPifmZ24RTN2KhwB8BfMLTVqaBReibyaFFcTP1s9n',
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.WrappedSegwit
+      type: BIP43PurposeTypeEnum.WrappedSegwit,
+      coin: new Bitcoin()
     })
     expect(resultWrappedSegwitTestnet).to.equals(
       'upub5EFU65HtV5TeiSHmZZm7FUffBGy8UKeqp7vw43jYbvZPpoVsgU93oac7Wk3u6moKegAEWtGNF8DehrnHtv21XXEMYRUocHqguyjknFHYfgY'
     )
+  })
 
+  it('bip44 xpriv to xpub mainnet', () => {
     const resultLegacy = xprivToXPub({
       xpriv:
         'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb',
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy
+      type: BIP43PurposeTypeEnum.Legacy,
+      coin: new Bitcoin()
     })
     expect(resultLegacy).to.equals(
       'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj'
     )
+  })
 
+  it('bip44 xpriv to xpub testnet', () => {
     const resultLegacyTestnet = xprivToXPub({
       xpriv:
         'tprv8fVU32aAEuEPeH1WYx3LhXtSFZTRaFqjbFNPaJZ9R8fCVja44tSaUPZEKGpMK6McUDkWWMvRiVfKR3Wzei6AmLoTNYHMAZ9KtvVTLZZdhvA',
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy
+      type: BIP43PurposeTypeEnum.Legacy,
+      coin: new Bitcoin()
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDCBWBScQPGv4Xk3JSbhw6wYYpayMjb2eAYyArpbSqQTbLDpphHGAetB6VQgVeftLML8vDSUEWcC2xDi3qJJ3YCDChJDvqVzpgoYSuT52MhJ'
@@ -147,13 +180,13 @@ describe('xpriv to xpub tests', () => {
   })
 })
 
-describe('xpub to address tests', () => {
-  it('given different xpubs, generate a valid address by calling xpubToScriptHash and scriptHashToAddress', () => {
-    /*
-    These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
-    using the same seed as in other tests (abandon, ...)
-    */
+describe('xpub to address tests;  generate valid addresses by calling xpubToScriptHash and scriptHashToAddress', () => {
+  /*
+  These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
+  using the same seed as in other tests (abandon, ...)
+  */
 
+  it('given an xpub, generate p2pkh address and cross verify scriptHash (pubkey hash) result', () => {
     const scriptHashP2PKH = xpubToScriptHash({
       xpub:
         'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj',
@@ -161,24 +194,29 @@ describe('xpub to address tests', () => {
       type: BIP43PurposeTypeEnum.Legacy,
       addressType: AddressTypeEnum.p2pkh,
       bip44ChangeIndex: 0,
-      bip44AddressIndex: 0
+      bip44AddressIndex: 0,
+      coin: new Bitcoin()
     })
     const p2pkhAddress = scriptHashToAddress({
       scriptHash: scriptHashP2PKH,
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2pkh
+      addressType: AddressTypeEnum.p2pkh,
+      coin: new Bitcoin()
     })
     expect(p2pkhAddress).to.equals('1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA')
     const scriptHashP2PKHRoundTrip = addressToScriptHash({
       address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2pkh
+      addressType: AddressTypeEnum.p2pkh,
+      coin: new Bitcoin()
     })
     // TODO: Drop this string comparison and use equals bytes instead
     expect(scriptHashP2PKHRoundTrip?.toString()).to.equals(
       scriptHashP2PKH?.toString()
     )
+  })
 
+  it('given an xpub, generate p2sh address and cross verify scriptHash result', () => {
     const scriptHashP2SH = xpubToScriptHash({
       xpub:
         'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj',
@@ -186,23 +224,28 @@ describe('xpub to address tests', () => {
       type: BIP43PurposeTypeEnum.Legacy,
       addressType: AddressTypeEnum.p2sh,
       bip44ChangeIndex: 0,
-      bip44AddressIndex: 0
+      bip44AddressIndex: 0,
+      coin: new Bitcoin()
     })
     const p2shAddress = scriptHashToAddress({
       scriptHash: scriptHashP2SH,
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2sh
+      addressType: AddressTypeEnum.p2sh,
+      coin: new Bitcoin()
     })
     expect(p2shAddress).to.equals('3Hggo5JYqytA5k5As5XuADi6TYGQmMZrND')
     const scriptHashP2SHRoundTrip = addressToScriptHash({
       address: '3Hggo5JYqytA5k5As5XuADi6TYGQmMZrND',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2sh
+      addressType: AddressTypeEnum.p2sh,
+      coin: new Bitcoin()
     })
     expect(scriptHashP2SHRoundTrip?.toString()).to.equals(
       scriptHashP2SH?.toString()
     )
+  })
 
+  it('given an ypub, generate p2wpkh-p2sh address and cross-verify scriptHash result', () => {
     const scriptHashP2WPKHP2SH = xpubToScriptHash({
       xpub:
         'ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP',
@@ -210,23 +253,28 @@ describe('xpub to address tests', () => {
       type: BIP43PurposeTypeEnum.WrappedSegwit,
       addressType: AddressTypeEnum.p2wpkhp2sh,
       bip44ChangeIndex: 0,
-      bip44AddressIndex: 0
+      bip44AddressIndex: 0,
+      coin: new Bitcoin()
     })
     const p2wpkhp2shAddress = scriptHashToAddress({
       scriptHash: scriptHashP2WPKHP2SH,
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkhp2sh
+      addressType: AddressTypeEnum.p2wpkhp2sh,
+      coin: new Bitcoin()
     })
     expect(p2wpkhp2shAddress).to.equals('37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf')
     const scriptHashP2WPKHP2SHRoundTrip = addressToScriptHash({
       address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkhp2sh
+      addressType: AddressTypeEnum.p2wpkhp2sh,
+      coin: new Bitcoin()
     })
     expect(scriptHashP2WPKHP2SHRoundTrip?.toString()).to.equals(
       scriptHashP2WPKHP2SH?.toString()
     )
+  })
 
+  it('given a zpub, generate p2wpkh address and cross verify scriptHash (pubkey hash) result', () => {
     const scriptHashP2WPKH = xpubToScriptHash({
       xpub:
         'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs',
@@ -234,12 +282,14 @@ describe('xpub to address tests', () => {
       type: BIP43PurposeTypeEnum.Segwit,
       addressType: AddressTypeEnum.p2wpkh,
       bip44ChangeIndex: 0,
-      bip44AddressIndex: 0
+      bip44AddressIndex: 0,
+      coin: new Bitcoin()
     })
     const p2wpkhAddress = scriptHashToAddress({
       scriptHash: scriptHashP2WPKH,
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkh
+      addressType: AddressTypeEnum.p2wpkh,
+      coin: new Bitcoin()
     })
     expect(p2wpkhAddress).to.equals(
       'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
@@ -247,7 +297,8 @@ describe('xpub to address tests', () => {
     const scriptHashP2WPKHRoundTrip = addressToScriptHash({
       address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkh
+      addressType: AddressTypeEnum.p2wpkh,
+      coin: new Bitcoin()
     })
     expect(scriptHashP2WPKHRoundTrip?.toString()).to.be.equal(
       scriptHashP2WPKH?.toString()
@@ -299,7 +350,8 @@ describe('transaction creation and signing test', () => {
           scriptPubkey: addressToScriptPubkey({
             address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
             network: NetworkEnum.Mainnet,
-            addressType: AddressTypeEnum.p2pkh
+            addressType: AddressTypeEnum.p2pkh,
+            coin: new Bitcoin()
           }),
           amount: 8000
         }
