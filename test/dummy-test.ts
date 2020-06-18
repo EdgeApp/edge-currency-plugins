@@ -10,10 +10,11 @@ import {
   createTx,
   mnemonicToXPriv,
   NetworkEnum,
+  privateKeyToPubkey,
   pubkeyToScriptPubkey,
   scriptHashToAddress,
   TransactionInputTypeEnum,
-  wifToECPair,
+  wifToPrivateKey,
   xprivToXPub,
   xpubToScriptHash
 } from '../src/index'
@@ -309,19 +310,19 @@ describe('xpub to address tests;  generate valid addresses by calling xpubToScri
 describe('transaction creation and signing test', () => {
   // key with control on the unspent output and used to sign the transaction
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
-  const ecKeyPair = wifToECPair({
+  const privateKey = wifToPrivateKey({
     wifKey,
     network: NetworkEnum.Mainnet,
     coin: new Bitcoin()
   })
   const scriptPubkey = pubkeyToScriptPubkey({
-    pubkey: ecKeyPair.publicKey,
+    pubkey: privateKeyToPubkey(privateKey),
     addressType: AddressTypeEnum.p2pkh
   })
   it('Create transaction with one legacy input and one output', () => {
     const hexTx: string = createTx({
       network: NetworkEnum.Mainnet,
-      privateKey: ecKeyPair,
+      privateKey: privateKey,
       inputs: [
         {
           type: TransactionInputTypeEnum.Legacy,

@@ -3,6 +3,7 @@ import { BIP32Interface } from 'bip32'
 import * as bip39 from 'bip39'
 import * as bitcoin from 'bitcoinjs-lib'
 
+// this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
   Mainnet,
   Testnet
@@ -16,7 +17,7 @@ export enum BIP43PurposeTypeEnum {
   WrappedSegwit // ypub/yprv upub/uprv
 }
 
-// supported address types. Notice that p2wsh is not included.
+// supported address types.
 export enum AddressTypeEnum {
   p2pkh,
   p2sh,
@@ -25,11 +26,6 @@ export enum AddressTypeEnum {
   p2wsh, // TODO: both witness script hash variants have not been implemented so far.
   p2wshp2sh,
   cashaddr
-}
-
-export enum TransactionInputTypeEnum {
-  Legacy,
-  Segwit
 }
 
 export interface MnemonicToXPrivArgs {
@@ -68,6 +64,8 @@ export interface XPubToScriptHashArgs {
   coin: Coin
 }
 
+// Careful! Calling this the ScriptHash is only correct for p2sh addresses.
+// For p2pkh and p2wpkh this is just the pubkey hash.
 export interface ScriptHashToAddressArgs {
   scriptHash: Buffer | undefined
   network: NetworkEnum
@@ -75,6 +73,8 @@ export interface ScriptHashToAddressArgs {
   coin: Coin
 }
 
+// Careful! Calling this the ScriptHash is only correct for p2sh addresses.
+// For p2pkh and p2wpkh this is just the pubkey hash.
 export interface AddressToScriptHashArgs {
   address: string
   network: NetworkEnum
@@ -94,13 +94,23 @@ export interface PubkeyToScriptPubkeyArgs {
   addressType: AddressTypeEnum
 }
 
-export interface WIFToECPairArgs {
+export interface WIFToPrivateKeyArgs {
   wifKey: string
   network: NetworkEnum
   coin: Coin
 }
 
-export type ECPair = bitcoin.ECPairInterface
+export interface PrivateKeyToWIFArgs {
+  privateKey: Buffer
+  network: NetworkEnum
+  coin: Coin
+}
+
+// A transaction input is either legacy or segwit. This is used for transaction creation and passed per input
+export enum TransactionInputTypeEnum {
+  Legacy,
+  Segwit
+}
 
 export interface TxInput {
   type: TransactionInputTypeEnum
@@ -108,7 +118,6 @@ export interface TxInput {
   index: number
   prev_txout: Buffer // relevant for legacy transactions
   prev_scriptPubkey: Buffer // relevant for segwit transactions, maybe make it optional in the future
-  // sequence: number
 }
 
 export interface TxOutput {
@@ -120,7 +129,7 @@ export interface CreateTxArgs {
   network: NetworkEnum
   inputs: TxInput[]
   outputs: TxOutput[]
-  privateKey: ECPair
+  privateKey: Buffer
   rbf: boolean
 }
 
@@ -129,13 +138,14 @@ export interface CoinPrefixes {
   WIF: number
   LegacyXPriv: number
   LegacyXPub: number
-  WrappedSegwitXPriv: number
-  WrappedSegwitXPub: number
-  SegwitXPriv: number
-  SegwitXPub: number
+  WrappedSegwitXPriv?: number
+  WrappedSegwitXPub?: number
+  SegwitXPriv?: number
+  SegwitXPub?: number
   PubkeyHash: number
   ScriptHash: number
-  Bech32: string
+  Bech32?: string
+  CashAddr?: string
 }
 
 export interface Coin {
@@ -144,6 +154,8 @@ export interface Coin {
   TestnetConstants: CoinPrefixes
 }
 
+// this an example implementation of a Coin class to show all required constants
+// not that support for esoteric sighash types is omitted for now
 export class Bitcoin implements Coin {
   Name: string = 'bitcoin'
 
@@ -176,64 +188,62 @@ export class Bitcoin implements Coin {
   }
 }
 
-interface BIP32Network {
+// BitcoinJSNetwork and Bip32 are the same interfaces as declared in  bitcoin-js ts_src/network.ts
+// We redeclare them here for transparency reasons
+interface BitcoinJSNetwork {
   wif: number
-  bip32: {
-    public: number
-    private: number
-  }
+  bip32: Bip32
   messagePrefix: string
   bech32: string
   pubKeyHash: number
   scriptHash: number
 }
 
+interface Bip32 {
+  public: number
+  private: number
+}
+
 function bip32NetworkFromCoinPrefix(
   sigType: BIP43PurposeTypeEnum,
   coinPrefixes: CoinPrefixes
-): BIP32Network {
-  const network: BIP32Network = {
-    messagePrefix: coinPrefixes.MessagePrefix,
-    wif: coinPrefixes.WIF,
-    bip32: {
-      public: coinPrefixes.LegacyXPub,
-      private: coinPrefixes.LegacyXPriv
-    },
-    bech32: coinPrefixes.Bech32,
-    pubKeyHash: coinPrefixes.PubkeyHash,
-    scriptHash: coinPrefixes.ScriptHash
-  }
+): BitcoinJSNetwork {
+  let xKeyPrefixes: Bip32
   switch (sigType) {
     case BIP43PurposeTypeEnum.Segwit:
-      network.bip32 = {
+      xKeyPrefixes = {
         public: coinPrefixes.SegwitXPub,
         private: coinPrefixes.SegwitXPriv
       }
       break
     case BIP43PurposeTypeEnum.WrappedSegwit:
-      network.bip32 = {
+      xKeyPrefixes = {
         public: coinPrefixes.WrappedSegwitXPub,
         private: coinPrefixes.WrappedSegwitXPriv
       }
       break
     case BIP43PurposeTypeEnum.Legacy:
-      network.bip32 = {
+      xKeyPrefixes = {
         public: coinPrefixes.LegacyXPub,
         private: coinPrefixes.LegacyXPriv
       }
       break
-    default:
-      // TODO: Crash here
-      break
   }
-  return network
+  return {
+    messagePrefix: coinPrefixes.MessagePrefix,
+    wif: coinPrefixes.WIF,
+    bip32: xKeyPrefixes,
+    bech32: coinPrefixes.Bech32,
+    pubKeyHash: coinPrefixes.PubkeyHash,
+    scriptHash: coinPrefixes.ScriptHash
+  }
 }
 
 function bip32NetworkFromCoin(
   networkType: NetworkEnum,
   coin: Coin,
   sigType: BIP43PurposeTypeEnum = BIP43PurposeTypeEnum.Legacy
-): BIP32Network {
+): BitcoinJSNetwork {
   if (networkType === NetworkEnum.Testnet) {
     return bip32NetworkFromCoinPrefix(sigType, coin.TestnetConstants)
   }
@@ -245,7 +255,7 @@ export function mnemonicToXPriv(
 ): string {
   const seed = bip39.mnemonicToSeedSync(mnemonicToXPrivArgs.mnemonic)
   const root: BIP32Interface = bip32.fromSeed(seed)
-  const network: BIP32Network = bip32NetworkFromCoin(
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     mnemonicToXPrivArgs.network,
     mnemonicToXPrivArgs.coin,
     mnemonicToXPrivArgs.type
@@ -256,7 +266,7 @@ export function mnemonicToXPriv(
 }
 
 export function xprivToXPub(xprivToXPubArgs: XPrivToXPubArgs): string {
-  const network: BIP32Network = bip32NetworkFromCoin(
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     xprivToXPubArgs.network,
     xprivToXPubArgs.coin,
     xprivToXPubArgs.type
@@ -269,7 +279,7 @@ export function xprivToXPub(xprivToXPubArgs: XPrivToXPubArgs): string {
 export function xpubToScriptHash(
   xpubToScriptHashArgs: XPubToScriptHashArgs
 ): Buffer | undefined {
-  const network: BIP32Network = bip32NetworkFromCoin(
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     xpubToScriptHashArgs.network,
     xpubToScriptHashArgs.coin,
     xpubToScriptHashArgs.type
@@ -301,7 +311,7 @@ export function xpubToScriptHash(
 export function scriptHashToAddress(
   scriptHashToAddressArgs: ScriptHashToAddressArgs
 ): string | undefined {
-  const network: BIP32Network = bip32NetworkFromCoin(
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     scriptHashToAddressArgs.network,
     scriptHashToAddressArgs.coin
   )
@@ -329,7 +339,7 @@ export function scriptHashToAddress(
 export function addressToScriptHash(
   addressToScriptHashArgs: AddressToScriptHashArgs
 ): Buffer | undefined {
-  const network: BIP32Network = bip32NetworkFromCoin(
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     addressToScriptHashArgs.network,
     addressToScriptHashArgs.coin
   )
@@ -361,7 +371,7 @@ export function addressToScriptHash(
 export function addressToScriptPubkey(
   addressToScriptPubkeyArgs: AddressToScriptPubkeyArgs
 ): Buffer | undefined {
-  const network: BIP32Network = bip32NetworkFromCoin(
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     addressToScriptPubkeyArgs.network,
     addressToScriptPubkeyArgs.coin
   )
@@ -406,7 +416,7 @@ export function pubkeyToScriptPubkey(
 export function xprivToPrivateKey(
   xprivToPrivateKeyArgs: XPrivToPrivateKeyArgs
 ): Buffer | undefined {
-  const network: BIP32Network = bip32NetworkFromCoin(
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     xprivToPrivateKeyArgs.network,
     xprivToPrivateKeyArgs.coin,
     xprivToPrivateKeyArgs.type
@@ -415,16 +425,36 @@ export function xprivToPrivateKey(
     xprivToPrivateKeyArgs.xpriv,
     network
   )
+  console.log()
   return node.derive(0).derive(0).privateKey
 }
 
-export function wifToECPair(wifToECPairArgs: WIFToECPairArgs): ECPair {
-  // later we can pass in an extra network here
-  const network: BIP32Network = bip32NetworkFromCoin(
+export function PrivateKeyToWIF(
+  privateKeyToWIFArgs: PrivateKeyToWIFArgs
+): string {
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
+    privateKeyToWIFArgs.network,
+    privateKeyToWIFArgs.coin
+  )
+  const ecPair: bitcoin.ECPairInterface = bitcoin.ECPair.fromPrivateKey(
+    privateKeyToWIFArgs.privateKey,
+    { network }
+  )
+  return ecPair.toWIF()
+}
+
+export function wifToPrivateKey(
+  wifToECPairArgs: WIFToPrivateKeyArgs
+): Buffer | undefined {
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     wifToECPairArgs.network,
     wifToECPairArgs.coin
   )
-  return bitcoin.ECPair.fromWIF(wifToECPairArgs.wifKey, network)
+  return bitcoin.ECPair.fromWIF(wifToECPairArgs.wifKey, network).privateKey
+}
+
+export function privateKeyToPubkey(privateKey: Buffer): Buffer {
+  return bitcoin.ECPair.fromPrivateKey(privateKey).publicKey
 }
 
 export function createTx(createTxArgs: CreateTxArgs): string {
@@ -461,7 +491,8 @@ export function createTx(createTxArgs: CreateTxArgs): string {
       value: 80000
     })
   }
-  psbt.signInput(0, createTxArgs.privateKey)
+  const ecPair = bitcoin.ECPair.fromPrivateKey(createTxArgs.privateKey)
+  psbt.signInput(0, ecPair)
   psbt.validateSignaturesOfInput(0)
   psbt.finalizeAllInputs()
   return psbt.extractTransaction().toHex()
