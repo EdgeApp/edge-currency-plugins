@@ -10,11 +10,14 @@ import {
   createTx,
   mnemonicToXPriv,
   NetworkEnum,
+  privateKeyHexStrToWIF,
   privateKeyToPubkey,
   pubkeyToScriptPubkey,
   scriptHashToAddress,
+  scriptPubkeyToElectrumScriptHash,
+  signTx,
   TransactionInputTypeEnum,
-  wifToPrivateKey,
+  wifToPrivateKeyHexStr,
   xprivToXPub,
   xpubToScriptHash
 } from '../src/index'
@@ -217,35 +220,6 @@ describe('xpub to address tests;  generate valid addresses by calling xpubToScri
     )
   })
 
-  it('given an xpub, generate p2sh address and cross verify scriptHash result', () => {
-    const scriptHashP2SH = xpubToScriptHash({
-      xpub:
-        'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj',
-      network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
-      addressType: AddressTypeEnum.p2sh,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
-      coin: new Bitcoin()
-    })
-    const p2shAddress = scriptHashToAddress({
-      scriptHash: scriptHashP2SH,
-      network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2sh,
-      coin: new Bitcoin()
-    })
-    expect(p2shAddress).to.equals('3Hggo5JYqytA5k5As5XuADi6TYGQmMZrND')
-    const scriptHashP2SHRoundTrip = addressToScriptHash({
-      address: '3Hggo5JYqytA5k5As5XuADi6TYGQmMZrND',
-      network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2sh,
-      coin: new Bitcoin()
-    })
-    expect(scriptHashP2SHRoundTrip?.toString()).to.equals(
-      scriptHashP2SH?.toString()
-    )
-  })
-
   it('given an ypub, generate p2wpkh-p2sh address and cross-verify scriptHash result', () => {
     const scriptHashP2WPKHP2SH = xpubToScriptHash({
       xpub:
@@ -307,29 +281,120 @@ describe('xpub to address tests;  generate valid addresses by calling xpubToScri
   })
 })
 
+describe('from WIF to private key buffer to WIF', () => {
+  it('take a wif private key', () => {
+    const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
+    const privateKey = wifToPrivateKeyHexStr({
+      wifKey,
+      network: NetworkEnum.Mainnet,
+      coin: new Bitcoin()
+    })
+    const wifKeyRoundTrip = privateKeyHexStrToWIF({
+      privateKey: privateKey,
+      network: NetworkEnum.Mainnet,
+      coin: new Bitcoin()
+    })
+    expect(wifKey).to.be.equal(wifKeyRoundTrip)
+  })
+})
+
+describe('get script pubkeys from address', () => {
+  // these tests are cross verified with bitcoin core
+  it('p2pkh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
+      network: NetworkEnum.Mainnet,
+      addressType: AddressTypeEnum.p2pkh,
+      coin: new Bitcoin()
+    })
+    expect(scriptPubkey.toString('hex')).to.equal(
+      '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
+    )
+  })
+  it('p2wpkh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
+      network: NetworkEnum.Mainnet,
+      addressType: AddressTypeEnum.p2wpkh,
+      coin: new Bitcoin()
+    })
+    expect(scriptPubkey.toString('hex')).to.equal(
+      '0014c0cebcd6c3d3ca8c75dc5ec62ebe55330ef910e2'
+    )
+  })
+  it('p2sh testnet address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: '2Mu9hifsg4foPLkyo9i1isPWTobnNmXL3Qk',
+      network: NetworkEnum.Testnet,
+      addressType: AddressTypeEnum.p2sh,
+      coin: new Bitcoin()
+    })
+    expect(scriptPubkey.toString('hex')).to.equal(
+      'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
+    )
+  })
+  it('p2wsh mainnet address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7',
+      network: NetworkEnum.Testnet,
+      addressType: AddressTypeEnum.p2wsh,
+      coin: new Bitcoin()
+    })
+    expect(scriptPubkey.toString('hex')).to.equal(
+      '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
+    )
+  })
+})
+
+describe('address to electrum script hash', () => {
+  it('tests as documented in https://electrumx.readthedocs.io/en/latest/protocol-basics.html', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+      network: NetworkEnum.Mainnet,
+      addressType: AddressTypeEnum.p2pkh,
+      coin: new Bitcoin()
+    })
+    expect(scriptPubkey.toString('hex')).to.equal(
+      '76a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac'
+    )
+    const electrumScriptHash = scriptPubkeyToElectrumScriptHash(scriptPubkey)
+    expect(electrumScriptHash).to.equal(
+      '8b01df4e368ea28f8dc0423bcf7a4923e3a12d307c875e47a0cfbf90b5c39161'
+    )
+  })
+})
+
 describe('transaction creation and signing test', () => {
   // key with control on the unspent output and used to sign the transaction
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
-  const privateKey = wifToPrivateKey({
+  const privateKey = wifToPrivateKeyHexStr({
     wifKey,
     network: NetworkEnum.Mainnet,
     coin: new Bitcoin()
   })
   const scriptPubkey = pubkeyToScriptPubkey({
-    pubkey: privateKeyToPubkey(privateKey),
+    pubkey: privateKeyToPubkey(Buffer.from(privateKey, 'hex')),
     addressType: AddressTypeEnum.p2pkh
   })
+
   it('Create transaction with one legacy input and one output', () => {
-    const hexTx: string = createTx({
+    /*
+      This here is the rawtransaction as assembled below:
+      0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000
+      The test case deconstructs the value, script pubkey and locktime values to show some deserialized values.
+      This deserialization is not required in the usually from the valler.
+      It is enough to pass the full previous rawtransaction.
+    */
+    const base64Tx: string = createTx({
       network: NetworkEnum.Mainnet,
-      privateKey: privateKey,
+      rbf: false,
       inputs: [
         {
           type: TransactionInputTypeEnum.Legacy,
-          prev_txid:
+          prevTxid:
             '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
           // prev_tx only for non segwit inputs
-          prev_txout: Buffer.from(
+          prevTxout: Buffer.from(
             '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
               '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
               'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
@@ -346,9 +411,8 @@ describe('transaction creation and signing test', () => {
             'hex'
           ),
           index: 0,
-          // prev_scriptPubkey only relevant for Segwit inputs, but keep mandator for now before we start handling errors.
-          prev_scriptPubkey: scriptPubkey,
-          rbf: false
+          // prev_scriptPubkey only relevant for Segwit inputs, but keep mandatory for now before we start handling errors.
+          prevScriptPubkey: scriptPubkey
         }
       ],
       outputs: [
@@ -363,7 +427,11 @@ describe('transaction creation and signing test', () => {
         }
       ]
     })
-    expect(hexTx).to.equal(
+    const hexTxSigned: string = signTx({
+      tx: base64Tx,
+      privateKeys: [privateKey]
+    })
+    expect(hexTxSigned).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7' +
         'b067d000000006b483045022100931b6db94aed25d5486884d83fc37160f37f3368c0' +
         'd7f48c757112abefec983802205fda64cff98c849577026eb2ce916a50ea70626a766' +
@@ -371,11 +439,5 @@ describe('transaction creation and signing test', () => {
         'fda5ec16b261ec1056f455ffffffff0180380100000000001976a914ca0d36044e0dc' +
         '08a22724efa6f6a07b0ec4c79aa88ac00000000'
     )
-  })
-})
-
-describe('edge-rest-wallet', function() {
-  it("Doesn't have tests yet", function() {
-    expect(1 + 1).equals(2)
   })
 })
