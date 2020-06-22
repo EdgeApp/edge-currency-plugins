@@ -310,7 +310,7 @@ describe('get script pubkeys from address', () => {
       addressType: AddressTypeEnum.p2pkh,
       coin: new Bitcoin()
     })
-    expect(scriptPubkey.toString('hex')).to.equal(
+    expect(scriptPubkey).to.equal(
       '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
     )
   })
@@ -321,7 +321,7 @@ describe('get script pubkeys from address', () => {
       addressType: AddressTypeEnum.p2wpkh,
       coin: new Bitcoin()
     })
-    expect(scriptPubkey.toString('hex')).to.equal(
+    expect(scriptPubkey).to.equal(
       '0014c0cebcd6c3d3ca8c75dc5ec62ebe55330ef910e2'
     )
   })
@@ -332,7 +332,7 @@ describe('get script pubkeys from address', () => {
       addressType: AddressTypeEnum.p2sh,
       coin: new Bitcoin()
     })
-    expect(scriptPubkey.toString('hex')).to.equal(
+    expect(scriptPubkey).to.equal(
       'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
     )
   })
@@ -343,7 +343,7 @@ describe('get script pubkeys from address', () => {
       addressType: AddressTypeEnum.p2wsh,
       coin: new Bitcoin()
     })
-    expect(scriptPubkey.toString('hex')).to.equal(
+    expect(scriptPubkey).to.equal(
       '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
     )
   })
@@ -357,7 +357,7 @@ describe('address to electrum script hash', () => {
       addressType: AddressTypeEnum.p2pkh,
       coin: new Bitcoin()
     })
-    expect(scriptPubkey.toString('hex')).to.equal(
+    expect(scriptPubkey).to.equal(
       '76a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac'
     )
     const electrumScriptHash = scriptPubkeyToElectrumScriptHash(scriptPubkey)
@@ -375,7 +375,7 @@ describe('transaction creation and signing test', () => {
     network: NetworkEnum.Mainnet,
     coin: new Bitcoin()
   })
-  const scriptPubkey: Buffer = pubkeyToScriptPubkey({
+  const scriptPubkey: string = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(Buffer.from(privateKey, 'hex')),
     addressType: AddressTypeEnum.p2pkh
   })
@@ -403,22 +403,20 @@ describe('transaction creation and signing test', () => {
           prevTxid:
             '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
           // prev_tx only for non segwit inputs
-          prevTx: Buffer.from(
+          prevTx:
             '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
-              '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
-              'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
-              '9e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec' +
-              '631e5e1e66009ce3710ceea5b1ad13ffffffff01' +
-              // value in satoshis (Int64LE) = 0x015f90 = 90000
-              '905f010000000000' +
-              // scriptPubkey length
-              '19' +
-              // scriptPubkey
-              scriptPubkey.toString('hex') +
-              // locktime
-              '00000000',
-            'hex'
-          ),
+            '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
+            'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
+            '9e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec' +
+            '631e5e1e66009ce3710ceea5b1ad13ffffffff01' +
+            // value in satoshis (Int64LE) = 0x015f90 = 90000
+            '905f010000000000' +
+            // scriptPubkey length
+            '19' +
+            // scriptPubkey
+            scriptPubkey +
+            // locktime
+            '00000000',
           index: 0
         }
       ],
@@ -449,20 +447,19 @@ describe('transaction creation and signing test', () => {
   })
 
   it('create tx with one input and 100 outputs, then create another tx with 100 inputs and two outputs', () => {
+    const nOutputs: number = 100
     const txInput: TxInput = {
       type: TransactionInputTypeEnum.Legacy,
       prevTxid:
         '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
       // prev_tx only for non segwit inputs
-      prevTx: Buffer.from(
+      prevTx:
         '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d94' +
-          '52e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca' +
-          '17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e7' +
-          '61da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e' +
-          '5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2' +
-          '709c71607c60ee3f097c1217482f518d88ac00000000',
-        'hex'
-      ),
+        '52e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca' +
+        '17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e7' +
+        '61da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e' +
+        '5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2' +
+        '709c71607c60ee3f097c1217482f518d88ac00000000',
       index: 0,
       // prev_scriptPubkey only relevant for Segwit inputs, but keep mandatory for now before we start handling errors.
       prevScriptPubkey: scriptPubkey
@@ -480,7 +477,7 @@ describe('transaction creation and signing test', () => {
 
     const base64Tx: string = createTx({
       inputs: [txInput],
-      outputs: Array(100).fill(txOutput),
+      outputs: Array(nOutputs).fill(txOutput),
       network: NetworkEnum.Mainnet,
       rbf: false
     })
@@ -490,13 +487,13 @@ describe('transaction creation and signing test', () => {
       privateKeys: [privateKey]
     })
 
-    const txInputs: TxInput[] = Array(100)
+    const txInputs: TxInput[] = Array(nOutputs)
     for (let i: number = 0; i < txInputs.length; i++) {
       txInputs[i] = {
         type: TransactionInputTypeEnum.Legacy,
         prevTxid:
           '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
-        prevTx: Buffer.from(hexTxSigned, 'hex'),
+        prevTx: hexTxSigned,
         index: i,
         prevScriptPubkey: scriptPubkey
       }
@@ -510,7 +507,7 @@ describe('transaction creation and signing test', () => {
 
     const hexTxMultiSigned: string = signTx({
       tx: base64TxMulti,
-      privateKeys: Array(100).fill(privateKey)
+      privateKeys: Array(nOutputs).fill(privateKey)
     })
 
     expect(hexTxMultiSigned).to.equal(

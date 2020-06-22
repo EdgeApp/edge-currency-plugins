@@ -77,7 +77,7 @@ export interface XPubToScriptHashArgs {
 // To get the script hash as used by electrum servers, follow their docs here:
 // https://electrumx.readthedocs.io/en/latest/protocol-basics.html#script-hashes
 export interface ScriptHashToAddressArgs {
-  scriptHash: Buffer
+  scriptHash: string
   network: NetworkEnum
   addressType: AddressTypeEnum
   coin: Coin
@@ -102,12 +102,12 @@ export interface AddressToScriptPubkeyArgs {
 }
 
 export interface PubkeyToScriptPubkeyArgs {
-  pubkey: Buffer
+  pubkey: string
   addressType: AddressTypeEnum
 }
 
 export interface ScriptPubkeyToAddressArgs {
-  scriptPubkey: Buffer
+  scriptPubkey: string
   addressType: AddressTypeEnum
   network: NetworkEnum
   coin: Coin
@@ -129,13 +129,13 @@ export interface TxInput {
   type: TransactionInputTypeEnum
   prevTxid: string
   index: number
-  prevTx?: Buffer // required for legacy transactions
-  prevScriptPubkey?: Buffer // required for segwit transactions
+  prevTx?: string // required for legacy transactions
+  prevScriptPubkey?: string // required for segwit transactions
   value?: number // required for segwit transactions
 }
 
 export interface TxOutput {
-  scriptPubkey: Buffer
+  scriptPubkey: string
   amount: number
 }
 
@@ -339,7 +339,7 @@ export function xprivToXPub(xprivToXPubArgs: XPrivToXPubArgs): string {
 // this supports building
 export function xpubToScriptHash(
   xpubToScriptHashArgs: XPubToScriptHashArgs
-): Buffer {
+): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     xpubToScriptHashArgs.network,
     xpubToScriptHashArgs.coin,
@@ -360,7 +360,7 @@ export function xpubToScriptHash(
       if (typeof scriptHash === 'undefined') {
         throw new Error('failed to derive script hash from provided xpub')
       }
-      return scriptHash
+      return scriptHash.toString('hex')
     case AddressTypeEnum.p2wpkhp2sh:
       scriptHash = bitcoin.payments.p2sh({
         redeem: bitcoin.payments.p2wpkh({ pubkey, network })
@@ -368,13 +368,13 @@ export function xpubToScriptHash(
       if (typeof scriptHash === 'undefined') {
         throw new Error('failed to derive script hash from provided xpub')
       }
-      return scriptHash
+      return scriptHash.toString('hex')
     case AddressTypeEnum.p2wpkh:
       scriptHash = bitcoin.payments.p2wpkh({ pubkey, network }).hash
       if (typeof scriptHash === 'undefined') {
         throw new Error('failed to derive script hash from provided xpub')
       }
-      return scriptHash
+      return scriptHash.toString('hex')
     default:
       throw new Error('invalid address type in xpub to script hash conversion')
   }
@@ -407,7 +407,7 @@ export function scriptHashToAddress(
       throw new Error('invalid address type in script hash to address')
   }
   const address = payment({
-    hash: scriptHashToAddressArgs.scriptHash,
+    hash: Buffer.from(scriptHashToAddressArgs.scriptHash, 'hex'),
     network: network
   }).address
   if (typeof address === 'undefined') {
@@ -419,7 +419,7 @@ export function scriptHashToAddress(
 // take an address and return either a script hash (for a p2sh address) or a pubkey hash (for p2pkh and p2wpkh)
 export function addressToScriptHash(
   addressToScriptHashArgs: AddressToScriptHashArgs
-): Buffer {
+): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     addressToScriptHashArgs.network,
     addressToScriptHashArgs.coin
@@ -455,12 +455,12 @@ export function addressToScriptHash(
   if (typeof scriptHash === 'undefined') {
     throw new Error('failed converting address to script hash')
   }
-  return scriptHash
+  return scriptHash.toString('hex')
 }
 
 export function addressToScriptPubkey(
   addressToScriptPubkeyArgs: AddressToScriptPubkeyArgs
-): Buffer {
+): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     addressToScriptPubkeyArgs.network,
     addressToScriptPubkeyArgs.coin
@@ -495,7 +495,7 @@ export function addressToScriptPubkey(
   if (typeof scriptPubkey === 'undefined') {
     throw new Error('failed converting address to scriptPubkey')
   }
-  return scriptPubkey
+  return scriptPubkey.toString('hex')
 }
 
 export function scriptPubkeyToAddress(
@@ -524,7 +524,7 @@ export function scriptPubkeyToAddress(
       throw new Error('invalid address type in address to script pubkey')
   }
   const address: string | undefined = payment({
-    output: scriptPubkeyToAddressArgs.scriptPubkey,
+    output: Buffer.from(scriptPubkeyToAddressArgs.scriptPubkey, 'hex'),
     network: network
   }).address
   if (typeof address === 'undefined') {
@@ -535,35 +535,35 @@ export function scriptPubkeyToAddress(
 
 export function pubkeyToScriptPubkey(
   pubkeyToScriptPubkeyArgs: PubkeyToScriptPubkeyArgs
-): Buffer {
+): string {
   let scriptPubkey: Buffer | undefined
   switch (pubkeyToScriptPubkeyArgs.addressType) {
     case AddressTypeEnum.p2pkh:
       scriptPubkey = bitcoin.payments.p2pkh({
-        pubkey: pubkeyToScriptPubkeyArgs.pubkey
+        pubkey: Buffer.from(pubkeyToScriptPubkeyArgs.pubkey, 'hex')
       }).output
       if (typeof scriptPubkey === 'undefined') {
         throw new Error('failed converting pubkey to script pubkey')
       }
-      return scriptPubkey
+      return scriptPubkey.toString('hex')
     case AddressTypeEnum.p2wpkhp2sh:
       scriptPubkey = bitcoin.payments.p2sh({
         redeem: bitcoin.payments.p2wpkh({
-          pubkey: pubkeyToScriptPubkeyArgs.pubkey
+          pubkey: Buffer.from(pubkeyToScriptPubkeyArgs.pubkey, 'hex')
         })
       }).output
       if (typeof scriptPubkey === 'undefined') {
         throw new Error('failed converting pubkey to script pubkey')
       }
-      return scriptPubkey
+      return scriptPubkey.toString('hex')
     case AddressTypeEnum.p2wpkh:
       scriptPubkey = bitcoin.payments.p2wpkh({
-        pubkey: pubkeyToScriptPubkeyArgs.pubkey
+        pubkey: Buffer.from(pubkeyToScriptPubkeyArgs.pubkey, 'hex')
       }).output
       if (typeof scriptPubkey === 'undefined') {
         throw new Error('failed converting pubkey to script pubkey')
       }
-      return scriptPubkey
+      return scriptPubkey.toString('hex')
     default:
       throw new Error('invalid address type in pubkey to script pubkey')
   }
@@ -619,15 +619,15 @@ export function wifToPrivateKeyHexStr(
   return privateKey.toString('hex')
 }
 
-export function privateKeyToPubkey(privateKey: Buffer): Buffer {
-  return bitcoin.ECPair.fromPrivateKey(privateKey).publicKey
+export function privateKeyToPubkey(privateKey: Buffer): string {
+  return bitcoin.ECPair.fromPrivateKey(privateKey).publicKey.toString('hex')
 }
 
 // Electrum uses the hash of the script pubkey to discover balances and transactions
-export function scriptPubkeyToElectrumScriptHash(scriptPubkey: Buffer): string {
-  return Buffer.from(bitcoin.crypto.sha256(scriptPubkey).reverse()).toString(
-    'hex'
-  )
+export function scriptPubkeyToElectrumScriptHash(scriptPubkey: string): string {
+  return Buffer.from(
+    bitcoin.crypto.sha256(Buffer.from(scriptPubkey, 'hex')).reverse()
+  ).toString('hex')
 }
 
 export function createTx(createTxArgs: CreateTxArgs): string {
@@ -649,7 +649,7 @@ export function createTx(createTxArgs: CreateTxArgs): string {
         index: input.index,
         sequence: sequence,
         // non-segwit inputs now require passing the whole previous tx as Buffer
-        nonWitnessUtxo: input.prevTx
+        nonWitnessUtxo: Buffer.from(input.prevTx, 'hex')
       })
     } else {
       if (
@@ -666,7 +666,7 @@ export function createTx(createTxArgs: CreateTxArgs): string {
         sequence: sequence,
         // add witnessUtxo for Segwit input type. The scriptPubkey and the value only are needed.
         witnessUtxo: {
-          script: input.prevScriptPubkey,
+          script: Buffer.from(input.prevScriptPubkey, 'hex'),
           value: input.value
         }
       })
@@ -674,7 +674,7 @@ export function createTx(createTxArgs: CreateTxArgs): string {
   }
   for (let i: number = 0; i < createTxArgs.outputs.length; i++) {
     psbt.addOutput({
-      script: createTxArgs.outputs[i].scriptPubkey,
+      script: Buffer.from(createTxArgs.outputs[i].scriptPubkey, 'hex'),
       value: createTxArgs.outputs[i].amount
     })
   }
