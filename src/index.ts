@@ -5,27 +5,33 @@ import * as bitcoin from 'bitcoinjs-lib'
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
-  Mainnet,
-  Testnet
+  Mainnet = 'mainnet',
+  Testnet = 'testnet'
 }
 
 // in bitcoin these are bip44, bip49, bip84 xpub prefixes
 // other coins contain different formats which still need to be gathered.
 export enum BIP43PurposeTypeEnum {
-  Legacy, // xpub/xprv tpub/tprv etc.
-  Segwit, // zpub/zprv vpub/vprv etc.
-  WrappedSegwit // ypub/yprv upub/uprv etc.
+  Legacy = 'legacy', // xpub/xprv tpub/tprv etc.
+  Segwit = 'segwit', // zpub/zprv vpub/vprv etc.
+  WrappedSegwit = 'wrappedSegwit' // ypub/yprv upub/uprv etc.
 }
 
 // supported address types.
 export enum AddressTypeEnum {
-  p2pkh,
-  p2sh,
-  p2wpkhp2sh,
-  p2wpkh,
-  p2wsh, // TODO: both witness script hash variants have not been implemented so far.
-  p2wshp2sh,
-  cashaddr
+  p2pkh = 'p2pkh',
+  p2sh = 'p2sh',
+  p2wpkhp2sh = 'p2wpkhp2sh',
+  p2wpkh = 'p2wpkh',
+  p2wsh = 'p2wsh', // TODO: both witness script hash variants have not been implemented so far.
+  p2wshp2sh = 'p2wshp2sh',
+  cashaddr = 'cashaddr'
+}
+
+// A transaction input is either legacy or segwit. This is used for transaction creation and passed per input
+export enum TransactionInputTypeEnum {
+  Legacy = 'legacy',
+  Segwit = 'segwit'
 }
 
 export interface MnemonicToXPrivArgs {
@@ -100,6 +106,13 @@ export interface PubkeyToScriptPubkeyArgs {
   addressType: AddressTypeEnum
 }
 
+export interface ScriptPubkeyToAddressArgs {
+  scriptPubkey: Buffer
+  addressType: AddressTypeEnum
+  network: NetworkEnum
+  coin: Coin
+}
+
 export interface WIFToPrivateKeyHexStrArgs {
   wifKey: string
   network: NetworkEnum
@@ -112,18 +125,13 @@ export interface PrivateKeyHexStrToWIFArgs {
   coin: Coin
 }
 
-// A transaction input is either legacy or segwit. This is used for transaction creation and passed per input
-export enum TransactionInputTypeEnum {
-  Legacy,
-  Segwit
-}
-
 export interface TxInput {
   type: TransactionInputTypeEnum
   prevTxid: string
   index: number
-  prevTxout: Buffer // relevant for legacy transactions
-  prevScriptPubkey: Buffer // relevant for segwit transactions, maybe make it optional in the future
+  prevTx?: Buffer // required for legacy transactions
+  prevScriptPubkey?: Buffer // required for segwit transactions
+  value?: number // required for segwit transactions
 }
 
 export interface TxOutput {
@@ -328,6 +336,7 @@ export function xprivToXPub(xprivToXPubArgs: XPrivToXPubArgs): string {
 }
 
 // return pubkey hash / script hash based on chosen type and network
+// this supports building
 export function xpubToScriptHash(
   xpubToScriptHashArgs: XPubToScriptHashArgs
 ): Buffer {
@@ -489,6 +498,41 @@ export function addressToScriptPubkey(
   return scriptPubkey
 }
 
+export function scriptPubkeyToAddress(
+  scriptPubkeyToAddressArgs: ScriptPubkeyToAddressArgs
+): string {
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
+    scriptPubkeyToAddressArgs.network,
+    scriptPubkeyToAddressArgs.coin
+  )
+  let payment: bitcoin.payments.PaymentCreator
+  switch (scriptPubkeyToAddressArgs.addressType) {
+    case AddressTypeEnum.p2pkh:
+      payment = bitcoin.payments.p2pkh
+      break
+    case AddressTypeEnum.p2sh:
+    case AddressTypeEnum.p2wpkhp2sh:
+      payment = bitcoin.payments.p2sh
+      break
+    case AddressTypeEnum.p2wpkh:
+      payment = bitcoin.payments.p2wpkh
+      break
+    case AddressTypeEnum.p2wsh:
+      payment = bitcoin.payments.p2wsh
+      break
+    default:
+      throw new Error('invalid address type in address to script pubkey')
+  }
+  const address: string | undefined = payment({
+    output: scriptPubkeyToAddressArgs.scriptPubkey,
+    network: network
+  }).address
+  if (typeof address === 'undefined') {
+    throw new Error('failed converting scriptPubkey to address')
+  }
+  return address
+}
+
 export function pubkeyToScriptPubkey(
   pubkeyToScriptPubkeyArgs: PubkeyToScriptPubkeyArgs
 ): Buffer {
@@ -579,6 +623,7 @@ export function privateKeyToPubkey(privateKey: Buffer): Buffer {
   return bitcoin.ECPair.fromPrivateKey(privateKey).publicKey
 }
 
+// Electrum uses the hash of the script pubkey to discover balances and transactions
 export function scriptPubkeyToElectrumScriptHash(scriptPubkey: Buffer): string {
   return Buffer.from(bitcoin.crypto.sha256(scriptPubkey).reverse()).toString(
     'hex'
@@ -592,23 +637,37 @@ export function createTx(createTxArgs: CreateTxArgs): string {
     sequence -= 2
   }
   for (let i: number = 0; i < createTxArgs.inputs.length; i++) {
-    if (createTxArgs.inputs[i].type === TransactionInputTypeEnum.Legacy) {
+    const input: TxInput = createTxArgs.inputs[i]
+    if (input.type === TransactionInputTypeEnum.Legacy) {
+      if (typeof input.prevTx === 'undefined') {
+        throw Error(
+          'legacy inputs require the full previous transaction to be passed'
+        )
+      }
       psbt.addInput({
-        hash: createTxArgs.inputs[i].prevTxid,
-        index: 0,
+        hash: input.prevTxid,
+        index: input.index,
         sequence: sequence,
         // non-segwit inputs now require passing the whole previous tx as Buffer
-        nonWitnessUtxo: createTxArgs.inputs[i].prevTxout
+        nonWitnessUtxo: input.prevTx
       })
     } else {
+      if (
+        typeof input.prevScriptPubkey === 'undefined' ||
+        typeof input.value === 'undefined'
+      ) {
+        throw Error(
+          'segwit inputs require a script pubkey and value to be passed'
+        )
+      }
       psbt.addInput({
-        hash: createTxArgs.inputs[i].prevTxid,
-        index: 0,
+        hash: input.prevTxid,
+        index: input.index,
         sequence: sequence,
         // add witnessUtxo for Segwit input type. The scriptPubkey and the value only are needed.
         witnessUtxo: {
-          script: createTxArgs.inputs[i].prevScriptPubkey,
-          value: 90000
+          script: input.prevScriptPubkey,
+          value: input.value
         }
       })
     }
@@ -616,7 +675,7 @@ export function createTx(createTxArgs: CreateTxArgs): string {
   for (let i: number = 0; i < createTxArgs.outputs.length; i++) {
     psbt.addOutput({
       script: createTxArgs.outputs[i].scriptPubkey,
-      value: 80000
+      value: createTxArgs.outputs[i].amount
     })
   }
   return psbt.toBase64()
@@ -624,7 +683,7 @@ export function createTx(createTxArgs: CreateTxArgs): string {
 
 export function signTx(signTxArgs: SignTxArgs): string {
   const psbt = bitcoin.Psbt.fromBase64(signTxArgs.tx)
-  for (let i: number = 0; i < privateKeyHexStrToWIF.length; i++) {
+  for (let i: number = 0; i < signTxArgs.privateKeys.length; i++) {
     psbt.signInput(
       i,
       bitcoin.ECPair.fromPrivateKey(
