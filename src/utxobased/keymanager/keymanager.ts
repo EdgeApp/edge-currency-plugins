@@ -26,7 +26,7 @@ export enum AddressTypeEnum {
   p2sh = 'p2sh',
   p2wpkhp2sh = 'p2wpkhp2sh',
   p2wpkh = 'p2wpkh',
-  p2wsh = 'p2wsh', // TODO: both witness script hash variants have not been implemented so far.
+  p2wsh = 'p2wsh',
   p2wshp2sh = 'p2wshp2sh',
   cashaddr = 'cashaddr'
 }
