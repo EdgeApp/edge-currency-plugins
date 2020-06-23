@@ -3,6 +3,9 @@ import { BIP32Interface } from 'bip32'
 import * as bip39 from 'bip39'
 import * as bitcoin from 'bitcoinjs-lib'
 
+import { Coin, CoinPrefixes } from './coin'
+import { getCoinFromString } from './coinmapper'
+
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
   Mainnet = 'mainnet',
@@ -39,14 +42,14 @@ export interface MnemonicToXPrivArgs {
   path: string
   network: NetworkEnum
   type: BIP43PurposeTypeEnum
-  coin: Coin
+  coin: string
 }
 
 export interface XPrivToXPubArgs {
   xpriv: string
   network: NetworkEnum
   type: BIP43PurposeTypeEnum
-  coin: Coin
+  coin: string
 }
 
 export interface XPrivToPrivateKeyHexStrArgs {
@@ -55,7 +58,7 @@ export interface XPrivToPrivateKeyHexStrArgs {
   type: BIP43PurposeTypeEnum
   bip44ChangeIndex: 0 | 1
   bip44AddressIndex: number
-  coin: Coin
+  coin: string
 }
 
 // Careful! Calling this the ScriptHash is only correct for p2sh addresses.
@@ -69,7 +72,7 @@ export interface XPubToScriptHashArgs {
   addressType: AddressTypeEnum
   bip44ChangeIndex: 0 | 1
   bip44AddressIndex: number
-  coin: Coin
+  coin: string
 }
 
 // Careful! Calling this the ScriptHash is only correct for p2sh addresses.
@@ -80,7 +83,7 @@ export interface ScriptHashToAddressArgs {
   scriptHash: string
   network: NetworkEnum
   addressType: AddressTypeEnum
-  coin: Coin
+  coin: string
 }
 
 // Careful! Calling this the ScriptHash is only correct for p2sh addresses.
@@ -91,14 +94,14 @@ export interface AddressToScriptHashArgs {
   address: string
   network: NetworkEnum
   addressType?: AddressTypeEnum
-  coin: Coin
+  coin: string
 }
 
 export interface AddressToScriptPubkeyArgs {
   address: string
   network: NetworkEnum
   addressType?: AddressTypeEnum
-  coin: Coin
+  coin: string
 }
 
 export interface PubkeyToScriptPubkeyArgs {
@@ -110,19 +113,19 @@ export interface ScriptPubkeyToAddressArgs {
   scriptPubkey: string
   addressType: AddressTypeEnum
   network: NetworkEnum
-  coin: Coin
+  coin: string
 }
 
 export interface WIFToPrivateKeyHexStrArgs {
   wifKey: string
   network: NetworkEnum
-  coin: Coin
+  coin: string
 }
 
 export interface PrivateKeyHexStrToWIFArgs {
   privateKey: string
   network: NetworkEnum
-  coin: Coin
+  coin: string
 }
 
 export interface TxInput {
@@ -149,92 +152,6 @@ export interface CreateTxArgs {
 export interface SignTxArgs {
   privateKeys: string[]
   tx: string
-}
-
-export interface CoinPrefixes {
-  messagePrefix: string
-  wif: number
-  legacyXPriv: number
-  legacyXPub: number
-  wrappedSegwitXPriv?: number
-  wrappedSegwitXPub?: number
-  segwitXPriv?: number
-  segwitXPub?: number
-  pubkeyHash: number
-  scriptHash: number
-  bech32: string
-  cashAddr?: string
-}
-
-export interface Coin {
-  name: string
-  mainnetConstants: CoinPrefixes
-  testnetConstants: CoinPrefixes
-}
-
-// this an example implementation of a Coin class to show all required constants
-// not that support for esoteric sighash types is omitted for now
-export class Bitcoin implements Coin {
-  name: string = 'bitcoin'
-
-  mainnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0x80,
-    legacyXPriv: 0x0488ade4,
-    legacyXPub: 0x0488b21e,
-    wrappedSegwitXPriv: 0x049d7878,
-    wrappedSegwitXPub: 0x049d7cb2,
-    segwitXPriv: 0x04b2430c,
-    segwitXPub: 0x04b24746,
-    pubkeyHash: 0x00,
-    scriptHash: 0x05,
-    bech32: 'bc'
-  }
-
-  testnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0xef,
-    legacyXPriv: 0x04358394,
-    legacyXPub: 0x043587cf,
-    wrappedSegwitXPriv: 0x044a4e28,
-    wrappedSegwitXPub: 0x044a5262,
-    segwitXPriv: 0x045f18bc,
-    segwitXPub: 0x045f1cf6,
-    pubkeyHash: 0x6f,
-    scriptHash: 0xc4,
-    bech32: 'tb'
-  }
-}
-
-export class Litecoin implements Coin {
-  name: string = 'litecoin'
-  mainnetConstants = {
-    messagePrefix: '\x19Litecoin Signed Message:\n',
-    wif: 0xb0,
-    legacyXPriv: 0x019d9cfe,
-    legacyXPub: 0x019da462,
-    wrappedSegwitXPriv: 0x01b26792,
-    wrappedSegwitXPub: 0x01b26ef6,
-    segwitXPriv: 0x04b2430c,
-    segwitXPub: 0x04b24746,
-    pubkeyHash: 0x30,
-    scriptHash: 0x32,
-    bech32: 'ltc'
-  }
-
-  testnetConstants = {
-    messagePrefix: '\x19Litecoin Signed Message:\n',
-    wif: 0xef,
-    legacyXPriv: 0x04358394,
-    legacyXPub: 0x043587cf,
-    wrappedSegwitXPriv: 0x044a4e28,
-    wrappedSegwitXPub: 0x044a5262,
-    segwitXPriv: 0x045f18bc,
-    segwitXPub: 0x045f1cf6,
-    pubkeyHash: 0x6f,
-    scriptHash: 0x3a,
-    bech32: 'tltc'
-  }
 }
 
 // BitcoinJSNetwork and Bip32 are the same interfaces as declared in  bitcoin-js ts_src/network.ts
@@ -304,9 +221,10 @@ function bip32NetworkFromCoinPrefix(
 
 function bip32NetworkFromCoin(
   networkType: NetworkEnum,
-  coin: Coin,
+  coinString: string,
   sigType: BIP43PurposeTypeEnum = BIP43PurposeTypeEnum.Legacy
 ): BitcoinJSNetwork {
+  const coin: Coin = getCoinFromString(coinString)
   if (networkType === NetworkEnum.Testnet) {
     return bip32NetworkFromCoinPrefix(sigType, coin.testnetConstants)
   }
