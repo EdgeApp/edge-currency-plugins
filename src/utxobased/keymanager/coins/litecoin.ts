@@ -1,8 +1,8 @@
 import { Coin } from '../coin'
 
 export class Litecoin implements Coin {
-  name: string = 'litecoin'
-
+  name = 'litecoin'
+  segwit = true
   mainnetConstants = {
     messagePrefix: '\x19Litecoin Signed Message:\n',
     wif: 0xb0,

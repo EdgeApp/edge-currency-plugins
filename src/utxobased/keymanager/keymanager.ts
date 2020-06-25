@@ -3,6 +3,12 @@ import { BIP32Interface } from 'bip32'
 import * as bip39 from 'bip39'
 import * as bitcoin from 'bitcoinjs-lib'
 
+import {
+  cashAddressToHash,
+  cashaddrPrefixEnum,
+  cashaddrTypeEnum,
+  hashToCashAddress
+} from './bitcoincashUtils/cashAddress'
 import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
 
@@ -28,7 +34,8 @@ export enum AddressTypeEnum {
   p2wpkh = 'p2wpkh',
   p2wsh = 'p2wsh',
   p2wshp2sh = 'p2wshp2sh',
-  cashaddr = 'cashaddr'
+  cashaddrP2PKH = 'cashaddrP2PKH',
+  cashaddrP2SH = 'cashaddrP2SH'
 }
 
 // A transaction input is either legacy or segwit. This is used for transaction creation and passed per input
@@ -116,6 +123,20 @@ export interface ScriptPubkeyToAddressArgs {
   coin: string
 }
 
+interface ScriptPubkeyToScriptHashArgs {
+  scriptPubkey: string
+  addressType: AddressTypeEnum
+  network: NetworkEnum
+  coin: string
+}
+
+interface ScriptHashToScriptPubkeyArgs {
+  scriptHash: string
+  addressType: AddressTypeEnum
+  network: NetworkEnum
+  coin: string
+}
+
 export interface WIFToPrivateKeyHexStrArgs {
   wifKey: string
   network: NetworkEnum
@@ -172,7 +193,8 @@ interface Bip32 {
 
 function bip32NetworkFromCoinPrefix(
   sigType: BIP43PurposeTypeEnum,
-  coinPrefixes: CoinPrefixes
+  coinPrefixes: CoinPrefixes,
+  segwit: Boolean
 ): BitcoinJSNetwork {
   let xKeyPrefixes: Bip32
   switch (sigType) {
@@ -209,11 +231,14 @@ function bip32NetworkFromCoinPrefix(
     default:
       throw new Error('invalid bip43 purpose type')
   }
+
+  const bech32: string = coinPrefixes.bech32 ?? 'bc'
+
   return {
     messagePrefix: coinPrefixes.messagePrefix,
     wif: coinPrefixes.wif,
     bip32: xKeyPrefixes,
-    bech32: coinPrefixes.bech32,
+    bech32: bech32,
     pubKeyHash: coinPrefixes.pubkeyHash,
     scriptHash: coinPrefixes.scriptHash
   }
@@ -226,9 +251,13 @@ function bip32NetworkFromCoin(
 ): BitcoinJSNetwork {
   const coin: Coin = getCoinFromString(coinString)
   if (networkType === NetworkEnum.Testnet) {
-    return bip32NetworkFromCoinPrefix(sigType, coin.testnetConstants)
+    return bip32NetworkFromCoinPrefix(
+      sigType,
+      coin.testnetConstants,
+      coin.segwit
+    )
   }
-  return bip32NetworkFromCoinPrefix(sigType, coin.mainnetConstants)
+  return bip32NetworkFromCoinPrefix(sigType, coin.mainnetConstants, coin.segwit)
 }
 
 function guessAddressTypeFromAddress(
@@ -254,6 +283,13 @@ function guessAddressTypeFromAddress(
   try {
     bitcoin.payments.p2wpkh({ address, network })
     return AddressTypeEnum.p2wpkh
+  } catch (e) {}
+  try {
+    const info = cashAddressToHash(address)
+    if (info.type === cashaddrTypeEnum.pubkeyhash) {
+      return AddressTypeEnum.cashaddrP2PKH
+    }
+    return AddressTypeEnum.cashaddrP2SH
   } catch (e) {}
 
   throw new Error('Could not determine address type of' + address)
@@ -352,6 +388,32 @@ export function scriptHashToAddress(
     case AddressTypeEnum.p2wsh:
       payment = bitcoin.payments.p2wsh
       break
+    case AddressTypeEnum.cashaddrP2PKH:
+      if (scriptHashToAddressArgs.network === NetworkEnum.Testnet) {
+        return hashToCashAddress(
+          scriptHashToAddressArgs.scriptHash,
+          cashaddrTypeEnum.pubkeyhash,
+          cashaddrPrefixEnum.testnet
+        )
+      }
+      return hashToCashAddress(
+        scriptHashToAddressArgs.scriptHash,
+        cashaddrTypeEnum.pubkeyhash,
+        cashaddrPrefixEnum.mainnet
+      )
+    case AddressTypeEnum.cashaddrP2SH:
+      if (scriptHashToAddressArgs.network === NetworkEnum.Testnet) {
+        return hashToCashAddress(
+          scriptHashToAddressArgs.scriptHash,
+          cashaddrTypeEnum.scripthash,
+          cashaddrPrefixEnum.testnet
+        )
+      }
+      return hashToCashAddress(
+        scriptHashToAddressArgs.scriptHash,
+        cashaddrTypeEnum.scripthash,
+        cashaddrPrefixEnum.mainnet
+      )
     default:
       throw new Error('invalid address type in script hash to address')
   }
@@ -394,6 +456,14 @@ export function addressToScriptHash(
     case AddressTypeEnum.p2wsh:
       payment = bitcoin.payments.p2wsh
       break
+    case AddressTypeEnum.cashaddrP2PKH:
+      return cashAddressToHash(
+        addressToScriptHashArgs.address
+      ).scriptHash.toString('hex')
+    case AddressTypeEnum.cashaddrP2SH:
+      return cashAddressToHash(
+        addressToScriptHashArgs.address
+      ).scriptHash.toString('hex')
     default:
       throw new Error('invalid address type in address to script hash')
   }
@@ -434,6 +504,24 @@ export function addressToScriptPubkey(
     case AddressTypeEnum.p2wsh:
       payment = bitcoin.payments.p2wsh
       break
+    case AddressTypeEnum.cashaddrP2PKH:
+      return scriptHashToScriptPubkey({
+        scriptHash: cashAddressToHash(
+          addressToScriptPubkeyArgs.address
+        ).scriptHash.toString('hex'),
+        network: addressToScriptPubkeyArgs.network,
+        addressType: AddressTypeEnum.p2pkh,
+        coin: addressToScriptPubkeyArgs.coin
+      })
+    case AddressTypeEnum.cashaddrP2SH:
+      return scriptHashToScriptPubkey({
+        scriptHash: cashAddressToHash(
+          addressToScriptPubkeyArgs.address
+        ).scriptHash.toString('hex'),
+        network: addressToScriptPubkeyArgs.network,
+        addressType: AddressTypeEnum.p2sh,
+        coin: addressToScriptPubkeyArgs.coin
+      })
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
@@ -469,6 +557,28 @@ export function scriptPubkeyToAddress(
     case AddressTypeEnum.p2wsh:
       payment = bitcoin.payments.p2wsh
       break
+    case AddressTypeEnum.cashaddrP2PKH:
+      return hashToCashAddress(
+        scriptPubkeyToScriptHash({
+          scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
+          network: scriptPubkeyToAddressArgs.network,
+          addressType: AddressTypeEnum.p2pkh,
+          coin: scriptPubkeyToAddressArgs.coin
+        }),
+        cashaddrTypeEnum.pubkeyhash,
+        cashaddrPrefixEnum.mainnet
+      )
+    case AddressTypeEnum.cashaddrP2SH:
+      return hashToCashAddress(
+        scriptPubkeyToScriptHash({
+          scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
+          network: scriptPubkeyToAddressArgs.network,
+          addressType: AddressTypeEnum.p2sh,
+          coin: scriptPubkeyToAddressArgs.coin
+        }),
+        cashaddrTypeEnum.scripthash,
+        cashaddrPrefixEnum.mainnet
+      )
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
@@ -480,6 +590,76 @@ export function scriptPubkeyToAddress(
     throw new Error('failed converting scriptPubkey to address')
   }
   return address
+}
+
+function scriptHashToScriptPubkey(
+  scriptHashToScriptPubkeyArgs: ScriptHashToScriptPubkeyArgs
+): string {
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
+    scriptHashToScriptPubkeyArgs.network,
+    scriptHashToScriptPubkeyArgs.coin
+  )
+  let payment: bitcoin.payments.PaymentCreator
+  switch (scriptHashToScriptPubkeyArgs.addressType) {
+    case AddressTypeEnum.p2pkh:
+      payment = bitcoin.payments.p2pkh
+      break
+    case AddressTypeEnum.p2sh:
+    case AddressTypeEnum.p2wpkhp2sh:
+      payment = bitcoin.payments.p2sh
+      break
+    case AddressTypeEnum.p2wpkh:
+      payment = bitcoin.payments.p2wpkh
+      break
+    case AddressTypeEnum.p2wsh:
+      payment = bitcoin.payments.p2wsh
+      break
+    default:
+      throw new Error('invalid address type in address to script pubkey')
+  }
+  const scriptPubkey: Buffer | undefined = payment({
+    hash: Buffer.from(scriptHashToScriptPubkeyArgs.scriptHash, 'hex'),
+    network: network
+  }).output
+  if (typeof scriptPubkey === 'undefined') {
+    throw new Error('failed converting scriptPubkey to address')
+  }
+  return scriptPubkey.toString('hex')
+}
+
+function scriptPubkeyToScriptHash(
+  scriptPubkeytoScriptHashArgs: ScriptPubkeyToScriptHashArgs
+): string {
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
+    scriptPubkeytoScriptHashArgs.network,
+    scriptPubkeytoScriptHashArgs.coin
+  )
+  let payment: bitcoin.payments.PaymentCreator
+  switch (scriptPubkeytoScriptHashArgs.addressType) {
+    case AddressTypeEnum.p2pkh:
+      payment = bitcoin.payments.p2pkh
+      break
+    case AddressTypeEnum.p2sh:
+    case AddressTypeEnum.p2wpkhp2sh:
+      payment = bitcoin.payments.p2sh
+      break
+    case AddressTypeEnum.p2wpkh:
+      payment = bitcoin.payments.p2wpkh
+      break
+    case AddressTypeEnum.p2wsh:
+      payment = bitcoin.payments.p2wsh
+      break
+    default:
+      throw new Error('invalid address type in address to script pubkey')
+  }
+  const scriptHash: Buffer | undefined = payment({
+    output: Buffer.from(scriptPubkeytoScriptHashArgs.scriptPubkey, 'hex'),
+    network: network
+  }).hash
+  if (typeof scriptHash === 'undefined') {
+    throw new Error('failed converting scriptPubkey to address')
+  }
+  return scriptHash.toString('hex')
 }
 
 export function pubkeyToScriptPubkey(

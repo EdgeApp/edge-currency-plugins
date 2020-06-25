@@ -9,12 +9,13 @@ export interface CoinPrefixes {
   segwitXPub?: number
   pubkeyHash: number
   scriptHash: number
-  bech32: string
+  bech32?: string
   cashAddr?: string
 }
 
 export interface Coin {
   name: string
+  segwit: boolean
   mainnetConstants: CoinPrefixes
   testnetConstants: CoinPrefixes
 }
