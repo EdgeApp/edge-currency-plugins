@@ -348,6 +348,50 @@ describe('bitcoin get script pubkeys from address', () => {
   })
 })
 
+describe('bitcoin guess get script pubkeys from address', () => {
+  // these tests are cross verified with bitcoin core
+  it('p2pkh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
+      network: NetworkEnum.Mainnet,
+      coin: 'bitcoin'
+    })
+    expect(scriptPubkey).to.equal(
+      '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
+    )
+  })
+  it('p2wpkh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
+      network: NetworkEnum.Mainnet,
+      coin: 'bitcoin'
+    })
+    expect(scriptPubkey).to.equal(
+      '0014c0cebcd6c3d3ca8c75dc5ec62ebe55330ef910e2'
+    )
+  })
+  it('p2sh testnet address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: '2Mu9hifsg4foPLkyo9i1isPWTobnNmXL3Qk',
+      network: NetworkEnum.Testnet,
+      coin: 'bitcoin'
+    })
+    expect(scriptPubkey).to.equal(
+      'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
+    )
+  })
+  it('p2wsh mainnet address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7',
+      network: NetworkEnum.Testnet,
+      coin: 'bitcoin'
+    })
+    expect(scriptPubkey).to.equal(
+      '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
+    )
+  })
+})
+
 describe('bitcoin address to electrum script hash', () => {
   it('tests as documented in https://electrumx.readthedocs.io/en/latest/protocol-basics.html', () => {
     const scriptPubkey = addressToScriptPubkey({
@@ -378,12 +422,32 @@ describe('bitcoin transaction creation and signing test', () => {
     pubkey: privateKeyToPubkey(Buffer.from(privateKey, 'hex')),
     addressType: AddressTypeEnum.p2pkh
   })
+  const segwitScriptPubkey: string = pubkeyToScriptPubkey({
+    pubkey: privateKeyToPubkey(Buffer.from(privateKey, 'hex')),
+    addressType: AddressTypeEnum.p2wpkh
+  })
+  // const wrappedSegwitScriptPubkey: string = pubkeyToScriptPubkey({
+  //   pubkey: privateKeyToPubkey(Buffer.from(privateKey, 'hex')),
+  //   addressType: AddressTypeEnum.p2wpkhp2sh
+  // })
   const address: string = scriptPubkeyToAddress({
     scriptPubkey: scriptPubkey,
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2pkh
   })
+  const segwitAddress: string = scriptPubkeyToAddress({
+    scriptPubkey: segwitScriptPubkey,
+    network: NetworkEnum.Mainnet,
+    coin: 'bitcoin',
+    addressType: AddressTypeEnum.p2wpkh
+  })
+  // const wrappedSegwitAddress: string = scriptPubkeyToAddress({
+  //   scriptPubkey: wrappedSegwitScriptPubkey,
+  //   network: NetworkEnum.Mainnet,
+  //   coin: 'bitcoin',
+  //   addressType: AddressTypeEnum.p2wpkhp2sh
+  // })
 
   it('Create transaction with one legacy input and one output', () => {
     /*
@@ -445,6 +509,146 @@ describe('bitcoin transaction creation and signing test', () => {
     )
   })
 
+  it(' create a mixed input and mixed output transaction', () => {
+    const txInputLegacy: TxInput = {
+      type: TransactionInputTypeEnum.Legacy,
+      prevTxid:
+        '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
+      // prev_tx only for non segwit inputs
+      prevTx:
+        '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d94' +
+        '52e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca' +
+        '17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e7' +
+        '61da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e' +
+        '5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2' +
+        '709c71607c60ee3f097c1217482f518d88ac00000000',
+      index: 0
+    }
+
+    const txInputSegwit: TxInput = {
+      type: TransactionInputTypeEnum.Segwit,
+      prevTxid:
+        '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
+      prevScriptPubkey: segwitScriptPubkey,
+      index: 1,
+      value: 200
+    }
+
+    // const txInputWrappedSegwit: TxInput = {
+    //   type: TransactionInputTypeEnum.Segwit,
+    //   prevTxid:
+    //     'e9f28846381667b6beb57698ab824b597312428cd026d45e9e3a13c95e335d9e',
+    //   prevScriptPubkey: wrappedSegwitScriptPubkey,
+    //   index: 1,
+    //   value: 200
+    // }
+
+    const txOutputLegacy: TxOutput = {
+      scriptPubkey: addressToScriptPubkey({
+        address: address,
+        network: NetworkEnum.Mainnet,
+        addressType: AddressTypeEnum.p2pkh,
+        coin: 'bitcoin'
+      }),
+      amount: 200
+    }
+
+    const txOutputSegwit: TxOutput = {
+      scriptPubkey: addressToScriptPubkey({
+        address: segwitAddress,
+        network: NetworkEnum.Mainnet,
+        addressType: AddressTypeEnum.p2wpkh,
+        coin: 'bitcoin'
+      }),
+      amount: 200
+    }
+
+    const base64Tx: string = createTx({
+      inputs: [txInputLegacy, txInputSegwit],
+      outputs: [txOutputLegacy, txOutputSegwit],
+      network: NetworkEnum.Mainnet,
+      rbf: false
+    })
+
+    const rawtransaction: string = signTx({
+      tx: base64Tx,
+      privateKeys: [privateKey, privateKey]
+    })
+
+    console.log(rawtransaction)
+  })
+
+  it('create a legacy tx with segwit outputs, then create another tx consuming these outputs', () => {
+    const nOutputs: number = 3
+    const txInput: TxInput = {
+      type: TransactionInputTypeEnum.Legacy,
+      prevTxid:
+        '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
+      // prev_tx only for non segwit inputs
+      prevTx:
+        '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d94' +
+        '52e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca' +
+        '17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e7' +
+        '61da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e' +
+        '5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2' +
+        '709c71607c60ee3f097c1217482f518d88ac00000000',
+      index: 0
+    }
+
+    const txOutput: TxOutput = {
+      scriptPubkey: addressToScriptPubkey({
+        address: segwitAddress,
+        network: NetworkEnum.Mainnet,
+        addressType: AddressTypeEnum.p2wpkh,
+        coin: 'bitcoin'
+      }),
+      amount: 200
+    }
+
+    const base64Tx: string = createTx({
+      inputs: [txInput],
+      outputs: Array(nOutputs).fill(txOutput),
+      network: NetworkEnum.Mainnet,
+      rbf: false
+    })
+
+    const rawtransaction: string = signTx({
+      tx: base64Tx,
+      privateKeys: [privateKey]
+    })
+
+    expect(rawtransaction).to.equal(
+      '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006b483045022100f593910a9664342432e52c2d220d4439d44605cf160da35627b9b1ba7a3859680220165ab76bf9301b2bd5a847c6c2d6b27261404fa3f8437495a72f57cdb7fa75cc01210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffff03c8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d00000000'
+    )
+
+    const txInputs: TxInput[] = Array(nOutputs)
+    for (let i: number = 0; i < txInputs.length; i++) {
+      txInputs[i] = {
+        type: TransactionInputTypeEnum.Segwit,
+        prevTxid:
+          '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
+        prevScriptPubkey: segwitScriptPubkey,
+        index: i,
+        value: 200
+      }
+    }
+
+    const segwitTx: string = createTx({
+      inputs: txInputs,
+      outputs: [txOutput],
+      network: NetworkEnum.Mainnet,
+      rbf: false
+    })
+    const segwitRawTransaction: string = signTx({
+      tx: segwitTx,
+      privateKeys: Array(nOutputs).fill(privateKey)
+    })
+
+    expect(segwitRawTransaction).to.equal(
+      '02000000000103b385ee16c29a8148e7e99187a293e96fcf9a16e4967d3afc8f7838024dfa268b0000000000ffffffffb385ee16c29a8148e7e99187a293e96fcf9a16e4967d3afc8f7838024dfa268b0100000000ffffffffb385ee16c29a8148e7e99187a293e96fcf9a16e4967d3afc8f7838024dfa268b0200000000ffffffff01c8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d0247304402202077dbfcf794ffcceb7351d1bfa51130baf25b3f1fd604a43e88069296464b05022060d1095b36ed20f041443122c694bcbc2209de6e87e69e17c8defb4ba132741e01210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f45502483045022100f2768b344facf8d0f9fc0d2617bd36f41faef43fd827969546cfea1ce4e2ee7402201a036100cfcded174fe205fd275bd4299774ce1a9650c4444d610199bfe6849c01210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f45502473044022061aba6e1c818367c668ffd120f83692909e7482a8b815e4764eade98ef41319702207e104d38d5ab1718b837acac16c2166ccd29f194e94c11814b4c796bd76186dc01210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f45500000000'
+    )
+  })
+
   it('create a legacy tx with one input and 100 outputs, then create another legacy tx with 100 inputs and two outputs', () => {
     const nOutputs: number = 100
     const txInput: TxInput = {
@@ -493,8 +697,7 @@ describe('bitcoin transaction creation and signing test', () => {
         prevTxid:
           '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
         prevTx: hexTxSigned,
-        index: i,
-        prevScriptPubkey: scriptPubkey
+        index: i
       }
     }
     const base64TxMulti: string = createTx({
