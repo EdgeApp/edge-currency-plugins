@@ -8,9 +8,9 @@ import {
   BIP43PurposeTypeEnum,
   mnemonicToXPriv,
   NetworkEnum,
-  privateKeyHexStrToWIF,
+  PrivateKeyToWIF,
   scriptHashToAddress,
-  wifToPrivateKeyHexStr,
+  wifToPrivateKey,
   xprivToXPub,
   xpubToScriptHash
 } from '../src/utxobased/keymanager/keymanager'
@@ -89,7 +89,7 @@ describe('bitcoin cash xpub to address tests; generate valid addresses by callin
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
       coin: 'bitcoincash'
-    })
+    }).scriptHash
     const p2pkhAddress = scriptHashToAddress({
       scriptHash: scriptHashP2PKH,
       network: NetworkEnum.Mainnet,
@@ -121,7 +121,7 @@ describe('bitcoin cash xpub to address tests; generate valid addresses by callin
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
       coin: 'bitcoincash'
-    })
+    }).scriptHash
     const p2pkhAddress = scriptHashToAddress({
       scriptHash: scriptHashP2PKH,
       network: NetworkEnum.Testnet,
@@ -147,12 +147,12 @@ describe('bitcoin cash xpub to address tests; generate valid addresses by callin
 describe('bitcoin cash from WIF to private key buffer to WIF', () => {
   it('take a wif private key', () => {
     const wifKey = 'KxbEv3FeYig2afQp7QEA9R3gwqdTBFwAJJ6Ma7j1SkmZoxC9bAXZ'
-    const privateKey = wifToPrivateKeyHexStr({
+    const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
       coin: 'bitcoincash'
     })
-    const wifKeyRoundTrip = privateKeyHexStrToWIF({
+    const wifKeyRoundTrip = PrivateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
       coin: 'bitcoincash'
