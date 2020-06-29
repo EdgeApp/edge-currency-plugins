@@ -6,16 +6,22 @@ import {
   cashaddrPrefixEnum,
   cashaddrTypeEnum,
   hashToCashAddress
-} from '../src/utxobased/keymanager/bitcoincashUtils/cashAddress'
+} from '../src/common/utxobased/keymanager/bitcoincashUtils/cashAddress'
 import {
-  addressToScriptHash,
+  addressToScriptPubkey,
   AddressTypeEnum,
-  NetworkEnum
-} from '../src/utxobased/keymanager/keymanager'
+  NetworkEnum,
+  scriptPubkeyToScriptHash
+} from '../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoin cash address tests', () => {
-  const pubkeyHash = addressToScriptHash({
-    address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
+  const pubkeyHash = scriptPubkeyToScriptHash({
+    scriptPubkey: addressToScriptPubkey({
+      address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
+      network: NetworkEnum.Mainnet,
+      addressType: AddressTypeEnum.p2pkh,
+      coin: 'bitcoin'
+    }),
     network: NetworkEnum.Mainnet,
     addressType: AddressTypeEnum.p2pkh,
     coin: 'bitcoin'
@@ -40,12 +46,18 @@ describe('bitcoin cash address tests', () => {
     )
   })
 
-  const scriptHash = addressToScriptHash({
-    address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
+  const scriptHash = scriptPubkeyToScriptHash({
+    scriptPubkey: addressToScriptPubkey({
+      address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
+      network: NetworkEnum.Mainnet,
+      addressType: AddressTypeEnum.p2sh,
+      coin: 'bitcoin'
+    }),
     network: NetworkEnum.Mainnet,
     addressType: AddressTypeEnum.p2sh,
     coin: 'bitcoin'
   })
+
   it('script hash to cashaddr', () => {
     const address = hashToCashAddress(
       scriptHash,

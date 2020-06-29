@@ -2,7 +2,6 @@ import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
 import {
-  addressToScriptHash,
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
@@ -12,7 +11,6 @@ import {
   privateKeyToPubkey,
   PrivateKeyToWIF,
   pubkeyToScriptPubkey,
-  scriptHashToAddress,
   scriptPubkeyToAddress,
   scriptPubkeyToElectrumScriptHash,
   signTx,
@@ -21,8 +19,8 @@ import {
   TxOutput,
   wifToPrivateKey,
   xprivToXPub,
-  xpubToScriptHash
-} from '../src/utxobased/keymanager/keymanager'
+  xpubToPubkey
+} from '../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 and some generated cases to test xpub prefix bytes', () => {
   const mnemonic =
@@ -186,84 +184,89 @@ describe('bitcoin bip32 prefix tests for the conversion from xpriv to xpub', () 
   })
 })
 
-describe('bitcoin xpub to address tests;  generate valid addresses by calling xpubToScriptHash and scriptHashToAddress', () => {
+describe('bitcoin xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
   /*
   These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
   using the same seed as in other tests (abandon, ...)
   */
 
-  it('given an xpub, generate p2pkh address and cross verify scriptHash (pubkey hash) result', () => {
-    const scriptHashP2PKH = xpubToScriptHash({
+  it('given an xpub, generate p2pkh address and cross verify script pubkey result', () => {
+    const pubkeyP2PKH = xpubToPubkey({
       xpub:
         'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      addressType: AddressTypeEnum.p2pkh,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
       coin: 'bitcoin'
-    }).scriptHash
-    const p2pkhAddress = scriptHashToAddress({
-      scriptHash: scriptHashP2PKH,
+    })
+    const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
+      pubkey: pubkeyP2PKH,
+      addressType: AddressTypeEnum.p2pkh
+    }).scriptPubkey
+
+    const p2pkhAddress = scriptPubkeyToAddress({
+      scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoin'
     })
     expect(p2pkhAddress).to.equals('1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA')
-    const scriptHashP2PKHRoundTrip = addressToScriptHash({
+    const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoin'
     })
-    // TODO: Drop this string comparison and use equals bytes instead
-    expect(scriptHashP2PKHRoundTrip?.toString()).to.equals(
-      scriptHashP2PKH?.toString()
-    )
+    expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
 
-  it('given an ypub, generate p2wpkh-p2sh address and cross-verify scriptHash result', () => {
-    const scriptHashP2WPKHP2SH = xpubToScriptHash({
+  it('given an ypub, generate p2wpkh-p2sh address and cross verify script pubkey result', () => {
+    const pubkeyP2WPKHP2SH = xpubToPubkey({
       xpub:
         'ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      addressType: AddressTypeEnum.p2wpkhp2sh,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
       coin: 'bitcoin'
-    }).scriptHash
-    const p2wpkhp2shAddress = scriptHashToAddress({
-      scriptHash: scriptHashP2WPKHP2SH,
+    })
+    const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
+      pubkey: pubkeyP2WPKHP2SH,
+      addressType: AddressTypeEnum.p2wpkhp2sh
+    }).scriptPubkey
+    const p2wpkhp2shAddress = scriptPubkeyToAddress({
+      scriptPubkey: scriptPubkeyP2WPKHP2SH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkhp2sh,
       coin: 'bitcoin'
     })
     expect(p2wpkhp2shAddress).to.equals('37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf')
-    const scriptHashP2WPKHP2SHRoundTrip = addressToScriptHash({
+    const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkhp2sh,
       coin: 'bitcoin'
     })
-    expect(scriptHashP2WPKHP2SHRoundTrip?.toString()).to.equals(
-      scriptHashP2WPKHP2SH?.toString()
-    )
+    expect(scriptPubkeyP2WPKHP2SHRoundTrip).to.equals(scriptPubkeyP2WPKHP2SH)
   })
 
-  it('bitcoin given a zpub, generate p2wpkh address and cross verify scriptHash (pubkey hash) result', () => {
-    const scriptHashP2WPKH = xpubToScriptHash({
+  it('given a zpub, generate p2wpkh address and cross verify script pubkey result', () => {
+    const pubkeyP2WPKH = xpubToPubkey({
       xpub:
         'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      addressType: AddressTypeEnum.p2wpkh,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
       coin: 'bitcoin'
-    }).scriptHash
-    const p2wpkhAddress = scriptHashToAddress({
-      scriptHash: scriptHashP2WPKH,
+    })
+    const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({
+      pubkey: pubkeyP2WPKH,
+      addressType: AddressTypeEnum.p2wpkh
+    }).scriptPubkey
+    const p2wpkhAddress = scriptPubkeyToAddress({
+      scriptPubkey: scriptPubkeyP2WPKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'bitcoin'
@@ -271,15 +274,13 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
     expect(p2wpkhAddress).to.equals(
       'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
     )
-    const scriptHashP2WPKHRoundTrip = addressToScriptHash({
+    const scriptPubkeyP2WPKHRoundTrip = addressToScriptPubkey({
       address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'bitcoin'
     })
-    expect(scriptHashP2WPKHRoundTrip?.toString()).to.be.equal(
-      scriptHashP2WPKH?.toString()
-    )
+    expect(scriptPubkeyP2WPKHRoundTrip).to.be.equal(scriptPubkeyP2WPKH)
   })
 })
 

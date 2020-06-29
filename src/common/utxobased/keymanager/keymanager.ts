@@ -68,44 +68,12 @@ export interface XPrivToPrivateKeyArgs {
   coin: string
 }
 
-// Careful! Calling this the ScriptHash is only correct for p2sh addresses.
-// For p2pkh and p2wpkh this is just the pubkey hash.
-// To get the script hash as used by electrum servers, follow their docs here:
-// https://electrumx.readthedocs.io/en/latest/protocol-basics.html#script-hashes
-export interface XPubToScriptHashArgs {
+export interface XPubToPubkeyArgs {
   xpub: string
   network: NetworkEnum
   type: BIP43PurposeTypeEnum
-  addressType: AddressTypeEnum
   bip44ChangeIndex: 0 | 1
   bip44AddressIndex: number
-  coin: string
-}
-
-export interface XPubToScriptHashReturn {
-  scriptHash: string
-  redeemScript?: string
-}
-
-// Careful! Calling this the ScriptHash is only correct for p2sh addresses.
-// For p2pkh and p2wpkh this is just the pubkey hash.
-// To get the script hash as used by electrum servers, follow their docs here:
-// https://electrumx.readthedocs.io/en/latest/protocol-basics.html#script-hashes
-export interface ScriptHashToAddressArgs {
-  scriptHash: string
-  network: NetworkEnum
-  addressType: AddressTypeEnum
-  coin: string
-}
-
-// Careful! Calling this the ScriptHash is only correct for p2sh addresses.
-// For p2pkh and p2wpkh this is just the pubkey hash.
-// To get the script hash as used by electrum servers, follow their docs here:
-// https://electrumx.readthedocs.io/en/latest/protocol-basics.html#script-hashes
-export interface AddressToScriptHashArgs {
-  address: string
-  network: NetworkEnum
-  addressType?: AddressTypeEnum
   coin: string
 }
 
@@ -133,7 +101,12 @@ export interface ScriptPubkeyToAddressArgs {
   coin: string
 }
 
-interface ScriptPubkeyToScriptHashArgs {
+// Careful! Calling this the ScriptHash is only correct for p2sh addresses.
+// For p2pkh and p2wpkh this is just the pubkey hash.
+// To get the script hash as used by electrum servers, follow their docs here:
+// https://electrumx.readthedocs.io/en/latest/protocol-basics.html#script-hashes
+// and use to scriptPubkeyToElectrumScriptHash function
+export interface ScriptPubkeyToScriptHashArgs {
   scriptPubkey: string
   addressType: AddressTypeEnum
   network: NetworkEnum
@@ -333,168 +306,18 @@ export function xprivToXPub(xprivToXPubArgs: XPrivToXPubArgs): string {
 
 // return pubkey hash / script hash based on chosen type and network
 // this supports building
-export function xpubToScriptHash(
-  xpubToScriptHashArgs: XPubToScriptHashArgs
-): XPubToScriptHashReturn {
+export function xpubToPubkey(xpubToPubkeyArgs: XPubToPubkeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    xpubToScriptHashArgs.network,
-    xpubToScriptHashArgs.coin,
-    xpubToScriptHashArgs.type
+    xpubToPubkeyArgs.network,
+    xpubToPubkeyArgs.coin,
+    xpubToPubkeyArgs.type
   )
-  const node: BIP32Interface = bip32.fromBase58(
-    xpubToScriptHashArgs.xpub,
-    network
-  )
+  const node: BIP32Interface = bip32.fromBase58(xpubToPubkeyArgs.xpub, network)
   const pubkey: Buffer = node
-    .derive(xpubToScriptHashArgs.bip44ChangeIndex)
-    .derive(xpubToScriptHashArgs.bip44AddressIndex).publicKey
+    .derive(xpubToPubkeyArgs.bip44ChangeIndex)
+    .derive(xpubToPubkeyArgs.bip44AddressIndex).publicKey
 
-  let payment: bitcoin.payments.Payment
-  switch (xpubToScriptHashArgs.addressType) {
-    case AddressTypeEnum.p2pkh:
-      payment = bitcoin.payments.p2pkh({ pubkey, network })
-      if (typeof payment.hash === 'undefined') {
-        throw new Error('failed to derive script hash from provided xpub')
-      }
-      return { scriptHash: payment.hash.toString('hex') }
-    case AddressTypeEnum.p2wpkhp2sh:
-      payment = bitcoin.payments.p2sh({
-        redeem: bitcoin.payments.p2wpkh({
-          pubkey: pubkey
-        })
-      })
-      if (
-        typeof payment.hash === 'undefined' ||
-        typeof payment.redeem === 'undefined' ||
-        typeof payment.redeem.output === 'undefined'
-      ) {
-        throw new Error('failed to derive script hash from provided xpub')
-      }
-      return {
-        scriptHash: payment.hash.toString('hex'),
-        redeemScript: payment.redeem.output.toString('hex')
-      }
-    case AddressTypeEnum.p2wpkh:
-      payment = bitcoin.payments.p2wpkh({ pubkey, network })
-      if (typeof payment.hash === 'undefined') {
-        throw new Error('failed to derive script hash from provided xpub')
-      }
-      return { scriptHash: payment.hash.toString('hex') }
-    default:
-      throw new Error('invalid address type in xpub to script hash conversion')
-  }
-}
-
-// take passed in script hash (for p2sh)/ pubkey hash (for p2pkh and p2wpkh) and encode as address of choice
-export function scriptHashToAddress(
-  scriptHashToAddressArgs: ScriptHashToAddressArgs
-): string {
-  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    scriptHashToAddressArgs.network,
-    scriptHashToAddressArgs.coin
-  )
-  let payment: bitcoin.payments.PaymentCreator
-  switch (scriptHashToAddressArgs.addressType) {
-    case AddressTypeEnum.p2pkh:
-      payment = bitcoin.payments.p2pkh
-      break
-    case AddressTypeEnum.p2sh:
-    case AddressTypeEnum.p2wpkhp2sh:
-      payment = bitcoin.payments.p2sh
-      break
-    case AddressTypeEnum.p2wpkh:
-      payment = bitcoin.payments.p2wpkh
-      break
-    case AddressTypeEnum.p2wsh:
-      payment = bitcoin.payments.p2wsh
-      break
-    case AddressTypeEnum.cashaddrP2PKH:
-      if (scriptHashToAddressArgs.network === NetworkEnum.Testnet) {
-        return hashToCashAddress(
-          scriptHashToAddressArgs.scriptHash,
-          cashaddrTypeEnum.pubkeyhash,
-          cashaddrPrefixEnum.testnet
-        )
-      }
-      return hashToCashAddress(
-        scriptHashToAddressArgs.scriptHash,
-        cashaddrTypeEnum.pubkeyhash,
-        cashaddrPrefixEnum.mainnet
-      )
-    case AddressTypeEnum.cashaddrP2SH:
-      if (scriptHashToAddressArgs.network === NetworkEnum.Testnet) {
-        return hashToCashAddress(
-          scriptHashToAddressArgs.scriptHash,
-          cashaddrTypeEnum.scripthash,
-          cashaddrPrefixEnum.testnet
-        )
-      }
-      return hashToCashAddress(
-        scriptHashToAddressArgs.scriptHash,
-        cashaddrTypeEnum.scripthash,
-        cashaddrPrefixEnum.mainnet
-      )
-    default:
-      throw new Error('invalid address type in script hash to address')
-  }
-  const address = payment({
-    hash: Buffer.from(scriptHashToAddressArgs.scriptHash, 'hex'),
-    network: network
-  }).address
-  if (typeof address === 'undefined') {
-    throw new Error('failed converting script hash to address')
-  }
-  return address
-}
-
-// take an address and return either a script hash (for a p2sh address) or a pubkey hash (for p2pkh and p2wpkh)
-export function addressToScriptHash(
-  addressToScriptHashArgs: AddressToScriptHashArgs
-): string {
-  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    addressToScriptHashArgs.network,
-    addressToScriptHashArgs.coin
-  )
-  const addressType: AddressTypeEnum = guessAddressTypeFromAddress(
-    addressToScriptHashArgs.address,
-    network,
-    addressToScriptHashArgs.addressType
-  )
-
-  let payment: bitcoin.payments.PaymentCreator
-  switch (addressType) {
-    case AddressTypeEnum.p2pkh:
-      payment = bitcoin.payments.p2pkh
-      break
-    case AddressTypeEnum.p2sh:
-    case AddressTypeEnum.p2wpkhp2sh:
-      payment = bitcoin.payments.p2sh
-      break
-    case AddressTypeEnum.p2wpkh:
-      payment = bitcoin.payments.p2wpkh
-      break
-    case AddressTypeEnum.p2wsh:
-      payment = bitcoin.payments.p2wsh
-      break
-    case AddressTypeEnum.cashaddrP2PKH:
-      return cashAddressToHash(
-        addressToScriptHashArgs.address
-      ).scriptHash.toString('hex')
-    case AddressTypeEnum.cashaddrP2SH:
-      return cashAddressToHash(
-        addressToScriptHashArgs.address
-      ).scriptHash.toString('hex')
-    default:
-      throw new Error('invalid address type in address to script hash')
-  }
-  const scriptHash = payment({
-    address: addressToScriptHashArgs.address,
-    network: network
-  }).hash
-  if (typeof scriptHash === 'undefined') {
-    throw new Error('failed converting address to script hash')
-  }
-  return scriptHash.toString('hex')
+  return pubkey.toString('hex')
 }
 
 export function addressToScriptPubkey(
@@ -578,6 +401,18 @@ export function scriptPubkeyToAddress(
       payment = bitcoin.payments.p2wsh
       break
     case AddressTypeEnum.cashaddrP2PKH:
+      if (scriptPubkeyToAddressArgs.network === NetworkEnum.Testnet) {
+        return hashToCashAddress(
+          scriptPubkeyToScriptHash({
+            scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
+            network: scriptPubkeyToAddressArgs.network,
+            addressType: AddressTypeEnum.p2pkh,
+            coin: scriptPubkeyToAddressArgs.coin
+          }),
+          cashaddrTypeEnum.pubkeyhash,
+          cashaddrPrefixEnum.testnet
+        )
+      }
       return hashToCashAddress(
         scriptPubkeyToScriptHash({
           scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
@@ -589,6 +424,18 @@ export function scriptPubkeyToAddress(
         cashaddrPrefixEnum.mainnet
       )
     case AddressTypeEnum.cashaddrP2SH:
+      if (scriptPubkeyToAddressArgs.network === NetworkEnum.Testnet) {
+        return hashToCashAddress(
+          scriptPubkeyToScriptHash({
+            scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
+            network: scriptPubkeyToAddressArgs.network,
+            addressType: AddressTypeEnum.p2sh,
+            coin: scriptPubkeyToAddressArgs.coin
+          }),
+          cashaddrTypeEnum.scripthash,
+          cashaddrPrefixEnum.testnet
+        )
+      }
       return hashToCashAddress(
         scriptPubkeyToScriptHash({
           scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
@@ -647,7 +494,7 @@ function scriptHashToScriptPubkey(
   return scriptPubkey.toString('hex')
 }
 
-function scriptPubkeyToScriptHash(
+export function scriptPubkeyToScriptHash(
   scriptPubkeytoScriptHashArgs: ScriptPubkeyToScriptHashArgs
 ): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
@@ -657,9 +504,11 @@ function scriptPubkeyToScriptHash(
   let payment: bitcoin.payments.PaymentCreator
   switch (scriptPubkeytoScriptHashArgs.addressType) {
     case AddressTypeEnum.p2pkh:
+    case AddressTypeEnum.cashaddrP2PKH:
       payment = bitcoin.payments.p2pkh
       break
     case AddressTypeEnum.p2sh:
+    case AddressTypeEnum.cashaddrP2SH:
     case AddressTypeEnum.p2wpkhp2sh:
       payment = bitcoin.payments.p2sh
       break
@@ -688,6 +537,7 @@ export function pubkeyToScriptPubkey(
   let payment: bitcoin.payments.Payment
   switch (pubkeyToScriptPubkeyArgs.addressType) {
     case AddressTypeEnum.p2pkh:
+    case AddressTypeEnum.cashaddrP2PKH:
       payment = bitcoin.payments.p2pkh({
         pubkey: Buffer.from(pubkeyToScriptPubkeyArgs.pubkey, 'hex')
       })
