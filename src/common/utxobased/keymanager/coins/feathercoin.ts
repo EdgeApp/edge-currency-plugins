@@ -4,8 +4,8 @@ export class Feathercoin implements Coin {
   name = 'feathercoin'
   segwit = true
   mainnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0x80,
+    messagePrefix: '\x18Feathercoin Signed Message:\n',
+    wif: 0x8e,
     legacyXPriv: 0x0488daee,
     legacyXPub: 0x0488bc26,
     wrappedSegwitXPriv: 0x049d7878,
@@ -18,7 +18,7 @@ export class Feathercoin implements Coin {
   }
 
   testnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
+    messagePrefix: '\x18Feathercoin Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,

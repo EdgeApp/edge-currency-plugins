@@ -4,8 +4,8 @@ export class Zcoin implements Coin {
   name = 'zcoin'
   segwit = false
   mainnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0x80,
+    messagePrefix: '\x18Zcoin Signed Message:\n',
+    wif: 0xd2,
     legacyXPriv: 0x0488ade4,
     legacyXPub: 0x0488b21e,
     pubkeyHash: 0x52,
@@ -13,7 +13,7 @@ export class Zcoin implements Coin {
   }
 
   testnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
+    messagePrefix: '\x18Zcoin Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,

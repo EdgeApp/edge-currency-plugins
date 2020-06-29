@@ -4,7 +4,7 @@ export class Digibyte implements Coin {
   name = 'digibyte'
   segwit = true
   mainnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
+    messagePrefix: '\x18Digibyte Signed Message:\n',
     wif: 0x80,
     legacyXPriv: 0x0488ade4,
     legacyXPub: 0x0488b21e,
@@ -18,7 +18,7 @@ export class Digibyte implements Coin {
   }
 
   testnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
+    messagePrefix: '\x18Digibyte Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,

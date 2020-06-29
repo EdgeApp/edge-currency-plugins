@@ -7,8 +7,10 @@ import {
   BIP43PurposeTypeEnum,
   mnemonicToXPriv,
   NetworkEnum,
+  privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey
 } from '../src/common/utxobased/keymanager/keymanager'
@@ -271,5 +273,57 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       coin: 'litecoin'
     })
     expect(scriptPubkeyP2WPKHRoundTrip).to.be.equal(scriptPubkeyP2WPKH)
+  })
+})
+
+describe('litecoin from WIF to private key to WIF', () => {
+  it('take a wif private key', () => {
+    const wifKey = 'T5b4RiWRs7XG8xZ2bCHBoJcn4JrpMTbGRFYXgoZHd7nD8izwqhMK'
+    const privateKey = wifToPrivateKey({
+      wifKey,
+      network: NetworkEnum.Mainnet,
+      coin: 'litecoin'
+    })
+    const wifKeyRoundTrip = privateKeyToWIF({
+      privateKey: privateKey,
+      network: NetworkEnum.Mainnet,
+      coin: 'litecoin'
+    })
+    expect(wifKey).to.be.equal(wifKeyRoundTrip)
+  })
+})
+
+describe('litecoin guess script pubkeys from address', () => {
+  // these tests are cross verified with bitcoin core
+  it('p2pkh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez',
+      network: NetworkEnum.Mainnet,
+      coin: 'litecoin'
+    })
+    expect(scriptPubkey).to.equal(
+      '76a91465d4f0444069f3881221e24bb6a99b1d53e008cf88ac'
+    )
+  })
+  it('p2sh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'M7wtsL7wSHDBJVMWWhtQfTMSYYkyooAAXM',
+      network: NetworkEnum.Mainnet,
+      coin: 'litecoin'
+    })
+    expect(scriptPubkey).to.equal(
+      'a91400846c3f4a7bb38e9b422b4129bf8b191287289e87'
+    )
+  })
+
+  it('p2wpkh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh',
+      network: NetworkEnum.Mainnet,
+      coin: 'litecoin'
+    })
+    expect(scriptPubkey).to.equal(
+      '001496cd3178f3de0f307bcee1aeaa4d5987862dd30a'
+    )
   })
 })

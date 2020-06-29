@@ -5,6 +5,7 @@ import { BitcoinCash } from './coins/bitcoincash'
 import { Bitcoingold } from './coins/bitcoingold'
 import { BitcoinSV } from './coins/bitcoinsv'
 import { Dash } from './coins/dash'
+import { Decred } from './coins/decred'
 import { Digibyte } from './coins/digibyte'
 import { Dogecoin } from './coins/dogecoin'
 import { EBoost } from './coins/eboost'
@@ -16,6 +17,7 @@ import { Ravencoin } from './coins/ravencoin'
 import { Smartcash } from './coins/smartcash'
 import { Uniformfiscalobject } from './coins/ufo'
 import { Vertcoin } from './coins/vertcoin'
+import { ZCash } from './coins/zcash'
 import { Zcoin } from './coins/zcoin'
 
 const coinClasses: Coin[] = [
@@ -26,6 +28,7 @@ const coinClasses: Coin[] = [
   new Badcoin(),
   new Bitcoingold(),
   new Dash(),
+  new Decred(),
   new Digibyte(),
   new Dogecoin(),
   new EBoost(),
@@ -37,7 +40,8 @@ const coinClasses: Coin[] = [
   new Smartcash(),
   new Uniformfiscalobject(),
   new Vertcoin(),
-  new Zcoin()
+  new Zcoin(),
+  new ZCash()
 ]
 
 export function getCoinFromString(coinName: string): Coin {

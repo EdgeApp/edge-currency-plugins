@@ -4,7 +4,7 @@ export class Badcoin implements Coin {
   name = 'badcoin'
   segwit = false
   mainnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
+    messagePrefix: '\x18Badcoin Signed Message:\n',
     wif: 0xb0,
     legacyXPriv: 0x06c4abc9,
     legacyXPub: 0x06c4abc8,
@@ -13,7 +13,7 @@ export class Badcoin implements Coin {
   }
 
   testnetConstants = {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
+    messagePrefix: '\x18Badcoin Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,

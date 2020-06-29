@@ -9,7 +9,7 @@ import {
   mnemonicToXPriv,
   NetworkEnum,
   privateKeyToPubkey,
-  PrivateKeyToWIF,
+  privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   scriptPubkeyToElectrumScriptHash,
@@ -200,6 +200,8 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       bip44AddressIndex: 0,
       coin: 'bitcoin'
     })
+    console.log(pubkeyP2PKH)
+
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
       addressType: AddressTypeEnum.p2pkh
@@ -292,7 +294,7 @@ describe('bitcoin from WIF to private key buffer to WIF', () => {
       network: NetworkEnum.Mainnet,
       coin: 'bitcoin'
     })
-    const wifKeyRoundTrip = PrivateKeyToWIF({
+    const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
       coin: 'bitcoin'

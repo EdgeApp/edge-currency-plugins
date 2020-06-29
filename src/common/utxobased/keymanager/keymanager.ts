@@ -276,7 +276,7 @@ function guessAddressTypeFromAddress(
     return AddressTypeEnum.cashaddrP2SH
   } catch (e) {}
 
-  throw new Error('Could not determine address type of' + address)
+  throw new Error('Could not determine address type of ' + address)
 }
 
 export function mnemonicToXPriv(
@@ -594,7 +594,7 @@ export function xprivToPrivateKey(
   return privateKey.toString('hex')
 }
 
-export function PrivateKeyToWIF(
+export function privateKeyToWIF(
   PrivateKeyToWIFArgs: PrivateKeyToWIFArgs
 ): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(

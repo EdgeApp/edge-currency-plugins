@@ -7,7 +7,7 @@ import {
   BIP43PurposeTypeEnum,
   mnemonicToXPriv,
   NetworkEnum,
-  PrivateKeyToWIF,
+  privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   wifToPrivateKey,
@@ -152,7 +152,7 @@ describe('bitcoin cash from WIF to private key buffer to WIF', () => {
       network: NetworkEnum.Mainnet,
       coin: 'bitcoincash'
     })
-    const wifKeyRoundTrip = PrivateKeyToWIF({
+    const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
       coin: 'bitcoincash'

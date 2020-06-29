@@ -1,15 +1,15 @@
 import { Coin } from '../coin'
 
-export class EBoost implements Coin {
-  name = 'eboost'
+export class ZCash implements Coin {
+  name = 'zcash'
   segwit = false
   mainnetConstants = {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0xb0,
+    wif: 0x80,
     legacyXPriv: 0x0488ade4,
     legacyXPub: 0x0488b21e,
-    pubkeyHash: 0x5c,
-    scriptHash: 0x05
+    pubkeyHash: 0x1cb8,
+    scriptHash: 0x1cbd
   }
 
   testnetConstants = {
@@ -17,8 +17,7 @@ export class EBoost implements Coin {
     wif: 0xef,
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,
-
-    pubkeyHash: 0x6f,
-    scriptHash: 0xc4
+    pubkeyHash: 0xef,
+    scriptHash: 0x1d25
   }
 }
