@@ -14,7 +14,7 @@
     "fix": "npm run lint -- --fix",
     "prepare": "npm-run-all clean -p build.*",
     "start": "node -r sucrase/register src/index.ts",
-    "test": "mocha -r sucrase/register 'test/**/*.test.ts'",
+    "test": "mocha -r sucrase/register 'test/**/*-test.ts'",
     "demo": "parcel serve src/demo/index.html --open",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx ."
   },
@@ -55,5 +55,9 @@
     "react-dom": "^16.12.0",
     "sucrase": "^3.12.1",
     "typescript": "^3.8.2"
+  },
+  "dependencies": {
+    "bip39": "^3.0.2",
+    "bitcoinjs-lib": "^5.1.10"
   }
 }
