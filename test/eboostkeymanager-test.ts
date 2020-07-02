@@ -7,10 +7,12 @@ import {
   BIP43PurposeTypeEnum,
   mnemonicToXPriv,
   NetworkEnum,
+  privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  wifToPrivateKey,
   xprivToXPub,
-  xpubToPubkey
+  xpubToPubkey,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('eboost mnemonic to xprv test vectors as compared with iancoleman', () => {
@@ -22,7 +24,7 @@ describe('eboost mnemonic to xprv test vectors as compared with iancoleman', () 
       path: "m/44'/0'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'eboost'
+      coin: 'eboost',
     })
     expect(resultLegacy).to.equal(
       'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb'
@@ -35,7 +37,7 @@ describe('eboost mnemonic to xprv test vectors as compared with iancoleman', () 
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'eboost'
+      coin: 'eboost',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -50,7 +52,7 @@ describe('eboost bip32 prefix tests for the conversion from xpriv to xpub', () =
         'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'eboost'
+      coin: 'eboost',
     })
     expect(resultLegacy).to.equals(
       'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj'
@@ -63,7 +65,7 @@ describe('eboost bip32 prefix tests for the conversion from xpriv to xpub', () =
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'eboost'
+      coin: 'eboost',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -85,25 +87,25 @@ describe('eboost xpub to address tests;  generate valid addresses by calling xpu
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'eboost'
+      coin: 'eboost',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.p2pkh
+      addressType: AddressTypeEnum.p2pkh,
     }).scriptPubkey
 
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'eboost'
+      coin: 'eboost',
     })
     expect(p2pkhAddress).to.equals('eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'eboost'
+      coin: 'eboost',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -115,10 +117,27 @@ describe('eboost guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4',
       network: NetworkEnum.Mainnet,
-      coin: 'eboost'
+      coin: 'eboost',
     })
     expect(scriptPubkey).to.equal(
       '76a914d986ed01b7a22225a70edbf2ba7cfb63a15cb3aa88ac'
     )
+  })
+})
+
+describe('eboost from WIF to private key to WIF', () => {
+  it('take a wif private key', () => {
+    const wifKey = 'ZcSgeybBZAQ7y7eFUEfPk6ZDA2843QMAJBvEfFMvyQfi8HsHfgEq'
+    const privateKey = wifToPrivateKey({
+      wifKey,
+      network: NetworkEnum.Mainnet,
+      coin: 'eboost',
+    })
+    const wifKeyRoundTrip = privateKeyToWIF({
+      privateKey: privateKey,
+      network: NetworkEnum.Mainnet,
+      coin: 'eboost',
+    })
+    expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
 })

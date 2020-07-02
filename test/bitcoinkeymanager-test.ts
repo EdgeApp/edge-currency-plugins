@@ -19,7 +19,7 @@ import {
   TxOutput,
   wifToPrivateKey,
   xprivToXPub,
-  xpubToPubkey
+  xpubToPubkey,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 and some generated cases to test xpub prefix bytes', () => {
@@ -31,7 +31,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
       path: "m/84'/0'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultSegwit).to.equal(
       'zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE'
@@ -44,7 +44,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
       path: "m/84'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultSegwitTestnet).to.equal(
       'vprv9K7GLAaERuM58PVvbk1sMo7wzVCoPwzZpVXLRBmum93gL5pSqQCAAvZjtmz93nnnYMr9i2FwG2fqrwYLRgJmDDwFjGiamGsbRMJ5Y6siJ8H'
@@ -57,7 +57,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
       path: "m/49'/0'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultWrappedSegwit).to.equal(
       'yprvAHwhK6RbpuS3dgCYHM5jc2ZvEKd7Bi61u9FVhYMpgMSuZS613T1xxQeKTffhrHY79hZ5PsskBjcc6C2V7DrnsMsNaGDaWev3GLRQRgV7hxF'
@@ -70,7 +70,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
       path: "m/49'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultWrappedSegwitTestnet).to.equal(
       'uprv91G7gZkzehuMVxDJTYE6tLivdF8e4rvzSu1LFfKw3b2Qx1Aj8vpoFnHdfUZ3hmi9jsvPifmZ24RTN2KhwB8BfMLTVqaBReibyaFFcTP1s9n'
@@ -83,7 +83,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
       path: "m/44'/0'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultLegacy).to.equal(
       'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb'
@@ -96,7 +96,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -111,7 +111,7 @@ describe('bitcoin bip32 prefix tests for the conversion from xpriv to xpub', () 
         'zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultSegwit).to.equals(
       'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs'
@@ -124,7 +124,7 @@ describe('bitcoin bip32 prefix tests for the conversion from xpriv to xpub', () 
         'vprv9K7GLAaERuM58PVvbk1sMo7wzVCoPwzZpVXLRBmum93gL5pSqQCAAvZjtmz93nnnYMr9i2FwG2fqrwYLRgJmDDwFjGiamGsbRMJ5Y6siJ8H',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultSegwitTestnet).to.equals(
       'vpub5Y6cjg78GGuNLsaPhmYsiw4gYX3HoQiRBiSwDaBXKUafCt9bNwWQiitDk5VZ5BVxYnQdwoTyXSs2JHRPAgjAvtbBrf8ZhDYe2jWAqvZVnsc'
@@ -137,7 +137,7 @@ describe('bitcoin bip32 prefix tests for the conversion from xpriv to xpub', () 
         'yprvAHwhK6RbpuS3dgCYHM5jc2ZvEKd7Bi61u9FVhYMpgMSuZS613T1xxQeKTffhrHY79hZ5PsskBjcc6C2V7DrnsMsNaGDaWev3GLRQRgV7hxF',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultWrappedSegwit).to.equals(
       'ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP'
@@ -150,7 +150,7 @@ describe('bitcoin bip32 prefix tests for the conversion from xpriv to xpub', () 
         'uprv91G7gZkzehuMVxDJTYE6tLivdF8e4rvzSu1LFfKw3b2Qx1Aj8vpoFnHdfUZ3hmi9jsvPifmZ24RTN2KhwB8BfMLTVqaBReibyaFFcTP1s9n',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultWrappedSegwitTestnet).to.equals(
       'upub5EFU65HtV5TeiSHmZZm7FUffBGy8UKeqp7vw43jYbvZPpoVsgU93oac7Wk3u6moKegAEWtGNF8DehrnHtv21XXEMYRUocHqguyjknFHYfgY'
@@ -163,7 +163,7 @@ describe('bitcoin bip32 prefix tests for the conversion from xpriv to xpub', () 
         'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultLegacy).to.equals(
       'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj'
@@ -176,7 +176,7 @@ describe('bitcoin bip32 prefix tests for the conversion from xpriv to xpub', () 
         'tprv8fVU32aAEuEPeH1WYx3LhXtSFZTRaFqjbFNPaJZ9R8fCVja44tSaUPZEKGpMK6McUDkWWMvRiVfKR3Wzei6AmLoTNYHMAZ9KtvVTLZZdhvA',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDCBWBScQPGv4Xk3JSbhw6wYYpayMjb2eAYyArpbSqQTbLDpphHGAetB6VQgVeftLML8vDSUEWcC2xDi3qJJ3YCDChJDvqVzpgoYSuT52MhJ'
@@ -198,27 +198,26 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
-    console.log(pubkeyP2PKH)
 
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.p2pkh
+      addressType: AddressTypeEnum.p2pkh,
     }).scriptPubkey
 
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(p2pkhAddress).to.equals('1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -231,24 +230,24 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       type: BIP43PurposeTypeEnum.WrappedSegwit,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKHP2SH,
-      addressType: AddressTypeEnum.p2wpkhp2sh
+      addressType: AddressTypeEnum.p2wpkhp2sh,
     }).scriptPubkey
     const p2wpkhp2shAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2WPKHP2SH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkhp2sh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(p2wpkhp2shAddress).to.equals('37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkhp2sh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkeyP2WPKHP2SHRoundTrip).to.equals(scriptPubkeyP2WPKHP2SH)
   })
@@ -261,17 +260,17 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       type: BIP43PurposeTypeEnum.Segwit,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKH,
-      addressType: AddressTypeEnum.p2wpkh
+      addressType: AddressTypeEnum.p2wpkh,
     }).scriptPubkey
     const p2wpkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2WPKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(p2wpkhAddress).to.equals(
       'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
@@ -280,7 +279,7 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkeyP2WPKHRoundTrip).to.be.equal(scriptPubkeyP2WPKH)
   })
@@ -292,12 +291,12 @@ describe('bitcoin from WIF to private key buffer to WIF', () => {
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
@@ -310,7 +309,7 @@ describe('bitcoin get script pubkeys from address', () => {
       address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkey).to.equal(
       '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
@@ -321,7 +320,7 @@ describe('bitcoin get script pubkeys from address', () => {
       address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkey).to.equal(
       '0014c0cebcd6c3d3ca8c75dc5ec62ebe55330ef910e2'
@@ -332,7 +331,7 @@ describe('bitcoin get script pubkeys from address', () => {
       address: '2Mu9hifsg4foPLkyo9i1isPWTobnNmXL3Qk',
       network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkey).to.equal(
       'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
@@ -343,7 +342,7 @@ describe('bitcoin get script pubkeys from address', () => {
       address: 'tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7',
       network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.p2wsh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkey).to.equal(
       '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
@@ -357,7 +356,7 @@ describe('bitcoin guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkey).to.equal(
       '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
@@ -367,7 +366,7 @@ describe('bitcoin guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkey).to.equal(
       '0014c0cebcd6c3d3ca8c75dc5ec62ebe55330ef910e2'
@@ -377,7 +376,7 @@ describe('bitcoin guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: '2Mu9hifsg4foPLkyo9i1isPWTobnNmXL3Qk',
       network: NetworkEnum.Testnet,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkey).to.equal(
       'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
@@ -387,7 +386,7 @@ describe('bitcoin guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7',
       network: NetworkEnum.Testnet,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkey).to.equal(
       '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
@@ -401,7 +400,7 @@ describe('bitcoin address to electrum script hash', () => {
       address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     })
     expect(scriptPubkey).to.equal(
       '76a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac'
@@ -419,41 +418,41 @@ describe('bitcoin transaction creation and signing test', () => {
   const privateKey = wifToPrivateKey({
     wifKey,
     network: NetworkEnum.Mainnet,
-    coin: 'bitcoin'
+    coin: 'bitcoin',
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(privateKey),
-    addressType: AddressTypeEnum.p2pkh
+    addressType: AddressTypeEnum.p2pkh,
   }).scriptPubkey
   const segwitScriptPubkey: string = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(privateKey),
-    addressType: AddressTypeEnum.p2wpkh
+    addressType: AddressTypeEnum.p2wpkh,
   }).scriptPubkey
   const wrappedSegwitScriptPubkey: string = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(privateKey),
-    addressType: AddressTypeEnum.p2wpkhp2sh
+    addressType: AddressTypeEnum.p2wpkhp2sh,
   }).scriptPubkey
   const wrappedSegwitRedeemScript: string | undefined = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(privateKey),
-    addressType: AddressTypeEnum.p2wpkhp2sh
+    addressType: AddressTypeEnum.p2wpkhp2sh,
   }).redeemScript
   const address: string = scriptPubkeyToAddress({
     scriptPubkey: scriptPubkey,
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
-    addressType: AddressTypeEnum.p2pkh
+    addressType: AddressTypeEnum.p2pkh,
   })
   const segwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: segwitScriptPubkey,
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
-    addressType: AddressTypeEnum.p2wpkh
+    addressType: AddressTypeEnum.p2wpkh,
   })
   const wrappedSegwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: wrappedSegwitScriptPubkey,
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
-    addressType: AddressTypeEnum.p2wpkhp2sh
+    addressType: AddressTypeEnum.p2wpkhp2sh,
   })
 
   it('Create transaction with one legacy input and one output', () => {
@@ -487,8 +486,8 @@ describe('bitcoin transaction creation and signing test', () => {
             scriptPubkey +
             // locktime
             '00000000',
-          index: 0
-        }
+          index: 0,
+        },
       ],
       outputs: [
         {
@@ -496,15 +495,15 @@ describe('bitcoin transaction creation and signing test', () => {
             address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
             network: NetworkEnum.Mainnet,
             addressType: AddressTypeEnum.p2pkh,
-            coin: 'bitcoin'
+            coin: 'bitcoin',
           }),
-          amount: 80000
-        }
-      ]
-    })
+          amount: 80000,
+        },
+      ],
+    }).psbt
     const hexTxSigned: string = signTx({
       tx: base64Tx,
-      privateKeys: [privateKey]
+      privateKeys: [privateKey],
     })
     expect(hexTxSigned).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7' +
@@ -524,13 +523,8 @@ describe('bitcoin transaction creation and signing test', () => {
         '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
       // prev_tx only for non segwit inputs
       prevTx:
-        '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d94' +
-        '52e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca' +
-        '17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e7' +
-        '61da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e' +
-        '5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2' +
-        '709c71607c60ee3f097c1217482f518d88ac00000000',
-      index: 0
+        '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000',
+      index: 0,
     }
 
     const txOutput: TxOutput = {
@@ -538,21 +532,21 @@ describe('bitcoin transaction creation and signing test', () => {
         address: segwitAddress,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2wpkh,
-        coin: 'bitcoin'
+        coin: 'bitcoin',
       }),
-      amount: 200
+      amount: 200,
     }
 
     const base64Tx: string = createTx({
       inputs: [txInput],
       outputs: Array(nOutputs).fill(txOutput),
       network: NetworkEnum.Mainnet,
-      rbf: false
-    })
+      rbf: false,
+    }).psbt
 
     const rawtransaction: string = signTx({
       tx: base64Tx,
-      privateKeys: [privateKey]
+      privateKeys: [privateKey],
     })
 
     expect(rawtransaction).to.equal(
@@ -567,7 +561,7 @@ describe('bitcoin transaction creation and signing test', () => {
           '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
         prevScriptPubkey: segwitScriptPubkey,
         index: i,
-        value: 200
+        value: 200,
       }
     }
 
@@ -575,11 +569,11 @@ describe('bitcoin transaction creation and signing test', () => {
       inputs: txInputs,
       outputs: [txOutput],
       network: NetworkEnum.Mainnet,
-      rbf: false
-    })
+      rbf: false,
+    }).psbt
     const segwitRawTransaction: string = signTx({
       tx: segwitTx,
-      privateKeys: Array(nOutputs).fill(privateKey)
+      privateKeys: Array(nOutputs).fill(privateKey),
     })
 
     expect(segwitRawTransaction).to.equal(
@@ -600,7 +594,7 @@ describe('bitcoin transaction creation and signing test', () => {
         '61da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e' +
         '5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2' +
         '709c71607c60ee3f097c1217482f518d88ac00000000',
-      index: 0
+      index: 0,
     }
 
     const txInputSegwit: TxInput = {
@@ -609,7 +603,7 @@ describe('bitcoin transaction creation and signing test', () => {
         '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
       prevScriptPubkey: segwitScriptPubkey,
       index: 1,
-      value: 200
+      value: 200,
     }
 
     const txInputWrappedSegwit: TxInput = {
@@ -619,7 +613,7 @@ describe('bitcoin transaction creation and signing test', () => {
       prevScriptPubkey: wrappedSegwitScriptPubkey,
       redeemScript: wrappedSegwitRedeemScript,
       index: 1,
-      value: 200
+      value: 200,
     }
 
     const txOutputLegacy: TxOutput = {
@@ -627,9 +621,9 @@ describe('bitcoin transaction creation and signing test', () => {
         address: address,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2pkh,
-        coin: 'bitcoin'
+        coin: 'bitcoin',
       }),
-      amount: 200
+      amount: 200,
     }
 
     const txOutputSegwit: TxOutput = {
@@ -637,9 +631,9 @@ describe('bitcoin transaction creation and signing test', () => {
         address: segwitAddress,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2wpkh,
-        coin: 'bitcoin'
+        coin: 'bitcoin',
       }),
-      amount: 200
+      amount: 200,
     }
 
     const txOutputWrappedSegwit: TxOutput = {
@@ -647,21 +641,21 @@ describe('bitcoin transaction creation and signing test', () => {
         address: wrappedSegwitAddress,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2wpkhp2sh,
-        coin: 'bitcoin'
+        coin: 'bitcoin',
       }),
-      amount: 200
+      amount: 200,
     }
 
     const base64Tx: string = createTx({
       inputs: [txInputLegacy, txInputSegwit, txInputWrappedSegwit],
       outputs: [txOutputLegacy, txOutputSegwit, txOutputWrappedSegwit],
       network: NetworkEnum.Mainnet,
-      rbf: false
-    })
+      rbf: false,
+    }).psbt
 
     const rawtransaction: string = signTx({
       tx: base64Tx,
-      privateKeys: [privateKey, privateKey, privateKey]
+      privateKeys: [privateKey, privateKey, privateKey],
     })
     expect(rawtransaction).to.equal(
       '020000000001033ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006b483045022100c10c70dab0e8e88a67bb013d276b88b3d5a52d3cb3ec53aa7d2e7c4704e89dc602207fabdfa3b55b196da7792de9fe436535501fce2fe76439d5361bd5d9dd69bd0901210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffffb385ee16c29a8148e7e99187a293e96fcf9a16e4967d3afc8f7838024dfa268b0100000000ffffffff9e5d335ec9133a9e5ed426d08c421273594b82ab9876b5beb66716384688f2e901000000171600148bbc95d2709c71607c60ee3f097c1217482f518dffffffff03c8000000000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88acc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc80000000000000017a9142427d83a84e5793ce6f6efc33020d844dd217dbb8700024730440220008a9738e8acdc002ae4bb415ff7368161057ed9b22fd8b671c5acbb47379a69022045ab99fa73730fa367d3972d41b26b4ef337b34c4e593c4f47800ed4ee1c64fd01210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f4550247304402201d4f3ee993cfb468dc41387ac618081c36c49ebc9db528155b51d346382c347802201d1c07201f80df3e6e86195444532b6be86e9a429a7eb5a0ae268df9760a974601210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f45500000000'
@@ -684,7 +678,7 @@ describe('bitcoin transaction creation and signing test', () => {
         '709c71607c60ee3f097c1217482f518d88ac00000000',
       index: 0,
       // prev_scriptPubkey only relevant for Segwit inputs, but keep mandatory for now before we start handling errors.
-      prevScriptPubkey: scriptPubkey
+      prevScriptPubkey: scriptPubkey,
     }
 
     const txOutput: TxOutput = {
@@ -692,21 +686,21 @@ describe('bitcoin transaction creation and signing test', () => {
         address: address,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2pkh,
-        coin: 'bitcoin'
+        coin: 'bitcoin',
       }),
-      amount: 200
+      amount: 200,
     }
 
     const base64Tx: string = createTx({
       inputs: [txInput],
       outputs: Array(nOutputs).fill(txOutput),
       network: NetworkEnum.Mainnet,
-      rbf: false
-    })
+      rbf: false,
+    }).psbt
 
     const hexTxSigned: string = signTx({
       tx: base64Tx,
-      privateKeys: [privateKey]
+      privateKeys: [privateKey],
     })
 
     const txInputs: TxInput[] = Array(nOutputs)
@@ -716,19 +710,19 @@ describe('bitcoin transaction creation and signing test', () => {
         prevTxid:
           '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
         prevTx: hexTxSigned,
-        index: i
+        index: i,
       }
     }
     const base64TxMulti: string = createTx({
       inputs: txInputs,
       outputs: [txOutput, txOutput],
       network: NetworkEnum.Mainnet,
-      rbf: false
-    })
+      rbf: false,
+    }).psbt
 
     const hexTxMultiSigned: string = signTx({
       tx: base64TxMulti,
-      privateKeys: Array(nOutputs).fill(privateKey)
+      privateKeys: Array(nOutputs).fill(privateKey),
     })
 
     expect(hexTxMultiSigned).to.equal(

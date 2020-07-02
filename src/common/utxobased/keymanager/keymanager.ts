@@ -1,13 +1,16 @@
+/* eslint-disable camelcase */
 import * as bip32 from 'bip32'
 import { BIP32Interface } from 'bip32'
+import * as bip32grs from 'bip32grs'
 import * as bip39 from 'bip39'
 import * as bitcoin from 'bitcoinjs-lib'
+import * as groestl from 'groestlcoinjs-lib'
 
 import {
   cashAddressToHash,
-  cashaddrPrefixEnum,
-  cashaddrTypeEnum,
-  hashToCashAddress
+  CashaddrPrefixEnum,
+  CashaddrTypeEnum,
+  hashToCashAddress,
 } from './bitcoincashUtils/cashAddress'
 import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
@@ -15,7 +18,7 @@ import { getCoinFromString } from './coinmapper'
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
   Mainnet = 'mainnet',
-  Testnet = 'testnet'
+  Testnet = 'testnet',
 }
 
 // in bitcoin these are bip44, bip49, bip84 xpub prefixes
@@ -23,7 +26,7 @@ export enum NetworkEnum {
 export enum BIP43PurposeTypeEnum {
   Legacy = 'legacy', // xpub/xprv tpub/tprv etc.
   Segwit = 'segwit', // zpub/zprv vpub/vprv etc.
-  WrappedSegwit = 'wrappedSegwit' // ypub/yprv upub/uprv etc.
+  WrappedSegwit = 'wrappedSegwit', // ypub/yprv upub/uprv etc.
 }
 
 // supported address types.
@@ -35,13 +38,13 @@ export enum AddressTypeEnum {
   p2wsh = 'p2wsh',
   p2wshp2sh = 'p2wshp2sh',
   cashaddrP2PKH = 'cashaddrP2PKH',
-  cashaddrP2SH = 'cashaddrP2SH'
+  cashaddrP2SH = 'cashaddrP2SH',
 }
 
 // A transaction input is either legacy or segwit. This is used for transaction creation and passed per input
 export enum TransactionInputTypeEnum {
   Legacy = 'legacy',
-  Segwit = 'segwit'
+  Segwit = 'segwit',
 }
 
 export interface MnemonicToXPrivArgs {
@@ -154,6 +157,11 @@ export interface CreateTxArgs {
   rbf: boolean
 }
 
+export interface CreateTxReturn {
+  psbt: string
+  vSize: number
+}
+
 export interface SignTxArgs {
   privateKeys: string[]
   tx: string
@@ -191,7 +199,7 @@ function bip32NetworkFromCoinPrefix(
       }
       xKeyPrefixes = {
         public: coinPrefixes.segwitXPub,
-        private: coinPrefixes.segwitXPriv
+        private: coinPrefixes.segwitXPriv,
       }
       break
     case BIP43PurposeTypeEnum.WrappedSegwit:
@@ -203,13 +211,13 @@ function bip32NetworkFromCoinPrefix(
       }
       xKeyPrefixes = {
         public: coinPrefixes.wrappedSegwitXPub,
-        private: coinPrefixes.wrappedSegwitXPriv
+        private: coinPrefixes.wrappedSegwitXPriv,
       }
       break
     case BIP43PurposeTypeEnum.Legacy:
       xKeyPrefixes = {
         public: coinPrefixes.legacyXPub,
-        private: coinPrefixes.legacyXPriv
+        private: coinPrefixes.legacyXPriv,
       }
       break
     default:
@@ -224,7 +232,7 @@ function bip32NetworkFromCoinPrefix(
     bip32: xKeyPrefixes,
     bech32: bech32,
     pubKeyHash: coinPrefixes.pubkeyHash,
-    scriptHash: coinPrefixes.scriptHash
+    scriptHash: coinPrefixes.scriptHash,
   }
 }
 
@@ -247,30 +255,47 @@ function bip32NetworkFromCoin(
 function guessAddressTypeFromAddress(
   address: string,
   network: BitcoinJSNetwork,
-  addressType: AddressTypeEnum | undefined
+  addressType: AddressTypeEnum | undefined,
+  coin: string
 ): AddressTypeEnum {
   if (typeof addressType !== 'undefined') {
     return addressType
   }
   try {
+    if (coin === 'groestlcoin') {
+      groestl.payments.p2pkh({ address, network })
+      return AddressTypeEnum.p2pkh
+    }
     bitcoin.payments.p2pkh({ address, network })
     return AddressTypeEnum.p2pkh
   } catch (e) {}
   try {
+    if (coin === 'groestlcoin') {
+      groestl.payments.p2sh({ address, network })
+      return AddressTypeEnum.p2sh
+    }
     bitcoin.payments.p2sh({ address, network })
     return AddressTypeEnum.p2sh
   } catch (e) {}
   try {
+    if (coin === 'groestlcoin') {
+      groestl.payments.p2wsh({ address, network })
+      return AddressTypeEnum.p2wsh
+    }
     bitcoin.payments.p2wsh({ address, network })
     return AddressTypeEnum.p2wsh
   } catch (e) {}
   try {
+    if (coin === 'groestlcoin') {
+      groestl.payments.p2wpkh({ address, network })
+      return AddressTypeEnum.p2wpkh
+    }
     bitcoin.payments.p2wpkh({ address, network })
     return AddressTypeEnum.p2wpkh
   } catch (e) {}
   try {
     const info = cashAddressToHash(address)
-    if (info.type === cashaddrTypeEnum.pubkeyhash) {
+    if (info.type === CashaddrTypeEnum.pubkeyhash) {
       return AddressTypeEnum.cashaddrP2PKH
     }
     return AddressTypeEnum.cashaddrP2SH
@@ -279,98 +304,113 @@ function guessAddressTypeFromAddress(
   throw new Error('Could not determine address type of ' + address)
 }
 
-export function mnemonicToXPriv(
-  mnemonicToXPrivArgs: MnemonicToXPrivArgs
-): string {
-  const seed = bip39.mnemonicToSeedSync(mnemonicToXPrivArgs.mnemonic)
+export function mnemonicToXPriv(args: MnemonicToXPrivArgs): string {
+  const seed = bip39.mnemonicToSeedSync(args.mnemonic)
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
+    args.network,
+    args.coin,
+    args.type
+  )
+  if (args.coin === 'groestlcoin') {
+    const root: BIP32Interface = bip32grs.fromSeed(seed)
+    root.network = network
+    return root.derivePath(args.path).toBase58()
+  }
   const root: BIP32Interface = bip32.fromSeed(seed)
-  const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    mnemonicToXPrivArgs.network,
-    mnemonicToXPrivArgs.coin,
-    mnemonicToXPrivArgs.type
-  )
   root.network = network
-  const child: BIP32Interface = root.derivePath(mnemonicToXPrivArgs.path)
-  return child.toBase58()
+  return root.derivePath(args.path).toBase58()
 }
 
-export function xprivToXPub(xprivToXPubArgs: XPrivToXPubArgs): string {
+export function xprivToXPub(args: XPrivToXPubArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    xprivToXPubArgs.network,
-    xprivToXPubArgs.coin,
-    xprivToXPubArgs.type
+    args.network,
+    args.coin,
+    args.type
   )
-  const node: BIP32Interface = bip32.fromBase58(xprivToXPubArgs.xpriv, network)
-  return node.neutered().toBase58()
+  if (args.coin === 'groestlcoin') {
+    return bip32grs.fromBase58(args.xpriv, network).neutered().toBase58()
+  }
+  return bip32.fromBase58(args.xpriv, network).neutered().toBase58()
 }
 
-// return pubkey hash / script hash based on chosen type and network
-// this supports building
-export function xpubToPubkey(xpubToPubkeyArgs: XPubToPubkeyArgs): string {
+export function xpubToPubkey(args: XPubToPubkeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    xpubToPubkeyArgs.network,
-    xpubToPubkeyArgs.coin,
-    xpubToPubkeyArgs.type
+    args.network,
+    args.coin,
+    args.type
   )
-  const node: BIP32Interface = bip32.fromBase58(xpubToPubkeyArgs.xpub, network)
-  const pubkey: Buffer = node
-    .derive(xpubToPubkeyArgs.bip44ChangeIndex)
-    .derive(xpubToPubkeyArgs.bip44AddressIndex).publicKey
-
-  return pubkey.toString('hex')
+  if (args.coin === 'groestlcoin') {
+    const node: BIP32Interface = bip32grs.fromBase58(args.xpub, network)
+    return node
+      .derive(args.bip44ChangeIndex)
+      .derive(args.bip44AddressIndex)
+      .publicKey.toString('hex')
+  }
+  const node: BIP32Interface = bip32.fromBase58(args.xpub, network)
+  return node
+    .derive(args.bip44ChangeIndex)
+    .derive(args.bip44AddressIndex)
+    .publicKey.toString('hex')
 }
 
-export function addressToScriptPubkey(
-  addressToScriptPubkeyArgs: AddressToScriptPubkeyArgs
-): string {
+export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    addressToScriptPubkeyArgs.network,
-    addressToScriptPubkeyArgs.coin
+    args.network,
+    args.coin
   )
   const addressType: AddressTypeEnum = guessAddressTypeFromAddress(
-    addressToScriptPubkeyArgs.address,
+    args.address,
     network,
-    addressToScriptPubkeyArgs.addressType
+    args.addressType,
+    args.coin
   )
   let payment: bitcoin.payments.PaymentCreator
   switch (addressType) {
     case AddressTypeEnum.p2pkh:
       payment = bitcoin.payments.p2pkh
+      if (args.coin === 'groestlcoin') {
+        payment = groestl.payments.p2pkh
+      }
       break
     case AddressTypeEnum.p2sh:
     case AddressTypeEnum.p2wpkhp2sh:
       payment = bitcoin.payments.p2sh
+      if (args.coin === 'groestlcoin') {
+        payment = groestl.payments.p2sh
+      }
       break
     case AddressTypeEnum.p2wpkh:
       payment = bitcoin.payments.p2wpkh
+      if (args.coin === 'groestlcoin') {
+        payment = groestl.payments.p2wpkh
+      }
       break
     case AddressTypeEnum.p2wsh:
       payment = bitcoin.payments.p2wsh
+      if (args.coin === 'groestlcoin') {
+        payment = groestl.payments.p2wsh
+      }
       break
     case AddressTypeEnum.cashaddrP2PKH:
       return scriptHashToScriptPubkey({
-        scriptHash: cashAddressToHash(
-          addressToScriptPubkeyArgs.address
-        ).scriptHash.toString('hex'),
-        network: addressToScriptPubkeyArgs.network,
+        scriptHash: cashAddressToHash(args.address).scriptHash.toString('hex'),
+        network: args.network,
         addressType: AddressTypeEnum.p2pkh,
-        coin: addressToScriptPubkeyArgs.coin
+        coin: args.coin,
       })
     case AddressTypeEnum.cashaddrP2SH:
       return scriptHashToScriptPubkey({
-        scriptHash: cashAddressToHash(
-          addressToScriptPubkeyArgs.address
-        ).scriptHash.toString('hex'),
-        network: addressToScriptPubkeyArgs.network,
+        scriptHash: cashAddressToHash(args.address).scriptHash.toString('hex'),
+        network: args.network,
         addressType: AddressTypeEnum.p2sh,
-        coin: addressToScriptPubkeyArgs.coin
+        coin: args.coin,
       })
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
   const scriptPubkey = payment({
-    address: addressToScriptPubkeyArgs.address,
-    network: network
+    address: args.address,
+    network: network,
   }).output
   if (typeof scriptPubkey === 'undefined') {
     throw new Error('failed converting address to scriptPubkey')
@@ -378,80 +418,90 @@ export function addressToScriptPubkey(
   return scriptPubkey.toString('hex')
 }
 
-export function scriptPubkeyToAddress(
-  scriptPubkeyToAddressArgs: ScriptPubkeyToAddressArgs
-): string {
+export function scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    scriptPubkeyToAddressArgs.network,
-    scriptPubkeyToAddressArgs.coin
+    args.network,
+    args.coin
   )
   let payment: bitcoin.payments.PaymentCreator
-  switch (scriptPubkeyToAddressArgs.addressType) {
+  switch (args.addressType) {
     case AddressTypeEnum.p2pkh:
       payment = bitcoin.payments.p2pkh
+      if (args.coin === 'groestlcoin') {
+        payment = groestl.payments.p2pkh
+      }
       break
     case AddressTypeEnum.p2sh:
     case AddressTypeEnum.p2wpkhp2sh:
       payment = bitcoin.payments.p2sh
+      if (args.coin === 'groestlcoin') {
+        payment = groestl.payments.p2sh
+      }
       break
     case AddressTypeEnum.p2wpkh:
       payment = bitcoin.payments.p2wpkh
+      if (args.coin === 'groestlcoin') {
+        payment = groestl.payments.p2wpkh
+      }
       break
     case AddressTypeEnum.p2wsh:
       payment = bitcoin.payments.p2wsh
+      if (args.coin === 'groestlcoin') {
+        payment = groestl.payments.p2wsh
+      }
       break
     case AddressTypeEnum.cashaddrP2PKH:
-      if (scriptPubkeyToAddressArgs.network === NetworkEnum.Testnet) {
+      if (args.network === NetworkEnum.Testnet) {
         return hashToCashAddress(
           scriptPubkeyToScriptHash({
-            scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
-            network: scriptPubkeyToAddressArgs.network,
+            scriptPubkey: args.scriptPubkey,
+            network: args.network,
             addressType: AddressTypeEnum.p2pkh,
-            coin: scriptPubkeyToAddressArgs.coin
+            coin: args.coin,
           }),
-          cashaddrTypeEnum.pubkeyhash,
-          cashaddrPrefixEnum.testnet
+          CashaddrTypeEnum.pubkeyhash,
+          CashaddrPrefixEnum.testnet
         )
       }
       return hashToCashAddress(
         scriptPubkeyToScriptHash({
-          scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
-          network: scriptPubkeyToAddressArgs.network,
+          scriptPubkey: args.scriptPubkey,
+          network: args.network,
           addressType: AddressTypeEnum.p2pkh,
-          coin: scriptPubkeyToAddressArgs.coin
+          coin: args.coin,
         }),
-        cashaddrTypeEnum.pubkeyhash,
-        cashaddrPrefixEnum.mainnet
+        CashaddrTypeEnum.pubkeyhash,
+        CashaddrPrefixEnum.mainnet
       )
     case AddressTypeEnum.cashaddrP2SH:
-      if (scriptPubkeyToAddressArgs.network === NetworkEnum.Testnet) {
+      if (args.network === NetworkEnum.Testnet) {
         return hashToCashAddress(
           scriptPubkeyToScriptHash({
-            scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
-            network: scriptPubkeyToAddressArgs.network,
+            scriptPubkey: args.scriptPubkey,
+            network: args.network,
             addressType: AddressTypeEnum.p2sh,
-            coin: scriptPubkeyToAddressArgs.coin
+            coin: args.coin,
           }),
-          cashaddrTypeEnum.scripthash,
-          cashaddrPrefixEnum.testnet
+          CashaddrTypeEnum.scripthash,
+          CashaddrPrefixEnum.testnet
         )
       }
       return hashToCashAddress(
         scriptPubkeyToScriptHash({
-          scriptPubkey: scriptPubkeyToAddressArgs.scriptPubkey,
-          network: scriptPubkeyToAddressArgs.network,
+          scriptPubkey: args.scriptPubkey,
+          network: args.network,
           addressType: AddressTypeEnum.p2sh,
-          coin: scriptPubkeyToAddressArgs.coin
+          coin: args.coin,
         }),
-        cashaddrTypeEnum.scripthash,
-        cashaddrPrefixEnum.mainnet
+        CashaddrTypeEnum.scripthash,
+        CashaddrPrefixEnum.mainnet
       )
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
   const address: string | undefined = payment({
-    output: Buffer.from(scriptPubkeyToAddressArgs.scriptPubkey, 'hex'),
-    network: network
+    output: Buffer.from(args.scriptPubkey, 'hex'),
+    network: network,
   }).address
   if (typeof address === 'undefined') {
     throw new Error('failed converting scriptPubkey to address')
@@ -459,15 +509,13 @@ export function scriptPubkeyToAddress(
   return address
 }
 
-function scriptHashToScriptPubkey(
-  scriptHashToScriptPubkeyArgs: ScriptHashToScriptPubkeyArgs
-): string {
+function scriptHashToScriptPubkey(args: ScriptHashToScriptPubkeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    scriptHashToScriptPubkeyArgs.network,
-    scriptHashToScriptPubkeyArgs.coin
+    args.network,
+    args.coin
   )
   let payment: bitcoin.payments.PaymentCreator
-  switch (scriptHashToScriptPubkeyArgs.addressType) {
+  switch (args.addressType) {
     case AddressTypeEnum.p2pkh:
       payment = bitcoin.payments.p2pkh
       break
@@ -485,8 +533,8 @@ function scriptHashToScriptPubkey(
       throw new Error('invalid address type in address to script pubkey')
   }
   const scriptPubkey: Buffer | undefined = payment({
-    hash: Buffer.from(scriptHashToScriptPubkeyArgs.scriptHash, 'hex'),
-    network: network
+    hash: Buffer.from(args.scriptHash, 'hex'),
+    network: network,
   }).output
   if (typeof scriptPubkey === 'undefined') {
     throw new Error('failed converting scriptPubkey to address')
@@ -495,14 +543,14 @@ function scriptHashToScriptPubkey(
 }
 
 export function scriptPubkeyToScriptHash(
-  scriptPubkeytoScriptHashArgs: ScriptPubkeyToScriptHashArgs
+  args: ScriptPubkeyToScriptHashArgs
 ): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    scriptPubkeytoScriptHashArgs.network,
-    scriptPubkeytoScriptHashArgs.coin
+    args.network,
+    args.coin
   )
   let payment: bitcoin.payments.PaymentCreator
-  switch (scriptPubkeytoScriptHashArgs.addressType) {
+  switch (args.addressType) {
     case AddressTypeEnum.p2pkh:
     case AddressTypeEnum.cashaddrP2PKH:
       payment = bitcoin.payments.p2pkh
@@ -522,8 +570,8 @@ export function scriptPubkeyToScriptHash(
       throw new Error('invalid address type in address to script pubkey')
   }
   const scriptHash: Buffer | undefined = payment({
-    output: Buffer.from(scriptPubkeytoScriptHashArgs.scriptPubkey, 'hex'),
-    network: network
+    output: Buffer.from(args.scriptPubkey, 'hex'),
+    network: network,
   }).hash
   if (typeof scriptHash === 'undefined') {
     throw new Error('failed converting scriptPubkey to address')
@@ -532,14 +580,14 @@ export function scriptPubkeyToScriptHash(
 }
 
 export function pubkeyToScriptPubkey(
-  pubkeyToScriptPubkeyArgs: PubkeyToScriptPubkeyArgs
+  args: PubkeyToScriptPubkeyArgs
 ): PubkeyToScriptPubkeyReturn {
   let payment: bitcoin.payments.Payment
-  switch (pubkeyToScriptPubkeyArgs.addressType) {
+  switch (args.addressType) {
     case AddressTypeEnum.p2pkh:
     case AddressTypeEnum.cashaddrP2PKH:
       payment = bitcoin.payments.p2pkh({
-        pubkey: Buffer.from(pubkeyToScriptPubkeyArgs.pubkey, 'hex')
+        pubkey: Buffer.from(args.pubkey, 'hex'),
       })
       if (typeof payment.output === 'undefined') {
         throw new Error('failed converting pubkey to script pubkey')
@@ -548,8 +596,8 @@ export function pubkeyToScriptPubkey(
     case AddressTypeEnum.p2wpkhp2sh:
       payment = bitcoin.payments.p2sh({
         redeem: bitcoin.payments.p2wpkh({
-          pubkey: Buffer.from(pubkeyToScriptPubkeyArgs.pubkey, 'hex')
-        })
+          pubkey: Buffer.from(args.pubkey, 'hex'),
+        }),
       })
       if (
         typeof payment.output === 'undefined' ||
@@ -560,11 +608,11 @@ export function pubkeyToScriptPubkey(
       }
       return {
         scriptPubkey: payment.output.toString('hex'),
-        redeemScript: payment.redeem.output.toString('hex')
+        redeemScript: payment.redeem.output.toString('hex'),
       }
     case AddressTypeEnum.p2wpkh:
       payment = bitcoin.payments.p2wpkh({
-        pubkey: Buffer.from(pubkeyToScriptPubkeyArgs.pubkey, 'hex')
+        pubkey: Buffer.from(args.pubkey, 'hex'),
       })
       if (typeof payment.output === 'undefined') {
         throw new Error('failed converting pubkey to script pubkey')
@@ -575,18 +623,21 @@ export function pubkeyToScriptPubkey(
   }
 }
 
-export function xprivToPrivateKey(
-  xprivToPrivateKeyArgs: XPrivToPrivateKeyArgs
-): string {
+export function xprivToPrivateKey(args: XPrivToPrivateKeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    xprivToPrivateKeyArgs.network,
-    xprivToPrivateKeyArgs.coin,
-    xprivToPrivateKeyArgs.type
+    args.network,
+    args.coin,
+    args.type
   )
-  const node: BIP32Interface = bip32.fromBase58(
-    xprivToPrivateKeyArgs.xpriv,
-    network
-  )
+  if (args.coin === 'groestlcoin') {
+    const node: BIP32Interface = bip32grs.fromBase58(args.xpriv, network)
+    const privateKey = node.derive(0).derive(0).privateKey
+    if (typeof privateKey === 'undefined') {
+      throw new Error('Failed to generate private key from xpriv')
+    }
+    return privateKey.toString('hex')
+  }
+  const node: BIP32Interface = bip32.fromBase58(args.xpriv, network)
   const privateKey = node.derive(0).derive(0).privateKey
   if (typeof privateKey === 'undefined') {
     throw new Error('Failed to generate private key from xpriv')
@@ -594,29 +645,34 @@ export function xprivToPrivateKey(
   return privateKey.toString('hex')
 }
 
-export function privateKeyToWIF(
-  PrivateKeyToWIFArgs: PrivateKeyToWIFArgs
-): string {
+export function privateKeyToWIF(args: PrivateKeyToWIFArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    PrivateKeyToWIFArgs.network,
-    PrivateKeyToWIFArgs.coin
+    args.network,
+    args.coin
   )
-  const ecPair: bitcoin.ECPairInterface = bitcoin.ECPair.fromPrivateKey(
-    Buffer.from(PrivateKeyToWIFArgs.privateKey, 'hex'),
-    { network }
-  )
-  return ecPair.toWIF()
+  if (args.coin === 'groestlcoin') {
+    return groestl.ECPair.fromPrivateKey(Buffer.from(args.privateKey, 'hex'), {
+      network,
+    }).toWIF()
+  }
+  return bitcoin.ECPair.fromPrivateKey(Buffer.from(args.privateKey, 'hex'), {
+    network,
+  }).toWIF()
 }
 
-export function wifToPrivateKey(
-  wifToPrivateKeyArgs: WIFToPrivateKeyArgs
-): string {
+export function wifToPrivateKey(args: WIFToPrivateKeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
-    wifToPrivateKeyArgs.network,
-    wifToPrivateKeyArgs.coin
+    args.network,
+    args.coin
   )
-  const privateKey = bitcoin.ECPair.fromWIF(wifToPrivateKeyArgs.wifKey, network)
-    .privateKey
+  if (args.coin === 'groestlcoin') {
+    const privateKey = groestl.ECPair.fromWIF(args.wifKey, network).privateKey
+    if (typeof privateKey === 'undefined') {
+      throw new Error('Failed to convert WIF key to private key')
+    }
+    return privateKey.toString('hex')
+  }
+  const privateKey = bitcoin.ECPair.fromWIF(args.wifKey, network).privateKey
   if (typeof privateKey === 'undefined') {
     throw new Error('Failed to convert WIF key to private key')
   }
@@ -636,14 +692,16 @@ export function scriptPubkeyToElectrumScriptHash(scriptPubkey: string): string {
   ).toString('hex')
 }
 
-export function createTx(createTxArgs: CreateTxArgs): string {
+export function createTx(args: CreateTxArgs): CreateTxReturn {
   const psbt = new bitcoin.Psbt()
   let sequence: number = 0xffffffff
-  if (createTxArgs.rbf) {
+  if (args.rbf) {
     sequence -= 2
   }
-  for (let i: number = 0; i < createTxArgs.inputs.length; i++) {
-    const input: TxInput = createTxArgs.inputs[i]
+  let segwit: boolean = false
+  let txVSize: number = 0
+  for (let i: number = 0; i < args.inputs.length; i++) {
+    const input: TxInput = args.inputs[i]
     if (input.type === TransactionInputTypeEnum.Legacy) {
       if (typeof input.prevTx === 'undefined') {
         throw Error(
@@ -655,9 +713,11 @@ export function createTx(createTxArgs: CreateTxArgs): string {
         index: input.index,
         sequence: sequence,
         // non-segwit inputs now require passing the whole previous tx as Buffer
-        nonWitnessUtxo: Buffer.from(input.prevTx, 'hex')
+        nonWitnessUtxo: Buffer.from(input.prevTx, 'hex'),
       })
+      txVSize += 148
     } else {
+      segwit = true
       if (
         typeof input.prevScriptPubkey === 'undefined' ||
         typeof input.value === 'undefined'
@@ -675,9 +735,11 @@ export function createTx(createTxArgs: CreateTxArgs): string {
           // add witnessUtxo for Segwit input type. The scriptPubkey and the value only are needed.
           witnessUtxo: {
             script: Buffer.from(input.prevScriptPubkey, 'hex'),
-            value: input.value
-          }
+            value: input.value,
+          },
         })
+        // weight for p2pkh input
+        txVSize += 67.75
         continue
       }
 
@@ -688,29 +750,45 @@ export function createTx(createTxArgs: CreateTxArgs): string {
         // add witnessUtxo for Segwit input type. The scriptPubkey and the value only are needed.
         witnessUtxo: {
           script: Buffer.from(input.prevScriptPubkey, 'hex'),
-          value: input.value
+          value: input.value,
         },
-        redeemScript: Buffer.from(input.redeemScript, 'hex')
+        redeemScript: Buffer.from(input.redeemScript, 'hex'),
       })
+      // weight for pwpkhp2sh input
+      txVSize += 91
     }
   }
-  for (let i: number = 0; i < createTxArgs.outputs.length; i++) {
+  for (let i: number = 0; i < args.outputs.length; i++) {
     psbt.addOutput({
-      script: Buffer.from(createTxArgs.outputs[i].scriptPubkey, 'hex'),
-      value: createTxArgs.outputs[i].amount
+      script: Buffer.from(args.outputs[i].scriptPubkey, 'hex'),
+      value: args.outputs[i].amount,
     })
+    if (args.outputs[i].scriptPubkey.length === 50) {
+      // p2pkh output
+      txVSize += 34
+    } else if (args.outputs[i].scriptPubkey.length === 46) {
+      txVSize += 32
+    } else if (args.outputs[i].scriptPubkey.length === 44) {
+      txVSize += 31
+    }
   }
-  return psbt.toBase64()
+  if (segwit) {
+    // segwit adds an additional 0.5 for the segwit transaction type flag and 0.25 for the number of witness elements
+    txVSize += 10.75
+  } else {
+    txVSize += 10
+  }
+  // round up to the nearest whole number to avoid too low fees
+  txVSize = Math.ceil(txVSize)
+  return { psbt: psbt.toBase64(), vSize: txVSize }
 }
 
-export function signTx(signTxArgs: SignTxArgs): string {
-  const psbt = bitcoin.Psbt.fromBase64(signTxArgs.tx)
-  for (let i: number = 0; i < signTxArgs.privateKeys.length; i++) {
+export function signTx(args: SignTxArgs): string {
+  const psbt = bitcoin.Psbt.fromBase64(args.tx)
+  for (let i: number = 0; i < args.privateKeys.length; i++) {
     psbt.signInput(
       i,
-      bitcoin.ECPair.fromPrivateKey(
-        Buffer.from(signTxArgs.privateKeys[i], 'hex')
-      )
+      bitcoin.ECPair.fromPrivateKey(Buffer.from(args.privateKeys[i], 'hex'))
     )
     psbt.validateSignaturesOfInput(i)
   }

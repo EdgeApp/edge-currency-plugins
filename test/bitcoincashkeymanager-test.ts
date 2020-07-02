@@ -12,7 +12,7 @@ import {
   scriptPubkeyToAddress,
   wifToPrivateKey,
   xprivToXPub,
-  xpubToPubkey
+  xpubToPubkey,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoin cash mnemonic to xprv test vectors as compared with iancoleman', () => {
@@ -24,7 +24,7 @@ describe('bitcoin cash mnemonic to xprv test vectors as compared with iancoleman
       path: "m/44'/145'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(resultLegacy).to.equal(
       'xprv9xywTsqYa9uDLdJs8QpXf7xwRWgPw4rq5FtkcShsDoZTqfNQjVQ3dDCdyedXX3FqB18U8e8PfVMeFqkhzPGseKVMDjGe5rPdiUXMxy7BQNJ'
@@ -37,7 +37,7 @@ describe('bitcoin cash mnemonic to xprv test vectors as compared with iancoleman
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -52,7 +52,7 @@ describe('bitcoin cash bip32 prefix tests for the conversion from xpriv to xpub'
         'xprv9xywTsqYa9uDLdJs8QpXf7xwRWgPw4rq5FtkcShsDoZTqfNQjVQ3dDCdyedXX3FqB18U8e8PfVMeFqkhzPGseKVMDjGe5rPdiUXMxy7BQNJ',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(resultLegacy).to.equals(
       'xpub6ByHsPNSQXTWZ7PLESMY2FufyYWtLXagSUpMQq7Un96SiThZH2iJB1X7pwviH1WtKVeDP6K8d6xxFzzoaFzF3s8BKCZx8oEDdDkNnp4owAZ'
@@ -65,7 +65,7 @@ describe('bitcoin cash bip32 prefix tests for the conversion from xpriv to xpub'
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -87,17 +87,17 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.cashaddrP2PKH
+      addressType: AddressTypeEnum.cashaddrP2PKH,
     }).scriptPubkey
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.cashaddrP2PKH,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(p2pkhAddress).to.equals(
       'bitcoincash:qqyx49mu0kkn9ftfj6hje6g2wfer34yfnq5tahq3q6'
@@ -106,7 +106,7 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
       address: 'bitcoincash:qqyx49mu0kkn9ftfj6hje6g2wfer34yfnq5tahq3q6',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.cashaddrP2PKH,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -119,17 +119,17 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.cashaddrP2PKH
+      addressType: AddressTypeEnum.cashaddrP2PKH,
     }).scriptPubkey
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.cashaddrP2PKH,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(p2pkhAddress).to.equals(
       'bitcoincashtestnet:qqaz6s295ncfs53m86qj0uw6sl8u2kuw0yjdsvk7h8'
@@ -138,7 +138,7 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
       address: 'bitcoincashtestnet:qqaz6s295ncfs53m86qj0uw6sl8u2kuw0yjdsvk7h8',
       network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.cashaddrP2PKH,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -150,12 +150,12 @@ describe('bitcoin cash from WIF to private key buffer to WIF', () => {
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
@@ -168,7 +168,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
       address: 'bitcoincash:qr9q6dsyfcxupz3zwf805mm2q7cwcnre4g60ww9wd5',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.cashaddrP2PKH,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
       '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
@@ -179,7 +179,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
       address: 'bchtest:qrall9d5uddv4yvdyms4wwfw59jr5twzsvashd0fst',
       network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.cashaddrP2PKH,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
       '76a914fbff95b4e35aca918d26e157392ea1643a2dc28388ac'
@@ -190,7 +190,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
       address: 'bitcoincash:pz689gnx6z7cnsfhq6jpxtx0k9hhcwulev5cpumfk0',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.cashaddrP2SH,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
       'a914b472a266d0bd89c13706a4132ccfb16f7c3b9fcb87'
@@ -201,7 +201,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
       address: 'bchtest:pq2wfeuppegjpnrg64ws8vmv7e4fatwzwq9rvngx8x',
       network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.cashaddrP2SH,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
       'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
@@ -215,7 +215,7 @@ describe('bitcoin cash guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bitcoincash:qr9q6dsyfcxupz3zwf805mm2q7cwcnre4g60ww9wd5',
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
       '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
@@ -225,7 +225,7 @@ describe('bitcoin cash guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bchtest:qrall9d5uddv4yvdyms4wwfw59jr5twzsvashd0fst',
       network: NetworkEnum.Testnet,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
       '76a914fbff95b4e35aca918d26e157392ea1643a2dc28388ac'
@@ -235,7 +235,7 @@ describe('bitcoin cash guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bitcoincash:pz689gnx6z7cnsfhq6jpxtx0k9hhcwulev5cpumfk0',
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
       'a914b472a266d0bd89c13706a4132ccfb16f7c3b9fcb87'
@@ -245,7 +245,7 @@ describe('bitcoin cash guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bchtest:pq2wfeuppegjpnrg64ws8vmv7e4fatwzwq9rvngx8x',
       network: NetworkEnum.Testnet,
-      coin: 'bitcoincash'
+      coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
       'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
