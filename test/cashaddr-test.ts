@@ -12,6 +12,7 @@ import {
   AddressTypeEnum,
   NetworkEnum,
   scriptPubkeyToScriptHash,
+  ScriptTypeEnum,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoin cash address tests', () => {
@@ -23,7 +24,7 @@ describe('bitcoin cash address tests', () => {
       coin: 'bitcoin',
     }),
     network: NetworkEnum.Mainnet,
-    addressType: AddressTypeEnum.p2pkh,
+    scriptType: ScriptTypeEnum.p2pkh,
     coin: 'bitcoin',
   })
   it('pubkey hash to cashaddr', () => {
@@ -54,7 +55,7 @@ describe('bitcoin cash address tests', () => {
       coin: 'bitcoin',
     }),
     network: NetworkEnum.Mainnet,
-    addressType: AddressTypeEnum.p2sh,
+    scriptType: ScriptTypeEnum.p2sh,
     coin: 'bitcoin',
   })
 

@@ -10,9 +10,10 @@ import {
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  ScriptTypeEnum,
   wifToPrivateKey,
   xprivToXPub,
-  xpubToPubkey
+  xpubToPubkey,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoin sv mnemonic to xprv test vectors as compared with iancoleman', () => {
@@ -24,7 +25,7 @@ describe('bitcoin sv mnemonic to xprv test vectors as compared with iancoleman',
       path: "m/44'/236'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     expect(resultLegacy).to.equal(
       'xprv9ydzpAw8scxgS53bvJyqSwDvfxDQZZtaJV98SYjZto3Pg7MCsPBjCcYqUtnWPRNayEXUcSYZDvXux545bHZwda7YUWvReJiRkx38VXathgK'
@@ -37,7 +38,7 @@ describe('bitcoin sv mnemonic to xprv test vectors as compared with iancoleman',
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -52,7 +53,7 @@ describe('bitcoin sv bip32 prefix tests for the conversion from xpriv to xpub', 
         'xprv9ydzpAw8scxgS53bvJyqSwDvfxDQZZtaJV98SYjZto3Pg7MCsPBjCcYqUtnWPRNayEXUcSYZDvXux545bHZwda7YUWvReJiRkx38VXathgK',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     expect(resultLegacy).to.equals(
       'xpub6CdMDgU2hzWyeZ852LWqp5AfDz3ty2cRfi4jEw9BT8aNYugMQvVykQsKLARZdbqKKp7yTviJdL1N9saYLmJNKD1rwVAwLTmU8r8qKeoyG4R'
@@ -65,7 +66,7 @@ describe('bitcoin sv bip32 prefix tests for the conversion from xpriv to xpub', 
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -87,25 +88,25 @@ describe('bitcoin sv xpub to address tests;  generate valid addresses by calling
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.p2pkh
+      scriptType: ScriptTypeEnum.p2pkh,
     }).scriptPubkey
 
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     expect(p2pkhAddress).to.equals('1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: '1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -117,12 +118,12 @@ describe('bitcoin sv from WIF to private key to WIF', () => {
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
@@ -134,7 +135,7 @@ describe('bitcoin sv guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: '1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f',
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoinsv'
+      coin: 'bitcoinsv',
     })
     expect(scriptPubkey).to.equal(
       '76a914c674ac8e0534044717c9ee450d5d9f25e243645088ac'

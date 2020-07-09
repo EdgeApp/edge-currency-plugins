@@ -33,10 +33,10 @@
     "@types/mocha": "^7.0.1",
     "@types/react": "^16.9.41",
     "@types/react-dom": "^16.9.5",
-    "@typescript-eslint/eslint-plugin": "^3.5.0",
+    "@typescript-eslint/eslint-plugin": "^3.6.0",
     "@typescript-eslint/parser": "^2.0.0",
     "chai": "^4.2.0",
-    "eslint": "^7.3.1",
+    "eslint": "^7.4.0",
     "eslint-config-standard-kit": ">=0.14.4",
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-node": ">=9.1.0",
@@ -58,8 +58,9 @@
   },
   "dependencies": {
     "bip39": "^3.0.2",
+    "bitcoinforksjs-lib": "git://https://github.com/TheCharlatan/bitcoinjs-lib#altcoins",
     "bitcoinjs-lib": "^5.1.10",
     "bn.js": "^5.1.2",
-    "groestlcoinjs-lib": "^5.1.7"
+    "groestlcoinjs-lib": "^5.1.10"
   }
 }

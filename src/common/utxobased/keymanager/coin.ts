@@ -16,6 +16,9 @@ export interface CoinPrefixes {
 export interface Coin {
   name: string
   segwit: boolean
+  coinType: number
+  sighash?: number
+  sighashFunction?: (Hash: Buffer) => Buffer
   mainnetConstants: CoinPrefixes
   testnetConstants: CoinPrefixes
 }

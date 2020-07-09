@@ -10,9 +10,10 @@ import {
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  ScriptTypeEnum,
   wifToPrivateKey,
   xprivToXPub,
-  xpubToPubkey
+  xpubToPubkey,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('ravencoin mnemonic to xprv test vectors as compared with iancoleman', () => {
@@ -24,7 +25,7 @@ describe('ravencoin mnemonic to xprv test vectors as compared with iancoleman', 
       path: "m/44'/175'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     expect(resultLegacy).to.equal(
       'xprv9zG1qmEumfwLUb2rTjKTxJEfLRxBqMGYyYm4S6wXpJyjyqrnqWN2aYf4EEt6iv27QMeHWyzressEVbmgrRFoqJQX47F3ncu2ghzeRYPhTJc'
@@ -37,7 +38,7 @@ describe('ravencoin mnemonic to xprv test vectors as compared with iancoleman', 
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -52,7 +53,7 @@ describe('ravencoin bip32 prefix tests for the conversion from xpriv to xpub', (
         'xprv9zG1qmEumfwLUb2rTjKTxJEfLRxBqMGYyYm4S6wXpJyjyqrnqWN2aYf4EEt6iv27QMeHWyzressEVbmgrRFoqJQX47F3ncu2ghzeRYPhTJc',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     expect(resultLegacy).to.equals(
       'xpub6DFNFGmoc3Vdh57KZkrUKSBPtTngEozQLmgfEVM9NeWireBwP3gH8LyY5VMsVB9zCGxzsph27TuppVSrbGP5sjqcJPrWLUwsEPrXPvCVgL1'
@@ -65,7 +66,7 @@ describe('ravencoin bip32 prefix tests for the conversion from xpriv to xpub', (
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -87,25 +88,25 @@ describe('ravencoin xpub to address tests;  generate valid addresses by calling 
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.p2pkh
+      scriptType: ScriptTypeEnum.p2pkh,
     }).scriptPubkey
 
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     expect(p2pkhAddress).to.equals('RDjNvZL1TJQ7R8L23jDutdEioQG4eTC38V')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'RDjNvZL1TJQ7R8L23jDutdEioQG4eTC38V',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -117,12 +118,12 @@ describe('ravencoin from WIF to private key to WIF', () => {
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
@@ -134,7 +135,7 @@ describe('ravencoin guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'RDjNvZL1TJQ7R8L23jDutdEioQG4eTC38V',
       network: NetworkEnum.Mainnet,
-      coin: 'ravencoin'
+      coin: 'ravencoin',
     })
     expect(scriptPubkey).to.equal(
       '76a91430d45f1e2c0d24c8340bd0b634ce89c5b0e579b388ac'

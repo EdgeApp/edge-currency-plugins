@@ -1,8 +1,13 @@
+import * as bitcoin from 'bitcoinforksjs-lib'
+
 import { Coin } from '../coin'
 
 export class BitcoinCash implements Coin {
   name = 'bitcoincash'
   segwit = false
+  sighash = bitcoin.Psbt.BCH_SIGHASH_ALL
+  coinType = 145
+
   mainnetConstants = {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0x80,
@@ -10,7 +15,7 @@ export class BitcoinCash implements Coin {
     legacyXPub: 0x0488b21e,
     pubkeyHash: 0x00,
     scriptHash: 0x05,
-    cashaddr: 'bitcoincash'
+    cashaddr: 'bitcoincash',
   }
 
   testnetConstants = {
@@ -20,6 +25,6 @@ export class BitcoinCash implements Coin {
     legacyXPub: 0x043587cf,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    cashaddr: 'bitcoincashtestnet'
+    cashaddr: 'bitcoincashtestnet',
   }
 }

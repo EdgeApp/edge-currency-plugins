@@ -3,6 +3,7 @@ import { Coin } from '../coin'
 export class Litecoin implements Coin {
   name = 'litecoin'
   segwit = true
+  coinType = 2
   mainnetConstants = {
     messagePrefix: '\x19Litecoin Signed Message:\n',
     wif: 0xb0,
@@ -14,7 +15,7 @@ export class Litecoin implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x30,
     scriptHash: 0x32,
-    bech32: 'ltc'
+    bech32: 'ltc',
   }
 
   testnetConstants = {
@@ -28,6 +29,6 @@ export class Litecoin implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0x3a,
-    bech32: 'tltc'
+    bech32: 'tltc',
   }
 }

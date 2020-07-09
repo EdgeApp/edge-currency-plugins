@@ -10,9 +10,10 @@ import {
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  ScriptTypeEnum,
   wifToPrivateKey,
   xprivToXPub,
-  xpubToPubkey
+  xpubToPubkey,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('qtum mnemonic to xprv test vectors as compared with iancoleman', () => {
@@ -24,7 +25,7 @@ describe('qtum mnemonic to xprv test vectors as compared with iancoleman', () =>
       path: "m/44'/2301'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     expect(resultLegacy).to.equal(
       'xprv9yNMmQAw1VJVPvfhyQiCoDT5hpKGuddV8ciqvzDiZkpjURynLpPAsTyDArW8ZUySHdeWnTLy3mJE8RMxo6AaKywAEGVe9t84tcBFssGyVNo'
@@ -37,7 +38,7 @@ describe('qtum mnemonic to xprv test vectors as compared with iancoleman', () =>
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -52,7 +53,7 @@ describe('qtum bip32 prefix tests for the conversion from xpriv to xpub', () => 
         'xprv9yNMmQAw1VJVPvfhyQiCoDT5hpKGuddV8ciqvzDiZkpjURynLpPAsTyDArW8ZUySHdeWnTLy3mJE8RMxo6AaKywAEGVe9t84tcBFssGyVNo',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     expect(resultLegacy).to.equals(
       'xpub6CMiAuhpqrrncQkB5SFDAMPpFr9mK6MLVqeSjNdL86MiMEJvtMhRRGHh27KNR7zLG8BPcjSEHQ2g6MYcKVssJGVZekhuYQQJc9kGC9ofwJX'
@@ -65,7 +66,7 @@ describe('qtum bip32 prefix tests for the conversion from xpriv to xpub', () => 
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -87,25 +88,25 @@ describe('qtum xpub to address tests;  generate valid addresses by calling xpubT
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.p2pkh
+      scriptType: ScriptTypeEnum.p2pkh,
     }).scriptPubkey
 
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     expect(p2pkhAddress).to.equals('QXykR884CoPkbYHCFZ68bNVTMRvicWAFq2')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'QXykR884CoPkbYHCFZ68bNVTMRvicWAFq2',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -117,12 +118,12 @@ describe('qtum from WIF to private key to WIF', () => {
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
@@ -134,7 +135,7 @@ describe('qtum guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'QXykR884CoPkbYHCFZ68bNVTMRvicWAFq2',
       network: NetworkEnum.Mainnet,
-      coin: 'qtum'
+      coin: 'qtum',
     })
     expect(scriptPubkey).to.equal(
       '76a9147cc71ace3e2abcc05b3214d284cf7abba684758c88ac'

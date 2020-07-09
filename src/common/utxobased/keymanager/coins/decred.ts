@@ -3,6 +3,7 @@ import { Coin } from '../coin'
 export class Decred implements Coin {
   name = 'decred'
   segwit = true
+  coinType = 42
   mainnetConstants = {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0x22de,
@@ -14,7 +15,7 @@ export class Decred implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x073f,
     scriptHash: 0x071a,
-    bech32: 'bc'
+    bech32: 'bc',
   }
 
   testnetConstants = {
@@ -28,6 +29,6 @@ export class Decred implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x0f21,
     scriptHash: 0x0efc,
-    bech32: 'tb'
+    bech32: 'tb',
   }
 }

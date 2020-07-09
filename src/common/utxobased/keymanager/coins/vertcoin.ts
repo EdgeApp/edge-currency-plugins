@@ -3,6 +3,7 @@ import { Coin } from '../coin'
 export class Vertcoin implements Coin {
   name = 'vertcoin'
   segwit = true
+  coinType = 28
   mainnetConstants = {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0x80,
@@ -14,7 +15,7 @@ export class Vertcoin implements Coin {
     segwitXPub: 0x0488b21e,
     pubkeyHash: 0x47,
     scriptHash: 0x05,
-    bech32: 'vtc'
+    bech32: 'vtc',
   }
 
   testnetConstants = {
@@ -28,6 +29,6 @@ export class Vertcoin implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'tb'
+    bech32: 'tb',
   }
 }

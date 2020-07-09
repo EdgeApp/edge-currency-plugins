@@ -3,6 +3,7 @@ import { Coin } from '../coin'
 export class EBoost implements Coin {
   name = 'eboost'
   segwit = false
+  coinType = 324
   mainnetConstants = {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0xdc,

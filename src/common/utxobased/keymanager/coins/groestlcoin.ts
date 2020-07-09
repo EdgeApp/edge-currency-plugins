@@ -1,10 +1,14 @@
+import { crypto } from 'bitcoinforksjs-lib'
+
 import { Coin } from '../coin'
 
 export class Groestlcoin implements Coin {
   name = 'groestlcoin'
   segwit = true
+  coinType = 17
+  sighashFunction = crypto.sha256
   mainnetConstants = {
-    messagePrefix: '\x19Groestlcoin Signed Message:\n',
+    messagePrefix: '\x1cGroestlCoin Signed Message:\n',
     wif: 0x80,
     legacyXPriv: 0x0488ade4,
     legacyXPub: 0x0488b21e,
@@ -18,7 +22,7 @@ export class Groestlcoin implements Coin {
   }
 
   testnetConstants = {
-    messagePrefix: '\x19Groestlcoin Signed Message:\n',
+    messagePrefix: '\x1cGroestlCoin Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,

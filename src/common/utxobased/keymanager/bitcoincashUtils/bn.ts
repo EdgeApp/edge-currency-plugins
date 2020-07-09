@@ -8,7 +8,7 @@ interface Opts {
   size?: number
 }
 
-const reversebuf = function(buf: Buffer): Buffer {
+const reversebuf = function (buf: Buffer): Buffer {
   const buf2 = Buffer.alloc(buf.length)
   for (let i = 0; i < buf.length; i++) {
     buf2[i] = buf[buf.length - 1 - i]
@@ -20,21 +20,21 @@ BN.Zero = new BN(0)
 BN.One = new BN(1)
 BN.Minus1 = new BN(-1)
 
-BN.fromNumber = function(n: number) {
+BN.fromNumber = function (n: number) {
   if (typeof n !== 'number') {
     throw new Error(`InvalidArgument: ${n} not a number`)
   }
   return new BN(n)
 }
 
-BN.fromString = function(str: string, base: number) {
+BN.fromString = function (str: string, base: number) {
   if (typeof str !== 'string') {
     throw new Error(`InvalidArgument: ${str} not a string`)
   }
   return new BN(str, base)
 }
 
-BN.fromBuffer = function(buf: Buffer, opts: Opts) {
+BN.fromBuffer = function (buf: Buffer, opts: Opts) {
   if (opts.endian === 'little') {
     buf = reversebuf(buf)
   }
@@ -47,7 +47,7 @@ BN.fromBuffer = function(buf: Buffer, opts: Opts) {
  * Instantiate a BigNumber from a "signed magnitude buffer"
  * (a buffer where the most significant bit represents the sign (0 = positive, -1 = negative))
  */
-BN.fromSM = function(buf: Buffer, opts: Opts) {
+BN.fromSM = function (buf: Buffer, opts: Opts) {
   let ret
   if (buf.length === 0) {
     return BN.fromBuffer(Buffer.from([0]))
@@ -68,11 +68,11 @@ BN.fromSM = function(buf: Buffer, opts: Opts) {
   return ret
 }
 
-BN.prototype.toNumber = function() {
+BN.prototype.toNumber = function () {
   return parseInt(this.toString(10), 10)
 }
 
-BN.prototype.toBuffer = function(opts: Opts) {
+BN.prototype.toBuffer = function (opts: Opts) {
   let buf, hex
   if (typeof opts.size !== 'undefined' && opts.size > 0) {
     hex = this.toString(16, 2)
@@ -96,7 +96,7 @@ BN.prototype.toBuffer = function(opts: Opts) {
   return buf
 }
 
-BN.prototype.toSMBigEndian = function() {
+BN.prototype.toSMBigEndian = function () {
   let buf: Buffer
   if (this.cmp(BN.Zero) === -1) {
     buf = this.neg().toBuffer()
@@ -118,7 +118,7 @@ BN.prototype.toSMBigEndian = function() {
   return buf
 }
 
-BN.prototype.toSM = function(opts: Opts) {
+BN.prototype.toSM = function (opts: Opts) {
   const endian = opts.endian ?? 'big'
   let buf = this.toSMBigEndian()
 
@@ -136,7 +136,7 @@ BN.prototype.toSM = function(opts: Opts) {
  * 4 bytes. We copy that behavior here. A third argument, `size`, is provided to
  * extend the hard limit of 4 bytes, as some usages require more than 4 bytes.
  */
-BN.fromScriptNumBuffer = function(
+BN.fromScriptNumBuffer = function (
   buf: Buffer,
   fRequireMinimal: boolean,
   size?: number
@@ -164,7 +164,7 @@ BN.fromScriptNumBuffer = function(
     }
   }
   return BN.fromSM(buf, {
-    endian: 'little'
+    endian: 'little',
   })
 }
 
@@ -174,29 +174,29 @@ BN.fromScriptNumBuffer = function(
  * performing a numerical operation that results in an overflow to more than 4
  * bytes).
  */
-BN.prototype.toScriptNumBuffer = function() {
+BN.prototype.toScriptNumBuffer = function () {
   return this.toSM({
-    endian: 'little'
+    endian: 'little',
   })
 }
 
-BN.prototype.gt = function(b: BN) {
+BN.prototype.gt = function (b: BN) {
   return this.cmp(b) > 0
 }
 
-BN.prototype.gte = function(b: BN) {
+BN.prototype.gte = function (b: BN) {
   return this.cmp(b) >= 0
 }
 
-BN.prototype.lt = function(b: BN) {
+BN.prototype.lt = function (b: BN) {
   return this.cmp(b) < 0
 }
 
-BN.trim = function(buf: Buffer, natlen: number) {
+BN.trim = function (buf: Buffer, natlen: number) {
   return buf.slice(natlen - buf.length, buf.length)
 }
 
-BN.pad = function(buf: Buffer, natlen: number, size: number) {
+BN.pad = function (buf: Buffer, natlen: number, size: number) {
   const rbuf = Buffer.alloc(size)
   for (let i = 0; i < buf.length; i++) {
     rbuf[rbuf.length - 1 - i] = buf[buf.length - 1 - i]

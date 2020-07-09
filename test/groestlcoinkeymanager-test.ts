@@ -12,6 +12,7 @@ import {
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  ScriptTypeEnum,
   signTx,
   TransactionInputTypeEnum,
   wifToPrivateKey,
@@ -96,7 +97,7 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.p2pkh,
+      scriptType: ScriptTypeEnum.p2pkh,
     }).scriptPubkey
 
     const p2pkhAddress = scriptPubkeyToAddress({
@@ -127,19 +128,19 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
     })
     const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKHP2SH,
-      addressType: AddressTypeEnum.p2wpkhp2sh,
+      scriptType: ScriptTypeEnum.p2wpkhp2sh,
     }).scriptPubkey
     const p2wpkhp2shAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2WPKHP2SH,
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkhp2sh,
+      addressType: AddressTypeEnum.p2sh,
       coin: 'groestlcoin',
     })
     expect(p2wpkhp2shAddress).to.equals('3299Qf2x9BnzLaZu4HCLvm26RbBB3ZRf4u')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '3299Qf2x9BnzLaZu4HCLvm26RbBB3ZRf4u',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkhp2sh,
+      addressType: AddressTypeEnum.p2sh,
       coin: 'groestlcoin',
     })
     expect(scriptPubkeyP2WPKHP2SHRoundTrip).to.equals(scriptPubkeyP2WPKHP2SH)
@@ -157,7 +158,7 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
     })
     const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKH,
-      addressType: AddressTypeEnum.p2wpkh,
+      scriptType: ScriptTypeEnum.p2wpkh,
     }).scriptPubkey
     const p2wpkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2WPKH,
@@ -257,7 +258,7 @@ describe('groestlcoin transaction creation and signing test', () => {
   })
   const segwitScriptPubkey: string = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(privateKey),
-    addressType: AddressTypeEnum.p2wpkh,
+    scriptType: ScriptTypeEnum.p2wpkh,
   }).scriptPubkey
 
   it('Create transaction with one legacy input and one output', () => {
@@ -297,9 +298,10 @@ describe('groestlcoin transaction creation and signing test', () => {
     const hexTxSigned: string = signTx({
       tx: base64Tx,
       privateKeys: [privateKey],
+      coin: 'groestlcoin',
     })
     expect(hexTxSigned).to.equal(
-      '020000000001013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d0000000000ffffffff0180380100000000001976a914d9863e608009f46ce023c852c7c209a607f8542b88ac02483045022100aa7a1afa26c637b948f6b08986562b290fae7d5a93f7789886a323582e5ef8b0022051740e97cea1ed65d7a8e75a5a88a47f1472a10905727003ebaa1a0d550995760121030f25e157a5ddc119bf370beb688878a3600461eb5c769a5556bdfe225d9a246e00000000'
+      '020000000001013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d0000000000ffffffff0180380100000000001976a914d9863e608009f46ce023c852c7c209a607f8542b88ac024730440220558f35be4edc22260bf98fe197e39aff6bfc3717be853735be837a30bd2a0f4202207b2429dd031e851b82836e24524689c70a8c8bf4be58f9b4be23bf3e76fa577a0121030f25e157a5ddc119bf370beb688878a3600461eb5c769a5556bdfe225d9a246e00000000'
     )
   })
 })
