@@ -366,7 +366,6 @@ describe('bitcoincash replay protection transaction creation and signing test', 
       This deserialization is not required in the usual form from the caller.
       It is enough to pass the full previous rawtransaction.
     */
-    console.log(Buffer.from(scriptPubkeyP2SH, 'hex').byteLength)
     const base64Tx: string = createTx({
       network: NetworkEnum.Mainnet,
       coin: 'bitcoincash',

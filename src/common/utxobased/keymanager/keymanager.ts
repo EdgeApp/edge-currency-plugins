@@ -1,6 +1,5 @@
 /* eslint-disable camelcase */
 import * as bip32 from 'bip32'
-import { BIP32Interface } from 'bip32'
 import * as bip32grs from 'bip32grs'
 import * as bip39 from 'bip39'
 import * as bitcoin from 'bitcoinforksjs-lib'
@@ -46,6 +45,7 @@ export enum ScriptTypeEnum {
   p2wpkhp2sh = 'p2wpkhp2sh',
   p2pkh = 'p2pkh',
   p2sh = 'p2sh',
+  replayProtection = 'replayprotection',
   replayProtectionP2SH = 'replayprotectionp2sh',
 }
 
@@ -128,6 +128,15 @@ export interface ScriptPubkeyToScriptHashArgs {
   scriptType: ScriptTypeEnum
   network: NetworkEnum
   coin: string
+}
+
+export interface ScriptPubkeyToP2SHArgs {
+  scriptPubkey: string
+}
+
+export interface ScriptPubkeyToP2SHReturn {
+  scriptPubkey: string
+  redeemScript: string
 }
 
 interface ScriptHashToScriptPubkeyArgs {
@@ -358,11 +367,11 @@ export function mnemonicToXPriv(args: MnemonicToXPrivArgs): string {
     args.type
   )
   if (args.coin === 'groestlcoin') {
-    const root: BIP32Interface = bip32grs.fromSeed(seed)
+    const root: bip32.BIP32Interface = bip32grs.fromSeed(seed)
     root.network = network
     return root.derivePath(args.path).toBase58()
   }
-  const root: BIP32Interface = bip32.fromSeed(seed)
+  const root: bip32.BIP32Interface = bip32.fromSeed(seed)
   root.network = network
   return root.derivePath(args.path).toBase58()
 }
@@ -379,6 +388,17 @@ export function xprivToXPub(args: XPrivToXPubArgs): string {
   return bip32.fromBase58(args.xpriv, network).neutered().toBase58()
 }
 
+export function derivationLevelScriptHash(type: ScriptTypeEnum): number {
+  let hash: string = '0000'
+  if (type === ScriptTypeEnum.replayProtectionP2SH) {
+    hash = bitcoin.crypto
+      .hash160(Buffer.from(cdsScriptTemplates.replayProtection(''), 'hex'))
+      .slice(0, 4)
+      .toString('hex')
+  }
+  return parseInt(hash, 16)
+}
+
 export function xpubToPubkey(args: XPubToPubkeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     args.network,
@@ -386,13 +406,13 @@ export function xpubToPubkey(args: XPubToPubkeyArgs): string {
     args.type
   )
   if (args.coin === 'groestlcoin') {
-    const node: BIP32Interface = bip32grs.fromBase58(args.xpub, network)
+    const node: bip32.BIP32Interface = bip32grs.fromBase58(args.xpub, network)
     return node
       .derive(args.bip44ChangeIndex)
       .derive(args.bip44AddressIndex)
       .publicKey.toString('hex')
   }
-  const node: BIP32Interface = bip32.fromBase58(args.xpub, network)
+  const node: bip32.BIP32Interface = bip32.fromBase58(args.xpub, network)
   return node
     .derive(args.bip44ChangeIndex)
     .derive(args.bip44AddressIndex)
@@ -619,6 +639,27 @@ export function scriptPubkeyToScriptHash(
   return scriptHash.toString('hex')
 }
 
+export function scriptPubkeyToP2SH(
+  args: ScriptPubkeyToP2SHArgs
+): ScriptPubkeyToP2SHReturn {
+  const p2sh = bitcoin.payments.p2sh({
+    redeem: {
+      output: Buffer.from(args.scriptPubkey, 'hex'),
+    },
+  })
+  if (
+    typeof p2sh.output === 'undefined' ||
+    typeof p2sh.redeem === 'undefined' ||
+    typeof p2sh.redeem.output === 'undefined'
+  ) {
+    throw new Error('unable to convert script to p2sh')
+  }
+  return {
+    scriptPubkey: p2sh.output.toString('hex'),
+    redeemScript: p2sh.redeem.output.toString('hex'),
+  }
+}
+
 export function pubkeyToScriptPubkey(
   args: PubkeyToScriptPubkeyArgs
 ): PubkeyToScriptPubkeyReturn {
@@ -633,22 +674,12 @@ export function pubkeyToScriptPubkey(
       }
       return { scriptPubkey: payment.output.toString('hex') }
     case ScriptTypeEnum.p2wpkhp2sh:
-      payment = bitcoin.payments.p2sh({
-        redeem: bitcoin.payments.p2wpkh({
-          pubkey: Buffer.from(args.pubkey, 'hex'),
-        }),
+      return scriptPubkeyToP2SH({
+        scriptPubkey: pubkeyToScriptPubkey({
+          pubkey: args.pubkey,
+          scriptType: ScriptTypeEnum.p2wpkh,
+        }).scriptPubkey,
       })
-      if (
-        typeof payment.output === 'undefined' ||
-        typeof payment.redeem === 'undefined' ||
-        typeof payment.redeem.output === 'undefined'
-      ) {
-        throw new Error('failed converting pubkey to script pubkey')
-      }
-      return {
-        scriptPubkey: payment.output.toString('hex'),
-        redeemScript: payment.redeem.output.toString('hex'),
-      }
     case ScriptTypeEnum.p2wpkh:
       payment = bitcoin.payments.p2wpkh({
         pubkey: Buffer.from(args.pubkey, 'hex'),
@@ -658,25 +689,9 @@ export function pubkeyToScriptPubkey(
       }
       return { scriptPubkey: payment.output.toString('hex') }
     case ScriptTypeEnum.replayProtectionP2SH:
-      payment = bitcoin.payments.p2sh({
-        redeem: {
-          output: Buffer.from(
-            cdsScriptTemplates.replayProtection(args.pubkey),
-            'hex'
-          ),
-        },
+      return scriptPubkeyToP2SH({
+        scriptPubkey: cdsScriptTemplates.replayProtection(args.pubkey),
       })
-      if (
-        typeof payment.output === 'undefined' ||
-        typeof payment.redeem === 'undefined' ||
-        typeof payment.redeem.output === 'undefined'
-      ) {
-        throw new Error('failed generating replay protection redeem script')
-      }
-      return {
-        scriptPubkey: payment.output?.toString('hex'),
-        redeemScript: payment.redeem?.output?.toString('hex'),
-      }
     default:
       throw new Error('invalid address type in pubkey to script pubkey')
   }
@@ -689,14 +704,14 @@ export function xprivToPrivateKey(args: XPrivToPrivateKeyArgs): string {
     args.type
   )
   if (args.coin === 'groestlcoin') {
-    const node: BIP32Interface = bip32grs.fromBase58(args.xpriv, network)
+    const node: bip32.BIP32Interface = bip32grs.fromBase58(args.xpriv, network)
     const privateKey = node.derive(0).derive(0).privateKey
     if (typeof privateKey === 'undefined') {
       throw new Error('Failed to generate private key from xpriv')
     }
     return privateKey.toString('hex')
   }
-  const node: BIP32Interface = bip32.fromBase58(args.xpriv, network)
+  const node: bip32.BIP32Interface = bip32.fromBase58(args.xpriv, network)
   const privateKey = node.derive(0).derive(0).privateKey
   if (typeof privateKey === 'undefined') {
     throw new Error('Failed to generate private key from xpriv')

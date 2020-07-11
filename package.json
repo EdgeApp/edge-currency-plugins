@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "bip39": "^3.0.2",
-    "bitcoinforksjs-lib": "git://https://github.com/TheCharlatan/bitcoinjs-lib#altcoins",
+    "bitcoinforksjs-lib": "file://../bitcoinjs-lib",
     "bitcoinjs-lib": "^5.1.10",
     "bn.js": "^5.1.2",
     "groestlcoinjs-lib": "^5.1.10"
