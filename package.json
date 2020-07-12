@@ -57,6 +57,7 @@
     "typescript": "^3.9.6"
   },
   "dependencies": {
+    "bip32grs": "^2.0.5",
     "bip39": "^3.0.2",
     "bitcoinforksjs-lib": "file://../bitcoinjs-lib",
     "bitcoinjs-lib": "^5.1.10",
