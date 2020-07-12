@@ -3,7 +3,6 @@ import * as bip32 from 'bip32'
 import * as bip32grs from 'bip32grs'
 import * as bip39 from 'bip39'
 import * as bitcoin from 'bitcoinforksjs-lib'
-import * as groestl from 'groestlcoinjs-lib'
 
 import {
   cashAddressToHash,
@@ -303,35 +302,30 @@ function guessAddressTypeFromAddress(
   if (typeof addressType !== 'undefined') {
     return addressType
   }
+  const coinClass: Coin = getCoinFromString(coin)
   try {
-    if (coin === 'groestlcoin') {
-      groestl.payments.p2pkh({ address, network })
-      return AddressTypeEnum.p2pkh
-    }
-    bitcoin.payments.p2pkh({ address, network })
+    bitcoin.payments.p2pkh({
+      address,
+      network,
+      bs58DecodeFunc: coinClass.bs58DecodeFunc,
+      bs58EncodeFunc: coinClass.bs58EncodeFunc,
+    })
     return AddressTypeEnum.p2pkh
   } catch (e) {}
   try {
-    if (coin === 'groestlcoin') {
-      groestl.payments.p2sh({ address, network })
-      return AddressTypeEnum.p2sh
-    }
-    bitcoin.payments.p2sh({ address, network })
+    bitcoin.payments.p2sh({
+      address,
+      network,
+      bs58DecodeFunc: coinClass.bs58DecodeFunc,
+      bs58EncodeFunc: coinClass.bs58EncodeFunc,
+    })
     return AddressTypeEnum.p2sh
   } catch (e) {}
   try {
-    if (coin === 'groestlcoin') {
-      groestl.payments.p2wsh({ address, network })
-      return AddressTypeEnum.p2wsh
-    }
     bitcoin.payments.p2wsh({ address, network })
     return AddressTypeEnum.p2wsh
   } catch (e) {}
   try {
-    if (coin === 'groestlcoin') {
-      groestl.payments.p2wpkh({ address, network })
-      return AddressTypeEnum.p2wpkh
-    }
     bitcoin.payments.p2wpkh({ address, network })
     return AddressTypeEnum.p2wpkh
   } catch (e) {}
@@ -430,31 +424,20 @@ export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
     args.addressType,
     args.coin
   )
+  const coinClass = getCoinFromString(args.coin)
   let payment: bitcoin.payments.PaymentCreator
   switch (addressType) {
     case AddressTypeEnum.p2pkh:
       payment = bitcoin.payments.p2pkh
-      if (args.coin === 'groestlcoin') {
-        payment = groestl.payments.p2pkh
-      }
       break
     case AddressTypeEnum.p2sh:
       payment = bitcoin.payments.p2sh
-      if (args.coin === 'groestlcoin') {
-        payment = groestl.payments.p2sh
-      }
       break
     case AddressTypeEnum.p2wpkh:
       payment = bitcoin.payments.p2wpkh
-      if (args.coin === 'groestlcoin') {
-        payment = groestl.payments.p2wpkh
-      }
       break
     case AddressTypeEnum.p2wsh:
       payment = bitcoin.payments.p2wsh
-      if (args.coin === 'groestlcoin') {
-        payment = groestl.payments.p2wsh
-      }
       break
     case AddressTypeEnum.cashaddrP2PKH:
       return scriptHashToScriptPubkey({
@@ -476,6 +459,8 @@ export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
   const scriptPubkey = payment({
     address: args.address,
     network: network,
+    bs58DecodeFunc: coinClass.bs58DecodeFunc,
+    bs58EncodeFunc: coinClass.bs58EncodeFunc,
   }).output
   if (typeof scriptPubkey === 'undefined') {
     throw new Error('failed converting address to scriptPubkey')
@@ -488,31 +473,20 @@ export function scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): string {
     args.network,
     args.coin
   )
+  const coinClass = getCoinFromString(args.coin)
   let payment: bitcoin.payments.PaymentCreator
   switch (args.addressType) {
     case AddressTypeEnum.p2pkh:
       payment = bitcoin.payments.p2pkh
-      if (args.coin === 'groestlcoin') {
-        payment = groestl.payments.p2pkh
-      }
       break
     case AddressTypeEnum.p2sh:
       payment = bitcoin.payments.p2sh
-      if (args.coin === 'groestlcoin') {
-        payment = groestl.payments.p2sh
-      }
       break
     case AddressTypeEnum.p2wpkh:
       payment = bitcoin.payments.p2wpkh
-      if (args.coin === 'groestlcoin') {
-        payment = groestl.payments.p2wpkh
-      }
       break
     case AddressTypeEnum.p2wsh:
       payment = bitcoin.payments.p2wsh
-      if (args.coin === 'groestlcoin') {
-        payment = groestl.payments.p2wsh
-      }
       break
     case AddressTypeEnum.cashaddrP2PKH:
       if (args.network === NetworkEnum.Testnet) {
@@ -563,10 +537,13 @@ export function scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): string {
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
-  const address: string | undefined = payment({
+  const address = payment({
     output: Buffer.from(args.scriptPubkey, 'hex'),
     network: network,
+    bs58DecodeFunc: coinClass.bs58DecodeFunc,
+    bs58EncodeFunc: coinClass.bs58EncodeFunc,
   }).address
+
   if (typeof address === 'undefined') {
     throw new Error('failed converting scriptPubkey to address')
   }
@@ -726,14 +703,10 @@ export function privateKeyToWIF(args: PrivateKeyToWIFArgs): string {
     BIP43PurposeTypeEnum.Legacy,
     true
   )
-  if (args.coin === 'groestlcoin') {
-    return groestl.ECPair.fromPrivateKey(Buffer.from(args.privateKey, 'hex'), {
-      network,
-    }).toWIF()
-  }
+  const coinClass = getCoinFromString(args.coin)
   return bitcoin.ECPair.fromPrivateKey(Buffer.from(args.privateKey, 'hex'), {
     network,
-  }).toWIF()
+  }).toWIF(coinClass.wifEncodeFunc)
 }
 
 export function wifToPrivateKey(args: WIFToPrivateKeyArgs): string {
@@ -743,14 +716,12 @@ export function wifToPrivateKey(args: WIFToPrivateKeyArgs): string {
     BIP43PurposeTypeEnum.Legacy,
     true
   )
-  if (args.coin === 'groestlcoin') {
-    const privateKey = groestl.ECPair.fromWIF(args.wifKey, network).privateKey
-    if (typeof privateKey === 'undefined') {
-      throw new Error('Failed to convert WIF key to private key')
-    }
-    return privateKey.toString('hex')
-  }
-  const privateKey = bitcoin.ECPair.fromWIF(args.wifKey, network).privateKey
+  const coinClass = getCoinFromString(args.coin)
+  const privateKey = bitcoin.ECPair.fromWIF(
+    args.wifKey,
+    network,
+    coinClass.bs58DecodeFunc
+  ).privateKey
   if (typeof privateKey === 'undefined') {
     throw new Error('Failed to convert WIF key to private key')
   }

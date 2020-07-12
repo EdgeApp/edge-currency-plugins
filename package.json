@@ -31,7 +31,7 @@
     "@babel/preset-react": "^7.10.4",
     "@types/chai": "^4.2.9",
     "@types/mocha": "^7.0.1",
-    "@types/react": "^16.9.41",
+    "@types/react": "^16.9.43",
     "@types/react-dom": "^16.9.5",
     "@typescript-eslint/eslint-plugin": "^3.6.0",
     "@typescript-eslint/parser": "^2.0.0",
@@ -61,6 +61,7 @@
     "bitcoinforksjs-lib": "file://../bitcoinjs-lib",
     "bitcoinjs-lib": "^5.1.10",
     "bn.js": "^5.1.2",
-    "groestlcoinjs-lib": "^5.1.10"
+    "bs58grscheck": "^2.1.2",
+    "wifgrs": "^2.0.6"
   }
 }

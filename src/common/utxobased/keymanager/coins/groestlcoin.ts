@@ -1,4 +1,6 @@
 import { crypto } from 'bitcoinforksjs-lib'
+import * as base58grs from 'bs58grscheck'
+import * as wifgrs from 'wifgrs'
 
 import { Coin } from '../coin'
 
@@ -7,6 +9,9 @@ export class Groestlcoin implements Coin {
   segwit = true
   coinType = 17
   sighashFunction = crypto.sha256
+  bs58DecodeFunc = base58grs.decode
+  bs58EncodeFunc = base58grs.encode
+  wifEncodeFunc = wifgrs.encode
   mainnetConstants = {
     messagePrefix: '\x1cGroestlCoin Signed Message:\n',
     wif: 0x80,

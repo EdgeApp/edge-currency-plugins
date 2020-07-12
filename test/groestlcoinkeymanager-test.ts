@@ -196,6 +196,19 @@ describe('groestlcoin from XPriv to WIF to private key to WIF', () => {
       network: NetworkEnum.Mainnet,
       coin: 'groestlcoin',
     })
+    const wifKey2 = 'L2JewQFXAVSw4zrihJY91G6ZUTL1F8YhcCqXgJTJd1AyCTABCzMD'
+    const privateKey2 = wifToPrivateKey({
+      wifKey: wifKey2,
+      network: NetworkEnum.Mainnet,
+      coin: 'groestlcoin',
+    })
+    const wifKeyRoundTrip2 = privateKeyToWIF({
+      privateKey: privateKey2,
+      network: NetworkEnum.Mainnet,
+      coin: 'groestlcoin',
+    })
+    expect(wifKey2).to.be.equal(wifKeyRoundTrip2)
+
     const wifKey = 'KyeNA49yfj4JDoMEWtpQiosP6eig55att3cTv6NBXCeFNsHoNnyM'
     expect(derivedWIFKey).to.equal(wifKey)
     const privateKey = wifToPrivateKey({
