@@ -73,11 +73,6 @@ describe('decred bip32 prefix tests for the conversion from xpriv to xpub', () =
 })
 
 describe('decred xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
-  /*
-    These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
-    using the same seed as in other tests (abandon, ...)
-    */
-
   it('given an xpub, generate p2pkh address and cross verify script pubkey result', () => {
     const pubkeyP2PKH = xpubToPubkey({
       xpub:

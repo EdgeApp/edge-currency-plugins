@@ -63,7 +63,9 @@
     "bitcoinforksjs-lib": "git://github.com/TheCharlatan/bitcoinjs-lib.git#altcoins",
     "bn.js": "^5.1.2",
     "bs58grscheck": "^2.1.2",
+    "bs58smartcheck": "^2.0.4",
     "crypto-browserify": "git://github.com/decred/crypto-browserify.git#master-legacy",
+    "wif-smart": "^2.0.0",
     "wifgrs": "^2.0.6"
   }
 }

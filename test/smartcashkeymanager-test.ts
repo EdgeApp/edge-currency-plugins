@@ -47,6 +47,7 @@ describe('smartcash mnemonic to xprv test vectors as compared with iancoleman', 
 })
 
 describe('smartcash bip32 prefix tests for the conversion from xpriv to xpub', () => {
+  // verified with old edge library tests
   it('bip44 xpriv to xpub mainnet', () => {
     const resultLegacy = xprivToXPub({
       xpriv:
@@ -101,9 +102,9 @@ describe('smartcash xpub to address tests;  generate valid addresses by calling 
       addressType: AddressTypeEnum.p2pkh,
       coin: 'smartcash',
     })
-    expect(p2pkhAddress).to.equals('SkYmjrcQQgc9XWFAfBRG61YEYRWUoFKjcJ')
+    expect(p2pkhAddress).to.equals('SkYmjrcQQgc9XWFAfBRG61YEYRWUqGEZnG')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
-      address: 'SkYmjrcQQgc9XWFAfBRG61YEYRWUoFKjcJ',
+      address: 'SkYmjrcQQgc9XWFAfBRG61YEYRWUqGEZnG',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'smartcash',
@@ -114,7 +115,7 @@ describe('smartcash xpub to address tests;  generate valid addresses by calling 
 
 describe('smartcash from WIF to private key to WIF', () => {
   it('take a wif private key', () => {
-    const wifKey = 'KxU83MzcLXP1WJtoFJXMDMcN3z5ykAa9xLdFTDY5XpV4e6Zit9BA'
+    const wifKey = 'VLqHRdvdNPgspEjPM6ee5CcLKc4CFBvafN183pevjxXKX1uZGe1m'
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
@@ -130,15 +131,14 @@ describe('smartcash from WIF to private key to WIF', () => {
 })
 
 describe('smartcash guess script pubkeys from address', () => {
-  // these tests are cross verified with bitcoin core
   it('p2pkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: 'SkYmjrcQQgc9XWFAfBRG61YEYRWUoFKjcJ',
+      address: 'ScZ5enspA3DpbSkX1SYxkCLyu8gh4qzTWH',
       network: NetworkEnum.Mainnet,
       coin: 'smartcash',
     })
     expect(scriptPubkey).to.equal(
-      '76a914ff1609403946409f74cd2c07e50c4c40ec66080288ac'
+      '76a914a763fb8d08fdd6b5f6e3e3bf41ab33901b86e72088ac'
     )
   })
 })
