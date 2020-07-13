@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
+import { cdsScriptTemplates } from '../src/common/utxobased/keymanager/bitcoincashUtils/checkdatasig'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -12,6 +13,7 @@ import {
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  scriptPubkeyToP2SH,
   ScriptTypeEnum,
   signTx,
   TransactionInputTypeEnum,
@@ -324,7 +326,7 @@ describe('bitcoincash transaction creation and signing test', () => {
       ],
     }).psbt
     const hexTxSigned: string = signTx({
-      tx: base64Tx,
+      psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoincash',
     })
@@ -346,9 +348,10 @@ describe('bitcoincash replay protection transaction creation and signing test', 
     pubkey: privateKeyToPubkey(privateKey),
     scriptType: ScriptTypeEnum.p2pkh,
   }).scriptPubkey
-  const info = pubkeyToScriptPubkey({
-    pubkey: privateKeyToPubkey(privateKey),
-    scriptType: ScriptTypeEnum.replayProtectionP2SH,
+  const info = scriptPubkeyToP2SH({
+    scriptPubkey: cdsScriptTemplates.replayProtection(
+      privateKeyToPubkey(privateKey)
+    ),
   })
   const scriptPubkeyP2SH = info.scriptPubkey
   const redeemScript = info.redeemScript
@@ -403,7 +406,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
       ],
     }).psbt
     const hexTxSigned: string = signTx({
-      tx: base64Tx,
+      psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoincash',
     })

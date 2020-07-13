@@ -40,7 +40,6 @@ export enum AddressTypeEnum {
 
 export enum ScriptTypeEnum {
   p2wpkh = 'p2wpkh',
-  p2wsh = 'p2wsh',
   p2wpkhp2sh = 'p2wpkhp2sh',
   p2pkh = 'p2pkh',
   p2sh = 'p2sh',
@@ -187,7 +186,7 @@ export interface CreateTxReturn {
 
 export interface SignTxArgs {
   privateKeys: string[]
-  tx: string
+  psbt: string
   coin: string
 }
 
@@ -340,6 +339,17 @@ function guessAddressTypeFromAddress(
   throw new Error('Could not determine address type of ' + address)
 }
 
+export function legacySeedToXPriv(seed: string): string {
+  const xpriv = bip32
+    .fromSeed(Buffer.from(seed, 'hex'))
+    .derivePath('m/0')
+    .toBase58()
+  if (typeof xpriv === 'undefined') {
+    throw new Error('Failed to generate xpriv from legacy seed')
+  }
+  return xpriv
+}
+
 export function legacySeedToPrivateKey(
   args: LegacySeedToPrivateKeyArgs
 ): string {
@@ -348,7 +358,7 @@ export function legacySeedToPrivateKey(
     .derivePath('m/0/0')
     .derive(args.index).privateKey
   if (typeof privateKey === 'undefined') {
-    throw new Error('Failed to generate private key from xpriv')
+    throw new Error('Failed to generate private key from legacy seed')
   }
   return privateKey.toString('hex')
 }
@@ -382,14 +392,14 @@ export function xprivToXPub(args: XPrivToXPubArgs): string {
   return bip32.fromBase58(args.xpriv, network).neutered().toBase58()
 }
 
-export function derivationLevelScriptHash(type: ScriptTypeEnum): number {
+export function derivationLevelScriptHash(): number {
+  // currently returns the derivation for an empty script template for a bitcoin cash
+  // replay protection script (without key material)
   let hash: string = '0000'
-  if (type === ScriptTypeEnum.replayProtectionP2SH) {
-    hash = bitcoin.crypto
-      .hash160(Buffer.from(cdsScriptTemplates.replayProtection(''), 'hex'))
-      .slice(0, 4)
-      .toString('hex')
-  }
+  hash = bitcoin.crypto
+    .hash160(Buffer.from(cdsScriptTemplates.replayProtection(''), 'hex'))
+    .slice(0, 4)
+    .toString('hex')
   return parseInt(hash, 16)
 }
 
@@ -566,9 +576,6 @@ function scriptHashToScriptPubkey(args: ScriptHashToScriptPubkeyArgs): string {
     case ScriptTypeEnum.p2wpkh:
       payment = bitcoin.payments.p2wpkh
       break
-    case ScriptTypeEnum.p2wsh:
-      payment = bitcoin.payments.p2wsh
-      break
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
@@ -599,9 +606,6 @@ export function scriptPubkeyToScriptHash(
       break
     case ScriptTypeEnum.p2wpkh:
       payment = bitcoin.payments.p2wpkh
-      break
-    case ScriptTypeEnum.p2wsh:
-      payment = bitcoin.payments.p2wsh
       break
     default:
       throw new Error('invalid address type in address to script pubkey')
@@ -665,10 +669,6 @@ export function pubkeyToScriptPubkey(
         throw new Error('failed converting pubkey to script pubkey')
       }
       return { scriptPubkey: payment.output.toString('hex') }
-    case ScriptTypeEnum.replayProtectionP2SH:
-      return scriptPubkeyToP2SH({
-        scriptPubkey: cdsScriptTemplates.replayProtection(args.pubkey),
-      })
     default:
       throw new Error('invalid address type in pubkey to script pubkey')
   }
@@ -860,7 +860,7 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
 }
 
 export function signTx(args: SignTxArgs): string {
-  const psbt = bitcoin.Psbt.fromBase64(args.tx)
+  const psbt = bitcoin.Psbt.fromBase64(args.psbt)
   const coin = getCoinFromString(args.coin)
   for (let i: number = 0; i < args.privateKeys.length; i++) {
     if (typeof coin.sighashFunction !== 'undefined') {

@@ -520,7 +520,7 @@ describe('bitcoin transaction creation and signing test', () => {
       ],
     }).psbt
     const hexTxSigned: string = signTx({
-      tx: base64Tx,
+      psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin',
     })
@@ -564,7 +564,7 @@ describe('bitcoin transaction creation and signing test', () => {
     }).psbt
 
     const rawtransaction: string = signTx({
-      tx: base64Tx,
+      psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin',
     })
@@ -592,7 +592,7 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false,
     }).psbt
     const segwitRawTransaction: string = signTx({
-      tx: segwitTx,
+      psbt: segwitTx,
       privateKeys: Array(nOutputs).fill(privateKey),
       coin: 'bitcoin',
     })
@@ -675,7 +675,7 @@ describe('bitcoin transaction creation and signing test', () => {
     }).psbt
 
     const rawtransaction: string = signTx({
-      tx: base64Tx,
+      psbt: base64Tx,
       privateKeys: [privateKey, privateKey, privateKey],
       coin: 'bitcoin',
     })
@@ -721,7 +721,7 @@ describe('bitcoin transaction creation and signing test', () => {
     }).psbt
 
     const hexTxSigned: string = signTx({
-      tx: base64Tx,
+      psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin',
     })
@@ -744,7 +744,7 @@ describe('bitcoin transaction creation and signing test', () => {
     }).psbt
 
     const hexTxMultiSigned: string = signTx({
-      tx: base64TxMulti,
+      psbt: base64TxMulti,
       privateKeys: Array(nOutputs).fill(privateKey),
       coin: 'bitcoin',
     })

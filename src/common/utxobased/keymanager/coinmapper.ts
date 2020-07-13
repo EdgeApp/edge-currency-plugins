@@ -20,7 +20,7 @@ import { Vertcoin } from './coins/vertcoin'
 import { ZCash } from './coins/zcash'
 import { Zcoin } from './coins/zcoin'
 
-const coinClasses: Coin[] = [
+export const coinClasses: Coin[] = [
   new Litecoin(),
   new Bitcoin(),
   new BitcoinCash(),

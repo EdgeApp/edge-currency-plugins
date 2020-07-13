@@ -309,7 +309,7 @@ describe('groestlcoin transaction creation and signing test', () => {
       ],
     }).psbt
     const hexTxSigned: string = signTx({
-      tx: base64Tx,
+      psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'groestlcoin',
     })
