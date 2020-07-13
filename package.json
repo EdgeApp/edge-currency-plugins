@@ -60,7 +60,7 @@
     "bip32": "^2.0.5",
     "bip32grs": "^2.0.5",
     "bip39": "^3.0.2",
-    "bitcoinforksjs-lib": "file://../bitcoinjs-lib",
+    "bitcoinforksjs-lib": "git://github.com/TheCharlatan/bitcoinjs-lib.git#decredSupport",
     "bn.js": "^5.1.2",
     "bs58grscheck": "^2.1.2",
     "crypto-browserify": "git://github.com/decred/crypto-browserify.git#master-legacy",
