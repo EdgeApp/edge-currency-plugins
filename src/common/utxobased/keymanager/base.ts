@@ -23,16 +23,6 @@ export function base58Base(
     const payload = buffer.slice(0, -4)
     const checksum = buffer.slice(-4)
     const newChecksum = checksumFn(payload)
-    console.log(
-      buffer.toString('hex'),
-      buffer,
-      'payload: ',
-      payload,
-      'as included: ',
-      checksum,
-      'new checksum: ',
-      newChecksum
-    )
 
     if (
       (checksum[0] ^ newChecksum[0]) |
