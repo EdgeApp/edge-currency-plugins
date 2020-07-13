@@ -7,10 +7,10 @@ import {
   BIP43PurposeTypeEnum,
   mnemonicToXPriv,
   NetworkEnum,
-  // privateKeyToWIF,
+  privateKeyToWIF,
   // pubkeyToScriptPubkey,
   // scriptPubkeyToAddress,
-  // wifToPrivateKey,
+  wifToPrivateKey,
   xprivToXPub,
   // xpubToPubkey,
 } from '../src/common/utxobased/keymanager/keymanager'
@@ -173,23 +173,38 @@ describe('decred bip32 prefix tests for the conversion from xpriv to xpub', () =
 //   })
 // })
 
-// describe('decred from WIF to private key to WIF', () => {
-//   it('take a wif private key', () => {
-//     console.log('PmQhFGVRUjeRmGBPJCW2FCXFck1EoDBF6hks6auNJVQ26M4h73W9W')
-//     const wifKey = 'PmQhFGVRUjeRmGBPJCW2FCXFck1EoDBF6hks6auNJVQ26M4h73W9W'
-//     const privateKey = wifToPrivateKey({
-//       wifKey,
-//       network: NetworkEnum.Mainnet,
-//       coin: 'decred',
-//     })
-//     const wifKeyRoundTrip = privateKeyToWIF({
-//       privateKey: privateKey,
-//       network: NetworkEnum.Mainnet,
-//       coin: 'decred',
-//     })
-//     expect(wifKey).to.be.equal(wifKeyRoundTrip)
-//   })
-// })
+describe('decred from WIF to private key to WIF', () => {
+  it('take a wif private key', () => {
+    const wifKey = 'PmQhFGVRUjeRmGBPJCW2FCXFck1EoDBF6hks6auNJVQ26M4h73W9W'
+    const privateKey = wifToPrivateKey({
+      wifKey,
+      network: NetworkEnum.Mainnet,
+      coin: 'decred',
+    })
+    const wifKeyRoundTrip = privateKeyToWIF({
+      privateKey: privateKey,
+      network: NetworkEnum.Mainnet,
+      coin: 'decred',
+    })
+    expect(wifKey).to.be.equal(wifKeyRoundTrip)
+  })
+
+  // it('take a wif private key', () => {
+  //   console.log('PmQhFGVRUjeRmGBPJCW2FCXFck1EoDBF6hks6auNJVQ26M4h73W9W')
+  //   const wifKey = 'PmQhFGVRUjeRmGBPJCW2FCXFck1EoDBF6hks6auNJVQ26M4h73W9W'
+  //   const privateKey = wifToPrivateKey({
+  //     wifKey,
+  //     network: NetworkEnum.Mainnet,
+  //     coin: 'decred',
+  //   })
+  //   const wifKeyRoundTrip = privateKeyToWIF({
+  //     privateKey: privateKey,
+  //     network: NetworkEnum.Mainnet,
+  //     coin: 'decred',
+  //   })
+  //   expect(wifKey).to.be.equal(wifKeyRoundTrip)
+  // })
+})
 
 // describe('decred guess script pubkeys from address', () => {
 //   // these tests are cross verified with bitcoin core

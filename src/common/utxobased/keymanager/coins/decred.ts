@@ -1,9 +1,14 @@
+import * as cryptob from 'crypto-browserify'
+
+import * as base58 from '../base'
 import { Coin } from '../coin'
 
 export class Decred implements Coin {
   name = 'decred'
   segwit = true
   coinType = 42
+  bs58DecodeFunc = base58.base58Base(doubleblake256).decode
+  bs58EncodeFunc = base58.base58Base(doubleblake256).encode
   mainnetConstants = {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0x22de,
@@ -31,4 +36,12 @@ export class Decred implements Coin {
     scriptHash: 0x0efc,
     bech32: 'tb',
   }
+}
+
+function doubleblake256(buffer: Buffer): Buffer {
+  return blake256(blake256(buffer))
+}
+
+function blake256(buffer: Buffer): Buffer {
+  return cryptob.createHash('blake256').update(buffer).digest()
 }
