@@ -10,9 +10,10 @@ import {
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  ScriptTypeEnum,
   wifToPrivateKey,
   xprivToXPub,
-  xpubToPubkey
+  xpubToPubkey,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 and some generated cases to test xpub prefix bytes', () => {
@@ -24,7 +25,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
       path: "m/84'/2'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultSegwit).to.equal(
       'zprvAdQSgFiAHcXKb1gcktyukXyGZykTBemmPZ9brfYnxqxM2CocMdxy9aPXTbTLv7dvJgWn2Efi4vFSyPbT4QqgarYrs583WCeMXM2q3TUU8FS'
@@ -37,7 +38,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
       path: "m/84'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultSegwitTestnet).to.equal(
       'vprv9K7GLAaERuM58PVvbk1sMo7wzVCoPwzZpVXLRBmum93gL5pSqQCAAvZjtmz93nnnYMr9i2FwG2fqrwYLRgJmDDwFjGiamGsbRMJ5Y6siJ8H'
@@ -50,7 +51,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
       path: "m/49'/2'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultWrappedSegwit).to.equal(
       'Mtpv7RooeEQDUitupgpJcxZnfDwvq8hC24R7GAiscrqFhHHhit96vCNY7yudJgrM841dMbiRUQceC12566XAHHC8Rd1BtnBdokq9tmF7jLLvUdh'
@@ -63,7 +64,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
       path: "m/49'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultWrappedSegwitTestnet).to.equal(
       'uprv91G7gZkzehuMVxDJTYE6tLivdF8e4rvzSu1LFfKw3b2Qx1Aj8vpoFnHdfUZ3hmi9jsvPifmZ24RTN2KhwB8BfMLTVqaBReibyaFFcTP1s9n'
@@ -76,7 +77,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
       path: "m/44'/2'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultLegacy).to.equal(
       'Ltpv7735AbcbmL1gbgDWj2ezvs59rh4RM1oTN2BKTKbfe3146FCPCNFbBBSWfuV9vCJNMXD9LuHpQnqVWpn2hbMhikqPdoGqbS3ptdPoNWEvvgR'
@@ -89,7 +90,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -104,7 +105,7 @@ describe('litecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
         'zprvAdQSgFiAHcXKb1gcktyukXyGZykTBemmPZ9brfYnxqxM2CocMdxy9aPXTbTLv7dvJgWn2Efi4vFSyPbT4QqgarYrs583WCeMXM2q3TUU8FS',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultSegwit).to.equals(
       'zpub6rPo5mF47z5coVm5rvWv7fv181awb7Vckn5Cf3xQXBVKu18kuBHDhNi1Jrb4br6vVD3ZbrnXemEsWJoR18mZwkUdzwD8TQnHDUCGxqZ6swA'
@@ -117,7 +118,7 @@ describe('litecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
         'vprv9K7GLAaERuM58PVvbk1sMo7wzVCoPwzZpVXLRBmum93gL5pSqQCAAvZjtmz93nnnYMr9i2FwG2fqrwYLRgJmDDwFjGiamGsbRMJ5Y6siJ8H',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultSegwitTestnet).to.equals(
       'vpub5Y6cjg78GGuNLsaPhmYsiw4gYX3HoQiRBiSwDaBXKUafCt9bNwWQiitDk5VZ5BVxYnQdwoTyXSs2JHRPAgjAvtbBrf8ZhDYe2jWAqvZVnsc'
@@ -130,7 +131,7 @@ describe('litecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
         'Mtpv7RooeEQDUitupgpJcxZnfDwvq8hC24R7GAiscrqFhHHhit96vCNY7yudJgrM841dMbiRUQceC12566XAHHC8Rd1BtnBdokq9tmF7jLLvUdh',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultWrappedSegwit).to.equals(
       'Mtub2rz9F1pkisRsSZX8sa4Ajon9GhPP6JymLgpuHqbYdU5JKFLBF7Qy8b1tZ3dccj2fefrAxfrPdVkpCxuWn3g72UctH2bvJRkp6iFmp8aLeRZ'
@@ -143,7 +144,7 @@ describe('litecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
         'uprv91G7gZkzehuMVxDJTYE6tLivdF8e4rvzSu1LFfKw3b2Qx1Aj8vpoFnHdfUZ3hmi9jsvPifmZ24RTN2KhwB8BfMLTVqaBReibyaFFcTP1s9n',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultWrappedSegwitTestnet).to.equals(
       'upub5EFU65HtV5TeiSHmZZm7FUffBGy8UKeqp7vw43jYbvZPpoVsgU93oac7Wk3u6moKegAEWtGNF8DehrnHtv21XXEMYRUocHqguyjknFHYfgY'
@@ -156,7 +157,7 @@ describe('litecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
         'Ltpv7735AbcbmL1gbgDWj2ezvs59rh4RM1oTN2BKTKbfe3146FCPCNFbBBSWfuV9vCJNMXD9LuHpQnqVWpn2hbMhikqPdoGqbS3ptdPoNWEvvgR',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultLegacy).to.equals(
       'Ltub2YDQmP391UYeDYvLye9P1SuNJFkcRGN7SYHM8JMxaDnegcPTXHJ2BnYmvHnFnGPGKu2WMuCga6iZV3SDxDMGrRyMcrYEfSPhrpS1EPkC43E'
@@ -169,7 +170,7 @@ describe('litecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
         'tprv8fVU32aAEuEPeH1WYx3LhXtSFZTRaFqjbFNPaJZ9R8fCVja44tSaUPZEKGpMK6McUDkWWMvRiVfKR3Wzei6AmLoTNYHMAZ9KtvVTLZZdhvA',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDCBWBScQPGv4Xk3JSbhw6wYYpayMjb2eAYyArpbSqQTbLDpphHGAetB6VQgVeftLML8vDSUEWcC2xDi3qJJ3YCDChJDvqVzpgoYSuT52MhJ'
@@ -191,24 +192,24 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.p2pkh
+      scriptType: ScriptTypeEnum.p2pkh,
     }).scriptPubkey
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(p2pkhAddress).to.equals('LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez')
     const scriptPukbeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(scriptPukbeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -221,24 +222,24 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       type: BIP43PurposeTypeEnum.WrappedSegwit,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKHP2SH,
-      addressType: AddressTypeEnum.p2wpkhp2sh
+      scriptType: ScriptTypeEnum.p2wpkhp2sh,
     }).scriptPubkey
     const p2wpkhp2shAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2WPKHP2SH,
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkhp2sh,
-      coin: 'litecoin'
+      addressType: AddressTypeEnum.p2sh,
+      coin: 'litecoin',
     })
     expect(p2wpkhp2shAddress).to.equals('M7wtsL7wSHDBJVMWWhtQfTMSYYkyooAAXM')
     const scriptHashP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: 'M7wtsL7wSHDBJVMWWhtQfTMSYYkyooAAXM',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkhp2sh,
-      coin: 'litecoin'
+      addressType: AddressTypeEnum.p2sh,
+      coin: 'litecoin',
     })
     expect(scriptHashP2WPKHP2SHRoundTrip).to.equals(scriptPubkeyP2WPKHP2SH)
   })
@@ -251,17 +252,17 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       type: BIP43PurposeTypeEnum.Segwit,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKH,
-      addressType: AddressTypeEnum.p2wpkh
+      scriptType: ScriptTypeEnum.p2wpkh,
     }).scriptPubkey
     const p2wpkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2WPKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(p2wpkhAddress).to.equals(
       'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh'
@@ -270,7 +271,7 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       address: 'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(scriptPubkeyP2WPKHRoundTrip).to.be.equal(scriptPubkeyP2WPKH)
   })
@@ -282,12 +283,12 @@ describe('litecoin from WIF to private key to WIF', () => {
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
@@ -299,7 +300,7 @@ describe('litecoin guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez',
       network: NetworkEnum.Mainnet,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(scriptPubkey).to.equal(
       '76a91465d4f0444069f3881221e24bb6a99b1d53e008cf88ac'
@@ -309,7 +310,7 @@ describe('litecoin guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'M7wtsL7wSHDBJVMWWhtQfTMSYYkyooAAXM',
       network: NetworkEnum.Mainnet,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(scriptPubkey).to.equal(
       'a91400846c3f4a7bb38e9b422b4129bf8b191287289e87'
@@ -320,7 +321,7 @@ describe('litecoin guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh',
       network: NetworkEnum.Mainnet,
-      coin: 'litecoin'
+      coin: 'litecoin',
     })
     expect(scriptPubkey).to.equal(
       '001496cd3178f3de0f307bcee1aeaa4d5987862dd30a'

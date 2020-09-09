@@ -6,19 +6,19 @@ import { Buffer } from 'buffer'
 import { decode, encode } from './base32'
 import BN from './bn'
 
-export enum cashaddrPrefixEnum {
+export enum CashaddrPrefixEnum {
   mainnet = 'bitcoincash',
-  testnet = 'bitcoincashtestnet'
+  testnet = 'bitcoincashtestnet',
 }
 
-export enum cashaddrTypeEnum {
+export enum CashaddrTypeEnum {
   pubkeyhash = 'pubkeyhash',
-  scripthash = 'scripthash'
+  scripthash = 'scripthash',
 }
 
 export interface BitcoinCashScriptHash {
   scriptHash: Buffer
-  type: cashaddrTypeEnum
+  type: CashaddrTypeEnum
 }
 
 const GENERATOR = [
@@ -26,8 +26,8 @@ const GENERATOR = [
   0x79b76d99e2,
   0xf33e5fb3c4,
   0xae2eabe2a8,
-  0x1e4f43e470
-].map(x => new BN(x))
+  0x1e4f43e470,
+].map((x) => new BN(x))
 
 // returns a BN object, which is not typed yet. Logs as <BN: dc0f07f285>
 const polymod = (data: number[]): any => {
@@ -106,8 +106,8 @@ const prefixToArray = (prefix: any): number[] => {
 
 export const hashToCashAddress = (
   scriptHash: string,
-  type: cashaddrTypeEnum,
-  prefix: cashaddrPrefixEnum
+  type: CashaddrTypeEnum,
+  prefix: CashaddrPrefixEnum
 ): string => {
   // Not any, but a BN object
   function checksumToArray(checksum: any): number[] {
@@ -122,9 +122,9 @@ export const hashToCashAddress = (
 
   function getTypeBits(type: string): number {
     switch (type) {
-      case cashaddrTypeEnum.pubkeyhash:
+      case CashaddrTypeEnum.pubkeyhash:
         return 0
-      case cashaddrTypeEnum.scripthash:
+      case CashaddrTypeEnum.scripthash:
         return 8
       default:
         throw new Error('Invalid type:' + type)
@@ -234,7 +234,7 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
       throw new Error(`InvalidArgument: ${address} has invalid checksum`)
     }
   } else {
-    const netNames = Object.values(cashaddrPrefixEnum)
+    const netNames = Object.values(CashaddrPrefixEnum)
     let i = netNames.shift()
     while (prefix === null && typeof i !== 'undefined') {
       const p = i
@@ -260,12 +260,12 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
     throw new Error(`InvalidArgument: ${address} has invalid hash size`)
   }
 
-  function getType(versionByte: number): cashaddrTypeEnum {
+  function getType(versionByte: number): CashaddrTypeEnum {
     switch (versionByte & 120) {
       case 0:
-        return cashaddrTypeEnum.pubkeyhash
+        return CashaddrTypeEnum.pubkeyhash
       case 8:
-        return cashaddrTypeEnum.scripthash
+        return CashaddrTypeEnum.scripthash
       default:
         throw new Error(
           'Invalid address type in version byte: ' + versionByte.toString()
@@ -276,7 +276,7 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
   const type = getType(versionByte)
   const info: BitcoinCashScriptHash = {
     scriptHash: Buffer.from(hash),
-    type: type
+    type: type,
   }
   return info
 }

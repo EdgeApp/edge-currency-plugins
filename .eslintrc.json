@@ -10,6 +10,7 @@
   },
   "plugins": ["simple-import-sort"],
   "rules": {
-    "simple-import-sort/sort": "error"
+    "simple-import-sort/sort": "error",
+    "@typescript-eslint/camelcase": "off"
   }
 }

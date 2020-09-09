@@ -3,6 +3,7 @@ import { Coin } from '../coin'
 export class Feathercoin implements Coin {
   name = 'feathercoin'
   segwit = true
+  coinType = 8
   mainnetConstants = {
     messagePrefix: '\x18Feathercoin Signed Message:\n',
     wif: 0x8e,
@@ -14,7 +15,7 @@ export class Feathercoin implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x0e,
     scriptHash: 0x05,
-    bech32: 'fc'
+    bech32: 'fc',
   }
 
   testnetConstants = {
@@ -28,6 +29,6 @@ export class Feathercoin implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'tb'
+    bech32: 'tb',
   }
 }

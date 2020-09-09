@@ -1,10 +1,19 @@
+import { crypto } from 'bitcoinforksjs-lib'
+import * as base58grs from 'bs58grscheck'
+import * as wifgrs from 'wifgrs'
+
 import { Coin } from '../coin'
 
 export class Groestlcoin implements Coin {
   name = 'groestlcoin'
   segwit = true
+  coinType = 17
+  sighashFunction = crypto.sha256
+  bs58DecodeFunc = base58grs.decode
+  bs58EncodeFunc = base58grs.encode
+  wifEncodeFunc = wifgrs.encode
   mainnetConstants = {
-    messagePrefix: '\x19Groestlcoin Signed Message:\n',
+    messagePrefix: '\x1cGroestlCoin Signed Message:\n',
     wif: 0x80,
     legacyXPriv: 0x0488ade4,
     legacyXPub: 0x0488b21e,
@@ -14,11 +23,11 @@ export class Groestlcoin implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x24,
     scriptHash: 0x05,
-    bech32: 'grs'
+    bech32: 'grs',
   }
 
   testnetConstants = {
-    messagePrefix: '\x19Groestlcoin Signed Message:\n',
+    messagePrefix: '\x1cGroestlCoin Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,
@@ -28,6 +37,6 @@ export class Groestlcoin implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'tb'
+    bech32: 'tb',
   }
 }

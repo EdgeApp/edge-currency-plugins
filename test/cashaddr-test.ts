@@ -3,15 +3,16 @@ import { describe, it } from 'mocha'
 
 import {
   cashAddressToHash,
-  cashaddrPrefixEnum,
-  cashaddrTypeEnum,
-  hashToCashAddress
+  CashaddrPrefixEnum,
+  CashaddrTypeEnum,
+  hashToCashAddress,
 } from '../src/common/utxobased/keymanager/bitcoincashUtils/cashAddress'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
   NetworkEnum,
-  scriptPubkeyToScriptHash
+  scriptPubkeyToScriptHash,
+  ScriptTypeEnum,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoin cash address tests', () => {
@@ -20,17 +21,17 @@ describe('bitcoin cash address tests', () => {
       address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     }),
     network: NetworkEnum.Mainnet,
-    addressType: AddressTypeEnum.p2pkh,
-    coin: 'bitcoin'
+    scriptType: ScriptTypeEnum.p2pkh,
+    coin: 'bitcoin',
   })
   it('pubkey hash to cashaddr', () => {
     const address = hashToCashAddress(
       pubkeyHash,
-      cashaddrTypeEnum.pubkeyhash,
-      cashaddrPrefixEnum.mainnet
+      CashaddrTypeEnum.pubkeyhash,
+      CashaddrPrefixEnum.mainnet
     )
     expect(address).to.equal(
       'bitcoincash:qrvcdmgpk73zyfd8pmdl9wnuld36zh9n4gms8s0u59'
@@ -51,18 +52,18 @@ describe('bitcoin cash address tests', () => {
       address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'bitcoin'
+      coin: 'bitcoin',
     }),
     network: NetworkEnum.Mainnet,
-    addressType: AddressTypeEnum.p2sh,
-    coin: 'bitcoin'
+    scriptType: ScriptTypeEnum.p2sh,
+    coin: 'bitcoin',
   })
 
   it('script hash to cashaddr', () => {
     const address = hashToCashAddress(
       scriptHash,
-      cashaddrTypeEnum.scripthash,
-      cashaddrPrefixEnum.mainnet
+      CashaddrTypeEnum.scripthash,
+      CashaddrPrefixEnum.mainnet
     )
     expect(address).to.equal(
       'bitcoincash:pqlmd62cztjhhdrfr7dy5c5gv2np5nmknvhfvqp85n'

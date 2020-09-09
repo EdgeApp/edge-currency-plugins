@@ -3,6 +3,7 @@ import { Coin } from '../coin'
 export class Digibyte implements Coin {
   name = 'digibyte'
   segwit = true
+  coinType = 20
   mainnetConstants = {
     messagePrefix: '\x18Digibyte Signed Message:\n',
     wif: 0x80,
@@ -14,7 +15,7 @@ export class Digibyte implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x1e,
     scriptHash: 0x3f,
-    bech32: 'dgb'
+    bech32: 'dgb',
   }
 
   testnetConstants = {
@@ -28,6 +29,6 @@ export class Digibyte implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'tb'
+    bech32: 'tb',
   }
 }

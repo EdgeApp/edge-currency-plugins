@@ -1,8 +1,13 @@
+import * as bitcoin from 'bitcoinforksjs-lib'
+
 import { Coin } from '../coin'
 
 export class Bitcoingold implements Coin {
   name = 'bitcoingold'
   segwit = true
+  sighash = bitcoin.Psbt.BTG_SIGHASH_ALL
+  coinType = 156
+
   mainnetConstants = {
     messagePrefix: '\x18Bitcoin Gold Signed Message:\n',
     wif: 0x80,
@@ -14,7 +19,7 @@ export class Bitcoingold implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x26,
     scriptHash: 0x17,
-    bech32: 'btg'
+    bech32: 'btg',
   }
 
   testnetConstants = {
@@ -28,6 +33,6 @@ export class Bitcoingold implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'btg'
+    bech32: 'btg',
   }
 }

@@ -20,7 +20,7 @@ import { Vertcoin } from './coins/vertcoin'
 import { ZCash } from './coins/zcash'
 import { Zcoin } from './coins/zcoin'
 
-const coinClasses: Coin[] = [
+export const coinClasses: Coin[] = [
   new Litecoin(),
   new Bitcoin(),
   new BitcoinCash(),
@@ -41,12 +41,12 @@ const coinClasses: Coin[] = [
   new Uniformfiscalobject(),
   new Vertcoin(),
   new Zcoin(),
-  new ZCash()
+  new ZCash(),
 ]
 
 export function getCoinFromString(coinName: string): Coin {
   const selectedCoin: Coin | undefined = coinClasses.find(
-    coin => coin.name === coinName
+    (coin) => coin.name === coinName
   )
   if (typeof selectedCoin === 'undefined') {
     throw new Error('Could not find coin ' + coinName)

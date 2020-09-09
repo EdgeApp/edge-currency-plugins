@@ -10,9 +10,10 @@ import {
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  ScriptTypeEnum,
   wifToPrivateKey,
   xprivToXPub,
-  xpubToPubkey
+  xpubToPubkey,
 } from '../src/common/utxobased/keymanager/keymanager'
 
 describe('dogecoin mnemonic to xprv test vectors as compared with iancoleman', () => {
@@ -24,7 +25,7 @@ describe('dogecoin mnemonic to xprv test vectors as compared with iancoleman', (
       path: "m/44'/3'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     expect(resultLegacy).to.equal(
       'dgpv57bftCH9z6cEAdAY9SCDV9NfVsygaQWdi5LuCXdumz5qUPWnw1S3YBM7PdHXMvA8oSGS6Pbes1xEHMd5Zi2qHVK45y5FKKXzBXsZcTtYmX5'
@@ -37,7 +38,7 @@ describe('dogecoin mnemonic to xprv test vectors as compared with iancoleman', (
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -52,7 +53,7 @@ describe('dogecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
         'dgpv57bftCH9z6cEAdAY9SCDV9NfVsygaQWdi5LuCXdumz5qUPWnw1S3YBM7PdHXMvA8oSGS6Pbes1xEHMd5Zi2qHVK45y5FKKXzBXsZcTtYmX5',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     expect(resultLegacy).to.equals(
       'dgub8rUhDtD3YFGZTUphBfpBbzvFxSMKQXYLzg87Me2ta78r2SdVLmypBUkkxrrn9RTnchsyiJSkHZyLWxD13ibBiXtuFWktBoDaGaZjQUBLNLs'
@@ -65,7 +66,7 @@ describe('dogecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -87,25 +88,25 @@ describe('dogecoin xpub to address tests;  generate valid addresses by calling x
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
-      addressType: AddressTypeEnum.p2pkh
+      scriptType: ScriptTypeEnum.p2pkh,
     }).scriptPubkey
 
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     expect(p2pkhAddress).to.equals('DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -117,12 +118,12 @@ describe('dogecoin from WIF to private key to WIF', () => {
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
@@ -134,7 +135,7 @@ describe('dogecoin guess script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC',
       network: NetworkEnum.Mainnet,
-      coin: 'dogecoin'
+      coin: 'dogecoin',
     })
     expect(scriptPubkey).to.equal(
       '76a9144a483568665dcdfa68dd58a1f62893448a64333988ac'

@@ -3,6 +3,7 @@ import { Coin } from '../coin'
 export class Uniformfiscalobject implements Coin {
   name = 'uniformfiscalobject'
   segwit = true
+  coinType = 202
   mainnetConstants = {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0x9b,
@@ -14,7 +15,7 @@ export class Uniformfiscalobject implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x1b,
     scriptHash: 0x44,
-    bech32: 'uf'
+    bech32: 'uf',
   }
 
   testnetConstants = {
@@ -28,6 +29,6 @@ export class Uniformfiscalobject implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'tb'
+    bech32: 'tb',
   }
 }
