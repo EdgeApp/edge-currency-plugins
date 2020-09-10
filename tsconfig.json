@@ -3,15 +3,16 @@
     "declaration": true,
     "declarationDir": "lib",
     "emitDeclarationOnly": true,
-
+    "sourceRoot": "src",
+    "sourceMap": true,
     "esModuleInterop": true,
     "module": "es2015",
     "moduleResolution": "node",
-    "jsx": "react",
     "resolveJsonModule": true,
     "target": "es2017",
 
     "strict": true
   },
-  "exclude": ["node_modules", "lib"]
+  "include": ["./src/**/*"],
+  "exclude": ["./node_modules/**/*", "./lib/**/*"]
 }
