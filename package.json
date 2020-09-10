@@ -54,6 +54,7 @@
     "bip32grs": "^2.0.5",
     "bip39": "^3.0.2",
     "bitcoinforksjs-lib": "git://github.com/TheCharlatan/bitcoinjs-lib.git#altcoins",
+    "blake-hash": "^2.0.0",
     "bn.js": "^5.1.2",
     "bs58grscheck": "^2.1.2",
     "bs58smartcheck": "^2.0.4",

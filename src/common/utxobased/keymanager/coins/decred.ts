@@ -1,4 +1,4 @@
-import * as cryptob from 'crypto-browserify'
+import createHash from 'blake-hash'
 
 import * as base58 from '../base'
 import { Coin } from '../coin'
@@ -34,5 +34,5 @@ function doubleblake256(buffer: Buffer): Buffer {
 }
 
 function blake256(buffer: Buffer): Buffer {
-  return cryptob.createHash('blake256').update(buffer).digest()
+  return createHash('blake256').update(buffer).digest()
 }
