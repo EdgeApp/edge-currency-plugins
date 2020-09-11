@@ -9,6 +9,9 @@ import { IUTXO, UTXO } from '../db/Models/UTXO'
 import { Processor } from '../db/Processor'
 import { addressToScriptPubkey } from '../keymanager/keymanager'
 import { BlockBook, INewTransactionResponse, ITransaction as IBlockBookTransaction } from '../network/BlockBook'
+import _ from 'lodash'
+import { Emitter, Event } from '../../event/Emitter'
+import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
 
 interface UtxoEngineStateConfig {
   currencyInfo: EngineCurrencyInfo
@@ -22,7 +25,7 @@ interface SyncProgress {
   ratio: number
 }
 
-export class UtxoEngineState implements UtxoEngineStateConfig {
+export class UtxoEngineState extends Emitter implements UtxoEngineStateConfig {
   public readonly currencyInfo: EngineCurrencyInfo
   public readonly processor: Processor
   public readonly network: BlockBook
@@ -35,11 +38,19 @@ export class UtxoEngineState implements UtxoEngineStateConfig {
   private freshChangeIndex: number = 0
 
   constructor(config: UtxoEngineStateConfig) {
+    super()
+
     this.currencyInfo = config.currencyInfo
     this.processor = config.processor
     this.account = config.account
 
-    this.network = new BlockBook()
+    this.network = new BlockBook({
+      callbacks: {
+        onNewBlock: (block) => {
+          this.emit(Event.BLOCK_HEIGHT_CHANGED, block.height)
+        }
+      }
+    })
 
     const { gapLimit } = config.currencyInfo
     this.progress = {
@@ -51,6 +62,7 @@ export class UtxoEngineState implements UtxoEngineStateConfig {
 
   public async load() {
     await this.network.connect()
+    this.emit(Event.BLOCK_HEIGHT_CHANGED, this.network.currentBlock.height)
   }
 
   public async start(): Promise<void> {
@@ -139,6 +151,8 @@ export class UtxoEngineState implements UtxoEngineStateConfig {
     this.progress.processedCount++
     this.progress.ratio = this.progress.processedCount / this.progress.totalCount
     console.log(this.progress)
+
+    this.emit(Event.ADDRESSES_CHECKED, this.progress.ratio)
   }
 
   private async _calculateAddressBalance(address: IAddressPartial) {
@@ -157,16 +171,31 @@ export class UtxoEngineState implements UtxoEngineStateConfig {
       page
     })
 
+    const changedTransactions: EdgeTransaction[] = []
+    const changeTxidMap: EdgeTxidMap = {}
     for (const rawTx of accountDetails.transactions ?? []) {
       const tx = await this.processor.fetchTransaction(rawTx.txid) ?? await this._processRawTransaction(rawTx)
+      const txClone = _.cloneDeep(tx)
 
 
       // let the processor process the transaction and update our reference
       await this.processor.addTransaction(tx)
 
+      // check if the processor updated our reference
+      if (!_.isEqual(tx, txClone)) {
+        const edgeTx = tx.toEdgeTransaction(this.currencyInfo.currencyCode)
+        changedTransactions.push(edgeTx)
+        changeTxidMap[tx.txid] = tx.date
+      }
+
       await this.processor.updateAddress(Path.fromString(address.path), {
         networkQueryVal: tx.blockHeight
       })
+    }
+
+    if (changedTransactions.length > 0) {
+      this.emit(Event.TRANSACTIONS_CHANGED, changedTransactions)
+      this.emit(Event.TXIDS_CHANGED, changeTxidMap)
     }
 
     if (accountDetails.page < accountDetails.totalPages) {

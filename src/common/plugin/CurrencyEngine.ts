@@ -2,6 +2,7 @@ import { Disklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
+  EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeDataDump,
@@ -60,6 +61,7 @@ export abstract class CurrencyEngine implements ICurrencyEngine, EdgeCurrencyEng
   protected readonly account: Account
   protected isLoaded = false
   protected isRunning = false
+  protected callbacks: EdgeCurrencyEngineCallbacks
 
   protected constructor(config: EngineConfig) {
     this.walletInfo = config.walletInfo
@@ -69,6 +71,7 @@ export abstract class CurrencyEngine implements ICurrencyEngine, EdgeCurrencyEng
     this.io = config.io
     // this.account = this.tools.deriveAccount(this.walletInfo)
     this.account = this.tools.buildAccount(this.walletInfo)
+    this.callbacks = config.options.callbacks
   }
 
   protected abstract async _load(): Promise<void>
