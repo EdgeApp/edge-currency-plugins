@@ -10,7 +10,11 @@
   },
   "plugins": ["simple-import-sort"],
   "rules": {
+    "no-dupe-class-members": 0,
     "simple-import-sort/sort": "error",
-    "@typescript-eslint/camelcase": "off"
+    "@typescript-eslint/camelcase": "off",
+    "@typescript-eslint/no-floating-promises": 0,
+    "@typescript-eslint/no-misused-promises": 0,
+    "@typescript-eslint/promise-function-async": 0
   }
 }

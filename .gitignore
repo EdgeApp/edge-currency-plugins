@@ -3,6 +3,8 @@
 /dist/
 /lib/
 /config.json
+tsconfig.tsbuildinfo
+.nyc_output
 
 # Package managers:
 node_modules/
@@ -14,3 +16,5 @@ yarn-error.log
 .DS_Store
 .idea/
 .vscode/
+
+db/**/*

@@ -6,7 +6,7 @@
     "sourceRoot": "src",
     "sourceMap": true,
     "esModuleInterop": true,
-    "module": "es2015",
+    "module": "commonjs",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "target": "es2017",

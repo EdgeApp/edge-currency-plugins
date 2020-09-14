@@ -28,6 +28,18 @@ export enum BIP43PurposeTypeEnum {
   WrappedSegwit = 'wrappedSegwit', // ypub/yprv upub/uprv etc.
 }
 
+export const BIP43FormatToType: { [format: string]: BIP43PurposeTypeEnum } = {
+  bip44: BIP43PurposeTypeEnum.Legacy,
+  bip49: BIP43PurposeTypeEnum.WrappedSegwit,
+  bip84: BIP43PurposeTypeEnum.Segwit
+}
+
+export const BIP43TypeToFormat: { [type: string]: string } = {
+  [BIP43PurposeTypeEnum.Legacy]: 'bip49',
+  [BIP43PurposeTypeEnum.WrappedSegwit]: 'bip49',
+  [BIP43PurposeTypeEnum.Segwit]: 'bip84'
+}
+
 // supported address types.
 export enum AddressTypeEnum {
   p2pkh = 'p2pkh',
