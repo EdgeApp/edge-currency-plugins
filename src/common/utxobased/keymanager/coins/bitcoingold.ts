@@ -1,4 +1,4 @@
-import * as bitcoin from 'bitcoinforksjs-lib'
+import * as bitcoin from 'altcoin-js'
 
 import { Coin } from '../coin'
 

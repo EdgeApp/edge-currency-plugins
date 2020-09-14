@@ -1,4 +1,4 @@
-import { crypto } from 'bitcoinforksjs-lib'
+import { crypto } from 'altcoin-js'
 import * as base58grs from 'bs58grscheck'
 import * as wifgrs from 'wifgrs'
 

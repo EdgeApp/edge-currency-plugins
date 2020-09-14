@@ -1036,6 +1036,28 @@ alphanum-sort@^1.0.0:
   resolved "https://registry.yarnpkg.com/alphanum-sort/-/alphanum-sort-1.0.2.tgz#97a1119649b211ad33691d9f9f486a8ec9fbe0a3"
   integrity sha1-l6ERlkmyEa0zaR2fn0hqjsn74KM=
 
+altcoin-js@EdgeApp/altcoin-js#master:
+  version "5.1.10"
+  resolved "https://codeload.github.com/EdgeApp/altcoin-js/tar.gz/9226e0af0eccffed7196c1ef2387db9dd5465ec0"
+  dependencies:
+    bech32 "^1.1.4"
+    big-integer "^1.6.44"
+    bip174 "^1.0.1"
+    bip32 "^2.0.5"
+    bip66 "^1.1.0"
+    bitcoin-ops "^1.4.0"
+    blake-hash "^2.0.0"
+    bs58check "^2.0.0"
+    create-hash "^1.1.0"
+    create-hmac "^1.1.3"
+    merkle-lib "^2.0.10"
+    pushdata-bitcoin "^1.0.1"
+    randombytes "^2.0.1"
+    tiny-secp256k1 "^1.1.5"
+    typeforce "^1.11.3"
+    varuint-bitcoin "^1.1.2"
+    wif "^2.0.1"
+
 ansi-colors@3.2.3:
   version "3.2.3"
   resolved "https://registry.yarnpkg.com/ansi-colors/-/ansi-colors-3.2.3.tgz#57d35b8686e851e2cc04c403f1c00203976a1813"
@@ -1399,28 +1421,6 @@ bitcoin-ops@^1.3.0, bitcoin-ops@^1.4.0:
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/bitcoin-ops/-/bitcoin-ops-1.4.1.tgz#e45de620398e22fd4ca6023de43974ff42240278"
   integrity sha512-pef6gxZFztEhaE9RY9HmWVmiIHqCb2OyS4HPKkpc6CIiiOa3Qmuoylxc5P2EkU3w+5eTSifI9SEZC88idAIGow==
-
-"bitcoinforksjs-lib@git://github.com/TheCharlatan/bitcoinjs-lib.git#altcoins":
-  version "5.1.10"
-  resolved "git://github.com/TheCharlatan/bitcoinjs-lib.git#41306ae978d5ab319ec4c103625fad84828b7478"
-  dependencies:
-    bech32 "^1.1.4"
-    big-integer "^1.6.44"
-    bip174 "^1.0.1"
-    bip32 "^2.0.5"
-    bip66 "^1.1.0"
-    bitcoin-ops "^1.4.0"
-    blake-hash "^2.0.0"
-    bs58check "^2.0.0"
-    create-hash "^1.1.0"
-    create-hmac "^1.1.3"
-    merkle-lib "^2.0.10"
-    pushdata-bitcoin "^1.0.1"
-    randombytes "^2.0.1"
-    tiny-secp256k1 "^1.1.5"
-    typeforce "^1.11.3"
-    varuint-bitcoin "^1.1.2"
-    wif "^2.0.1"
 
 blake-hash@^2.0.0:
   version "2.0.0"

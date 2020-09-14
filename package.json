@@ -1,9 +1,9 @@
 {
-  "name": "edge-rest-wallet",
+  "name": "edge-currency-plugins",
   "version": "0.1.0",
   "private": true,
-  "description": "A REST API for storing & sending money, powered by Edge",
-  "repository": "https://github.app/EdgeApp/edge-rest-wallet",
+  "description": "Edge currency plugins to fetch and process wallet accounts, balances and transactions.",
+  "repository": "https://github.app/EdgeApp/edge-currency-plugins",
   "license": "MIT",
   "author": "Airbitz, Inc.",
   "main": "lib/index.js",
@@ -50,10 +50,10 @@
     "typescript": "^3.9.6"
   },
   "dependencies": {
+    "altcoin-js": "EdgeApp/altcoin-js#master",
     "bip32": "^2.0.5",
     "bip32grs": "^2.0.5",
     "bip39": "^3.0.2",
-    "bitcoinforksjs-lib": "git://github.com/TheCharlatan/bitcoinjs-lib.git#altcoins",
     "blake-hash": "^2.0.0",
     "bn.js": "^5.1.2",
     "bs58grscheck": "^2.1.2",

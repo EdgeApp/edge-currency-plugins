@@ -2,7 +2,7 @@
 import * as bip32 from 'bip32'
 import * as bip32grs from 'bip32grs'
 import * as bip39 from 'bip39'
-import * as bitcoin from 'bitcoinforksjs-lib'
+import * as bitcoin from 'altcoin-js'
 
 import {
   cashAddressToHash,

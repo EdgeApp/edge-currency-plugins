@@ -1,4 +1,4 @@
-import { crypto } from 'bitcoinforksjs-lib'
+import { crypto } from 'altcoin-js'
 import * as base58smart from 'bs58smartcheck'
 import * as wifsmart from 'wif-smart'
 
