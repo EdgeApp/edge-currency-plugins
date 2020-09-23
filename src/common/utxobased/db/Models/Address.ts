@@ -1,7 +1,8 @@
+import { AddressTypeEnum, NetworkEnum, scriptPubkeyToAddress } from '../../keymanager/keymanager'
+
 export type IAddress = Required<IAddressPartial>
 export interface IAddressPartial extends IAddressRequired, IAddressOptional {}
 export interface IAddressRequired {
-  address: string
   scriptPubKey: string
   networkQueryVal: number
   path: string
@@ -14,7 +15,6 @@ export interface IAddressOptional {
 }
 
 export class Address implements IAddress {
-  public address: string
   public scriptPubKey: string
   public networkQueryVal: number
   public path: string
@@ -24,7 +24,6 @@ export class Address implements IAddress {
   public balance: string
 
   constructor(data: IAddress) {
-    this.address = data.address
     this.scriptPubKey = data.scriptPubKey
     this.networkQueryVal = data.networkQueryVal
     this.path = data.path
@@ -32,5 +31,14 @@ export class Address implements IAddress {
     this.used = data.used ?? false
     this.lastTouched = data.lastTouched ?? 0
     this.balance = data.balance ?? '0'
+  }
+
+  public deriveAddress(type: AddressTypeEnum, coinName: string, networkType = NetworkEnum.Mainnet): string {
+    return scriptPubkeyToAddress({
+      scriptPubkey: this.scriptPubKey,
+      addressType: type,
+      coin: coinName,
+      network: networkType
+    })
   }
 }

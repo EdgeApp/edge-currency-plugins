@@ -1,41 +1,35 @@
 import {
-  BIP43FormatToType,
-  BIP43PurposeTypeEnum, BIP43TypeToFormat,
-  NetworkEnum
+  BIP43NameToPurposeType,
+  BIP43PurposeTypeEnum, BIP43PurposeTypeToName
 } from '../utxobased/keymanager/keymanager'
-
-const CoinToNetwork: { [coin: string]: NetworkEnum } = {
-  0: NetworkEnum.Mainnet,
-  1: NetworkEnum.Testnet
-}
 
 const REGEX = /^m[/_](\d\d?)(?:(?:'\/)|(?:__))(\d)(?:(?:'\/)|(?:__))(\d+)['_]?(?:(?:[/_]([01]))(?:(?:(?:\/)|(?:___))(\d+))?)?$/
 
 interface IPathConfig {
-  type: BIP43PurposeTypeEnum
+  purpose: BIP43PurposeTypeEnum
+  coin: number
   account?: number
-  external?: boolean
+  change?: number
   index?: number
-  network?: NetworkEnum
 }
 
 export class Path {
-  public type: BIP43PurposeTypeEnum
+  public purpose: BIP43PurposeTypeEnum
+  public coin: number
   public account: number
-  public external: boolean
+  public change: number
   public index: number
-  public network: NetworkEnum
 
   constructor(config: IPathConfig) {
-    this.type = config.type
+    this.purpose = config.purpose
+    this.coin = config.coin
     this.account = config.account ?? 0
-    this.external = config.external ?? true
+    this.change = config.change ?? 0
     this.index = config.index ?? 0
-    this.network = config.network ?? NetworkEnum.Mainnet
   }
 
-  public static fromType(type: BIP43PurposeTypeEnum, account = 0): Path {
-    return new Path({ type, account })
+  public static fromPurpose(purpose: BIP43PurposeTypeEnum, coin: number): Path {
+    return new Path({ purpose, coin })
   }
 
   public static fromString(path: string): Path {
@@ -44,36 +38,35 @@ export class Path {
     const match = path.match(REGEX)
     if (match == null) throw err
 
-    const type = BIP43FormatToType[`bip${match[1]}`]
-    if (type == null) throw err
+    const [ _, _purpose, _coin, _account, _change = '0', _index = '0' ] = match
 
-    const network = CoinToNetwork[match[2]]
-    if (network == null) throw err
+    if (_purpose == null) throw err
+    const purpose = BIP43NameToPurposeType[`bip${_purpose}`]
 
-    if (match[3] == null) throw err
-    const account = parseInt(match[3])
+    if (_coin == null) throw err
+    const coin = parseInt(_coin)
 
-    const external = match[4] === '0' || match[4] == null
+    if (_account == null) throw err
+    const account = parseInt(_account)
 
-    let index
-    if (match[5] != null) index = parseInt(match[5])
+    const change = parseInt(_change)
 
-    const config: IPathConfig = {
-      type: type,
+    const index = parseInt(_index)
+
+    return new Path({
+      purpose,
+      coin,
       account,
-      external,
+      change,
       index,
-      network
-    }
-
-    return new Path(config)
+    })
   }
 
   public static normalize(path: string): string {
-    return path.replace(REGEX, (_, type, coin, account, external, index) => {
-      let str = `m_${type}__${coin}__${account}`
-      if (external != null) {
-        str += `__${external}`
+    return path.replace(REGEX, (_, purpose, coin, account, change, index) => {
+      let str = `m_${purpose}__${coin}__${account}`
+      if (change != null) {
+        str += `__${change}`
         if (index != null) str += `___${index}`
       }
       return str
@@ -82,42 +75,36 @@ export class Path {
 
   public clone(): Path {
     return new Path({
-      type: this.type,
+      purpose: this.purpose,
       account: this.account,
-      external: this.external,
+      change: this.change,
       index: this.index,
-      network: this.network
+      coin: this.coin
     })
   }
 
-  public goTo(index: number, external?: boolean): this {
+  public goTo(index: number, change: number = this.change): this {
     this.index = index
-    this.external = external ?? this.external
+    this.change = change
     return this
   }
 
-  public next(external?: boolean): this {
-    return this.goTo(this.index + 1, external)
+  public goToChange(change: number): this {
+    return this.goTo(this.index, change)
   }
 
-  public switch(external?: boolean): this {
-    return this.goTo(this.index, external ?? !this.external)
-  }
-
-  public reset(external = true): this {
-    return this.goTo(0, external)
+  public next(change?: number): this {
+    return this.goTo(this.index + 1, change)
   }
 
   public toAccount(normalize = false): string {
-    const coin = this.network === NetworkEnum.Mainnet ? 0 : 1
-    const typeNum = BIP43TypeToFormat[this.type].replace('bip', '')
-    const path = `m/${typeNum}'/${coin}'/${this.account}'`
+    const typeNum = BIP43PurposeTypeToName[this.purpose].replace('bip', '')
+    const path = `m/${typeNum}'/${this.coin}'/${this.account}'`
     return normalize ? Path.normalize(path) : path
   }
 
   public toChange(normalize = false): string {
-    const change = this.external ? 0 : 1
-    const path = `${this.toAccount()}/${change}`
+    const path = `${this.toAccount()}/${this.change}`
     return normalize ? Path.normalize(path) : path
   }
 

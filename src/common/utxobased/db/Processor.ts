@@ -9,12 +9,27 @@ import { HashBase } from 'baselet/src/HashBase'
 import { RangeBase } from 'baselet/src/RangeBase'
 import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
-import _ from 'lodash'
 
 import { Path } from '../../Account/Path'
 import { IAddress, IAddressOptional, IAddressRequired } from './Models/Address'
 import { IProcessorTransaction, ProcessorTransaction } from './Models/ProcessorTransaction'
 import { IUTXO } from './Models/UTXO'
+
+const BUCKET_SIZES = {
+  ADDRESS_BY_PATH: 50, // count base
+  ADDRESS_PATH_BY_SPUBKEY: 6, // hash base
+  ADDRESS_BY_MRU: 100, // count base
+  SCRIPT_PUB_KEY_BY_BALANCE: 100000, // range base
+  TX_BY_ID: 2, // hash base
+  TXS_BY_SPUBKEY: 2, // hash base
+  TXS_BY_DATE: 30 * 24 * 60 * 60 * 1000, // range base
+  UTXO_BY_ID: 2, // hash base
+  UTXO_IDS_BY_SPUBKEY: 6, // hash base
+  UTXO_IDS_BY_SIZE: 100000 // range base
+}
+
+const RANGE_ID_KEY = 'id'
+const RANGE_KEY = 'rangeKey'
 
 export class Processor {
   public queue: Array<{ name: string; args: any[] }> = []
@@ -59,7 +74,7 @@ export class Processor {
           case 'count':
             return await createCountBase(disklet, dbName, size)
           case 'range':
-            return await createRangeBase(disklet, dbName, size, 'range', 'id')
+            return await createRangeBase(disklet, dbName, size, RANGE_KEY, RANGE_ID_KEY)
         }
       } catch (err) {
         // TODO verify type
@@ -68,16 +83,16 @@ export class Processor {
       }
     }
     const baselets = await Promise.all([
-      createOrOpen('count', 'addressByPath', 50),
-      createOrOpen('hash', 'addressPathBySPubKey', 6),
-      createOrOpen('count', 'addressByMRU', 100),
-      createOrOpen('range', 'scriptPubKeyByBalance', 100000),
-      createOrOpen('hash', 'txById', 2),
-      createOrOpen('hash', 'txsBySPubKey', 2),
-      createOrOpen('range', 'txsByDate', 30 * 24 * 60 * 60 * 1000),
-      createOrOpen('hash', 'utxoById', 2),
-      createOrOpen('hash', 'utxoIdsBySPubKey', 6),
-      createOrOpen('range', 'utxoIdsBySize', 100000)
+      createOrOpen('count', 'addressByPath', BUCKET_SIZES.ADDRESS_BY_PATH),
+      createOrOpen('hash', 'addressPathBySPubKey', BUCKET_SIZES.ADDRESS_PATH_BY_SPUBKEY),
+      createOrOpen('count', 'addressByMRU', BUCKET_SIZES.ADDRESS_BY_MRU),
+      createOrOpen('range', 'scriptPubKeyByBalance', BUCKET_SIZES.SCRIPT_PUB_KEY_BY_BALANCE),
+      createOrOpen('hash', 'txById', BUCKET_SIZES.TX_BY_ID),
+      createOrOpen('hash', 'txsBySPubKey', BUCKET_SIZES.TXS_BY_SPUBKEY),
+      createOrOpen('range', 'txsByDate', BUCKET_SIZES.TXS_BY_DATE),
+      createOrOpen('hash', 'utxoById', BUCKET_SIZES.UTXO_BY_ID),
+      createOrOpen('hash', 'utxoIdsBySPubKey', BUCKET_SIZES.UTXO_IDS_BY_SPUBKEY),
+      createOrOpen('range', 'utxoIdsBySize', BUCKET_SIZES.UTXO_IDS_BY_SIZE)
     ])
     return new Processor(disklet, ...baselets)
   }
@@ -98,18 +113,14 @@ export class Processor {
 
   private async _fetchAddress(path: Path): Promise<IAddress | null> {
     const prefix = path.toChange(true)
-    const [data] = await this.addressByPath
-      .query(prefix, path.index)
-      .catch(() => [])
+    const [data] = await this.addressByPath.query(prefix, path.index)
     return data
   }
 
   public async fetchAddressPathBySPubKey(
     scriptPubKey: string
   ): Promise<string | null> {
-    const [path] = await this.addressPathBySPubKey
-      .query('', [scriptPubKey])
-      .catch(() => [])
+    const [path] = await this.addressPathBySPubKey.query('', [scriptPubKey])
     return path
   }
 
@@ -138,9 +149,7 @@ export class Processor {
   private async _fetchAddressesByPath(path: Path): Promise<IAddress[]> {
     const prefix = path.toChange(true)
     const count = this.fetchAddressCountFromPathPartition(path)
-    return this.addressByPath
-      .query(prefix, 0, count - 1)
-      .catch(() => [])
+    return this.addressByPath.query(prefix, 0, count - 1)
   }
 
   public fetchAddressCountFromPathPartition(path: Path): number {
@@ -152,9 +161,7 @@ export class Processor {
   public async fetchScriptPubKeysByBalance(): Promise<
     Array<{ id: string; range: string }>
   > {
-    return this.scriptPubKeyByBalance
-      .query('', 0, 100000000000000000000)
-      .catch(() => [])
+    return this.scriptPubKeyByBalance.query('', 0, 100000000000000000000)
   }
 
   public async saveAddress(
@@ -173,25 +180,15 @@ export class Processor {
       }
     ) as IAddress
 
-    const previousData = await this._fetchAddress(path)
-    if (_.isEqual(values, previousData)) return
-
     const prefix = path.toChange(true)
     await this.addressByPath.insert(prefix, path.index, values)
+
     // Moving scriptPubKey based on balance.
-    // First delete the scriptPubKey in the db, then add it with new value
-    try {
-      if (previousData && previousData.balance !== values.balance) {
-        await this.scriptPubKeyByBalance.delete(
-          '',
-          values.scriptPubKey
-        )
-      }
-      await this.scriptPubKeyByBalance.insert('', {
-        id: values.scriptPubKey,
-        range: Number(values.balance)
-      })
-    } catch {}
+    await this.scriptPubKeyByBalance.move('', {
+      ...values,
+      [RANGE_ID_KEY]: values.scriptPubKey,
+      [RANGE_KEY]: Number(values.balance)
+    })
 
     if (onlyUpdate) return
 
@@ -256,16 +253,14 @@ export class Processor {
   }
 
   public async fetchTransaction(txId: string): Promise<ProcessorTransaction | null> {
-    const [data] = await this.txById.query('', [txId]).catch(() => [])
+    const [data] = await this.txById.query('', [txId])
     return data ? ProcessorTransaction.fromEdgeTransaction(data) : null
   }
 
   public async fetchTransactionsByScriptPubKey(
     scriptHash: string
   ): Promise<string[]> {
-    const [txIds] = await this.txsBySPubKey
-      .query('', [scriptHash])
-      .catch(() => [])
+    const [txIds] = await this.txsBySPubKey.query('', [scriptHash])
     return txIds ?? []
   }
 
@@ -285,8 +280,6 @@ export class Processor {
   }
 
   private async processTransaction(tx: ProcessorTransaction): Promise<ProcessorTransaction> {
-    const txClone = _.cloneDeep(tx)
-
     for (const inOout of [true, false]) {
       const arr = inOout ? tx.inputs : tx.outputs
       for (let i = 0; i < arr.length; i++) {
@@ -306,9 +299,7 @@ export class Processor {
       }
     }
 
-    if (!_.isEqual(tx, txClone)) {
-      await this.txById.insert('', tx.txid, tx).catch((err) => console.error(err))
-    }
+    await this.txById.insert('', tx.txid, tx)
 
     return tx
   }
@@ -334,6 +325,8 @@ export class Processor {
     if (data.blockHeight != null) {
       txData.blockHeight = data.blockHeight
     }
+
+    await this.txById.insert('', txId, txData)
   }
 
   // TODO: delete everything from db?
@@ -365,11 +358,7 @@ export class Processor {
       const address = await this._fetchAddress(path)
       balance = address?.balance ?? '0'
     } else {
-      const result = await this.utxoIdsBySize.query(
-        '',
-        0,
-        1000000000000000000000
-      )
+      const result = await this.utxoIdsBySize.query('', 0, this.utxoIdsBySize.max(''))
       balance = result.reduce(
         (sum, { range }) => bs.add(sum, range.toString()),
         '0'
@@ -380,56 +369,34 @@ export class Processor {
   }
 
   public async fetchUtxos(scriptPubKey?: string): Promise<IUTXO[]> {
-    try {
-      let ids: string[] = []
-      if (scriptPubKey) {
-        const [result = []] = await this.utxoIdsBySPubKey.query('', [
-          scriptPubKey
-        ])
-        ids = result
-      } else {
-        const result = await this.utxoIdsBySize.query(
-          '',
-          0,
-          1000000000000000000000
-        )
-        ids = result.map(({ id }: { id: string }) => id)
-      }
-
-      return ids.length === 0 ? [] : this.utxoById.query('', ids)
-    } catch (err) {
-      console.log(err)
-      return []
+    let ids: string[] = []
+    if (scriptPubKey) {
+      const [result = []] = await this.utxoIdsBySPubKey.query('', [ scriptPubKey ])
+      ids = result
+    } else {
+      const result = await this.utxoIdsBySize.query('', 0, this.utxoIdsBySize.max(''))
+      ids = result.map(({ id }: { id: string }) => id)
     }
+
+    return ids.length === 0 ? [] : this.utxoById.query('', ids)
   }
 
   public async addUTXO(utxo: IUTXO) {
-    await this.utxoById.insert('', utxo.id, utxo).catch(() => {})
-    await this.utxoIdsBySize
-      .insert('', {
-        id: utxo.id,
-        range: Number(utxo.value)
-      })
-      .catch(() => {})
-    await this.utxoIdsBySPubKey
-      .query('', [utxo.scriptPubKey])
-      .catch(() => [])
-      .then(([utxoIds]) => {
-        const set = new Set(utxoIds)
-        set.add(utxo.id)
-        return this.utxoIdsBySPubKey.insert(
-          '',
-          utxo.scriptPubKey,
-          Array.from(set)
-        )
-      })
+    await this.utxoById.insert('', utxo.id, utxo)
+    await this.utxoIdsBySize.insert('', {
+      id: utxo.id,
+      range: Number(utxo.value)
+    })
+
+    const [utxoIds] = await this.utxoIdsBySPubKey.query('', [utxo.scriptPubKey])
+    const set = new Set(utxoIds)
+    set.add(utxo.id)
+    await this.utxoIdsBySPubKey.insert('', utxo.scriptPubKey, Array.from(set))
   }
 
   public async removeUtxo(utxo: IUTXO) {
-    await this.utxoById.delete('', [utxo.id]).catch(() => {})
-    await this.utxoIdsBySize
-      .delete('', utxo.id)
-      .catch(() => {})
-    await this.utxoIdsBySPubKey.delete('', [utxo.scriptPubKey]).catch(() => {})
+    await this.utxoById.delete('', [utxo.id])
+    await this.utxoIdsBySize.delete('', utxo.id)
+    await this.utxoIdsBySPubKey.delete('', [utxo.scriptPubKey])
   }
 }
