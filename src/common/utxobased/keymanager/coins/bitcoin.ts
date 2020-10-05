@@ -6,7 +6,7 @@ export class Bitcoin implements Coin {
   coinType = 0
 
   mainnetConstants = {
-    messagePrefix: '\x1Bitcoin Signed Message:\n',
+    messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0x80,
     legacyXPriv: 0x0488ade4,
     legacyXPub: 0x0488b21e,
