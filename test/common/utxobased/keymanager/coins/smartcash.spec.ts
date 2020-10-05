@@ -14,21 +14,21 @@ import {
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
-describe('zcash mnemonic to xprv test vectors as compared with iancoleman', () => {
+describe('smartcash mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = mnemonicToXPriv({
       mnemonic: mnemonic,
-      path: "m/44'/133'/0'",
+      path: "m/44'/224'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
     expect(resultLegacy).to.equal(
-      'xprv9yMAh5zLARRVxiM7BXEzJ2t6WbW7dbm8G765ctzqhjYqW9GAtei2NjQyYmDsoVoWxTdfY5D1uDAm58bcTb35GHTxKRCVzpv42SfuxTfPTCm'
+      'xprv9yWirNER4qGZHR9cLGqJi8Z23wy2M9JmbCA7zkCunzneLv84Gxj4DmZkdjjkqotSverQ7pWsHnkPdFH2RqfkmSizzR6rZFHQ9cHSqjCKs3b'
     )
   })
 
@@ -38,7 +38,7 @@ describe('zcash mnemonic to xprv test vectors as compared with iancoleman', () =
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -46,17 +46,18 @@ describe('zcash mnemonic to xprv test vectors as compared with iancoleman', () =
   })
 })
 
-describe('zcash bip32 prefix tests for the conversion from xpriv to xpub', () => {
+describe('smartcash bip32 prefix tests for the conversion from xpriv to xpub', () => {
+  // verified with old edge library tests
   it('bip44 xpriv to xpub mainnet', () => {
     const resultLegacy = xprivToXPub({
       xpriv:
-        'xprv9yMAh5zLARRVxiM7BXEzJ2t6WbW7dbm8G765ctzqhjYqW9GAtei2NjQyYmDsoVoWxTdfY5D1uDAm58bcTb35GHTxKRCVzpv42SfuxTfPTCm',
+        'xprv9yWirNER4qGZHR9cLGqJi8Z23wy2M9JmbCA7zkCunzneLv84Gxj4DmZkdjjkqotSverQ7pWsHnkPdFH2RqfkmSizzR6rZFHQ9cHSqjCKs3b',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
     expect(resultLegacy).to.equals(
-      'xpub6CLX6bXDznyoBCRaHYmzfApq4dLc34UydL1gRHQTG55pNwbKSC2GvXjTQ4VS3n6P24fRd14uKz7P92xJQ3MWdRzUxGkqiftZf3riboiJLJs'
+      'xpub6CW5FsmJuCprVuE5SJNK5GVkbyoWkc2cxR5io8cXMLKdDiTCpW3JmZtEUzKML8iYKp5Fs7iGSLnW4EjGZFaRtmVo9RPW36CY2w4imVdUNjK'
     )
   })
 
@@ -66,7 +67,7 @@ describe('zcash bip32 prefix tests for the conversion from xpriv to xpub', () =>
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -74,7 +75,7 @@ describe('zcash bip32 prefix tests for the conversion from xpriv to xpub', () =>
   })
 })
 
-describe('zcash xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
+describe('smartcash xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
   /*
     These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
     using the same seed as in other tests (abandon, ...)
@@ -83,12 +84,12 @@ describe('zcash xpub to address tests;  generate valid addresses by calling xpub
   it('given an xpub, generate p2pkh address and cross verify script pubkey result', () => {
     const pubkeyP2PKH = xpubToPubkey({
       xpub:
-        'xpub6CLX6bXDznyoBCRaHYmzfApq4dLc34UydL1gRHQTG55pNwbKSC2GvXjTQ4VS3n6P24fRd14uKz7P92xJQ3MWdRzUxGkqiftZf3riboiJLJs',
+        'xpub6CW5FsmJuCprVuE5SJNK5GVkbyoWkc2cxR5io8cXMLKdDiTCpW3JmZtEUzKML8iYKp5Fs7iGSLnW4EjGZFaRtmVo9RPW36CY2w4imVdUNjK',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
@@ -99,46 +100,45 @@ describe('zcash xpub to address tests;  generate valid addresses by calling xpub
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
-    expect(p2pkhAddress).to.equals('t1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F')
+    expect(p2pkhAddress).to.equals('SkYmjrcQQgc9XWFAfBRG61YEYRWUqGEZnG')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
-      address: 't1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F',
+      address: 'SkYmjrcQQgc9XWFAfBRG61YEYRWUqGEZnG',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
 })
 
-describe('zcash from WIF to private key to WIF', () => {
+describe('smartcash from WIF to private key to WIF', () => {
   it('take a wif private key', () => {
-    const wifKey = 'KxU83MzcLXP1WJtoFJXMDMcN3z5ykAa9xLdFTDY5XpV4e6Zit9BA'
+    const wifKey = 'VLqHRdvdNPgspEjPM6ee5CcLKc4CFBvafN183pevjxXKX1uZGe1m'
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
 })
 
-describe('zcash guess script pubkeys from address', () => {
-  // these tests are cross verified with bitcoin core
+describe('smartcash guess script pubkeys from address', () => {
   it('p2pkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: 't1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F',
+      address: 'ScZ5enspA3DpbSkX1SYxkCLyu8gh4qzTWH',
       network: NetworkEnum.Mainnet,
-      coin: 'zcash',
+      coin: 'smartcash',
     })
     expect(scriptPubkey).to.equal(
-      '76a9149564d9fed247986b15a2f57d0b3b032eeb28476c88ac'
+      '76a914a763fb8d08fdd6b5f6e3e3bf41ab33901b86e72088ac'
     )
   })
 })
