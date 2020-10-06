@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
-import { cdsScriptTemplates } from '../src/common/utxobased/keymanager/bitcoincashUtils/checkdatasig'
+import { cdsScriptTemplates } from '../../../../../src/common/utxobased/keymanager/bitcoincashUtils/checkdatasig'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -20,7 +20,7 @@ import {
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoin cash mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =

@@ -14,21 +14,21 @@ import {
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
-describe('feathercoin mnemonic to xprv test vectors as compared with iancoleman', () => {
+describe('bitcoin gold mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = mnemonicToXPriv({
       mnemonic: mnemonic,
-      path: "m/44'/8'/0'",
+      path: "m/44'/156'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(resultLegacy).to.equal(
-      'xqMPAtc6rF1XptQ6QavaQ5fNyJkDgrZ3BLW4qwzMiDKmnRV4jWoDQHFdCzFMCJfXvxNtVcMW3rdD2FGVd54ygV72BVHNDMkr3k1HE3dE6NdQwc8'
+      'xprv9xwq8XoNMYibm1tgqx9MknBEhV2piDRtYrVLdbRFHaQiYc8Y3yxhWVBui2Pcw6GK1GjhMMsY9qnJAAFEW5QhvvQP8wCyBRMnnGCSADhBBY5'
     )
   })
 
@@ -38,7 +38,7 @@ describe('feathercoin mnemonic to xprv test vectors as compared with iancoleman'
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -46,17 +46,17 @@ describe('feathercoin mnemonic to xprv test vectors as compared with iancoleman'
   })
 })
 
-describe('feathercoin bip32 prefix tests for the conversion from xpriv to xpub', () => {
+describe('bitcoin gold bip32 prefix tests for the conversion from xpriv to xpub', () => {
   it('bip44 xpriv to xpub mainnet', () => {
     const resultLegacy = xprivToXPub({
       xpriv:
-        'xqMPAtc6rF1XptQ6QavaQ5fNyJkDgrZ3BLW4qwzMiDKmnRV4jWoDQHFdCzFMCJfXvxNtVcMW3rdD2FGVd54ygV72BVHNDMkr3k1HE3dE6NdQwc8',
+        'xprv9xwq8XoNMYibm1tgqx9MknBEhV2piDRtYrVLdbRFHaQiYc8Y3yxhWVBui2Pcw6GK1GjhMMsY9qnJAAFEW5QhvvQP8wCyBRMnnGCSADhBBY5',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(resultLegacy).to.equals(
-      'xq1vow2yefS81cbgEiWByGtkSSpvaKbitriBYioqhEvBRmRnoHaozKGHmnJCkisCuwv1NebnzGWLsuPwjZZABdb8f42MtkJqekEzqo7q7hUCpvB'
+      'xpub6BwBY3LGBvGtyVy9wygN7v7yFWsK7g9jv5QwRyprquwhRQTgbXGx4HWPZHRnF5ueji94Dztce4k3RJnt2ir3xWBS7y6bDk8ryS8vKXyoYPL'
     )
   })
 
@@ -66,7 +66,7 @@ describe('feathercoin bip32 prefix tests for the conversion from xpriv to xpub',
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -74,7 +74,7 @@ describe('feathercoin bip32 prefix tests for the conversion from xpriv to xpub',
   })
 })
 
-describe('feathercoin xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
+describe('bitcoin gold xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
   /*
     These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
     using the same seed as in other tests (abandon, ...)
@@ -83,12 +83,12 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
   it('given an xpub, generate p2pkh address and cross verify script pubkey result', () => {
     const pubkeyP2PKH = xpubToPubkey({
       xpub:
-        'xq1vow2yefS81cbgEiWByGtkSSpvaKbitriBYioqhEvBRmRnoHaozKGHmnJCkisCuwv1NebnzGWLsuPwjZZABdb8f42MtkJqekEzqo7q7hUCpvB',
+        'xpub6BwBY3LGBvGtyVy9wygN7v7yFWsK7g9jv5QwRyprquwhRQTgbXGx4HWPZHRnF5ueji94Dztce4k3RJnt2ir3xWBS7y6bDk8ryS8vKXyoYPL',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
@@ -99,14 +99,14 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
-    expect(p2pkhAddress).to.equals('6foXhTEUMC85RAhkPS2MfoxD6oS69x4rBS')
+    expect(p2pkhAddress).to.equals('GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
-      address: '6foXhTEUMC85RAhkPS2MfoxD6oS69x4rBS',
+      address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -119,7 +119,7 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       type: BIP43PurposeTypeEnum.WrappedSegwit,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKHP2SH,
@@ -129,14 +129,14 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       scriptPubkey: scriptPubkeyP2WPKHP2SH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
-    expect(p2wpkhp2shAddress).to.equals('3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i')
+    expect(p2wpkhp2shAddress).to.equals('AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
-      address: '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i',
+      address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(scriptPubkeyP2WPKHP2SHRoundTrip).to.equals(scriptPubkeyP2WPKHP2SH)
   })
@@ -149,7 +149,7 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       type: BIP43PurposeTypeEnum.Segwit,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKH,
@@ -159,55 +159,55 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       scriptPubkey: scriptPubkeyP2WPKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(p2wpkhAddress).to.equals(
-      'fc1qkwnu2phwvard2spr2n0a9d84x590ahywnuszd4'
+      'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu'
     )
     const scriptPubkeyP2WPKHRoundTrip = addressToScriptPubkey({
-      address: 'fc1qkwnu2phwvard2spr2n0a9d84x590ahywnuszd4',
+      address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(scriptPubkeyP2WPKHRoundTrip).to.be.equal(scriptPubkeyP2WPKH)
   })
 })
 
-describe('feathercoin from WIF to private key to WIF', () => {
+describe('bitcoin gold from WIF to private key to WIF', () => {
   it('take a wif private key', () => {
-    const wifKey = 'N7sWmZgvC2X451cLTriK8PD8tnUGhRMJkNNaarmLpJP9aJBLBgA4'
+    const wifKey = 'L4gU3tKvsS3XQ5eJXDARFEnMyoCvE8vsoYBngMAJESexY5yHsdkJ'
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
 })
 
-describe('feathercoin guess script pubkeys from address', () => {
+describe('bitcoin gold guess script pubkeys from address', () => {
   // these tests are cross verified with bitcoin core
   it('p2pkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: '6foXhTEUMC85RAhkPS2MfoxD6oS69x4rBS',
+      address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9',
       network: NetworkEnum.Mainnet,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(scriptPubkey).to.equal(
-      '76a91416b60429ed63dedf0d83d004bc4464130ee4cefb88ac'
+      '76a914e21fb547704ff606ba769b9d6d7985f4cca760f788ac'
     )
   })
   it('p2sh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i',
+      address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn',
       network: NetworkEnum.Mainnet,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(scriptPubkey).to.equal(
       'a9142fdadae8827ecedb668946c073ebbb0482820c6387'
@@ -216,9 +216,9 @@ describe('feathercoin guess script pubkeys from address', () => {
 
   it('p2wpkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: 'fc1qkwnu2phwvard2spr2n0a9d84x590ahywnuszd4',
+      address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu',
       network: NetworkEnum.Mainnet,
-      coin: 'feathercoin',
+      coin: 'bitcoingold',
     })
     expect(scriptPubkey).to.equal(
       '0014b3a7c506ee6746d5402354dfd2b4f5350afedc8e'

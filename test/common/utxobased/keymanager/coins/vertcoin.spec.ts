@@ -14,21 +14,21 @@ import {
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
-describe('digibyte mnemonic to xprv test vectors as compared with iancoleman', () => {
+describe('vertcoin mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = mnemonicToXPriv({
       mnemonic: mnemonic,
-      path: "m/44'/20'/0'",
+      path: "m/44'/28'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(resultLegacy).to.equal(
-      'xprv9yjgD7qdk99UwHsGUwGeqAy1QpKrYUPuZsb2ApTfE8cv4Nuij5G7HcnCMaxPU1m4bADnR4kqHnJsvW9LHvUcoLcmKLYLzjd3FGJr1CxdxWy'
+      'xprv9ymzu53azAnFBpJxehxAZi18cA112AVvbeBwMMjfHBieJwrqZjaV3EBE7k5yJPf7RfYBEJzwGKvZP1Gps312YU6BJvdobsd1CmD1xobGkrR'
     )
   })
 
@@ -38,7 +38,7 @@ describe('digibyte mnemonic to xprv test vectors as compared with iancoleman', (
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -46,17 +46,17 @@ describe('digibyte mnemonic to xprv test vectors as compared with iancoleman', (
   })
 })
 
-describe('digibyte bip32 prefix tests for the conversion from xpriv to xpub', () => {
+describe('vertcoin bip32 prefix tests for the conversion from xpriv to xpub', () => {
   it('bip44 xpriv to xpub mainnet', () => {
     const resultLegacy = xprivToXPub({
       xpriv:
-        'xprv9yjgD7qdk99UwHsGUwGeqAy1QpKrYUPuZsb2ApTfE8cv4Nuij5G7HcnCMaxPU1m4bADnR4kqHnJsvW9LHvUcoLcmKLYLzjd3FGJr1CxdxWy',
+        'xprv9ymzu53azAnFBpJxehxAZi18cA112AVvbeBwMMjfHBieJwrqZjaV3EBE7k5yJPf7RfYBEJzwGKvZP1Gps312YU6BJvdobsd1CmD1xobGkrR',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(resultLegacy).to.equals(
-      'xpub6Cj2cdNXaWhn9mwjaxofCJujxrALww7kw6WcyCsGnU9twBEsGcaMqR6gCtQ9b3k6awqL2egNaat2btUCVoETYzcmngU9outdn6RA2KxmNEn'
+      'xpub6CmMJaaUpYLYQJPRkjVAvqwsABqVRdDmxs7Y9k9GqXFdBkBz7Gtjb2VhxzCeYKuXkEzZ23MNRFj9tqjYS5UgvewWpxYmhWuwDiLR84spHS8'
     )
   })
 
@@ -66,7 +66,7 @@ describe('digibyte bip32 prefix tests for the conversion from xpriv to xpub', ()
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -74,7 +74,7 @@ describe('digibyte bip32 prefix tests for the conversion from xpriv to xpub', ()
   })
 })
 
-describe('digibyte xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
+describe('vertcoin xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
   /*
     These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
     using the same seed as in other tests (abandon, ...)
@@ -83,12 +83,12 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
   it('given an xpub, generate p2pkh address and cross verify script pubkey result', () => {
     const pubkeyP2PKH = xpubToPubkey({
       xpub:
-        'xpub6Cj2cdNXaWhn9mwjaxofCJujxrALww7kw6WcyCsGnU9twBEsGcaMqR6gCtQ9b3k6awqL2egNaat2btUCVoETYzcmngU9outdn6RA2KxmNEn',
+        'xpub6CmMJaaUpYLYQJPRkjVAvqwsABqVRdDmxs7Y9k9GqXFdBkBz7Gtjb2VhxzCeYKuXkEzZ23MNRFj9tqjYS5UgvewWpxYmhWuwDiLR84spHS8',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
@@ -99,14 +99,14 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
-    expect(p2pkhAddress).to.equals('DG1KhhBKpsyWXTakHNezaDQ34focsXjN1i')
+    expect(p2pkhAddress).to.equals('Vce16eJifb7HpuoTFEBJyKNLsBJPo7fM83')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
-      address: 'DG1KhhBKpsyWXTakHNezaDQ34focsXjN1i',
+      address: 'Vce16eJifb7HpuoTFEBJyKNLsBJPo7fM83',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
@@ -114,12 +114,12 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
   it('given an ypub, generate p2wpkh-p2sh address and cross verify script pubkey result', () => {
     const pubkeyP2WPKHP2SH = xpubToPubkey({
       xpub:
-        'ypub6YAzMR6Pck8es9hsWTDoHUw95DS2ajZtmf6k9epK6aUoteJe5LWEtsW6ys97MqeK18CJe2MDYXWaitVDwogT46t6F7uGrHHk9VHzvxoX5in',
+        'xpub6D1pK4ozztYgDWaNcvgYjXTQoWNfzSgQY9poZkJWhhbCKYVjQdUmhkRYF6NkLPNzTohQ3KEMm1ZqzZAHTPPQYuDYzVmkXtTLzLYPDhjoUrm',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKHP2SH,
@@ -129,14 +129,14 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
       scriptPubkey: scriptPubkeyP2WPKHP2SH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
-    expect(p2wpkhp2shAddress).to.equals('SQ9EXABrHztGgefL9aH3FyeRjowdjtLfn4')
+    expect(p2wpkhp2shAddress).to.equals('3GKaSv31kZoxGwMs2Kp25ngoHRHi5pz2SP')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
-      address: 'SQ9EXABrHztGgefL9aH3FyeRjowdjtLfn4',
+      address: '3GKaSv31kZoxGwMs2Kp25ngoHRHi5pz2SP',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(scriptPubkeyP2WPKHP2SHRoundTrip).to.equals(scriptPubkeyP2WPKHP2SH)
   })
@@ -144,12 +144,12 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
   it('given a zpub, generate p2wpkh address and cross verify script pubkey result', () => {
     const pubkeyP2WPKH = xpubToPubkey({
       xpub:
-        'zpub6qSFywPULarUNuzKdbWVZwFpYnb2igv9AqLCufRkXwWfexmdhkAgAsosnc3UiYaBNWBHm3DpuCfmwEG9g27X5t6vKGuLq7jvtsmLoCBMw3j',
+        'xpub6Cq877KwJnLWBSAoVoFLwoe7BbPhxxkpBkvEugZRzmWRsGqPJDJU3t8jWFuNWMR5uYLQuYPgypSR2F9HWjVaroCNtRqH43Chwjeox4je1yB',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2WPKH,
@@ -159,69 +159,69 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
       scriptPubkey: scriptPubkeyP2WPKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(p2wpkhAddress).to.equals(
-      'dgb1q9gmf0pv8jdymcly6lz6fl7lf6mhslsd72e2jq8'
+      'vtc1qfe8v6c4r39fq8xnjgcpunt5spdfcxw63zzfwru'
     )
     const scriptPubkeyP2WPKHRoundTrip = addressToScriptPubkey({
-      address: 'dgb1q9gmf0pv8jdymcly6lz6fl7lf6mhslsd72e2jq8',
+      address: 'vtc1qfe8v6c4r39fq8xnjgcpunt5spdfcxw63zzfwru',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(scriptPubkeyP2WPKHRoundTrip).to.be.equal(scriptPubkeyP2WPKH)
   })
 })
 
-describe('digibyte from WIF to private key to WIF', () => {
+describe('vertcoin from WIF to private key to WIF', () => {
   it('take a wif private key', () => {
-    const wifKey = 'L1CAcXSxB48WoRs91gjSaj8eerBj3ruTyun7MvqBpnrc62cXAJqq'
+    const wifKey = 'KxQ19nBiiNeR743RdgwWxsYogKCWgjNKp9jT2ug8wvhJdXCP8HNh'
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
 })
 
-describe('digibyte guess script pubkeys from address', () => {
+describe('vertcoin guess script pubkeys from address', () => {
   // these tests are cross verified with bitcoin core
   it('p2pkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: 'DG1KhhBKpsyWXTakHNezaDQ34focsXjN1i',
+      address: 'Vce16eJifb7HpuoTFEBJyKNLsBJPo7fM83',
       network: NetworkEnum.Mainnet,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(scriptPubkey).to.equal(
-      '76a91477310b27af676f9663881f649860a327d28777be88ac'
+      '76a9141cf825a7d790c30f6eef81f397a66c156540036e88ac'
     )
   })
   it('p2sh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: 'SQ9EXABrHztGgefL9aH3FyeRjowdjtLfn4',
+      address: '3GKaSv31kZoxGwMs2Kp25ngoHRHi5pz2SP',
       network: NetworkEnum.Mainnet,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(scriptPubkey).to.equal(
-      'a9141f3fe4a26b7d41be615d020c177c20882a2d95d287'
+      'a914a07be28d5d535951b4882821e519391bf9a39f4987'
     )
   })
 
   it('p2wpkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: 'dgb1q9gmf0pv8jdymcly6lz6fl7lf6mhslsd72e2jq8',
+      address: 'vtc1qfe8v6c4r39fq8xnjgcpunt5spdfcxw63zzfwru',
       network: NetworkEnum.Mainnet,
-      coin: 'digibyte',
+      coin: 'vertcoin',
     })
     expect(scriptPubkey).to.equal(
-      '00142a369785879349bc7c9af8b49ffbe9d6ef0fc1be'
+      '00144e4ecd62a38952039a724603c9ae900b53833b51'
     )
   })
 })
