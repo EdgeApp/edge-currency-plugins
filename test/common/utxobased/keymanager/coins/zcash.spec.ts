@@ -14,21 +14,21 @@ import {
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
-describe('qtum mnemonic to xprv test vectors as compared with iancoleman', () => {
+describe('zcash mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = mnemonicToXPriv({
       mnemonic: mnemonic,
-      path: "m/44'/2301'/0'",
+      path: "m/44'/133'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'qtum',
+      coin: 'zcash',
     })
     expect(resultLegacy).to.equal(
-      'xprv9yNMmQAw1VJVPvfhyQiCoDT5hpKGuddV8ciqvzDiZkpjURynLpPAsTyDArW8ZUySHdeWnTLy3mJE8RMxo6AaKywAEGVe9t84tcBFssGyVNo'
+      'xprv9yMAh5zLARRVxiM7BXEzJ2t6WbW7dbm8G765ctzqhjYqW9GAtei2NjQyYmDsoVoWxTdfY5D1uDAm58bcTb35GHTxKRCVzpv42SfuxTfPTCm'
     )
   })
 
@@ -38,7 +38,7 @@ describe('qtum mnemonic to xprv test vectors as compared with iancoleman', () =>
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'qtum',
+      coin: 'zcash',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -46,17 +46,17 @@ describe('qtum mnemonic to xprv test vectors as compared with iancoleman', () =>
   })
 })
 
-describe('qtum bip32 prefix tests for the conversion from xpriv to xpub', () => {
+describe('zcash bip32 prefix tests for the conversion from xpriv to xpub', () => {
   it('bip44 xpriv to xpub mainnet', () => {
     const resultLegacy = xprivToXPub({
       xpriv:
-        'xprv9yNMmQAw1VJVPvfhyQiCoDT5hpKGuddV8ciqvzDiZkpjURynLpPAsTyDArW8ZUySHdeWnTLy3mJE8RMxo6AaKywAEGVe9t84tcBFssGyVNo',
+        'xprv9yMAh5zLARRVxiM7BXEzJ2t6WbW7dbm8G765ctzqhjYqW9GAtei2NjQyYmDsoVoWxTdfY5D1uDAm58bcTb35GHTxKRCVzpv42SfuxTfPTCm',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'qtum',
+      coin: 'zcash',
     })
     expect(resultLegacy).to.equals(
-      'xpub6CMiAuhpqrrncQkB5SFDAMPpFr9mK6MLVqeSjNdL86MiMEJvtMhRRGHh27KNR7zLG8BPcjSEHQ2g6MYcKVssJGVZekhuYQQJc9kGC9ofwJX'
+      'xpub6CLX6bXDznyoBCRaHYmzfApq4dLc34UydL1gRHQTG55pNwbKSC2GvXjTQ4VS3n6P24fRd14uKz7P92xJQ3MWdRzUxGkqiftZf3riboiJLJs'
     )
   })
 
@@ -66,7 +66,7 @@ describe('qtum bip32 prefix tests for the conversion from xpriv to xpub', () => 
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'qtum',
+      coin: 'zcash',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -74,7 +74,7 @@ describe('qtum bip32 prefix tests for the conversion from xpriv to xpub', () => 
   })
 })
 
-describe('qtum xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
+describe('zcash xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
   /*
     These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
     using the same seed as in other tests (abandon, ...)
@@ -83,12 +83,12 @@ describe('qtum xpub to address tests;  generate valid addresses by calling xpubT
   it('given an xpub, generate p2pkh address and cross verify script pubkey result', () => {
     const pubkeyP2PKH = xpubToPubkey({
       xpub:
-        'xpub6CMiAuhpqrrncQkB5SFDAMPpFr9mK6MLVqeSjNdL86MiMEJvtMhRRGHh27KNR7zLG8BPcjSEHQ2g6MYcKVssJGVZekhuYQQJc9kGC9ofwJX',
+        'xpub6CLX6bXDznyoBCRaHYmzfApq4dLc34UydL1gRHQTG55pNwbKSC2GvXjTQ4VS3n6P24fRd14uKz7P92xJQ3MWdRzUxGkqiftZf3riboiJLJs',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'qtum',
+      coin: 'zcash',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
@@ -99,46 +99,46 @@ describe('qtum xpub to address tests;  generate valid addresses by calling xpubT
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'qtum',
+      coin: 'zcash',
     })
-    expect(p2pkhAddress).to.equals('QXykR884CoPkbYHCFZ68bNVTMRvicWAFq2')
+    expect(p2pkhAddress).to.equals('t1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
-      address: 'QXykR884CoPkbYHCFZ68bNVTMRvicWAFq2',
+      address: 't1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'qtum',
+      coin: 'zcash',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
 })
 
-describe('qtum from WIF to private key to WIF', () => {
+describe('zcash from WIF to private key to WIF', () => {
   it('take a wif private key', () => {
     const wifKey = 'KxU83MzcLXP1WJtoFJXMDMcN3z5ykAa9xLdFTDY5XpV4e6Zit9BA'
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'qtum',
+      coin: 'zcash',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'qtum',
+      coin: 'zcash',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
   })
 })
 
-describe('qtum guess script pubkeys from address', () => {
+describe('zcash guess script pubkeys from address', () => {
   // these tests are cross verified with bitcoin core
   it('p2pkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: 'QXykR884CoPkbYHCFZ68bNVTMRvicWAFq2',
+      address: 't1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F',
       network: NetworkEnum.Mainnet,
-      coin: 'qtum',
+      coin: 'zcash',
     })
     expect(scriptPubkey).to.equal(
-      '76a9147cc71ace3e2abcc05b3214d284cf7abba684758c88ac'
+      '76a9149564d9fed247986b15a2f57d0b3b032eeb28476c88ac'
     )
   })
 })

@@ -14,7 +14,7 @@
     "fix": "npm run lint -- --fix",
     "prepare": "npm-run-all clean -p build.*",
     "start": "node -r sucrase/register src/index.ts",
-    "test": "mocha -r sucrase/register 'test/**/*-test.ts'",
+    "test": "mocha -r sucrase/register 'test/**/*.spec.ts'",
     "lint": "eslint --ext .js,.ts ."
   },
   "husky": {
@@ -26,6 +26,7 @@
     "*.{js,ts}": "eslint"
   },
   "devDependencies": {
+    "@types/bn.js": "^4.11.6",
     "@types/chai": "^4.2.9",
     "@types/mocha": "^7.0.1",
     "@types/node": "^14.10.0",
@@ -34,9 +35,11 @@
     "@types/ws": "^7.2.6",
     "@typescript-eslint/eslint-plugin": "^3.6.0",
     "@typescript-eslint/parser": "^2.0.0",
+    "babel-eslint": "^10.1.0",
     "chai": "^4.2.0",
     "eslint": "^7.4.0",
     "eslint-config-standard-kit": ">=0.14.4",
+    "eslint-plugin-flowtype": "^5.2.0",
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-node": ">=9.1.0",
     "eslint-plugin-prettier": "^3.1.4",
@@ -48,7 +51,7 @@
     "mocha": "^7.0.1",
     "npm-run-all": "^4.1.5",
     "parcel": "^1.12.4",
-    "prettier": ">=1.0.0",
+    "prettier": "^2.0.5",
     "sucrase": "^3.12.1",
     "typescript": "^3.9.6"
   },
