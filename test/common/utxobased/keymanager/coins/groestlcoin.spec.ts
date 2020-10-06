@@ -19,7 +19,7 @@ import {
   xprivToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
 describe('groestlcoin mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =

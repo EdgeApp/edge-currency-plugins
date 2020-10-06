@@ -6,14 +6,14 @@ import {
   CashaddrPrefixEnum,
   CashaddrTypeEnum,
   hashToCashAddress,
-} from '../src/common/utxobased/keymanager/bitcoincashUtils/cashAddress'
+} from '../../../../../src/common/utxobased/keymanager/bitcoincashUtils/cashAddress'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
   NetworkEnum,
   scriptPubkeyToScriptHash,
   ScriptTypeEnum,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoin cash address tests', () => {
   const pubkeyHash = scriptPubkeyToScriptHash({

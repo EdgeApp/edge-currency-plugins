@@ -14,7 +14,7 @@ import {
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
 describe('uniformfiscalobject mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
