@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
-import { cdsScriptTemplates } from '../src/common/utxobased/keymanager/bitcoincashUtils/checkdatasig'
+import { cdsScriptTemplates } from '../../../../../src/common/utxobased/keymanager/bitcoincashUtils/checkdatasig'
 
 describe('bitcoin cash checkdatasig scripting tests', () => {
   const redeemScript = cdsScriptTemplates.replayProtection(

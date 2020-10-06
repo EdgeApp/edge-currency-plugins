@@ -1,16 +1,18 @@
 {
   "extends": [
     "standard-kit/prettier",
-    "standard-kit/prettier/node",
-    "standard-kit/prettier/jsx",
+    "standard-kit/prettier/flow",
     "standard-kit/prettier/typescript"
   ],
   "parserOptions": {
     "project": "tsconfig.json"
   },
-  "plugins": ["simple-import-sort"],
+  "plugins": [
+    "simple-import-sort"
+  ],
   "rules": {
-    "simple-import-sort/sort": "error",
-    "@typescript-eslint/camelcase": "off"
+    "@typescript-eslint/promise-function-async": "off",
+    "no-var": "error",
+    "simple-import-sort/sort": "error"
   }
 }

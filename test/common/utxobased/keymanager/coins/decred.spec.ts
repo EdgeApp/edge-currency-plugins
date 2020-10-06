@@ -7,28 +7,26 @@ import {
   BIP43PurposeTypeEnum,
   mnemonicToXPriv,
   NetworkEnum,
-  privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
-  wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
-describe('dogecoin mnemonic to xprv test vectors as compared with iancoleman', () => {
+describe('decred mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = mnemonicToXPriv({
       mnemonic: mnemonic,
-      path: "m/44'/3'/0'",
+      path: "m/44'/156'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'dogecoin',
+      coin: 'decred',
     })
     expect(resultLegacy).to.equal(
-      'dgpv57bftCH9z6cEAdAY9SCDV9NfVsygaQWdi5LuCXdumz5qUPWnw1S3YBM7PdHXMvA8oSGS6Pbes1xEHMd5Zi2qHVK45y5FKKXzBXsZcTtYmX5'
+      'dprv3o8pLs3xWbQUcPFT19CVo7NgS6GKpRbR9ib9m6RR5TEzXhfCFUq1hHhHK7BUxqqpG7WP7KYuRH3rMibWqqYSnSRxeUxv57oXdV1BmJ6Qw5Y'
     )
   })
 
@@ -38,7 +36,7 @@ describe('dogecoin mnemonic to xprv test vectors as compared with iancoleman', (
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'dogecoin',
+      coin: 'decred',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -46,17 +44,17 @@ describe('dogecoin mnemonic to xprv test vectors as compared with iancoleman', (
   })
 })
 
-describe('dogecoin bip32 prefix tests for the conversion from xpriv to xpub', () => {
+describe('decred bip32 prefix tests for the conversion from xpriv to xpub', () => {
   it('bip44 xpriv to xpub mainnet', () => {
     const resultLegacy = xprivToXPub({
       xpriv:
-        'dgpv57bftCH9z6cEAdAY9SCDV9NfVsygaQWdi5LuCXdumz5qUPWnw1S3YBM7PdHXMvA8oSGS6Pbes1xEHMd5Zi2qHVK45y5FKKXzBXsZcTtYmX5',
+        'dprv3o8pLs3xWbQUcPFT19CVo7NgS6GKpRbR9ib9m6RR5TEzXhfCFUq1hHhHK7BUxqqpG7WP7KYuRH3rMibWqqYSnSRxeUxv57oXdV1BmJ6Qw5Y',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'dogecoin',
+      coin: 'decred',
     })
     expect(resultLegacy).to.equals(
-      'dgub8rUhDtD3YFGZTUphBfpBbzvFxSMKQXYLzg87Me2ta78r2SdVLmypBUkkxrrn9RTnchsyiJSkHZyLWxD13ibBiXtuFWktBoDaGaZjQUBLNLs'
+      'dpubZEvuhzcFayUGWo9DFfFrKLAw46pbFNBVMGDUW1Mn5XqdFFgq8SAcmsDJTotAMMkqgQvGRtARQUzaYAvdT4zy7YwomLzYC8KLW6KdBqP9nsC'
     )
   })
 
@@ -66,7 +64,7 @@ describe('dogecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'dogecoin',
+      coin: 'decred',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -74,21 +72,16 @@ describe('dogecoin bip32 prefix tests for the conversion from xpriv to xpub', ()
   })
 })
 
-describe('dogecoin xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
-  /*
-    These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
-    using the same seed as in other tests (abandon, ...)
-    */
-
+describe('decred xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
   it('given an xpub, generate p2pkh address and cross verify script pubkey result', () => {
     const pubkeyP2PKH = xpubToPubkey({
       xpub:
-        'dgub8rUhDtD3YFGZTUphBfpBbzvFxSMKQXYLzg87Me2ta78r2SdVLmypBUkkxrrn9RTnchsyiJSkHZyLWxD13ibBiXtuFWktBoDaGaZjQUBLNLs',
+        'dpubZEvuhzcFayUGWo9DFfFrKLAw46pbFNBVMGDUW1Mn5XqdFFgq8SAcmsDJTotAMMkqgQvGRtARQUzaYAvdT4zy7YwomLzYC8KLW6KdBqP9nsC',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'dogecoin',
+      coin: 'decred',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
@@ -99,46 +92,52 @@ describe('dogecoin xpub to address tests;  generate valid addresses by calling x
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'dogecoin',
+      coin: 'decred',
     })
-    expect(p2pkhAddress).to.equals('DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC')
+    expect(p2pkhAddress).to.equals('DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
-      address: 'DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC',
+      address: 'DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'dogecoin',
+      coin: 'decred',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
 })
 
-describe('dogecoin from WIF to private key to WIF', () => {
-  it('take a wif private key', () => {
-    const wifKey = 'QPkeC1ZfHx3c9g7WTj9cQ8gnvk2iSAfAcbq1aVAWjNTwDAKfZUzx'
-    const privateKey = wifToPrivateKey({
-      wifKey,
-      network: NetworkEnum.Mainnet,
-      coin: 'dogecoin',
-    })
-    const wifKeyRoundTrip = privateKeyToWIF({
-      privateKey: privateKey,
-      network: NetworkEnum.Mainnet,
-      coin: 'dogecoin',
-    })
-    expect(wifKey).to.be.equal(wifKeyRoundTrip)
-  })
-})
-
-describe('dogecoin guess script pubkeys from address', () => {
-  // these tests are cross verified with bitcoin core
+describe('decred guess script pubkeys from address', () => {
   it('p2pkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
-      address: 'DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC',
+      address: 'DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg',
       network: NetworkEnum.Mainnet,
-      coin: 'dogecoin',
+      coin: 'decred',
     })
     expect(scriptPubkey).to.equal(
-      '76a9144a483568665dcdfa68dd58a1f62893448a64333988ac'
+      '76a914e21fb547704ff606ba769b9d6d7985f4cca760f788ac'
     )
+    const address = scriptPubkeyToAddress({
+      scriptPubkey: scriptPubkey,
+      network: NetworkEnum.Mainnet,
+      addressType: AddressTypeEnum.p2pkh,
+      coin: 'decred',
+    })
+    expect(address).to.equal('DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg')
+  })
+  it('p2sh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'DcbpczkMzqtYozqrX7vHcFQmCF5wqsW2hYW',
+      network: NetworkEnum.Mainnet,
+      coin: 'decred',
+    })
+    expect(scriptPubkey).to.equal(
+      'a9142fdadae8827ecedb668946c073ebbb0482820c6387'
+    )
+    const address = scriptPubkeyToAddress({
+      scriptPubkey: scriptPubkey,
+      network: NetworkEnum.Mainnet,
+      addressType: AddressTypeEnum.p2sh,
+      coin: 'decred',
+    })
+    expect(address).to.equal('DcbpczkMzqtYozqrX7vHcFQmCF5wqsW2hYW')
   })
 })

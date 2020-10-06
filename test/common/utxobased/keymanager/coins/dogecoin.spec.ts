@@ -14,21 +14,21 @@ import {
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
-describe('eboost mnemonic to xprv test vectors as compared with iancoleman', () => {
+describe('dogecoin mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = mnemonicToXPriv({
       mnemonic: mnemonic,
-      path: "m/44'/0'/0'",
+      path: "m/44'/3'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'eboost',
+      coin: 'dogecoin',
     })
     expect(resultLegacy).to.equal(
-      'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb'
+      'dgpv57bftCH9z6cEAdAY9SCDV9NfVsygaQWdi5LuCXdumz5qUPWnw1S3YBM7PdHXMvA8oSGS6Pbes1xEHMd5Zi2qHVK45y5FKKXzBXsZcTtYmX5'
     )
   })
 
@@ -38,7 +38,7 @@ describe('eboost mnemonic to xprv test vectors as compared with iancoleman', () 
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'eboost',
+      coin: 'dogecoin',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -46,17 +46,17 @@ describe('eboost mnemonic to xprv test vectors as compared with iancoleman', () 
   })
 })
 
-describe('eboost bip32 prefix tests for the conversion from xpriv to xpub', () => {
+describe('dogecoin bip32 prefix tests for the conversion from xpriv to xpub', () => {
   it('bip44 xpriv to xpub mainnet', () => {
     const resultLegacy = xprivToXPub({
       xpriv:
-        'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb',
+        'dgpv57bftCH9z6cEAdAY9SCDV9NfVsygaQWdi5LuCXdumz5qUPWnw1S3YBM7PdHXMvA8oSGS6Pbes1xEHMd5Zi2qHVK45y5FKKXzBXsZcTtYmX5',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'eboost',
+      coin: 'dogecoin',
     })
     expect(resultLegacy).to.equals(
-      'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj'
+      'dgub8rUhDtD3YFGZTUphBfpBbzvFxSMKQXYLzg87Me2ta78r2SdVLmypBUkkxrrn9RTnchsyiJSkHZyLWxD13ibBiXtuFWktBoDaGaZjQUBLNLs'
     )
   })
 
@@ -66,7 +66,7 @@ describe('eboost bip32 prefix tests for the conversion from xpriv to xpub', () =
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'eboost',
+      coin: 'dogecoin',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -74,21 +74,21 @@ describe('eboost bip32 prefix tests for the conversion from xpriv to xpub', () =
   })
 })
 
-describe('eboost xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
+describe('dogecoin xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
   /*
-    These methods were cross verified with the old edge plugin tests
+    These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
     using the same seed as in other tests (abandon, ...)
     */
 
   it('given an xpub, generate p2pkh address and cross verify script pubkey result', () => {
     const pubkeyP2PKH = xpubToPubkey({
       xpub:
-        'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj',
+        'dgub8rUhDtD3YFGZTUphBfpBbzvFxSMKQXYLzg87Me2ta78r2SdVLmypBUkkxrrn9RTnchsyiJSkHZyLWxD13ibBiXtuFWktBoDaGaZjQUBLNLs',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'eboost',
+      coin: 'dogecoin',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
@@ -99,46 +99,46 @@ describe('eboost xpub to address tests;  generate valid addresses by calling xpu
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'eboost',
+      coin: 'dogecoin',
     })
-    expect(p2pkhAddress).to.equals('eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4')
+    expect(p2pkhAddress).to.equals('DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
-      address: 'eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4',
+      address: 'DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'eboost',
+      coin: 'dogecoin',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
 })
 
-describe('eboost guess script pubkeys from address', () => {
-  // these tests are cross verified with bitcoin core
-  it('p2pkh address to scriptPubkey', () => {
-    const scriptPubkey = addressToScriptPubkey({
-      address: 'eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4',
-      network: NetworkEnum.Mainnet,
-      coin: 'eboost',
-    })
-    expect(scriptPubkey).to.equal(
-      '76a914d986ed01b7a22225a70edbf2ba7cfb63a15cb3aa88ac'
-    )
-  })
-})
-
-describe('eboost from WIF to private key to WIF', () => {
+describe('dogecoin from WIF to private key to WIF', () => {
   it('take a wif private key', () => {
-    const wifKey = 'ZcSgeybBZAQ7y7eFUEfPk6ZDA2843QMAJBvEfFMvyQfi8HsHfgEq'
+    const wifKey = 'QPkeC1ZfHx3c9g7WTj9cQ8gnvk2iSAfAcbq1aVAWjNTwDAKfZUzx'
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'eboost',
+      coin: 'dogecoin',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'eboost',
+      coin: 'dogecoin',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
+  })
+})
+
+describe('dogecoin guess script pubkeys from address', () => {
+  // these tests are cross verified with bitcoin core
+  it('p2pkh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC',
+      network: NetworkEnum.Mainnet,
+      coin: 'dogecoin',
+    })
+    expect(scriptPubkey).to.equal(
+      '76a9144a483568665dcdfa68dd58a1f62893448a64333988ac'
+    )
   })
 })
