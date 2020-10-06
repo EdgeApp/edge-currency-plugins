@@ -1,6 +1,7 @@
 import Websocket from 'ws'
 import { EdgeTransaction } from 'edge-core-js'
 import Axios, { AxiosInstance } from 'axios'
+import { BlockHeightEmitter, EngineEvent } from '../../plugin/types'
 
 const baseUri = 'btc1.trezor.io'
 
@@ -130,7 +131,7 @@ interface IBlock {
   txCount: number
 }
 
-export interface IBlockBook {
+export interface BlockBook {
   isConnected: boolean
 
   connect(): Promise<void>
@@ -162,6 +163,8 @@ export interface IBlockBook {
 
   fetchAddress(address: string, opts?: IAccountOpts): Promise<IAccountDetailsBasic>
 
+  watchAddresses(addresses: string[], cb?: (response: INewTransactionResponse) => void): void
+
   fetchAddressUtxos(account: string): Promise<IAccountUTXO[]>
 
   fetchTransaction(hash: string): Promise<ITransaction>
@@ -169,13 +172,18 @@ export interface IBlockBook {
   broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction>
 }
 
-export function makeBlockBook(): IBlockBook {
-  const instance: IBlockBook = {
+interface BlockBookConfig {
+  emitter: BlockHeightEmitter
+}
+
+export function makeBlockBook(config: BlockBookConfig): BlockBook {
+  const instance: BlockBook = {
     isConnected: false,
     connect,
     disconnect,
     fetchBlock,
     fetchAddress,
+    watchAddresses,
     fetchAddressUtxos,
     fetchTransaction,
     broadcastTx
@@ -185,6 +193,7 @@ export function makeBlockBook(): IBlockBook {
   let pingTimeout!: NodeJS.Timeout
   let addressesToWatch: string[] = []
   let addressWatcherCallback: undefined | ((response: INewTransactionResponse) => void)
+  const WATCH_NEW_BLOCK_EVENT_ID = 'WATCH_NEW_BLOCK_EVENT_ID'
   const WATCH_ADDRESS_TX_EVENT_ID = 'WATCH_ADDRESS_TX_EVENT_ID'
 
   const ws = new Websocket(`wss://${baseUri}/websocket`)
@@ -224,6 +233,12 @@ export function makeBlockBook(): IBlockBook {
     // Listen once to the open message to ensure we are connected before returning
     await new Promise((resolve) => {
       ws.once('open', () => {
+        // Watch for new blocks
+        sendWsMessage({
+          id: WATCH_NEW_BLOCK_EVENT_ID,
+          method: 'subscribeNewBlock'
+        })
+
         resolve()
       })
     })
@@ -255,7 +270,9 @@ export function makeBlockBook(): IBlockBook {
   }
 
   function handleWsResponse(response: IWsResponse): void {
-    if (
+    if (response.id === WATCH_NEW_BLOCK_EVENT_ID) {
+      config.emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, response.data)
+    } else if (
       response.id === WATCH_ADDRESS_TX_EVENT_ID &&
       response.data?.subscribed === true
     ) {

@@ -1,6 +1,8 @@
 import * as chai from 'chai'
+import { EventEmitter } from 'events'
 
-import { IBlockBook, makeBlockBook } from '../../../../src/common/utxobased/network/BlockBook'
+import { BlockBook, makeBlockBook } from '../../../../src/common/utxobased/network/BlockBook'
+import { BlockHeightEmitter } from '../../../../src/common/plugin/types'
 
 chai.should()
 
@@ -8,10 +10,11 @@ describe('BlockBook', function() {
   this.timeout(10000)
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
-  let blockBook: IBlockBook
+  const emitter: BlockHeightEmitter = new EventEmitter() as any
+  let blockBook: BlockBook
 
   beforeEach(async () => {
-    blockBook = makeBlockBook()
+    blockBook = makeBlockBook({ emitter })
     await blockBook.connect()
   })
 
