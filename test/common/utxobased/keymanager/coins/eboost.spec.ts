@@ -14,21 +14,21 @@ import {
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
-} from '../src/common/utxobased/keymanager/keymanager'
+} from '../../../../../src/common/utxobased/keymanager/keymanager'
 
-describe('zcoin mnemonic to xprv test vectors as compared with iancoleman', () => {
+describe('eboost mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = mnemonicToXPriv({
       mnemonic: mnemonic,
-      path: "m/44'/136'/0'",
+      path: "m/44'/0'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'zcoin',
+      coin: 'eboost',
     })
     expect(resultLegacy).to.equal(
-      'xprv9yDcvGwNLgwS8rV5AYuupanjnfAoDZksQkDdXagMv5MAfrdSaKhoxqhic4NupSGNXtg1eqoAH7UezJMFoBfNNZHL2wVHjX1hEfU1xhceu8b'
+      'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb'
     )
   })
 
@@ -38,7 +38,7 @@ describe('zcoin mnemonic to xprv test vectors as compared with iancoleman', () =
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'zcoin',
+      coin: 'eboost',
     })
     expect(resultLegacyTestnet).to.equal(
       'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR'
@@ -46,17 +46,17 @@ describe('zcoin mnemonic to xprv test vectors as compared with iancoleman', () =
   })
 })
 
-describe('zcoin bip32 prefix tests for the conversion from xpriv to xpub', () => {
+describe('eboost bip32 prefix tests for the conversion from xpriv to xpub', () => {
   it('bip44 xpriv to xpub mainnet', () => {
     const resultLegacy = xprivToXPub({
       xpriv:
-        'xprv9yDcvGwNLgwS8rV5AYuupanjnfAoDZksQkDdXagMv5MAfrdSaKhoxqhic4NupSGNXtg1eqoAH7UezJMFoBfNNZHL2wVHjX1hEfU1xhceu8b',
+        'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'zcoin',
+      coin: 'eboost',
     })
     expect(resultLegacy).to.equals(
-      'xpub6CCyKnUGB4VjMLZYGaSvBijULh1Hd2Uimy9EKy5yUQt9Yexb7s24We2CTM54hWaQZYhCzSR6yEFAs5cQ8TwbaSn53S6HRrmaFkdgqczb85v'
+      'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj'
     )
   })
 
@@ -66,7 +66,7 @@ describe('zcoin bip32 prefix tests for the conversion from xpriv to xpub', () =>
         'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'zcoin',
+      coin: 'eboost',
     })
     expect(resultLegacyTestnet).to.equals(
       'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
@@ -74,21 +74,21 @@ describe('zcoin bip32 prefix tests for the conversion from xpriv to xpub', () =>
   })
 })
 
-describe('zcoin xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
+describe('eboost xpub to address tests;  generate valid addresses by calling xpubToPubkey, pubkeyToScriptPubkey and scriptPubkeyToAddress', () => {
   /*
-    These methods were cross verified using ian colemans bip32 website https://iancoleman.io/bip39/
+    These methods were cross verified with the old edge plugin tests
     using the same seed as in other tests (abandon, ...)
     */
 
   it('given an xpub, generate p2pkh address and cross verify script pubkey result', () => {
     const pubkeyP2PKH = xpubToPubkey({
       xpub:
-        'xpub6CCyKnUGB4VjMLZYGaSvBijULh1Hd2Uimy9EKy5yUQt9Yexb7s24We2CTM54hWaQZYhCzSR6yEFAs5cQ8TwbaSn53S6HRrmaFkdgqczb85v',
+        'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'zcoin',
+      coin: 'eboost',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
       pubkey: pubkeyP2PKH,
@@ -99,46 +99,46 @@ describe('zcoin xpub to address tests;  generate valid addresses by calling xpub
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'zcoin',
+      coin: 'eboost',
     })
-    expect(p2pkhAddress).to.equals('a1bW3sVVUsLqgKuTMXtSaAHGvpxKwugxPH')
+    expect(p2pkhAddress).to.equals('eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
-      address: 'a1bW3sVVUsLqgKuTMXtSaAHGvpxKwugxPH',
+      address: 'eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'zcoin',
+      coin: 'eboost',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
 })
 
-describe('zcoin from WIF to private key to WIF', () => {
+describe('eboost guess script pubkeys from address', () => {
+  // these tests are cross verified with bitcoin core
+  it('p2pkh address to scriptPubkey', () => {
+    const scriptPubkey = addressToScriptPubkey({
+      address: 'eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4',
+      network: NetworkEnum.Mainnet,
+      coin: 'eboost',
+    })
+    expect(scriptPubkey).to.equal(
+      '76a914d986ed01b7a22225a70edbf2ba7cfb63a15cb3aa88ac'
+    )
+  })
+})
+
+describe('eboost from WIF to private key to WIF', () => {
   it('take a wif private key', () => {
-    const wifKey = 'Y6U2XvHuURXs7sDsokirN2CwZedNeGdkSA3dNBMPKqFpBttBeH8s'
+    const wifKey = 'ZcSgeybBZAQ7y7eFUEfPk6ZDA2843QMAJBvEfFMvyQfi8HsHfgEq'
     const privateKey = wifToPrivateKey({
       wifKey,
       network: NetworkEnum.Mainnet,
-      coin: 'zcoin',
+      coin: 'eboost',
     })
     const wifKeyRoundTrip = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'zcoin',
+      coin: 'eboost',
     })
     expect(wifKey).to.be.equal(wifKeyRoundTrip)
-  })
-})
-
-describe('zcoin guess script pubkeys from address', () => {
-  // these tests are cross verified with bitcoin core
-  it('p2pkh address to scriptPubkey', () => {
-    const scriptPubkey = addressToScriptPubkey({
-      address: 'a1bW3sVVUsLqgKuTMXtSaAHGvpxKwugxPH',
-      network: NetworkEnum.Mainnet,
-      coin: 'zcoin',
-    })
-    expect(scriptPubkey).to.equal(
-      '76a91409a72463ad9977d0b81baacbf25054de672d69f088ac'
-    )
   })
 })
