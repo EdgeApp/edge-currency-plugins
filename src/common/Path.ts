@@ -3,6 +3,7 @@ import {
   BIP43PurposeTypeEnum,
   ScriptTypeEnum
 } from './utxobased/keymanager/keymanager'
+import { getCoinFromString } from './utxobased/keymanager/coinmapper'
 
 export const BIP43NameToPurposeType: { [format: string]: BIP43PurposeTypeEnum } = {
   bip44: BIP43PurposeTypeEnum.Legacy,
@@ -20,13 +21,20 @@ const REGEX = /^m[/_](\d\d?)(?:(?:'\/)|(?:__))(\d)(?:(?:'\/)|(?:__))(\d+)['_]?(?
 
 interface IPathConfig {
   purpose: BIP43PurposeTypeEnum
-  coin: number
   account?: number
   change?: number
   index?: number
 }
 
-interface IPathValues extends Required<IPathConfig> {
+interface IPathConfig1 extends IPathConfig {
+  coin: number
+}
+
+interface IPathConfig2 extends IPathConfig {
+  coinName: string
+}
+
+interface IPathValues extends Required<IPathConfig1> {
   addressType: AddressTypeEnum
   scriptType: ScriptTypeEnum
 }
@@ -82,7 +90,13 @@ export function makePathFromString(path: string): Path {
   return makePath({ purpose, coin, account, change, index })
 }
 
-export function makePath(config: IPathConfig): Path {
+export function makePath(config: IPathConfig1): Path
+export function makePath(config: IPathConfig2): Path
+export function makePath(config: IPathConfig1 | IPathConfig2): Path {
+  const coin = 'coin' in config
+    ? config.coin
+    : getCoinFromString(config.coinName).coinType
+
   let scriptType: ScriptTypeEnum
   let addressType: AddressTypeEnum
 
@@ -108,6 +122,7 @@ export function makePath(config: IPathConfig): Path {
     change: 0,
     index: 0,
     ...config,
+    coin,
     scriptType,
     addressType,
 
