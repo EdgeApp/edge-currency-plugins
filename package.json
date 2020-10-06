@@ -70,7 +70,7 @@
     "bs58grscheck": "^2.1.2",
     "bs58smartcheck": "^2.0.4",
     "disklet": "^0.4.5",
-    "edge-core-js": "^0.17.10",
+    "edge-core-js": "^0.17.14",
     "wif-smart": "^2.0.0",
     "wifgrs": "^2.0.6"
   }
