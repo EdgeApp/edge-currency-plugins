@@ -61,6 +61,7 @@
     "bn.js": "^5.1.2",
     "bs58grscheck": "^2.1.2",
     "bs58smartcheck": "^2.0.4",
+    "edge-core-js": "^0.17.14",
     "wif-smart": "^2.0.0",
     "wifgrs": "^2.0.6"
   }
