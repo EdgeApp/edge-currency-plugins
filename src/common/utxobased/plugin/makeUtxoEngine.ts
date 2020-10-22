@@ -14,6 +14,7 @@ import { EngineConfig, EngineEvent, LocalWalletMetadata } from '../../plugin/typ
 import { makeUtxoEngineState } from './UtxoEngineState'
 import { makeProcessor } from '../db/Processor'
 import { deriveAccount } from '../../plugin/makeCurrencyTools'
+import { makeBlockBook } from '../network/BlockBook'
 
 const localWalletDataPath = `metadata.json`
 async function fetchLocalWalletMetadata(config: EngineConfig): Promise<LocalWalletMetadata> {
@@ -34,15 +35,22 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
   const {
     info,
     walletInfo,
+    io,
     options: {
       walletLocalDisklet,
       emitter
     }
   } = config
 
+
+  const network = makeBlockBook({
+    emitter
+  })
+  await network.connect()
+
   const metadata = await fetchLocalWalletMetadata(config)
   let currentBalance = metadata.balance
-  let currentBlockHeight = 0
+  let currentBlockHeight = (await network.fetchInfo()).bestHeight
 
   const processor = await makeProcessor(walletLocalDisklet)
   const account = deriveAccount(info, walletInfo)
@@ -50,7 +58,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     currencyInfo: info,
     processor,
     account,
-    emitter
+    emitter,
+    network
   })
   emitter.on(EngineEvent.BLOCK_HEIGHT_CHANGED, (height) => {
     currentBlockHeight = height

@@ -4,7 +4,7 @@ import { isEqual, cloneDeep } from 'lodash'
 
 import { EngineCurrencyInfo, EngineEmitter, EngineEvent } from '../../plugin/types'
 import { Processor } from '../db/Processor'
-import { INewTransactionResponse, ITransaction, makeBlockBook } from '../network/BlockBook'
+import { BlockBook, INewTransactionResponse, ITransaction, makeBlockBook } from '../network/BlockBook'
 import { Account } from '../../Account'
 import { makePathFromString, Path } from '../../Path'
 import { IAddress, IAddressOptional, IAddressPartial, IAddressRequired, IUTXO } from '../db/types'
@@ -16,6 +16,7 @@ interface UtxoEngineStateConfig {
   processor: Processor
   account: Account
   emitter: EngineEmitter
+  network: BlockBook
 }
 
 interface SyncProgress {
@@ -35,12 +36,9 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     currencyInfo,
     processor,
     account,
-    emitter
+    emitter,
+    network
   } = config
-
-  const network = makeBlockBook({
-    emitter
-  })
 
   const progress: SyncProgress = {
     totalCount: currencyInfo.gapLimit + currencyInfo.gapLimit, // spend + change accounts
