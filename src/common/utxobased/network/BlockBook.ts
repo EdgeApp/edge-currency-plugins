@@ -1,13 +1,6 @@
 import Websocket from 'ws'
 import { EdgeTransaction } from 'edge-core-js'
-import Axios, { AxiosInstance } from 'axios'
 import { BlockHeightEmitter, EngineEvent } from '../../plugin/types'
-
-const baseUri = 'btc1.trezor.io'
-
-const axios: AxiosInstance = Axios.create({
-  baseURL: `https://${baseUri}/api/v2/`
-})
 
 export interface INewTransactionResponse {
   address: string
@@ -112,23 +105,15 @@ interface IAccountUTXO extends IUTXO {
   path?: string
 }
 
-interface IBlock {
-  page: number
-  totalPages: number
-  itemsOnPage: number
-  hash: string
-  previousBlockHash: string
-  nextBlockHash: string | null
-  height: number
-  confirmations: number
-  size: number
-  time: number
-  version: number
-  merkleRoot: string
-  nonce: string
-  bits: string
-  difficulty: string
-  txCount: number
+interface IServerInfo {
+  name: string
+  shortcut: string
+  decimals: number
+  version: string
+  bestHeight: number
+  bestHash: string
+  block0Hash: string
+  testnet: boolean
 }
 
 export interface BlockBook {
@@ -138,7 +123,7 @@ export interface BlockBook {
 
   disconnect(): Promise<void>
 
-  fetchBlock(height?: number): Promise<IBlock>
+  fetchInfo(): Promise<IServerInfo>
 
   fetchAddress(
     address: string,
@@ -176,12 +161,18 @@ interface BlockBookConfig {
   emitter: BlockHeightEmitter
 }
 
+const baseUri = 'btc1.trezor.io'
+
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
+  const {
+    emitter,
+  } = config
+
   const instance: BlockBook = {
     isConnected: false,
     connect,
     disconnect,
-    fetchBlock,
+    fetchInfo,
     fetchAddress,
     watchAddresses,
     fetchAddressUtxos,
@@ -253,7 +244,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     instance.isConnected = false
   }
 
-  async function promisifyWsMessage<T>(method: string, params: object): Promise<T> {
+  async function promisifyWsMessage<T>(method: string, params?: object): Promise<T> {
     return new Promise((resolve) => {
       const id = wsIdCounter++
       sendWsMessage({ id: id.toString(), method, params }, resolve)
@@ -271,7 +262,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   function handleWsResponse(response: IWsResponse): void {
     if (response.id === WATCH_NEW_BLOCK_EVENT_ID) {
-      config.emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, response.data)
+      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, response.data)
     } else if (
       response.id === WATCH_ADDRESS_TX_EVENT_ID &&
       response.data?.subscribed === true
@@ -284,13 +275,8 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     delete wsPendingMessages[response.id]
   }
 
-  async function fetchBlock(hashOrHeight?: string | number): Promise<IBlock> {
-    if (!hashOrHeight) {
-      const { data: { blockHash } } = await axios.get('/block-index')
-      hashOrHeight = blockHash
-    }
-    const { data: block } = await axios.get<IBlock>(`/block/${hashOrHeight}`)
-    return block
+  async function fetchInfo(): Promise<IServerInfo> {
+    return promisifyWsMessage('getInfo')
   }
 
   function fetchAddress(address: string, opts: IAccountOpts = {}): Promise<any> {
