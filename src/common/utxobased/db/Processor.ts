@@ -6,8 +6,8 @@ import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
 
 import { makePathFromString, Path } from '../../Path'
-import { IAddress, IAddressOptional, IAddressPartial, IAddressRequired, IUTXO } from './types'
-import { IProcessorTransaction, ProcessorTransaction } from './Models/ProcessorTransaction'
+import { IAddress, IAddressOptional, IAddressPartial, IAddressRequired, IUTXO, IProcessorTransaction } from './types'
+import { ProcessorTransaction } from './Models/ProcessorTransaction'
 
 const BUCKET_SIZES = {
   ADDRESS_BY_PATH: 50, // count base
@@ -55,6 +55,8 @@ export interface Processor {
   dropTransaction(txId: string): Promise<void>
 
   fetchBalance(path?: Path): Promise<string>
+
+  fetchUtxo(id: string): Promise<IUTXO>
 
   fetchUtxos(scriptPubKey?: string): Promise<IUTXO[]>
 
@@ -245,7 +247,8 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
     ) {
       const hasScriptPubKey = await fns.hasSPubKey(data.scriptPubKey)
       if (hasScriptPubKey) {
-        throw new Error('Address data already exists')
+        await fns.updateAddress(path, data)
+        return
       }
 
       const values: IAddress = {
@@ -290,7 +293,10 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
         address.balance = data.balance
 
         promises.push(
-          scriptPubKeysByBalance.move('', address.scriptPubKey, Number(address.balance))
+          scriptPubKeysByBalance.update('', {
+            [RANGE_ID_KEY]: address.scriptPubKey,
+            [RANGE_KEY]: Number(address.balance)
+          })
         )
       }
 
@@ -316,7 +322,7 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
 
     async fetchTransaction(txId: string): Promise<ProcessorTransaction | null> {
       const [ data ] = await txById.query('', [ txId ])
-      return data ? ProcessorTransaction.fromEdgeTransaction(data) : null
+      return data ? new ProcessorTransaction(data) : null
     },
 
     async fetchTransactionsByScriptPubKey(
@@ -394,6 +400,11 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
       return balance
     },
 
+    async fetchUtxo(id: string): Promise<IUTXO> {
+      const [ utxo ] = await utxoById.query('', [ id ])
+      return utxo
+    },
+
     async fetchUtxos(scriptPubKey?: string): Promise<IUTXO[]> {
       let ids: string[] = []
       if (scriptPubKey) {
@@ -401,7 +412,7 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
         ids = result
       } else {
         const result = await utxoIdsBySize.query('', 0, utxoIdsBySize.max(''))
-        ids = result.map(({ id }: { id: string }) => id)
+        ids = result.map(({ [RANGE_ID_KEY]: id }) => id)
       }
 
       return ids.length === 0 ? [] : utxoById.query('', ids)
