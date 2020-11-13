@@ -108,7 +108,7 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
 
         scriptPubKeysByBalance.insert('', {
           [RANGE_ID_KEY]: data.scriptPubKey,
-          [RANGE_KEY]: Number(data.balance)
+          [RANGE_KEY]: parseInt(data.balance)
         }),
 
         addressPathBySPubKey.insert(
@@ -134,7 +134,7 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
       // Undo any changes we made on a fail
       // Note: cannot remove from addressByPath (CountBase)
       await Promise.all([
-        scriptPubKeysByBalance.delete('', data.scriptPubKey),
+        scriptPubKeysByBalance.delete('', parseInt(data.balance), data.scriptPubKey),
 
         addressPathBySPubKey.delete('', [data.scriptPubKey]),
 
@@ -290,12 +290,12 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
       }
 
       if (data.balance != null && data.balance !== address.balance) {
+        const oldRange = parseInt(address.balance)
         address.balance = data.balance
-
         promises.push(
-          scriptPubKeysByBalance.update('', {
+          scriptPubKeysByBalance.update('', oldRange, {
             [RANGE_ID_KEY]: address.scriptPubKey,
-            [RANGE_KEY]: Number(address.balance)
+            [RANGE_KEY]: parseInt(data.balance)
           })
         )
       }
@@ -422,7 +422,7 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
       await utxoById.insert('', utxo.id, utxo)
       await utxoIdsBySize.insert('', {
         [RANGE_ID_KEY]: utxo.id,
-        [RANGE_KEY]: Number(utxo.value)
+        [RANGE_KEY]: parseInt(utxo.value)
       })
 
       const [ utxoIds ] = await utxoIdsBySPubKey.query('', [ utxo.scriptPubKey ])
@@ -433,7 +433,7 @@ export async function makeProcessor(disklet: Disklet): Promise<Processor> {
 
     async removeUtxo(utxo: IUTXO) {
       await utxoById.delete('', [ utxo.id ])
-      await utxoIdsBySize.delete('', utxo.id)
+      await utxoIdsBySize.delete('', parseInt(utxo.value), utxo.id)
       await utxoIdsBySPubKey.delete('', [ utxo.scriptPubKey ])
     }
   }
