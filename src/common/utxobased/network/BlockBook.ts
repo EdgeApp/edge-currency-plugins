@@ -1,12 +1,7 @@
-import Websocket from 'ws'
 import { EdgeTransaction } from 'edge-core-js'
-import Axios, { AxiosInstance } from 'axios'
+import Sock from 'sockjs-client'
 
-const baseUri = 'btc1.trezor.io'
-
-const axios: AxiosInstance = Axios.create({
-  baseURL: `https://${baseUri}/api/v2/`
-})
+import { EmitterEvent } from '../../plugin/types'
 
 export interface INewTransactionResponse {
   address: string
@@ -78,6 +73,7 @@ interface IAccountOpts {
 
 export interface ITransaction {
   txid: string
+  hex?: string
   blockHeight: number
   confirmations: number
   blockTime: number
@@ -111,33 +107,25 @@ interface IAccountUTXO extends IUTXO {
   path?: string
 }
 
-interface IBlock {
-  page: number
-  totalPages: number
-  itemsOnPage: number
-  hash: string
-  previousBlockHash: string
-  nextBlockHash: string | null
-  height: number
-  confirmations: number
-  size: number
-  time: number
-  version: number
-  merkleRoot: string
-  nonce: string
-  bits: string
-  difficulty: string
-  txCount: number
+interface IServerInfo {
+  name: string
+  shortcut: string
+  decimals: number
+  version: string
+  bestHeight: number
+  bestHash: string
+  block0Hash: string
+  testnet: boolean
 }
 
-export interface IBlockBook {
+export interface BlockBook {
   isConnected: boolean
 
   connect(): Promise<void>
 
   disconnect(): Promise<void>
 
-  fetchBlock(height?: number): Promise<IBlock>
+  fetchInfo(): Promise<IServerInfo>
 
   fetchAddress(
     address: string,
@@ -160,85 +148,103 @@ export interface IBlockBook {
     }
   ): Promise<IAccountDetailsBasic & ITransactionDetailsPaginationResponse>
 
-  fetchAddress(address: string, opts?: IAccountOpts): Promise<IAccountDetailsBasic>
+  fetchAddress(
+    address: string,
+    opts?: IAccountOpts
+  ): Promise<IAccountDetailsBasic>
+
+  watchAddresses(
+    addresses: string[],
+    cb?: (response: INewTransactionResponse) => void
+  ): void
 
   fetchAddressUtxos(account: string): Promise<IAccountUTXO[]>
 
   fetchTransaction(hash: string): Promise<ITransaction>
 
-  broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction>
+  broadcastTx(transaction: EdgeTransaction): Promise<void>
 }
 
-export function makeBlockBook(): IBlockBook {
-  const instance: IBlockBook = {
+interface BlockHeightEmitter {
+  emit(event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number): this
+}
+
+interface BlockBookConfig {
+  emitter: BlockHeightEmitter
+}
+
+const baseUri = 'btc1.trezor.io'
+const Socket: any = window?.WebSocket ?? Sock
+const PING_TIMEOUT = 30000
+
+export function makeBlockBook(config: BlockBookConfig): BlockBook {
+  const { emitter } = config
+
+  const instance: BlockBook = {
     isConnected: false,
     connect,
     disconnect,
-    fetchBlock,
+    fetchInfo,
     fetchAddress,
+    watchAddresses,
     fetchAddressUtxos,
     fetchTransaction,
-    broadcastTx
+    broadcastTx,
   }
   let wsIdCounter = 0
-  let wsPendingMessages: IWsPendingMessages = {}
+  const wsPendingMessages: IWsPendingMessages = {}
   let pingTimeout!: NodeJS.Timeout
   let addressesToWatch: string[] = []
-  let addressWatcherCallback: undefined | ((response: INewTransactionResponse) => void)
+  let addressWatcherCallback:
+    | undefined
+    | ((response: INewTransactionResponse) => void)
+  const PING_ID = 'ping'
+  const WATCH_NEW_BLOCK_EVENT_ID = 'WATCH_NEW_BLOCK_EVENT_ID'
   const WATCH_ADDRESS_TX_EVENT_ID = 'WATCH_ADDRESS_TX_EVENT_ID'
 
-  const ws = new Websocket(`wss://${baseUri}/websocket`)
-
-  ws.on('open', () => {
-    console.log('connected to websocket')
-
-    instance.isConnected = true
-
-    // Ping the server for a pong response and start a timeout
-    ws.ping()
-    watchAddresses(addressesToWatch, addressWatcherCallback)
-  })
-
-  ws.on('message', (event: Websocket.Data) => {
-    const response = JSON.parse(event.toString())
-    handleWsResponse(response)
-  })
-
-  ws.on('ping', (data) => {
-    console.log('ping', data.toString())
-  })
-
-  ws.on('pong', (data) => {
-    console.log('pong', data.toString())
-
-    pingTimeout = setTimeout(() => ws.ping(), 30000)
-  })
-
-  ws.on('error', (error) => {
-    console.log('error', error)
-  })
+  let socket: any
 
   async function connect(): Promise<void> {
     if (instance.isConnected) return
 
-    // Listen once to the open message to ensure we are connected before returning
-    await new Promise((resolve) => {
-      ws.once('open', () => {
+    return new Promise((resolve) => {
+      socket = new Socket(`wss://${baseUri}/websocket`)
+
+      socket.onopen = () => {
+        console.log('connected to websocket')
+
+        instance.isConnected = true
+        // Ping the server for a pong response and start a timeout
+        ping()
+        watchAddresses(addressesToWatch, addressWatcherCallback)
+        sendWsMessage({
+          id: WATCH_NEW_BLOCK_EVENT_ID,
+          method: 'subscribeNewBlock',
+        })
+
         resolve()
-      })
+      }
+
+      socket.onmessage = handleWsMessage
+
+      socket.onerror = (error: Error) => {
+        throw error
+      }
     })
   }
 
   async function disconnect(): Promise<void> {
     if (!instance.isConnected) return
 
-    ws.terminate()
-
+    socket.close()
     clearTimeout(pingTimeout)
     instance.isConnected = false
   }
 
-  async function promisifyWsMessage<T>(method: string, params: object): Promise<T> {
+  async function promisifyWsMessage<T>(
+    method: string,
+    params?: object
+  ): Promise<T> {
     return new Promise((resolve) => {
       const id = wsIdCounter++
       sendWsMessage({ id: id.toString(), method, params }, resolve)
@@ -251,45 +257,66 @@ export function makeBlockBook(): IBlockBook {
     }
 
     if (cb) wsPendingMessages[message.id] = cb
-    ws.send(JSON.stringify(message))
+    socket.send(JSON.stringify(message))
   }
 
-  function handleWsResponse(response: IWsResponse): void {
-    if (
-      response.id === WATCH_ADDRESS_TX_EVENT_ID &&
-      response.data?.subscribed === true
-    ) {
-      // Don't notify on successful subscribe
-      return
+  function ping() {
+    sendWsMessage({
+      id: PING_ID,
+      method: PING_ID,
+    })
+  }
+
+  function handleWsMessage(event: MessageEvent): void {
+    if (!instance.isConnected) return
+    const response: IWsResponse = JSON.parse(event.data)
+
+    switch (response.id) {
+      case PING_ID:
+        console.log('ping')
+        pingTimeout = setTimeout(ping, PING_TIMEOUT)
+        break
+      case WATCH_NEW_BLOCK_EVENT_ID:
+        emitter.emit(EmitterEvent.BLOCK_HEIGHT_CHANGED, response.data)
+        break
+      case WATCH_ADDRESS_TX_EVENT_ID:
+        // Don't notify on successful subscribe
+        if (response.data?.subscribed === true) {
+          return
+        }
+        break
     }
 
-    wsPendingMessages[response.id]?.(response.data)
+    const fn = wsPendingMessages[response.id]
     delete wsPendingMessages[response.id]
-  }
-
-  async function fetchBlock(hashOrHeight?: string | number): Promise<IBlock> {
-    if (!hashOrHeight) {
-      const { data: { blockHash } } = await axios.get('/block-index')
-      hashOrHeight = blockHash
+    if ('error' in response.data) {
+      throw response.data.error
+    } else {
+      fn?.(response.data)
     }
-    const { data: block } = await axios.get<IBlock>(`/block/${hashOrHeight}`)
-    return block
   }
 
-  function fetchAddress(address: string, opts: IAccountOpts = {}): Promise<any> {
+  async function fetchInfo(): Promise<IServerInfo> {
+    return promisifyWsMessage('getInfo')
+  }
+
+  function fetchAddress(
+    address: string,
+    opts: IAccountOpts = {}
+  ): Promise<any> {
     opts = Object.assign(
       {},
       {
         details: 'basic',
         page: 1,
-        perPage: 100
+        perPage: 100,
       },
       opts
     )
 
     return promisifyWsMessage('getAccountInfo', {
       ...opts,
-      descriptor: address
+      descriptor: address,
     })
   }
 
@@ -303,7 +330,7 @@ export function makeBlockBook(): IBlockBook {
       {
         id: WATCH_ADDRESS_TX_EVENT_ID,
         method: 'subscribeAddresses',
-        params: { addresses }
+        params: { addresses },
       },
       async (response: INewTransactionResponse) => {
         // Need to resubscribe to addresses
@@ -321,9 +348,10 @@ export function makeBlockBook(): IBlockBook {
     return promisifyWsMessage('getTransaction', { txid: hash })
   }
 
-  async function broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // TODO:
-    return transaction
+  async function broadcastTx(
+    transaction: EdgeTransaction
+  ): Promise<void> {
+    await promisifyWsMessage('sendTransaction', { hex: transaction.signedTx })
   }
 
   return instance
