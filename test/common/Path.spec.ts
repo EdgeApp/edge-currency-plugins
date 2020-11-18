@@ -2,6 +2,7 @@ import * as chai from 'chai'
 
 import { makePath, makePathFromString, normalizePath, Path } from '../../src/common/Path'
 import { BIP43PurposeTypeEnum } from '../../src/common/utxobased/keymanager/keymanager'
+import { getCoinFromString } from '../../src/common/utxobased/keymanager/coinmapper'
 
 chai.should()
 
@@ -77,6 +78,24 @@ describe('Path', function() {
   })
 
   describe('makePath', function() {
+    it('should return a path object from a coin name config', function() {
+      const coinName = 'dogecoin'
+      const config = {
+        purpose: BIP43PurposeTypeEnum.Legacy,
+        account: 0,
+        change: 0,
+        index: 0
+      }
+      const path = makePath({
+        ...config,
+        coinName
+      })
+
+      validatePathValues(path, {
+        ...config,
+        coin: getCoinFromString(coinName).coinType,
+      })
+    })
     it('should return a path object from a legacy config', function() {
       const config = {
         purpose: BIP43PurposeTypeEnum.Legacy,
