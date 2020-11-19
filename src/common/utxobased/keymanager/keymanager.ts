@@ -13,6 +13,7 @@ import {
 import { cdsScriptTemplates } from './bitcoincashUtils/checkdatasig'
 import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
+import * as utxopicker from './utxopicker'
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
@@ -183,6 +184,36 @@ export interface CreateTxArgs {
 export interface CreateTxReturn {
   psbt: string
   vSize: number
+}
+
+export interface MakeTxArgs {
+  network: NetworkEnum
+  utxos: MakeTxUtxo[]
+  targets: MakeTxTarget[]
+  feeRate: number
+  rbf: boolean
+  coin: string
+  freshChangeAddress: string
+}
+
+interface MakeTxUtxo {
+  txid: string
+  vout: number
+  value: string
+  scriptSig?: string
+  redeemScript?: string
+  isSegwit: boolean
+}
+
+export interface MakeTxTarget {
+  address: string
+  value: number
+}
+
+interface MakeTxReturn {
+  psbt: string
+  changeUsed: boolean
+  fee: number
 }
 
 export interface SignTxArgs {
@@ -803,6 +834,84 @@ export function scriptPubkeyToElectrumScriptHash(scriptPubkey: string): string {
   ).toString('hex')
 }
 
+export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
+  let sequence: number = 0xffffffff
+  if (args.rbf) {
+    sequence -= 2
+  }
+
+  // get coin specific replay protection sighhash bits
+  let sighashType = bitcoin.Transaction.SIGHASH_ALL
+  const coin = getCoinFromString(args.coin)
+  if (typeof coin.sighash !== 'undefined') {
+    sighashType = coin.sighash
+  }
+
+  const mappedUtxos: utxopicker.UTXO[] = []
+  for (const utxo of args.utxos) {
+    // Cannot use a utxo without a signature
+    if (!utxo.scriptSig) continue
+    const input: utxopicker.UTXO = {
+      hash: Buffer.from(utxo.txid, 'hex').reverse(),
+      index: utxo.vout,
+      value: parseInt(utxo.value),
+      script: Buffer.from(utxo.scriptSig, 'hex'),
+      sequence,
+      sighashType
+    }
+    if (utxo.isSegwit) {
+      input.witnessUtxo = {
+        script: input.script,
+        value: parseInt(utxo.value)
+      }
+
+      if (utxo.redeemScript) {
+        input.redeemScript = Buffer.from(utxo.redeemScript, 'hex')
+      }
+    } else {
+      input.nonWitnessUtxo = input.script
+    }
+    mappedUtxos.push(input)
+  }
+
+  const targets: utxopicker.Target[] = args.targets.map((target) => ({
+    script: addressToScriptPubkey({
+      address: target.address,
+      coin: coin.name,
+      network: args.network
+    }),
+    value: target.value
+  }))
+  const changeScript = addressToScriptPubkey({
+    address: args.freshChangeAddress,
+    coin: coin.name,
+    network: args.network
+  })
+  const { inputs, outputs, changeUsed = false, fee } = utxopicker.accumulative(
+    mappedUtxos,
+    targets,
+    args.feeRate,
+    changeScript
+  )
+  if (!inputs || !outputs) {
+    throw new Error('Make spend failed.')
+  }
+
+  const psbt = new bitcoin.Psbt()
+  psbt.addInputs(inputs)
+  psbt.addOutputs(outputs)
+  
+  const tx = new bitcoin.Transaction()
+  inputs.forEach((input) => tx.addInput(input.hash, input.index, input.sequence, input.redeemScript))
+  outputs.forEach((output) => tx.addOutput(output.script, output.value))
+  console.log('bytes no witness before:', tx.byteLength(false))
+  console.log('bytes witness before:', tx.byteLength())
+  console.log('vbytes before:', tx.virtualSize())
+  console.log('weight before:', tx.weight())
+
+  return { psbt: psbt.toBase64(), changeUsed, fee }
+}
+
 export function createTx(args: CreateTxArgs): CreateTxReturn {
   const psbt = new bitcoin.Psbt()
   let sequence: number = 0xffffffff
@@ -921,25 +1030,29 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
   return { psbt: psbt.toBase64(), vSize: txVSize }
 }
 
-export function signTx(args: SignTxArgs): string {
+export async function signTx(args: SignTxArgs): Promise<string> {
   const psbt = bitcoin.Psbt.fromBase64(args.psbt)
   const coin = getCoinFromString(args.coin)
-  for (let i: number = 0; i < args.privateKeys.length; i++) {
-    if (typeof coin.sighashFunction !== 'undefined') {
-      psbt.signInput(
-        i,
-        bitcoin.ECPair.fromPrivateKey(Buffer.from(args.privateKeys[i], 'hex')),
-        bitcoin.Psbt.DEFAULT_SIGHASHES,
-        coin.sighashFunction
-      )
-    } else {
-      psbt.signInput(
-        i,
-        bitcoin.ECPair.fromPrivateKey(Buffer.from(args.privateKeys[i], 'hex'))
-      )
-    }
+
+  for (let i = 0; i < psbt.inputCount; i++) {
+    const privateKey = Buffer.from(args.privateKeys[i], 'hex')
+    psbt.signInput(
+      i,
+      bitcoin.ECPair.fromPrivateKey(privateKey),
+      bitcoin.Psbt.DEFAULT_SIGHASHES,
+      coin.sighashFunction
+    )
     psbt.validateSignaturesOfInput(i)
+    psbt.finalizeInput(i)
   }
-  psbt.finalizeAllInputs()
+  console.log('-----------------------------------------')
+  const tx = psbt.extractTransaction()
+  console.log('bytes no witness after:', tx.byteLength(false))
+  console.log('bytes witness after:', tx.byteLength())
+  console.log('vbytes after:', tx.virtualSize())
+  console.log('weight after:', tx.weight())
+  console.log('fee:', psbt.getFee())
+  console.log('feeRate:', psbt.getFeeRate())
+  console.log('-----------------------------------------')
   return psbt.extractTransaction().toHex()
 }
