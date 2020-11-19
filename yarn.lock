@@ -1563,7 +1563,7 @@ base@^0.11.1:
     mixin-deep "^1.2.0"
     pascalcase "^0.1.1"
 
-baselet@^0.0.2:
+baselet@^0.0.3:
   version "0.0.2"
   resolved "https://registry.yarnpkg.com/baselet/-/baselet-0.0.2.tgz#79d037d039c15e195a1c6d49e82d98854b7abd63"
   integrity sha512-oKzDj0fB+ZQPyJ/XFHy3cZEPAeXCFR1JezzXuB3CzoUgR/KPUn5OXZ7koWNV6iX0H7q2F633nGdFMi4HeQGARQ==
