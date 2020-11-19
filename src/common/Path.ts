@@ -3,6 +3,7 @@ import {
   BIP43PurposeTypeEnum,
   ScriptTypeEnum
 } from './utxobased/keymanager/keymanager'
+import { getCoinFromString } from './utxobased/keymanager/coinmapper'
 
 export const BIP43NameToPurposeType: { [format: string]: BIP43PurposeTypeEnum } = {
   bip44: BIP43PurposeTypeEnum.Legacy,
@@ -20,13 +21,20 @@ const REGEX = /^m[/_](\d\d?)(?:(?:'\/)|(?:__))(\d)(?:(?:'\/)|(?:__))(\d+)['_]?(?
 
 interface IPathConfig {
   purpose: BIP43PurposeTypeEnum
-  coin: number
   account?: number
-  change?: number
+  change?: 0 | 1
   index?: number
 }
 
-interface IPathValues extends Required<IPathConfig> {
+interface IPathConfig1 extends IPathConfig {
+  coin: number
+}
+
+interface IPathConfig2 extends IPathConfig {
+  coinName: string
+}
+
+interface IPathValues extends Required<IPathConfig1> {
   addressType: AddressTypeEnum
   scriptType: ScriptTypeEnum
 }
@@ -34,7 +42,7 @@ interface IPathValues extends Required<IPathConfig> {
 export interface Path extends IPathValues {
   clone(): Path
 
-  goTo(index: number, change?: number): this
+  goTo(index: number, change?: 0 | 1): this
 
   goToChange(change: number): this
 
@@ -46,6 +54,8 @@ export interface Path extends IPathValues {
 
   toString(normalize?: boolean): string
 }
+
+const InvalidPathError = new Error('Invalid path')
 
 export function normalizePath(path: string): string {
   return path.replace(REGEX, (_, purpose, coin, account, change, index) => {
@@ -59,30 +69,36 @@ export function normalizePath(path: string): string {
 }
 
 export function makePathFromString(path: string): Path {
-  const err = new Error('Invalid path')
-
   const match = path.match(REGEX)
-  if (match == null) throw err
+  if (match == null) throw InvalidPathError
 
   const [ _, _purpose, _coin, _account, _change = '0', _index = '0' ] = match
 
-  if (_purpose == null) throw err
+  if (_purpose == null) throw InvalidPathError
   const purpose = BIP43NameToPurposeType[`bip${_purpose}`]
 
-  if (_coin == null) throw err
+  if (_coin == null) throw InvalidPathError
   const coin = parseInt(_coin)
 
-  if (_account == null) throw err
+  if (_account == null) throw InvalidPathError
   const account = parseInt(_account)
 
-  const change = parseInt(_change)
+  const change = <0|1>parseInt(_change)
+  if (change < 0 || change > 1) throw InvalidPathError
 
   const index = parseInt(_index)
 
   return makePath({ purpose, coin, account, change, index })
 }
 
-export function makePath(config: IPathConfig): Path {
+export function makePath(config: IPathConfig1): Path
+export function makePath(config: IPathConfig2): Path
+export function makePath(config: IPathConfig1 | IPathConfig2): Path {
+  config = { ...config }
+  const coin = 'coin' in config
+    ? config.coin
+    : getCoinFromString(config.coinName).coinType
+
   let scriptType: ScriptTypeEnum
   let addressType: AddressTypeEnum
 
@@ -108,6 +124,7 @@ export function makePath(config: IPathConfig): Path {
     change: 0,
     index: 0,
     ...config,
+    coin,
     scriptType,
     addressType,
 
@@ -121,12 +138,12 @@ export function makePath(config: IPathConfig): Path {
       return path
     },
 
-    goToChange(change: number): Path {
+    goToChange(change: 0 | 1): Path {
       return path.goTo(path.index, change)
     },
 
-    next(change = path.change): Path {
-      return path.goTo(path.index + 1, change)
+    next(): Path {
+      return path.goTo(path.index + 1, path.change)
     },
 
     toAccount(normalize = false): string {
