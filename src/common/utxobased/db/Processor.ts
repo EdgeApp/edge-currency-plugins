@@ -6,44 +6,33 @@ import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
 
 import { makePathFromString, Path } from '../../Path'
-import { IAddress, IAddressOptional, IAddressPartial, IAddressRequired, IProcessorTransaction, IUTXO } from './types'
+import {
+  Baselet,
+  BaseletConfig,
+  IAddress,
+  IAddressOptional,
+  IAddressPartial,
+  IAddressRequired,
+  IProcessorTransaction,
+  IUTXO
+} from './types'
 import { ProcessorTransaction } from './Models/ProcessorTransaction'
 import { makeQueue } from './makeQueue'
 import { EmitterEvent } from '../../plugin/types'
-
-interface BaseletConfig<T extends BaseType> {
-  dbName: string
-  type: T
-  bucketSize: number
-}
-type Baselet = HashBase | CountBase | RangeBase
-interface Baselets {
-  addressByPath: BaseletConfig<BaseType.CountBase>
-  addressPathByScriptPubKey: BaseletConfig<BaseType.HashBase>
-  addressByMRU: BaseletConfig<BaseType.CountBase>
-  scriptPubKeysByBalance: BaseletConfig<BaseType.RangeBase>
-  txById: BaseletConfig<BaseType.HashBase>
-  txsByScriptPubKey: BaseletConfig<BaseType.HashBase>
-  txsByDate: BaseletConfig<BaseType.RangeBase>
-  utxoById: BaseletConfig<BaseType.HashBase>
-  utxoIdsByScriptPubKey: BaseletConfig<BaseType.HashBase>
-  utxoIdsBySize: BaseletConfig<BaseType.RangeBase>
-}
-const BASELET_CONFIGS: Baselets = {
-  addressByPath: { dbName: 'addressByPath', type: BaseType.CountBase, bucketSize: 50 },
-  addressPathByScriptPubKey: { dbName: 'addressPathByScriptPubKey', type: BaseType.HashBase, bucketSize: 6 },
-  addressByMRU: { dbName: 'addressByMRU', type: BaseType.CountBase, bucketSize: 100 },
-  scriptPubKeysByBalance: { dbName: 'scriptPubKeysByBalance', type: BaseType.RangeBase, bucketSize: 100000 },
-  txById: { dbName: 'txById', type: BaseType.HashBase, bucketSize: 2 },
-  txsByScriptPubKey: { dbName: 'txsByScriptPubKey', type: BaseType.HashBase, bucketSize: 5 },
-  txsByDate: { dbName: 'txsByDate', type: BaseType.RangeBase, bucketSize: 30 * 24 * 60 * 60 * 1000 },
-  utxoById: { dbName: 'utxoById', type: BaseType.HashBase, bucketSize: 2 },
-  utxoIdsByScriptPubKey: { dbName: 'utxoIdsByScriptPubKey', type: BaseType.HashBase, bucketSize: 6 },
-  utxoIdsBySize: { dbName: 'utxoIdsBySize', type: BaseType.RangeBase, bucketSize: 100000 },
-}
-
-const RANGE_ID_KEY = 'idKey'
-const RANGE_KEY = 'rangeKey'
+import {
+  AddressByPath,
+  addressByPathConfig,
+  addressPathByMRUConfig, AddressPathByScriptPubKey,
+  addressPathByScriptPubKeyConfig,
+  RANGE_ID_KEY,
+  RANGE_KEY, ScriptPubKeysByBalance,
+  scriptPubKeysByBalanceConfig, TxById,
+  txByIdConfig,
+  txsByDateConfig, TxsByScriptPubKey,
+  txsByScriptPubKeyConfig, UtxoById,
+  utxoByIdConfig,
+  utxoIdsByScriptPubKeyConfig, utxoIdsBySizeConfig
+} from './Models/baselet'
 
 interface ProcessorEmitter {
   emit(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, transaction: ProcessorTransaction): this
@@ -55,17 +44,17 @@ interface ProcessorConfig {
 }
 
 export interface Processor {
-  fetchAddress(path: Path): Promise<IAddress | null>
+  fetchAddress(path: Path): Promise<AddressByPath>
 
-  fetchAddressPathBySPubKey(scriptPubKey: string): Promise<string | null>
+  fetchAddressPathBySPubKey(scriptPubKey: string): Promise<AddressPathByScriptPubKey>
 
   hasSPubKey(scriptPubKey: string): Promise<boolean>
 
-  fetchAddressesByPath(path: Path): Promise<IAddress[]>
+  fetchAddressesByPath(path: Path): Promise<AddressByPath[]>
 
   fetchAddressCountFromPathPartition(path: Path): number
 
-  fetchScriptPubKeysByBalance(): Promise<Array<{ [RANGE_ID_KEY]: string; [RANGE_KEY]: string }>>
+  fetchScriptPubKeysByBalance(): Promise<Array<ScriptPubKeysByBalance>>
 
   saveAddress(path: Path, data: IAddressRequired & IAddressOptional, onComplete?: () => void): void
 
@@ -73,9 +62,9 @@ export interface Processor {
 
   updateAddressByScriptPubKey(scriptPubKey: string, data: Partial<IAddress>): void
 
-  fetchTransaction(txId: string): Promise<ProcessorTransaction | null>
+  fetchTransaction(txId: string): Promise<TxById>
 
-  fetchTransactionsByScriptPubKey(scriptHash: string): Promise<string[]>
+  fetchTransactionsByScriptPubKey(scriptHash: string): Promise<TxsByScriptPubKey>
 
   fetchTransactionsByDate(start: number, end?: number): Promise<ProcessorTransaction[]>
 
@@ -85,11 +74,11 @@ export interface Processor {
 
   dropTransaction(txId: string): void
 
-  fetchBalance(path?: Path): Promise<string>
+  fetchUtxo(id: string): Promise<UtxoById>
 
-  fetchUtxo(id: string): Promise<IUTXO>
+  fetchUtxosByScriptPubKey(scriptPubKey: string): Promise<IUTXO[]>
 
-  fetchUtxos(scriptPubKey?: string): Promise<IUTXO[]>
+  fetchAllUtxos(): Promise<IUTXO[]>
 
   saveUtxo(utxo: IUTXO): void
 
@@ -130,7 +119,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
   const [
     addressByPath,
     addressPathByScriptPubKey,
-    addressByMRU,
+    addressPathByMRU,
     scriptPubKeysByBalance,
     txById,
     txsByScriptPubKey,
@@ -139,16 +128,16 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     utxoIdsByScriptPubKey,
     utxoIdsBySize
   ] = await Promise.all([
-    createOrOpen(disklet, BASELET_CONFIGS.addressByPath),
-    createOrOpen(disklet, BASELET_CONFIGS.addressPathByScriptPubKey),
-    createOrOpen(disklet, BASELET_CONFIGS.addressByMRU),
-    createOrOpen(disklet, BASELET_CONFIGS.scriptPubKeysByBalance),
-    createOrOpen(disklet, BASELET_CONFIGS.txById),
-    createOrOpen(disklet, BASELET_CONFIGS.txsByScriptPubKey),
-    createOrOpen(disklet, BASELET_CONFIGS.txsByDate),
-    createOrOpen(disklet, BASELET_CONFIGS.utxoById),
-    createOrOpen(disklet, BASELET_CONFIGS.utxoIdsByScriptPubKey),
-    createOrOpen(disklet, BASELET_CONFIGS.utxoIdsBySize)
+    createOrOpen(disklet, addressByPathConfig),
+    createOrOpen(disklet, addressPathByScriptPubKeyConfig),
+    createOrOpen(disklet, addressPathByMRUConfig),
+    createOrOpen(disklet, scriptPubKeysByBalanceConfig),
+    createOrOpen(disklet, txByIdConfig),
+    createOrOpen(disklet, txsByScriptPubKeyConfig),
+    createOrOpen(disklet, txsByDateConfig),
+    createOrOpen(disklet, utxoByIdConfig),
+    createOrOpen(disklet, utxoIdsByScriptPubKeyConfig),
+    createOrOpen(disklet, utxoIdsBySizeConfig)
   ])
 
   async function processAndSaveAddress(path: Path, data: IAddress) {
@@ -174,12 +163,21 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       ])
 
       // Find transactions associated with this scriptPubKey, process the balances and save it
-      const txIds = await fns.fetchTransactionsByScriptPubKey(data.scriptPubKey)
-      for (const txId of txIds) {
+      const byScriptPubKey = await fns.fetchTransactionsByScriptPubKey(data.scriptPubKey)
+      for (const txId in byScriptPubKey) {
+        const tx = byScriptPubKey[txId]
         const txData = await fns.fetchTransaction(txId)
         if (txData) {
-          await processTransaction(txData)
-          await txById.insert('', txData.txid, txData)
+          txData.ourIns = Object.keys(tx.ins)
+          txData.ourOuts = Object.keys(tx.outs)
+
+          await fns.updateAddressByScriptPubKey(data.scriptPubKey, {
+            lastTouched: txData.date,
+            used: true
+          })
+
+          await innerUpdateTransaction(txId, txData, true)
+          queue.add(() => calculateTransactionAmount(txId))
         }
       }
     } catch (err) {
@@ -196,68 +194,75 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     }
   }
 
-  async function innerFetchAddress(path: Path): Promise<IAddress | null> {
+  async function innerFetchAddress(path: Path): Promise<AddressByPath> {
     const prefix = path.toChange(true)
     const [ data ] = await addressByPath.query(prefix, path.index)
     return data
   }
 
-  async function fetchAddressesByPrefix(prefix: string, startIndex = 0, endIndex?: number): Promise<IAddress[]> {
+  async function fetchAddressesByPrefix(prefix: string, startIndex = 0, endIndex?: number): Promise<AddressByPath[]> {
     const end = endIndex ?? addressByPath.length(prefix) - 1
     return addressByPath.query(prefix, startIndex, end)
   }
 
-  async function processTransaction(tx: ProcessorTransaction): Promise<ProcessorTransaction> {
-    for (const inOout of [ true, false ]) {
-      const arr = inOout ? tx.inputs : tx.outputs
-      for (let i = 0; i < arr.length; i++) {
-        const { scriptPubKey } = arr[i]
-
-        await saveTransactionByScriptPubKey(scriptPubKey, tx.txid)
-
-        const own = await fns.hasSPubKey(scriptPubKey)
-        if (own) {
-          const arr = inOout ? tx.ourIns : tx.ourOuts
-          const set = new Set(arr)
-          if (!set.has(i)) {
-            set.add(i)
-            if (inOout) {
-              tx.ourIns = Array.from(set)
-            } else {
-              tx.ourOuts = Array.from(set)
-            }
-
-            const amount = inOout ? tx.inputs[i].amount : tx.outputs[i].amount
-            tx.ourAmount = inOout
-              ? bs.sub(tx.ourAmount, amount)
-              : bs.add(tx.ourAmount, amount)
-              tx.ourOuts = Array.from(set)
-
-            emitter.emit(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
-          }
-
-          await fns.updateAddressByScriptPubKey(scriptPubKey, {
-            lastTouched: tx.date,
-            used: true
-          })
-        }
+  async function saveTransactionByScriptPubKey(
+    scriptPubKey: string,
+    tx: ProcessorTransaction,
+    isInput: boolean,
+    index: number,
+    save = true
+  ) {
+    const txs = await fns.fetchTransactionsByScriptPubKey(scriptPubKey)
+    if (!txs[tx.txid]) {
+      txs[tx.txid] = {
+        ins: {},
+        outs: {}
+      }
+    }
+    if (save) {
+      if (isInput) {
+        txs[tx.txid].ins[index] = true
+      } else {
+        txs[tx.txid].outs[index] = true
+      }
+    } else {
+      if (isInput) {
+        delete txs[tx.txid].ins[index]
+      } else {
+        delete txs[tx.txid].outs[index]
       }
     }
 
-    await txById.insert('', tx.txid, tx)
+    const own = await fns.hasSPubKey(scriptPubKey)
+    if (own) {
+      if (isInput) {
+        tx.ourIns = Object.keys(txs[tx.txid].ins)
+      } else {
+        tx.ourOuts = Object.keys(txs[tx.txid].outs)
+      }
+    }
 
-    return tx
+    await txsByScriptPubKey.insert('', scriptPubKey, txs)
   }
 
-  async function saveTransactionByScriptPubKey(
-    scriptPubKey: string,
-    txId: string,
-    save = true
-  ) {
-    const txIds = await fns.fetchTransactionsByScriptPubKey(scriptPubKey)
-    const set = new Set(txIds)
-    save ? set.add(txId) : set.delete(txId)
-    await txsByScriptPubKey.insert('', scriptPubKey, Array.from(set))
+  async function calculateTransactionAmount(txId: string){
+    const tx = await fns.fetchTransaction(txId)
+    if (!tx) {
+      throw new Error(`Cannot calculate amount for non-existent transaction: ${txId}`)
+    }
+
+    let total = '0'
+    for (const i of tx.ourIns) {
+      const { amount } = tx.inputs[parseInt(i)]
+      total = bs.sub(total, amount)
+    }
+    for (const i of tx.ourOuts) {
+      const { amount } = tx.outputs[parseInt(i)]
+      total = bs.add(total, amount)
+    }
+    tx.ourAmount = total
+
+    await innerUpdateTransaction(tx.txid, tx, true)
   }
 
   async function innerSaveAddress(
@@ -327,14 +332,15 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     data: Partial<IAddress>
   ) {
     const pathStr = await fns.fetchAddressPathBySPubKey(scriptPubKey)
-    if (pathStr) {
-      const path = makePathFromString(pathStr)
-      await innerUpdateAddress(path, data)
+    if (!pathStr) {
+      throw new Error(`Cannot update address by scriptPubKey that does not exist: ${scriptPubKey}`)
     }
+
+    const path = makePathFromString(pathStr)
+    await innerUpdateAddress(path, data)
   }
 
   async function innerSaveTransaction(tx: ProcessorTransaction): Promise<void> {
-    // Don't save the same transaction twice. Possible data overwrite
     const existingTx = await fns.fetchTransaction(tx.txid)
     if (!existingTx) {
       await txsByDate.insert('', {
@@ -343,19 +349,55 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       })
     }
 
-    await processTransaction(tx)
+    for (const inOout of [ true, false ]) {
+      const arr = inOout ? tx.inputs : tx.outputs
+      for (let i = 0; i < arr.length; i++) {
+        const { scriptPubKey, amount } = arr[i]
+
+        await saveTransactionByScriptPubKey(scriptPubKey, tx, inOout, i)
+
+        const own = await fns.hasSPubKey(scriptPubKey)
+        if (own) {
+          await fns.updateAddressByScriptPubKey(scriptPubKey, {
+            lastTouched: tx.date,
+            used: true
+          })
+        }
+      }
+    }
+
+    queue.add(() => calculateTransactionAmount(tx.txid))
+
+    await txById.insert('', tx.txid, tx)
   }
 
   async function innerUpdateTransaction(
     txId: string,
-    data: Pick<IProcessorTransaction, 'blockHeight'>
+    data: IProcessorTransaction,
+    merge = false
   ) {
-    const txData = await fns.fetchTransaction(txId)
-    if (!txData) return
-
-    if (data.blockHeight != null) {
-      txData.blockHeight = data.blockHeight
+    let txData = await fns.fetchTransaction(txId)
+    if (!txData && !merge) {
+      throw new Error('Cannot update transaction that does not exists')
+    } else {
+      txData = new ProcessorTransaction(data)
     }
+
+    txData.blockHeight = data.blockHeight
+
+    if (merge) {
+      const ins = new Set(txData.ourIns.concat(data.ourIns))
+      const outs = new Set(txData.ourOuts.concat(data.ourOuts))
+      txData.ourIns = Array.from(ins)
+      txData.ourOuts = Array.from(outs)
+    } else {
+      txData.ourIns = data.ourIns
+      txData.ourOuts = data.ourOuts
+    }
+
+    txData.ourAmount = data.ourAmount
+
+    emitter.emit(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, txData)
 
     await txById.insert('', txId, txData)
   }
@@ -367,13 +409,13 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     for (let i = 0; i < tx.inputs.length; i++) {
       const input = tx.inputs[i]
 
-      await saveTransactionByScriptPubKey(input.scriptPubKey, txId, false)
+      await saveTransactionByScriptPubKey(input.scriptPubKey, tx, true, i, false)
     }
 
     for (let i = 0; i < tx.outputs.length; i++) {
       const output = tx.outputs[i]
 
-      await saveTransactionByScriptPubKey(output.scriptPubKey, txId, false)
+      await saveTransactionByScriptPubKey(output.scriptPubKey, tx, false, i, false)
     }
 
     tx.blockHeight = -1
@@ -402,7 +444,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
   }
 
   const fns: Processor = {
-    async fetchAddress(path: Path): Promise<IAddress | null> {
+    async fetchAddress(path: Path): Promise<AddressByPath> {
       const lastQuery = Date.now()
       const address = await innerFetchAddress(path)
       address && await innerUpdateAddress(path, { lastQuery })
@@ -411,7 +453,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
     async fetchAddressPathBySPubKey(
       scriptPubKey: string
-    ): Promise<string | null> {
+    ): Promise<AddressPathByScriptPubKey> {
       const [ path ] = await addressPathByScriptPubKey.query('', [ scriptPubKey ])
       return path
     },
@@ -422,18 +464,16 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       )
     },
 
-    async fetchAddressesByPath(path: Path): Promise<IAddress[]> {
+    async fetchAddressesByPath(path: Path): Promise<AddressByPath[]> {
       const prefix = path.toChange(true)
       const addresses = await fetchAddressesByPrefix(prefix)
 
-      // TODO: queueify
       const now = Date.now()
       for (const address of addresses) {
-        const path = makePathFromString(address.path)
-        await innerUpdateAddress(path, {
-          ...address,
-          lastQuery: now
-        })
+        if (address) {
+          const path = makePathFromString(address.path)
+          queue.add(() => innerUpdateAddress(path, { ...address, lastQuery: now }))
+        }
       }
 
       return addresses
@@ -486,9 +526,9 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
     async fetchTransactionsByScriptPubKey(
       scriptHash: string
-    ): Promise<string[]> {
-      const [ txIds ] = await txsByScriptPubKey.query('', [ scriptHash ])
-      return txIds ?? []
+    ): Promise<TxsByScriptPubKey> {
+      const [ txs ] = await txsByScriptPubKey.query('', [ scriptHash ])
+      return txs ?? {}
     },
 
     async fetchTransactionsByDate(
@@ -505,7 +545,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
     updateTransaction(
       txId: string,
-      data: Pick<IProcessorTransaction, 'blockHeight'>
+      data: IProcessorTransaction
     ): void {
       queue.add(() => innerUpdateTransaction(txId, data))
     },
@@ -515,37 +555,19 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       queue.add(() => innerDropTransaction(txId))
     },
 
-    async fetchBalance(path?: Path): Promise<string> {
-      let balance: string
-      if (path) {
-        const address = await innerFetchAddress(path)
-        balance = address?.balance ?? '0'
-      } else {
-        const result = await utxoIdsBySize.query('', 0, utxoIdsBySize.max(''))
-        balance = result.reduce(
-          (sum: string, { [RANGE_KEY]: range }: { [RANGE_KEY]: string }) => bs.add(sum, range.toString()),
-          '0'
-        )
-      }
-
-      return balance
-    },
-
     async fetchUtxo(id: string): Promise<IUTXO> {
       const [ utxo ] = await utxoById.query('', [ id ])
       return utxo
     },
 
-    async fetchUtxos(scriptPubKey?: string): Promise<IUTXO[]> {
-      let ids: string[] = []
-      if (scriptPubKey) {
-        const [ result = [] ] = await utxoIdsByScriptPubKey.query('', [ scriptPubKey ])
-        ids = result
-      } else {
-        const result = await utxoIdsBySize.query('', 0, utxoIdsBySize.max(''))
-        ids = result.map(({ [RANGE_ID_KEY]: id }) => id)
-      }
+    async fetchUtxosByScriptPubKey(scriptPubKey: string): Promise<IUTXO[]> {
+      const [ ids = [] ] = await utxoIdsByScriptPubKey.query('', [ scriptPubKey ])
+      return ids.length === 0 ? [] : utxoById.query('', ids)
+    },
 
+    async fetchAllUtxos(): Promise<IUTXO[]> {
+      const result = await utxoIdsBySize.query('', 0, utxoIdsBySize.max(''))
+      const ids = result.map(({ [RANGE_ID_KEY]: id }) => id)
       return ids.length === 0 ? [] : utxoById.query('', ids)
     },
 
