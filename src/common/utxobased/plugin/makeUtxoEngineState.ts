@@ -67,6 +67,9 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     progress.totalCount += addresses.length
 
     for (const address of addresses) {
+      if (!address) {
+        throw new Error('Expected address missing from the database')
+      }
       await processAddress(address)
     }
 
@@ -163,23 +166,9 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       page
     })
 
-    const changedTransactions: EdgeTransaction[] = []
-    const changeTxidMap: EdgeTxidMap = {}
     for (const rawTx of accountDetails.transactions ?? []) {
-      let tx = await processor.fetchTransaction(rawTx.txid)
-      if (!tx) {
-        tx = await processRawTransaction(rawTx)
-        const edgeTx = tx.toEdgeTransaction(currencyInfo.currencyCode)
-        changedTransactions.push(edgeTx)
-        changeTxidMap[tx.txid] = tx.date
-      }
-
+      const tx = processRawTransaction(rawTx)
       processor.saveTransaction(tx)
-    }
-
-    if (changedTransactions.length > 0) {
-      emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, changedTransactions)
-      emitter.emit(EmitterEvent.TXIDS_CHANGED, changeTxidMap)
     }
 
     if (accountDetails.page < accountDetails.totalPages) {
@@ -188,10 +177,11 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function processAddressUTXOs(address: IAddressPartial): Promise<void> {
-    const oldUtxos = await processor.fetchUtxos(address.scriptPubKey)
+    const oldUtxos = await processor.fetchUtxosByScriptPubKey(address.scriptPubKey)
     const oldUtxoMap: IUTXOMap = { lastIndex: 0, array: oldUtxos, map: {} }
     const addressStr = account.getAddressFromPathString(address.path)
     const accountUtxos = await network.fetchAddressUtxos(addressStr)
+
     for (const { txid, vout, value, height = 0 } of accountUtxos) {
       const prevTx = await network.fetchTransaction(txid)
       const prevScriptPubKey = addressToScriptPubkey({
@@ -206,8 +196,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       const scriptType = scriptPubkeyToType(prevScriptPubKey)
       if (scriptType === ScriptTypeEnum.p2pkh) {
         isSegwit = false
-        const tx = await processor.fetchTransaction(txid)
-        scriptSig = tx?.hex
+        scriptSig = prevTx.hex
       } else {
         scriptSig = prevScriptPubKey
 
@@ -250,8 +239,8 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     // Process any of addresses' balances from the transaction
     const ourInOuts: Array<{ scriptPubKey: string }> = []
-    ourInOuts.push(...tx.ourIns.map((index: number) => tx.inputs[index]))
-    ourInOuts.push(...tx.ourOuts.map((index: number) => tx.outputs[index]))
+    ourInOuts.push(...tx.ourIns.map((index: string) => tx.inputs[parseInt(index)]))
+    ourInOuts.push(...tx.ourOuts.map((index: string) => tx.outputs[parseInt(index)]))
     for (const { scriptPubKey } of ourInOuts) {
       const pathStr = await processor.fetchAddressPathBySPubKey(
         scriptPubKey
@@ -273,7 +262,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     })
   }
 
-  async function processRawTransaction(rawTx: ITransaction): Promise<ProcessorTransaction> {
+  function processRawTransaction(rawTx: ITransaction): ProcessorTransaction {
     const tx = new ProcessorTransaction({
       txid: rawTx.txid,
       hex: rawTx.hex!,
