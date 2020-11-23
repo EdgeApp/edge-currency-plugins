@@ -103,6 +103,68 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
+      if (!account.isPrivate()) {
+        throw new Error('Action invalid for public account')
+      }
+
+      const targets: MakeTxTarget[] = []
+      const ourReceiveAddresses: string[] = []
+      for (const target of edgeSpendInfo.spendTargets) {
+        if (!target.publicAddress || !target.nativeAmount) {
+          throw new Error('Invalid spend target')
+        }
+
+        targets.push({
+          address: target.publicAddress,
+          value: parseInt(target.nativeAmount)
+        })
+      }
+
+      const freshChangeAddress = await state.getFreshChangeAddress()
+      const utxos = await processor.fetchAllUtxos()
+      const feeRate = parseInt(calculateFeeRate(info, edgeSpendInfo))
+      const tx = await makeTx({
+        utxos,
+        targets,
+        feeRate,
+        coin: account.coinName,
+        network: account.networkType,
+        rbf: false,
+        freshChangeAddress
+      })
+      if (tx.changeUsed) {
+        ourReceiveAddresses.push(freshChangeAddress)
+      }
+
+      let nativeAmount = '0'
+      for (const output of tx.psbt.txOutputs) {
+        const scriptPubKey = output.script.toString('hex')
+        const own = await processor.hasSPubKey(scriptPubKey)
+        if (!own) {
+          nativeAmount = bs.sub(nativeAmount, output.value.toString())
+        }
+      }
+
+      const networkFee = tx.fee.toString()
+      nativeAmount = bs.sub(nativeAmount, networkFee)
+
+      return {
+        ourReceiveAddresses,
+        otherParams: {
+          psbt: tx.psbt.toBase64(),
+          edgeSpendInfo
+        },
+        currencyCode: info.currencyCode,
+        txid: '',
+        date: 0,
+        blockHeight: 0,
+        nativeAmount,
+        networkFee,
+        feeRateUsed: {
+          satPerVByte: feeRate
+        },
+        signedTx: ''
+      }
     },
 
     resyncBlockchain(): Promise<unknown> {
@@ -114,6 +176,30 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
+      if (!account.isPrivate()) {
+        throw new Error('Action invalid for public account')
+      }
+
+      const { psbt } = transaction!.otherParams!
+      const inputs = bitcoin.Psbt.fromBase64(psbt).txInputs
+      const privateKeys = await Promise.all(inputs.map(async ({ hash, index }) => {
+        const txid = Buffer.isBuffer(hash) ? hash.reverse().toString('hex') : hash
+
+        const utxo = await processor.fetchUtxo(`${txid}_${index}`)
+        if (!utxo) throw new Error('Invalid UTXO')
+
+        const pathStr = await processor.fetchAddressPathBySPubKey(utxo.scriptPubKey)
+        if (!pathStr) throw new Error('Invalid script pubkey')
+
+        const path = makePathFromString(pathStr)
+        return account.getPrivateKey(path)
+      }))
+      transaction.signedTx = await signTx({
+        psbt,
+        coin: account.coinName,
+        privateKeys
+      })
+
       return transaction
     },
 
