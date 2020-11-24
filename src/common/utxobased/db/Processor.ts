@@ -200,9 +200,9 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     return data
   }
 
-  async function fetchAddressesByPrefix(prefix: string, startIndex = 0, endIndex?: number): Promise<AddressByPath[]> {
-    const end = endIndex ?? addressByPath.length(prefix) - 1
-    return addressByPath.query(prefix, startIndex, end)
+  async function fetchAddressesByPathPrefix(pathPrefix: string, startIndex = 0, endIndex?: number): Promise<AddressByPath[]> {
+    const end = endIndex ?? addressByPath.length(pathPrefix) - 1
+    return addressByPath.query(pathPrefix, startIndex, end)
   }
 
   async function saveTransactionByScriptPubKey(
@@ -233,16 +233,9 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       }
     }
 
-    const own = await fns.hasSPubKey(scriptPubKey)
-    if (own) {
-      if (isInput) {
-        tx.ourIns = Object.keys(txs[tx.txid].ins)
-      } else {
-        tx.ourOuts = Object.keys(txs[tx.txid].outs)
-      }
-    }
-
     await txsByScriptPubKey.insert('', scriptPubKey, txs)
+
+    return txs
   }
 
   async function calculateTransactionAmount(txId: string){
@@ -354,10 +347,15 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       for (let i = 0; i < arr.length; i++) {
         const { scriptPubKey, amount } = arr[i]
 
-        await saveTransactionByScriptPubKey(scriptPubKey, tx, inOout, i)
-
+        const txs = await saveTransactionByScriptPubKey(scriptPubKey, tx, inOout, i)
         const own = await fns.hasSPubKey(scriptPubKey)
         if (own) {
+          if (inOout) {
+            tx.ourIns = Object.keys(txs[tx.txid].ins)
+          } else {
+            tx.ourOuts = Object.keys(txs[tx.txid].outs)
+          }
+
           await fns.updateAddressByScriptPubKey(scriptPubKey, {
             lastTouched: tx.date,
             used: true
@@ -366,9 +364,8 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       }
     }
 
-    queue.add(() => calculateTransactionAmount(tx.txid))
-
     await txById.insert('', tx.txid, tx)
+    queue.add(() => calculateTransactionAmount(tx.txid))
   }
 
   async function innerUpdateTransaction(
@@ -466,7 +463,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
     async fetchAddressesByPath(path: Path): Promise<AddressByPath[]> {
       const prefix = path.toChange(true)
-      const addresses = await fetchAddressesByPrefix(prefix)
+      const addresses = await fetchAddressesByPathPrefix(prefix)
 
       const now = Date.now()
       for (const address of addresses) {
