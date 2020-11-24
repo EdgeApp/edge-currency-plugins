@@ -200,7 +200,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     return data
   }
 
-  async function fetchAddressesByPathPrefix(pathPrefix: string, startIndex = 0, endIndex?: number): Promise<AddressByPath[]> {
+  async function fetchAddressesByPrefix(pathPrefix: string, startIndex = 0, endIndex?: number): Promise<AddressByPath[]> {
     const end = endIndex ?? addressByPath.length(pathPrefix) - 1
     return addressByPath.query(pathPrefix, startIndex, end)
   }
@@ -463,7 +463,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
     async fetchAddressesByPath(path: Path): Promise<AddressByPath[]> {
       const prefix = path.toChange(true)
-      const addresses = await fetchAddressesByPathPrefix(prefix)
+      const addresses = await fetchAddressesByPrefix(prefix)
 
       const now = Date.now()
       for (const address of addresses) {
