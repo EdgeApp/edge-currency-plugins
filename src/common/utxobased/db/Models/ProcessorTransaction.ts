@@ -1,4 +1,3 @@
-import * as bs from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/lib/types'
 
 import { IProcessorTransaction, ITransactionInput, ITransactionOutput } from '../types'
@@ -11,8 +10,8 @@ export class ProcessorTransaction implements IProcessorTransaction {
   public fees: string
   public inputs: ITransactionInput[]
   public outputs: ITransactionOutput[]
-  public ourIns: number[]
-  public ourOuts: number[]
+  public ourIns: string[]
+  public ourOuts: string[]
   public ourAmount: string
 
   constructor(data: IProcessorTransaction) {

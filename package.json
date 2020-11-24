@@ -69,7 +69,7 @@
   },
   "dependencies": {
     "altcoin-js": "https://github.com/EdgeApp/altcoin-js#master",
-    "baselet": "^0.0.2",
+    "baselet": "^0.0.3",
     "biggystring": "^4.0.0",
     "bip32": "^2.0.5",
     "bip32grs": "^2.0.5",
