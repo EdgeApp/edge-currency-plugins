@@ -14,6 +14,7 @@ import { cdsScriptTemplates } from './bitcoincashUtils/checkdatasig'
 import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
 import * as utxopicker from './utxopicker'
+import { IUTXO } from '../db/types'
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
@@ -43,6 +44,7 @@ export enum ScriptTypeEnum {
   p2wpkh = 'p2wpkh',
   p2wpkhp2sh = 'p2wpkhp2sh',
   p2wsh = 'p2wsh',
+  p2pk = 'p2pk',
   p2pkh = 'p2pkh',
   p2sh = 'p2sh',
   replayProtection = 'replayprotection',
@@ -188,21 +190,12 @@ export interface CreateTxReturn {
 
 export interface MakeTxArgs {
   network: NetworkEnum
-  utxos: MakeTxUtxo[]
+  utxos: IUTXO[]
   targets: MakeTxTarget[]
   feeRate: number
   rbf: boolean
   coin: string
   freshChangeAddress: string
-}
-
-interface MakeTxUtxo {
-  txid: string
-  vout: number
-  value: string
-  scriptSig?: string
-  redeemScript?: string
-  isSegwit: boolean
 }
 
 export interface MakeTxTarget {
@@ -371,39 +364,63 @@ function addressTypeFromAddress(
   throw new Error('Could not determine address type of ' + address)
 }
 
-function isPaymentFactory(payment: bitcoin.PaymentCreator): (script: Buffer) => boolean {
-  return (script: Buffer): boolean => {
+function isPaymentFactory(creator: bitcoin.PaymentCreator): (payment: bitcoin.Payment) => boolean {
+  return (payment: bitcoin.Payment): boolean => {
     try {
-      payment({ output: script });
-      return true;
+      creator(payment)
+      return true
     } catch (err) {
-      return false;
+      return false
     }
   };
 }
-const isP2MS = isPaymentFactory(bitcoin.payments.p2ms);
-const isP2PK = isPaymentFactory(bitcoin.payments.p2pk);
-const isP2PKH = isPaymentFactory(bitcoin.payments.p2pkh);
-const isP2SH = isPaymentFactory(bitcoin.payments.p2sh);
-const isP2WPKH = isPaymentFactory(bitcoin.payments.p2wpkh);
-const isP2WSHScript = isPaymentFactory(bitcoin.payments.p2wsh);
+const isP2MS = isPaymentFactory(bitcoin.payments.p2ms)
+const isP2WSH = isPaymentFactory(bitcoin.payments.p2wsh)
+const isP2WPKH = isPaymentFactory(bitcoin.payments.p2wpkh)
+const isP2WPKHP2SH = (redeem: bitcoin.Payment) =>
+  isPaymentFactory(bitcoin.payments.p2sh)({ redeem })
+const isP2SH = (payment: bitcoin.Payment) =>
+  !isP2WPKHP2SH(payment) && isPaymentFactory(bitcoin.payments.p2sh)(payment)
+const isP2PKH = isPaymentFactory(bitcoin.payments.p2pkh)
+const isP2PK = isPaymentFactory(bitcoin.payments.p2pk)
+
+export function addressToType(address: string): AddressTypeEnum {
+  if (isP2WSH({ address })) {
+    return AddressTypeEnum.p2wsh
+  }
+  if (isP2WPKH({ address })) {
+    return AddressTypeEnum.p2wpkh
+  }
+  if (isP2SH({ address })) {
+    return AddressTypeEnum.p2sh
+  }
+  if (isP2PKH({ address })) {
+    return AddressTypeEnum.p2pkh
+  }
+
+  throw new Error('Could not determine address type of ' + address)
+}
 
 export function scriptPubkeyToType(scriptPubkey: string): ScriptTypeEnum {
-  const script = Buffer.from(scriptPubkey, 'hex')
-  if (isP2PK(script)) {
-    return ScriptTypeEnum.p2pkh
+  const output = Buffer.from(scriptPubkey, 'hex')
+
+  if (isP2WSH({ output })) {
+    return ScriptTypeEnum.p2wsh
   }
-  if (isP2PKH(script)) {
-    return ScriptTypeEnum.p2pkh
+  if (isP2WPKH({ output })) {
+    return ScriptTypeEnum.p2wpkh
   }
-  if (isP2SH(script)) {
-    return ScriptTypeEnum.p2sh
-  }
-  if (isP2WSHScript(script)) {
+  if (isP2WPKHP2SH({ output })) {
     return ScriptTypeEnum.p2wpkhp2sh
   }
-  if (isP2WPKH(script)) {
-    return ScriptTypeEnum.p2wpkh
+  if (isP2SH({ output })) {
+    return ScriptTypeEnum.p2sh
+  }
+  if (isP2PKH({ output })) {
+    return ScriptTypeEnum.p2pkh
+  }
+  if (isP2PK({ output })) {
+    return ScriptTypeEnum.p2pk
   }
 
   throw new Error('Could not determine scriptPubkey type of ' + scriptPubkey)
@@ -849,17 +866,20 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
 
   const mappedUtxos: utxopicker.UTXO[] = []
   for (const utxo of args.utxos) {
-    // Cannot use a utxo without a signature
-    if (!utxo.scriptSig) continue
+    // Cannot use a utxo without a script
+    if (!utxo.script) continue
     const input: utxopicker.UTXO = {
       hash: Buffer.from(utxo.txid, 'hex').reverse(),
       index: utxo.vout,
       value: parseInt(utxo.value),
-      script: Buffer.from(utxo.scriptSig, 'hex'),
+      script: Buffer.from(utxo.script, 'hex'),
+      scriptType: utxo.scriptType,
       sequence,
       sighashType
     }
-    if (utxo.isSegwit) {
+    if (utxo.scriptType === ScriptTypeEnum.p2pkh) {
+      input.nonWitnessUtxo = input.script
+    } else {
       input.witnessUtxo = {
         script: input.script,
         value: parseInt(utxo.value)
@@ -868,20 +888,23 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
       if (utxo.redeemScript) {
         input.redeemScript = Buffer.from(utxo.redeemScript, 'hex')
       }
-    } else {
-      input.nonWitnessUtxo = input.script
     }
     mappedUtxos.push(input)
   }
 
-  const targets: utxopicker.Target[] = args.targets.map((target) => ({
-    script: addressToScriptPubkey({
+  const targets: utxopicker.Target[] = args.targets.map((target) => {
+    const script = addressToScriptPubkey({
       address: target.address,
       coin: coin.name,
       network: args.network
-    }),
-    value: target.value
-  }))
+    })
+    const scriptType = scriptPubkeyToType(script)
+    return {
+      script,
+      scriptType,
+      value: target.value
+    }
+  })
   const changeScript = addressToScriptPubkey({
     address: args.freshChangeAddress,
     coin: coin.name,
@@ -900,14 +923,6 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   const psbt = new bitcoin.Psbt()
   psbt.addInputs(inputs)
   psbt.addOutputs(outputs)
-  
-  const tx = new bitcoin.Transaction()
-  inputs.forEach((input) => tx.addInput(input.hash, input.index, input.sequence, input.redeemScript))
-  outputs.forEach((output) => tx.addOutput(output.script, output.value))
-  console.log('bytes no witness before:', tx.byteLength(false))
-  console.log('bytes witness before:', tx.byteLength())
-  console.log('vbytes before:', tx.virtualSize())
-  console.log('weight before:', tx.weight())
 
   return { psbt: psbt.toBase64(), changeUsed, fee }
 }

@@ -1,4 +1,5 @@
 import { PsbtInput } from 'bip174/src/lib/interfaces'
+import { ScriptTypeEnum } from '../keymanager'
 
 export type Input = UTXO
 export interface UTXO extends PsbtInput {
@@ -7,15 +8,18 @@ export interface UTXO extends PsbtInput {
   sequence?: number
   value: number
   script: Buffer
+  scriptType: ScriptTypeEnum
 }
 
 export interface Output {
   script: Buffer
+  scriptType?: ScriptTypeEnum
   value: number
 }
 
 export interface Target {
   script: string
+  scriptType: ScriptTypeEnum
   value: number
 }
 
