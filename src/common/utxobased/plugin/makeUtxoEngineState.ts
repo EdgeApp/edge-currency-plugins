@@ -1,13 +1,17 @@
 import * as bs from 'biggystring'
-import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
 
-import { EngineCurrencyInfo, Emitter, EmitterEvent, LocalWalletMetadata } from '../../plugin/types'
+import { Emitter, EmitterEvent, EngineCurrencyInfo, LocalWalletMetadata } from '../../plugin/types'
 import { Processor } from '../db/Processor'
 import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
 import { Account } from '../../Account'
-import { makePathFromString, Path } from '../../Path'
+import { makePathFromString, Path, toPurposeType } from '../../Path'
 import { IAddressPartial, IUTXO } from '../db/types'
-import { addressToScriptPubkey, scriptPubkeyToType, ScriptTypeEnum } from '../keymanager/keymanager'
+import {
+  addressToScriptPubkey,
+  BIP43PurposeTypeEnum,
+  scriptPubkeyToType,
+  ScriptTypeEnum
+} from '../keymanager/keymanager'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 
 interface UtxoEngineStateConfig {
@@ -183,40 +187,37 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     const accountUtxos = await network.fetchAddressUtxos(addressStr)
 
     for (const { txid, vout, value, height = 0 } of accountUtxos) {
-      const prevTx = await network.fetchTransaction(txid)
-      const prevScriptPubKey = addressToScriptPubkey({
-        address: prevTx.vout[vout].addresses[0],
-        network: account.networkType,
-        coin: account.coinName
-      })
+      const prevTx = await processor.fetchTransaction(txid)
+      if (!prevTx) {
+        throw new Error('Previous transaction does not exist for p2pkh UTXO')
+      }
 
-      let scriptSig: string | undefined
+      const path = makePathFromString(address.path)
+      const purposeType = toPurposeType(address.path)
+      let scriptType = scriptPubkeyToType(prevTx.outputs[vout].scriptPubKey)
+      let script: string
       let redeemScript: string | undefined
-      let isSegwit = true
-      const scriptType = scriptPubkeyToType(prevScriptPubKey)
-      if (scriptType === ScriptTypeEnum.p2pkh) {
-        isSegwit = false
-        scriptSig = prevTx.hex
-      } else {
-        scriptSig = prevScriptPubKey
-
-        if (scriptType === ScriptTypeEnum.p2sh) {
-          const pathStr = await processor.fetchAddressPathBySPubKey(prevScriptPubKey)
-          if (pathStr) {
-            const path = makePathFromString(pathStr)
-            redeemScript = account.getRedeemScript(path)
-          }
-        }
+      switch (purposeType) {
+        case BIP43PurposeTypeEnum.Legacy:
+          script = prevTx.hex
+          break
+        case BIP43PurposeTypeEnum.WrappedSegwit:
+          script = address.scriptPubKey
+          redeemScript = account.getRedeemScript(path)
+          break
+        case BIP43PurposeTypeEnum.Segwit:
+          script = address.scriptPubKey
+          break
       }
       const utxo: IUTXO = {
         id: `${txid}_${vout}`,
         txid,
         vout,
         value,
-        scriptPubKey: prevScriptPubKey,
-        scriptSig,
+        scriptPubKey: address.scriptPubKey,
+        script,
         redeemScript,
-        isSegwit,
+        scriptType,
         blockHeight: height
       }
       const found = includesUtxo(utxo, oldUtxoMap)
@@ -265,7 +266,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   function processRawTransaction(rawTx: ITransaction): ProcessorTransaction {
     const tx = new ProcessorTransaction({
       txid: rawTx.txid,
-      hex: rawTx.hex!,
+      hex: rawTx.hex,
       blockHeight: rawTx.blockHeight,
       date: rawTx.blockTime,
       fees: rawTx.fees,
