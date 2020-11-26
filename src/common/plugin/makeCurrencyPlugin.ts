@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events'
 import { EdgeCorePluginOptions, EdgeCurrencyPlugin } from 'edge-core-js'
 import {
   EdgeCurrencyEngine,
@@ -7,13 +8,14 @@ import {
 } from 'edge-core-js/lib/types/types'
 
 import { makeCurrencyTools } from './makeCurrencyTools'
-import { EngineConfig, EngineCurrencyInfo } from './types'
+import { makeUtxoEngine } from '../utxobased/plugin/makeUtxoEngine'
+import { EngineCoinType, EngineConfig, EngineCurrencyInfo, Emitter, EmitterEvent } from './types'
 
 export function makeCurrencyPlugin(
-  options: EdgeCorePluginOptions,
+  pluginOptions: EdgeCorePluginOptions,
   info: EngineCurrencyInfo
 ): EdgeCurrencyPlugin {
-  const { io } = options
+  const { io } = pluginOptions
   const tools = makeCurrencyTools(io, info)
 
   return {
@@ -21,21 +23,37 @@ export function makeCurrencyPlugin(
 
     async makeCurrencyEngine(
       walletInfo: EdgeWalletInfo,
-      options: EdgeCurrencyEngineOptions
+      engineOptions: EdgeCurrencyEngineOptions
     ): Promise<EdgeCurrencyEngine> {
+      const emitter: Emitter = new EventEmitter() as any
+      emitter.on(EmitterEvent.TRANSACTIONS_CHANGED, engineOptions.callbacks.onTransactionsChanged)
+      emitter.on(EmitterEvent.BALANCE_CHANGED, engineOptions.callbacks.onBalanceChanged)
+      emitter.on(EmitterEvent.BLOCK_HEIGHT_CHANGED, engineOptions.callbacks.onBlockHeightChanged)
+      emitter.on(EmitterEvent.ADDRESSES_CHECKED, engineOptions.callbacks.onAddressesChecked)
+      emitter.on(EmitterEvent.TXIDS_CHANGED, engineOptions.callbacks.onTxidsChanged)
+
+      emitter.on(EmitterEvent.ADDRESSES_CHECKED, (progress) => {
+        console.log('progress:', progress)
+      })
+
       const engineConfig: EngineConfig = {
         walletInfo,
         info,
         tools,
         io,
-        options
+        options: {
+          ...pluginOptions,
+          ...engineOptions,
+          emitter
+        }
       }
 
-      let engine!: EdgeCurrencyEngine
+      let engine: EdgeCurrencyEngine
       switch (info.coinType) {
+        case EngineCoinType.UTXO:
+          engine = await makeUtxoEngine(engineConfig)
+          break
       }
-
-      await engine.startEngine()
 
       return engine
     },

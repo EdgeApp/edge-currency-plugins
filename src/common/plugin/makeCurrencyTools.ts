@@ -1,6 +1,14 @@
 import { EdgeCurrencyTools, EdgeEncodeUri, EdgeIo, EdgeParsedUri, EdgeWalletInfo } from 'edge-core-js'
 import { JsonObject } from 'edge-core-js/lib/types'
+
+import {
+  Account,
+  PrivateAccount,
+} from '../Account'
 import { EngineCurrencyInfo } from './types'
+
+export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: EdgeWalletInfo): Account | PrivateAccount {
+}
 
 /**
  * The core currency plugin.
