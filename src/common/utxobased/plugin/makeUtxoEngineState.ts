@@ -4,14 +4,9 @@ import { Emitter, EmitterEvent, EngineCurrencyInfo, LocalWalletMetadata } from '
 import { Processor } from '../db/Processor'
 import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
 import { Account } from '../../Account'
-import { makePathFromString, Path, toPurposeType } from '../../Path'
+import { makePathFromString, Path } from '../../Path'
 import { IAddressPartial, IUTXO } from '../db/types'
-import {
-  addressToScriptPubkey,
-  BIP43PurposeTypeEnum,
-  scriptPubkeyToType,
-  ScriptTypeEnum
-} from '../keymanager/keymanager'
+import { addressToScriptPubkey, BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import { EdgeTxidMap } from 'edge-core-js'
 
@@ -214,20 +209,22 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       }
 
       const path = makePathFromString(address.path)
-      const purposeType = toPurposeType(address.path)
-      let scriptType = scriptPubkeyToType(prevTx.outputs[vout].scriptPubKey)
+      let scriptType: ScriptTypeEnum
       let script: string
       let redeemScript: string | undefined
-      switch (purposeType) {
+      switch (account.purpose) {
         case BIP43PurposeTypeEnum.Legacy:
           script = prevTx.hex
+          scriptType = ScriptTypeEnum.p2pkh
           break
         case BIP43PurposeTypeEnum.WrappedSegwit:
           script = address.scriptPubKey
+          scriptType = ScriptTypeEnum.p2wpkhp2sh
           redeemScript = account.getRedeemScript(path)
           break
         case BIP43PurposeTypeEnum.Segwit:
           script = address.scriptPubKey
+          scriptType = ScriptTypeEnum.p2wpkh
           break
       }
 

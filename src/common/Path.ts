@@ -55,15 +55,6 @@ export interface Path extends IPathValues {
 
 const InvalidPathError = new Error('Invalid path')
 
-export function toPurposeType(path: string): BIP43PurposeTypeEnum {
-  const match = path.match(PurposeRegExp)
-  if (!match) {
-    throw InvalidPathError
-  }
-
-  return BIP43NameToPurposeType[`bip${match[1]}`]
-}
-
 export function normalizePath(path: string): string {
   return path.replace(REGEX, (_, purpose, coin, account, change, index) => {
     let str = `m_${purpose}__${coin}__${account}`
