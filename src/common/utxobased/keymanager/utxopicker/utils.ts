@@ -2,38 +2,42 @@ import { ScriptTypeEnum } from '../keymanager'
 import { Input, Output, Result, UTXO } from './types'
 
 const WITNESS_SCALE = 4
+const OP_CODE_VSIZE = WITNESS_SCALE - 1
+const OP_CODE_SIZE = 1
+const SIGNATURE_SIZE = 73
+const PUB_KEY_SIZE = 33
+const SCRIPT_HASH_SIZE = 23
+const PREVOUT_SIZE = 40
 
-export function sizeVarint(num: number): number {
-  if (num < 0xfd)
-    return 1;
-  if (num <= 0xffff)
-    return 3;
-  if (num <= 0xffffffff)
-    return 5;
-  return 9;
-}
+export const sizeVarint = (num: number): number =>
+  num < 0xfd ? 1
+    : num <= 0xffff ? 3
+      : num <= 0xffffffff ? 5
+        : 9
 
 export function inputBytes (input: UTXO): number {
-  const base = 40 + sizeVarint(input.script.length)
+  const base = PREVOUT_SIZE
 
-  let scriptSize = 0
+  let scriptSize = sizeVarint(input.script.length)
   switch (input.scriptType) {
     case ScriptTypeEnum.p2pkh:
     case ScriptTypeEnum.p2wpkh:
     case ScriptTypeEnum.p2wpkhp2sh:
       // signature + public key
-      scriptSize += 108
+      scriptSize += OP_CODE_SIZE + PUB_KEY_SIZE + OP_CODE_SIZE + SIGNATURE_SIZE
+    case ScriptTypeEnum.p2wpkhp2sh:
+      scriptSize /= WITNESS_SCALE
+      scriptSize += SCRIPT_HASH_SIZE * WITNESS_SCALE
     case ScriptTypeEnum.p2sh:
     case ScriptTypeEnum.p2wsh:
-    case ScriptTypeEnum.p2wpkhp2sh:
       // 2-of-3 multisig input
       scriptSize += 253
     case ScriptTypeEnum.p2wpkh:
     case ScriptTypeEnum.p2wpkhp2sh:
     case ScriptTypeEnum.p2wsh:
-      scriptSize += WITNESS_SCALE - 1
+      scriptSize += OP_CODE_VSIZE
       scriptSize /= WITNESS_SCALE
-      scriptSize = scriptSize| 0
+      scriptSize = scriptSize | 0
   }
 
   return base + scriptSize
