@@ -13,6 +13,7 @@ import {
   ScriptTypeEnum
 } from '../keymanager/keymanager'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
+import { EdgeTxidMap } from 'edge-core-js'
 
 interface UtxoEngineStateConfig {
   currencyInfo: EngineCurrencyInfo
@@ -172,9 +173,15 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       page
     })
 
+    const changeTxidMap: EdgeTxidMap = {}
     for (const rawTx of accountDetails.transactions ?? []) {
       const tx = processRawTransaction(rawTx)
       processor.saveTransaction(tx)
+
+      changeTxidMap[tx.txid] = tx.date
+    }
+    if (accountDetails.transactions?.length ?? 0 > 0) {
+      emitter.emit(EmitterEvent.TXIDS_CHANGED, changeTxidMap)
     }
 
     if (accountDetails.page < accountDetails.totalPages) {
