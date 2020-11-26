@@ -35,6 +35,8 @@ export interface UtxoEngineState {
   stop(): Promise<void>
 
   getFreshChangeAddress(): string
+
+  markAddressUsed(address: string): Promise<void>
 }
 
 export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineState {
@@ -125,15 +127,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   async function afterProcessAddress(address: IAddressPartial, path: Path): Promise<void> {
     if (!address.used) {
       const path = makePathFromString(address.path)
-      if (path.change === 0) {
-        if (freshReceiveIndex === 0) {
-          freshReceiveIndex = path.index
-        }
-      } else {
-        if (freshChangeIndex === 0) {
-          freshChangeIndex = path.index
-        }
-      }
+      updateFreshIndex(path)
     }
 
     progress.processedCount++
@@ -143,6 +137,14 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     address.networkQueryVal = metadata.lastSeenBlockHeight + 1
 
     processor.updateAddress(path, address)
+  }
+
+  function updateFreshIndex(path: Path): void {
+    if (path.change === 0 && path.index === freshReceiveIndex) {
+      freshReceiveIndex++
+    } else if (path.change === 1 && path.index === freshChangeIndex) {
+      freshChangeIndex++
+    }
   }
 
   async function calculateAddressBalance(address: IAddressPartial): Promise<void> {
@@ -182,11 +184,23 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
   async function processAddressUTXOs(address: IAddressPartial): Promise<void> {
     const oldUtxos = await processor.fetchUtxosByScriptPubKey(address.scriptPubKey)
-    const oldUtxoMap: IUTXOMap = { lastIndex: 0, array: oldUtxos, map: {} }
+    const oldUtxoMap = oldUtxos.reduce<{ [id: string]: IUTXO }>((obj, utxo) => ({
+      ...obj,
+      [utxo.id]: utxo
+    }), {})
     const addressStr = account.getAddressFromPathString(address.path)
     const accountUtxos = await network.fetchAddressUtxos(addressStr)
 
     for (const { txid, vout, value, height = 0 } of accountUtxos) {
+      const id = `${txid}_${vout}`
+
+      // Any UTXOs listed in the oldUtxoMap after the for loop will be deleted from the database.
+      // If we do not already know about this UTXO, lets process it and add it to the database.
+      if (oldUtxoMap[id]) {
+        delete oldUtxoMap[id]
+        continue
+      }
+
       const prevTx = await processor.fetchTransaction(txid)
       if (!prevTx) {
         throw new Error('Previous transaction does not exist for p2pkh UTXO')
@@ -209,8 +223,9 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
           script = address.scriptPubKey
           break
       }
-      const utxo: IUTXO = {
-        id: `${txid}_${vout}`,
+
+      processor.saveUtxo({
+        id,
         txid,
         vout,
         value,
@@ -219,17 +234,11 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         redeemScript,
         scriptType,
         blockHeight: height
-      }
-      const found = includesUtxo(utxo, oldUtxoMap)
-      if (found) {
-        oldUtxoMap.array.splice(oldUtxoMap.lastIndex, 1)
-      } else {
-        processor.saveUtxo(utxo)
-      }
+      })
     }
 
-    for (const oldUtxo of oldUtxoMap.array) {
-      processor.removeUtxo(oldUtxo)
+    for (const id in oldUtxoMap) {
+      processor.removeUtxo(oldUtxoMap[id])
     }
   }
 
@@ -264,7 +273,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   function processRawTransaction(rawTx: ITransaction): ProcessorTransaction {
-    const tx = new ProcessorTransaction({
+    return new ProcessorTransaction({
       txid: rawTx.txid,
       hex: rawTx.hex,
       blockHeight: rawTx.blockHeight,
@@ -286,7 +295,6 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       ourOuts: [],
       ourAmount: '0'
     })
-    return tx
   }
 
   return {
@@ -302,29 +310,25 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       const path = account.path.clone()
       path.goTo(freshChangeIndex, 1)
       return account.getAddress(path)
+    },
+
+    async markAddressUsed(address: string) {
+      const scriptPubKey = addressToScriptPubkey({
+        address,
+        addressType: account.addressType,
+        network: account.networkType,
+        coin: account.coinName
+      })
+      const pathStr = await processor.fetchAddressPathBySPubKey(scriptPubKey)
+      if (!pathStr) {
+        throw new Error('Invalid address: not stored in database')
+      }
+
+      const path = makePathFromString(pathStr)
+      updateFreshIndex(path)
+      processor.updateAddress(path, {
+        used: true
+      })
     }
   }
-}
-
-interface IUTXOMap {
-  lastIndex: number
-  array: IUTXO[]
-  map: { [id: string]: number }
-}
-
-function includesUtxo(utxo: IUTXO, utxoMap: IUTXOMap): boolean {
-  const index = utxoMap.map[utxo.id]
-  if (index != null) {
-    utxoMap.lastIndex = index
-    return true
-  }
-
-  for (; utxoMap.lastIndex < utxoMap.array.length; utxoMap.lastIndex++) {
-    const oldUtxo = utxoMap.array[utxoMap.lastIndex]
-    utxoMap.map[oldUtxo.id] = utxoMap.lastIndex
-
-    if (utxo.id === oldUtxo.id) return true
-  }
-
-  return false
 }
