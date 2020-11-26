@@ -23,11 +23,11 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     getBalance(opts: EdgeCurrencyCodeOptions): string {
-      return ''
+      return metadata.balance
     },
 
     getBlockHeight(): number {
-      return 0
+      return metadata.lastSeenBlockHeight
     },
 
     addCustomToken(_token: EdgeTokenInfo): Promise<unknown> {
@@ -38,6 +38,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
+      await network.broadcastTx(transaction)
       return transaction
     },
 
@@ -51,8 +52,10 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
     dumpData(): EdgeDataDump {
       return {
-        walletId: '',
-        walletType: '',
+        walletId: walletInfo.id.split(' - ')[0],
+        walletType: walletInfo.type,
+        // walletFormat: walletInfo.keys && walletInfo.keys.format,
+        // pluginType: pluginState.pluginId,
         data: {}
       }
     },
@@ -74,10 +77,9 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     getFreshAddress(_opts: EdgeCurrencyCodeOptions): EdgeFreshAddress {
+      const freshAddress = state.getFreshChangeAddress()
       return {
-        publicAddress: '',
-        legacyAddress: '',
-        segwitAddress: ''
+        publicAddress: freshAddress
       }
     },
 
@@ -95,7 +97,10 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     async getTransactions(opts: EdgeGetTransactionsOptions): Promise<EdgeTransaction[]> {
-      return []
+      // TODO: Update RangeBase to paginate
+      const start = opts.startDate?.getTime() ?? Date.now() / 2
+      const txs = await processor.fetchTransactionsByDate(start)
+      return txs.map((tx) => tx.toEdgeTransaction(info.currencyCode))
     },
 
     isAddressUsed(_address: string): boolean {
