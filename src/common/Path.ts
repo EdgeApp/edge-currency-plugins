@@ -1,8 +1,4 @@
-import {
-  AddressTypeEnum,
-  BIP43PurposeTypeEnum,
-  ScriptTypeEnum
-} from './utxobased/keymanager/keymanager'
+import { AddressTypeEnum, BIP43PurposeTypeEnum, ScriptTypeEnum } from './utxobased/keymanager/keymanager'
 import { getCoinFromString } from './utxobased/keymanager/coinmapper'
 
 export const BIP43NameToPurposeType: { [format: string]: BIP43PurposeTypeEnum } = {
@@ -17,7 +13,9 @@ export const BIP43PurposeTypeToName: { [type: string]: string } = {
   [BIP43PurposeTypeEnum.Segwit]: 'bip84'
 }
 
-const REGEX = /^m[/_](\d\d?)(?:(?:'\/)|(?:__))(\d)(?:(?:'\/)|(?:__))(\d+)['_]?(?:(?:[/_]([01]))(?:(?:(?:\/)|(?:___))(\d+))?)?$/
+const PurposeRegExp = /^m[/_](\d\d?)(?:(?:'\/)|(?:__))/
+const RemaningRegExp = /(\d)(?:(?:'\/)|(?:__))(\d+)['_]?(?:(?:[/_]([01]))(?:(?:(?:\/)|(?:___))(\d+))?)?$/
+const REGEX = new RegExp(PurposeRegExp.source + RemaningRegExp.source)
 
 interface IPathConfig {
   purpose: BIP43PurposeTypeEnum
@@ -56,6 +54,15 @@ export interface Path extends IPathValues {
 }
 
 const InvalidPathError = new Error('Invalid path')
+
+export function toPurposeType(path: string): BIP43PurposeTypeEnum {
+  const match = path.match(PurposeRegExp)
+  if (!match) {
+    throw InvalidPathError
+  }
+
+  return BIP43NameToPurposeType[`bip${match[1]}`]
+}
 
 export function normalizePath(path: string): string {
   return path.replace(REGEX, (_, purpose, coin, account, change, index) => {

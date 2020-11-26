@@ -2,6 +2,7 @@ import { BaseType } from 'baselet'
 import { HashBase } from 'baselet/src/HashBase'
 import { CountBase } from 'baselet/src/CountBase'
 import { RangeBase } from 'baselet/src/RangeBase'
+import { ScriptTypeEnum } from '../keymanager/keymanager'
 
 export type IAddress = Required<IAddressPartial>
 export interface IAddressPartial extends IAddressRequired, IAddressOptional {}
@@ -23,9 +24,9 @@ export interface IUTXO {
   vout: number
   value: string
   scriptPubKey: string
-  scriptSig?: string
+  script: string
   redeemScript?: string
-  isSegwit: boolean
+  scriptType: ScriptTypeEnum
   blockHeight: number
 }
 

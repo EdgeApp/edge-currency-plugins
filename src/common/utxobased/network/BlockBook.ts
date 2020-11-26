@@ -73,7 +73,7 @@ interface IAccountOpts {
 
 export interface ITransaction {
   txid: string
-  hex?: string
+  hex: string
   blockHeight: number
   confirmations: number
   blockTime: number
