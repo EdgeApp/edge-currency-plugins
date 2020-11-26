@@ -204,7 +204,7 @@ export interface MakeTxTarget {
 }
 
 interface MakeTxReturn {
-  psbt: string
+  psbt: bitcoin.Psbt
   changeUsed: boolean
   fee: number
 }
@@ -924,7 +924,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   psbt.addInputs(inputs)
   psbt.addOutputs(outputs)
 
-  return { psbt: psbt.toBase64(), changeUsed, fee }
+  return { psbt: psbt, changeUsed, fee }
 }
 
 export function createTx(args: CreateTxArgs): CreateTxReturn {
