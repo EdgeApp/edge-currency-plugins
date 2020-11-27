@@ -187,7 +187,22 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return txs.map((tx) => tx.toEdgeTransaction(info.currencyCode))
     },
 
-    isAddressUsed(_address: string): boolean {
+    // @ts-ignore
+    async isAddressUsed(address: string): Promise<boolean> {
+      const scriptPubKey = addressToScriptPubkey({
+        address,
+        addressType: account.addressType,
+        network: account.networkType,
+        coin: account.coinName
+      })
+
+      const addressStr = await processor.fetchAddressPathBySPubKey(scriptPubKey)
+      if (addressStr) {
+        const path = makePathFromString(addressStr)
+        const address = await processor.fetchAddress(path)
+        return address?.used ?? false
+      }
+
       return false
     },
 

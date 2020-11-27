@@ -31,9 +31,6 @@ export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: Edge
   }
 }
 
-export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: EdgeWalletInfo): Account | PrivateAccount {
-}
-
 /**
  * The core currency plugin.
  * Provides information about the currency,
