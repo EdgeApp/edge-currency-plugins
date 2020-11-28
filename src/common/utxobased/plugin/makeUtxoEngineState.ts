@@ -203,18 +203,13 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         continue
       }
 
-      const prevTx = await processor.fetchTransaction(txid)
-      if (!prevTx) {
-        throw new Error('Previous transaction does not exist for p2pkh UTXO')
-      }
-
       const path = makePathFromString(address.path)
       let scriptType: ScriptTypeEnum
       let script: string
       let redeemScript: string | undefined
       switch (account.purpose) {
         case BIP43PurposeTypeEnum.Legacy:
-          script = prevTx.hex
+          script = (await fetchTransaction(txid)).hex
           scriptType = ScriptTypeEnum.p2pkh
           break
         case BIP43PurposeTypeEnum.WrappedSegwit:
@@ -244,6 +239,15 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     for (const id in oldUtxoMap) {
       processor.removeUtxo(oldUtxoMap[id])
     }
+  }
+
+  async function fetchTransaction(txid: string): Promise<ProcessorTransaction> {
+    let tx = await processor.fetchTransaction(txid)
+    if (!tx) {
+      const rawTx = await network.fetchTransaction(txid)
+      tx = processRawTransaction(rawTx)
+    }
+    return tx
   }
 
   // TODO: watch transaction status in case it is dropped
