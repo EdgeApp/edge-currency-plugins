@@ -86,8 +86,8 @@ describe('bitcoin sv xpub to address tests;  generate valid addresses by calling
         'xpub6CdMDgU2hzWyeZ852LWqp5AfDz3ty2cRfi4jEw9BT8aNYugMQvVykQsKLARZdbqKKp7yTviJdL1N9saYLmJNKD1rwVAwLTmU8r8qKeoyG4R',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'bitcoinsv',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({

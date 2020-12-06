@@ -87,8 +87,8 @@ describe('smartcash xpub to address tests;  generate valid addresses by calling 
         'xpub6CW5FsmJuCprVuE5SJNK5GVkbyoWkc2cxR5io8cXMLKdDiTCpW3JmZtEUzKML8iYKp5Fs7iGSLnW4EjGZFaRtmVo9RPW36CY2w4imVdUNjK',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'smartcash',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({

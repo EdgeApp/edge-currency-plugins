@@ -86,8 +86,8 @@ describe('eboost xpub to address tests;  generate valid addresses by calling xpu
         'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'eboost',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({

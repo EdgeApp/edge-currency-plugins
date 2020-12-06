@@ -86,8 +86,8 @@ describe('zcash xpub to address tests;  generate valid addresses by calling xpub
         'xpub6CLX6bXDznyoBCRaHYmzfApq4dLc34UydL1gRHQTG55pNwbKSC2GvXjTQ4VS3n6P24fRd14uKz7P92xJQ3MWdRzUxGkqiftZf3riboiJLJs',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'zcash',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
@@ -105,7 +105,6 @@ describe('zcash xpub to address tests;  generate valid addresses by calling xpub
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 't1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2pkh,
       coin: 'zcash',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)

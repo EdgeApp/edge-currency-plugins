@@ -9,6 +9,8 @@ export interface CoinPrefixes {
   segwitXPub?: number
   pubkeyHash: number
   scriptHash: number
+  legacyPubkeyHash?: number,
+  legacyScriptHash?: number,
   bech32?: string
   cashAddr?: string
 }

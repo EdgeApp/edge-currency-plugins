@@ -86,8 +86,8 @@ describe('bitcoin gold xpub to address tests;  generate valid addresses by calli
         'xpub6BwBY3LGBvGtyVy9wygN7v7yFWsK7g9jv5QwRyprquwhRQTgbXGx4HWPZHRnF5ueji94Dztce4k3RJnt2ir3xWBS7y6bDk8ryS8vKXyoYPL',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'bitcoingold',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
@@ -105,7 +105,6 @@ describe('bitcoin gold xpub to address tests;  generate valid addresses by calli
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoingold',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
@@ -117,8 +116,8 @@ describe('bitcoin gold xpub to address tests;  generate valid addresses by calli
         'ypub6Wu2Ax4NRoLJW1UCNBRMatwYW5Vr7vqgE4SK6FdKssNEUA2NCor8c5oSdMTUgHT3V9yj1LzMLTJpXwCh7hVenJdfhLB9M6qxmi6bcoFSdVd',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'bitcoingold',
     })
     const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
@@ -135,7 +134,6 @@ describe('bitcoin gold xpub to address tests;  generate valid addresses by calli
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2sh,
       coin: 'bitcoingold',
     })
     expect(scriptPubkeyP2WPKHP2SHRoundTrip).to.equals(scriptPubkeyP2WPKHP2SH)
@@ -147,8 +145,8 @@ describe('bitcoin gold xpub to address tests;  generate valid addresses by calli
         'zpub6sBMnpX8349mvyqk3Y4U1mTJAeCpY4qGNgMeJejYe1sjPYyVVs6qBDrycdTNd7kHXCZBUxuTB9kojxvHKVU6kS9hsoUeekK1QRBU9nDYtx2',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'bitcoingold',
     })
     const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({
@@ -167,7 +165,6 @@ describe('bitcoin gold xpub to address tests;  generate valid addresses by calli
     const scriptPubkeyP2WPKHRoundTrip = addressToScriptPubkey({
       address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkh,
       coin: 'bitcoingold',
     })
     expect(scriptPubkeyP2WPKHRoundTrip).to.be.equal(scriptPubkeyP2WPKH)

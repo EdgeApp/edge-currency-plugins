@@ -15,6 +15,8 @@ export class Litecoin implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x30,
     scriptHash: 0x32,
+    legacyPubkeyHash: 0x00,
+    legacyScriptHash: 0x05,
     bech32: 'ltc',
   }
 

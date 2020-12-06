@@ -91,8 +91,8 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
         'xpub6DFSGe2bonksyNuiTXpJ7iuFZZUAdKvsdxSdp1zREazBVTBDcWn94f7eNg5MN148WHsaUfG3Mmmqa6nBi1VCde1t7wM3NA3993CcjChk1g5',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'groestlcoin',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
@@ -122,8 +122,8 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
         'ypub6X46SconPpL9QhXPnMGuPLB9jYai7nrHz7ki4zq3awHb462iPSG5eV19oBWv22RWt69npsi75XGcANsevtTWE8YFgqpygrGUPnEKp6vty5v',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'groestlcoin',
     })
     const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
@@ -152,8 +152,8 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
         'zpub6qdhcNVVLJ2t8kLzGLzeaiJv7EahaRBsXmu1yVPyXHvMdFmS4d7JSi5aS6mc1oz5k6DZN781Ffn3GAs3r2FJnCPSw5nti63s3c9EDg2u7MS',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'groestlcoin',
     })
     const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({
@@ -187,8 +187,8 @@ describe('groestlcoin from XPriv to WIF to private key to WIF', () => {
       xpriv: xpriv,
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'groestlcoin',
     })
     const derivedWIFKey = privateKeyToWIF({

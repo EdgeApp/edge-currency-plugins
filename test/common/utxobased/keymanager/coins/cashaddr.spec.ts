@@ -20,7 +20,6 @@ describe('bitcoin cash address tests', () => {
     scriptPubkey: addressToScriptPubkey({
       address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoin',
     }),
     network: NetworkEnum.Mainnet,
@@ -51,7 +50,6 @@ describe('bitcoin cash address tests', () => {
     scriptPubkey: addressToScriptPubkey({
       address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2sh,
       coin: 'bitcoin',
     }),
     network: NetworkEnum.Mainnet,

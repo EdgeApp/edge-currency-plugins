@@ -86,8 +86,8 @@ describe('dash xpub to address tests;  generate valid addresses by calling xpubT
         'drkpRzJp5yxNJdtLq7YmV6Bfg7NtjycEopwQtnqre1mPRoie9DPWBfCu23U5gVteaKYiMF3gaFd88RnZUfowGYoBoR4sWk4RApm4jrbSAGgQUdq',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'dash',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({

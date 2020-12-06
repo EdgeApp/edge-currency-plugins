@@ -86,8 +86,8 @@ describe('vertcoin xpub to address tests;  generate valid addresses by calling x
         'xpub6CmMJaaUpYLYQJPRkjVAvqwsABqVRdDmxs7Y9k9GqXFdBkBz7Gtjb2VhxzCeYKuXkEzZ23MNRFj9tqjYS5UgvewWpxYmhWuwDiLR84spHS8',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'vertcoin',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
@@ -117,8 +117,8 @@ describe('vertcoin xpub to address tests;  generate valid addresses by calling x
         'xpub6D1pK4ozztYgDWaNcvgYjXTQoWNfzSgQY9poZkJWhhbCKYVjQdUmhkRYF6NkLPNzTohQ3KEMm1ZqzZAHTPPQYuDYzVmkXtTLzLYPDhjoUrm',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'vertcoin',
     })
     const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
@@ -147,8 +147,8 @@ describe('vertcoin xpub to address tests;  generate valid addresses by calling x
         'xpub6Cq877KwJnLWBSAoVoFLwoe7BbPhxxkpBkvEugZRzmWRsGqPJDJU3t8jWFuNWMR5uYLQuYPgypSR2F9HWjVaroCNtRqH43Chwjeox4je1yB',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'vertcoin',
     })
     const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({

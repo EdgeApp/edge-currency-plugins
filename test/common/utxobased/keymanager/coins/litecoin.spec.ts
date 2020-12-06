@@ -1,6 +1,5 @@
-import { expect } from 'chai'
+import { expect, should } from 'chai'
 import { describe, it } from 'mocha'
-
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -13,8 +12,10 @@ import {
   ScriptTypeEnum,
   wifToPrivateKey,
   xprivToXPub,
-  xpubToPubkey,
+  xpubToPubkey
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
+
+should()
 
 describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 and some generated cases to test xpub prefix bytes', () => {
   const mnemonic =
@@ -190,8 +191,8 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
         'Ltub2YDQmP391UYeDYvLye9P1SuNJFkcRGN7SYHM8JMxaDnegcPTXHJ2BnYmvHnFnGPGKu2WMuCga6iZV3SDxDMGrRyMcrYEfSPhrpS1EPkC43E',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'litecoin',
     })
     const scriptPubkeyP2PKH = pubkeyToScriptPubkey({
@@ -208,7 +209,6 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
     const scriptPukbeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2pkh,
       coin: 'litecoin',
     })
     expect(scriptPukbeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
@@ -220,8 +220,8 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
         'Mtub2rz9F1pkisRsSZX8sa4Ajon9GhPP6JymLgpuHqbYdU5JKFLBF7Qy8b1tZ3dccj2fefrAxfrPdVkpCxuWn3g72UctH2bvJRkp6iFmp8aLeRZ',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'litecoin',
     })
     const scriptPubkeyP2WPKHP2SH = pubkeyToScriptPubkey({
@@ -238,7 +238,6 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
     const scriptHashP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: 'M7wtsL7wSHDBJVMWWhtQfTMSYYkyooAAXM',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2sh,
       coin: 'litecoin',
     })
     expect(scriptHashP2WPKHP2SHRoundTrip).to.equals(scriptPubkeyP2WPKHP2SH)
@@ -250,8 +249,8 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
         'zpub6rPo5mF47z5coVm5rvWv7fv181awb7Vckn5Cf3xQXBVKu18kuBHDhNi1Jrb4br6vVD3ZbrnXemEsWJoR18mZwkUdzwD8TQnHDUCGxqZ6swA',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
-      bip44ChangeIndex: 0,
-      bip44AddressIndex: 0,
+      changeIndex: 0,
+      addressIndex: 0,
       coin: 'litecoin',
     })
     const scriptPubkeyP2WPKH = pubkeyToScriptPubkey({
@@ -270,7 +269,6 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
     const scriptPubkeyP2WPKHRoundTrip = addressToScriptPubkey({
       address: 'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.p2wpkh,
       coin: 'litecoin',
     })
     expect(scriptPubkeyP2WPKHRoundTrip).to.be.equal(scriptPubkeyP2WPKH)

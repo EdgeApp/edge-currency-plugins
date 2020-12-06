@@ -25,6 +25,6 @@ export class BitcoinCash implements Coin {
     legacyXPub: 0x043587cf,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    cashaddr: 'bitcoincashtestnet',
+    cashaddr: 'bchtest',
   }
 }

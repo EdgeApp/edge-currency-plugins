@@ -8,7 +8,7 @@ import BN from './bn'
 
 export enum CashaddrPrefixEnum {
   mainnet = 'bitcoincash',
-  testnet = 'bitcoincashtestnet',
+  testnet = 'bchtest',
 }
 
 export enum CashaddrTypeEnum {
