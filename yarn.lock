@@ -1242,9 +1242,9 @@ alphanum-sort@^1.0.0:
   resolved "https://registry.yarnpkg.com/alphanum-sort/-/alphanum-sort-1.0.2.tgz#97a1119649b211ad33691d9f9f486a8ec9fbe0a3"
   integrity sha1-l6ERlkmyEa0zaR2fn0hqjsn74KM=
 
-"altcoin-js@https://github.com/EdgeApp/altcoin-js#master":
+"altcoin-js@git://github.com/EdgeApp/altcoin-js.git#master":
   version "5.1.10"
-  resolved "https://github.com/EdgeApp/altcoin-js#9226e0af0eccffed7196c1ef2387db9dd5465ec0"
+  resolved "git://github.com/EdgeApp/altcoin-js.git#b0a16589b50c1a88482bb98930b13d14088b44f4"
   dependencies:
     bech32 "^1.1.4"
     big-integer "^1.6.44"
@@ -1563,10 +1563,9 @@ base@^0.11.1:
     mixin-deep "^1.2.0"
     pascalcase "^0.1.1"
 
-baselet@^0.0.3:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/baselet/-/baselet-0.0.2.tgz#79d037d039c15e195a1c6d49e82d98854b7abd63"
-  integrity sha512-oKzDj0fB+ZQPyJ/XFHy3cZEPAeXCFR1JezzXuB3CzoUgR/KPUn5OXZ7koWNV6iX0H7q2F633nGdFMi4HeQGARQ==
+"baselet@git://github.com/EdgeApp/baselet.git#noah/range-page":
+  version "0.0.4"
+  resolved "git://github.com/EdgeApp/baselet.git#d16ee9d5160fd5946f4b5a7bd567c4b994d4ec90"
   dependencies:
     disklet "^0.4.5"
     memlet "^0.0.3"

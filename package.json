@@ -68,8 +68,8 @@
     "typescript": "^3.9.6"
   },
   "dependencies": {
-    "altcoin-js": "https://github.com/EdgeApp/altcoin-js#master",
-    "baselet": "^0.0.4",
+    "altcoin-js": "git://github.com/EdgeApp/altcoin-js.git#master",
+    "baselet": "git://github.com/EdgeApp/baselet.git#noah/range-page",
     "biggystring": "^4.0.0",
     "bip32": "^2.0.5",
     "bip32grs": "^2.0.5",
