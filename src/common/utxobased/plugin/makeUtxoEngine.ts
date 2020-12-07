@@ -181,9 +181,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     async getTransactions(opts: EdgeGetTransactionsOptions): Promise<EdgeTransaction[]> {
-      // TODO: Update RangeBase to paginate
-      const start = opts.startDate?.getTime() ?? Date.now() / 2
-      const txs = await processor.fetchTransactionsByDate(start)
+      const txs = await processor.fetchTransactions(opts)
       return txs.map((tx) => tx.toEdgeTransaction(info.currencyCode))
     },
 

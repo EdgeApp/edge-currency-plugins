@@ -33,6 +33,7 @@ import {
   utxoByIdConfig,
   utxoIdsByScriptPubKeyConfig, utxoIdsBySizeConfig
 } from './Models/baselet'
+import { EdgeGetTransactionsOptions } from 'edge-core-js/lib/types'
 
 interface ProcessorEmitter {
   emit(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, transaction: ProcessorTransaction): this
@@ -66,7 +67,7 @@ export interface Processor {
 
   fetchTransactionsByScriptPubKey(scriptHash: string): Promise<TxsByScriptPubKey>
 
-  fetchTransactionsByDate(start: number, end?: number): Promise<ProcessorTransaction[]>
+  fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<ProcessorTransaction[]>
 
   saveTransaction(tx: ProcessorTransaction): void
 
@@ -528,12 +529,17 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       return txs ?? {}
     },
 
-    async fetchTransactionsByDate(
-      start: number,
-      end?: number
-    ): Promise<ProcessorTransaction[]> {
-      const txs = await txsByDate.query('', start, end)
-      return txs.map((tx) => new ProcessorTransaction(tx))
+    async fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<ProcessorTransaction[]> {
+      const {
+        startEntries = 10,
+        startIndex = 0
+      } = opts
+      const txData = await txsByDate.queryByCount('', startEntries, startIndex)
+      const txPromises = txData.map(async ({ [RANGE_ID_KEY]: txId }) => {
+        const [ tx ] = await txById.query('', [ txId ])
+        return new ProcessorTransaction(tx)
+      })
+      return Promise.all(txPromises)
     },
 
     saveTransaction(tx: ProcessorTransaction): void {
