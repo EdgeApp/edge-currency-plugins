@@ -535,10 +535,10 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
         startIndex = 0
       } = opts
       const txData = await txsByDate.queryByCount('', startEntries, startIndex)
-      const txPromises = txData.map(async ({ [RANGE_ID_KEY]: txId }) => {
-        const [ tx ] = await txById.query('', [ txId ])
-        return new ProcessorTransaction(tx)
-      })
+      const txPromises = txData.map(({ [RANGE_ID_KEY]: txId }) =>
+        txById.query('', [ txId ])
+          .then(([ tx ]) => new ProcessorTransaction(tx))
+      )
       return Promise.all(txPromises)
     },
 
