@@ -19,7 +19,6 @@ export interface Output {
 
 export interface Target {
   script: string
-  scriptType: ScriptTypeEnum
   value: number
 }
 
