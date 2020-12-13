@@ -25,9 +25,24 @@ export enum NetworkEnum {
 // in bitcoin these are bip44, bip49, bip84 xpub prefixes
 // other coins contain different formats which still need to be gathered.
 export enum BIP43PurposeTypeEnum {
+  Airbitz = 'airbitz',
   Legacy = 'legacy', // xpub/xprv tpub/tprv etc.
   Segwit = 'segwit', // zpub/zprv vpub/vprv etc.
   WrappedSegwit = 'wrappedSegwit', // ypub/yprv upub/uprv etc.
+}
+
+export const BIP43NameToPurposeType: { [format: string]: BIP43PurposeTypeEnum } = {
+  bip32: BIP43PurposeTypeEnum.Airbitz,
+  bip44: BIP43PurposeTypeEnum.Legacy,
+  bip49: BIP43PurposeTypeEnum.WrappedSegwit,
+  bip84: BIP43PurposeTypeEnum.Segwit
+}
+
+export const BIP43PurposeTypeToName: { [type: string]: string } = {
+  [BIP43PurposeTypeEnum.Airbitz]: 'bip32',
+  [BIP43PurposeTypeEnum.Legacy]: 'bip44',
+  [BIP43PurposeTypeEnum.WrappedSegwit]: 'bip49',
+  [BIP43PurposeTypeEnum.Segwit]: 'bip84'
 }
 
 // supported address types.
@@ -90,7 +105,7 @@ export interface XPubToPubkeyArgs {
   xpub: string
   network: NetworkEnum
   type: BIP43PurposeTypeEnum
-  bip44ChangeIndex: 0 | 1
+  bip44ChangeIndex?: 0 | 1
   bip44AddressIndex: number
   coin: string
 }
@@ -264,9 +279,10 @@ function bip32NetworkFromCoinPrefix(
       }
       break
     case BIP43PurposeTypeEnum.Legacy:
+    case BIP43PurposeTypeEnum.Airbitz:
       xKeyPrefixes = {
         public: coinPrefixes.legacyXPub,
-        private: coinPrefixes.legacyXPriv,
+        private: coinPrefixes.legacyXPriv
       }
       break
     default:
@@ -443,7 +459,7 @@ export function addressTypeToPurpose(type: AddressTypeEnum): BIP43PurposeTypeEnu
   }
 }
 
-export function legacySeedToXPriv(seed: string): string {
+export function airbitzSeedToXPriv(seed: string): string {
   const xpriv = bip32
     .fromSeed(Buffer.from(seed, 'hex'))
     .derivePath('m/0')
@@ -454,7 +470,17 @@ export function legacySeedToXPriv(seed: string): string {
   return xpriv
 }
 
-export function legacySeedToPrivateKey(
+export function airbitzXPrivToPrivateKey(xpriv: string, index: number): string {
+  const privateKey = bip32
+    .fromBase58(xpriv)
+    .derive(index).privateKey
+  if (typeof privateKey === 'undefined') {
+    throw new Error('Failed to generate private key from legacy seed')
+  }
+  return privateKey.toString('hex')
+}
+
+export function airbitzSeedToPrivateKey(
   args: LegacySeedToPrivateKeyArgs
 ): string {
   const privateKey = bip32
@@ -513,18 +539,17 @@ export function xpubToPubkey(args: XPubToPubkeyArgs): string {
     args.coin,
     args.type
   )
-  if (args.coin === 'groestlcoin') {
-    const node: bip32.BIP32Interface = bip32grs.fromBase58(args.xpub, network)
-    return node
-      .derive(args.bip44ChangeIndex)
-      .derive(args.bip44AddressIndex)
-      .publicKey.toString('hex')
+  let node: bip32.BIP32Interface = args.coin === 'groestlcoin'
+    ? bip32grs.fromBase58(args.xpub, network)
+    : bip32.fromBase58(args.xpub, network)
+  if (args.bip44ChangeIndex) {
+    node = node.derive(args.bip44ChangeIndex)
   }
-  const node: bip32.BIP32Interface = bip32.fromBase58(args.xpub, network)
   return node
-    .derive(args.bip44ChangeIndex)
     .derive(args.bip44AddressIndex)
-    .publicKey.toString('hex')
+    .publicKey
+    .toString('hex')
+
 }
 
 export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {

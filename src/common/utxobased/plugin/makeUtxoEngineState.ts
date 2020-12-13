@@ -9,6 +9,7 @@ import { IAddressPartial, IUTXO } from '../db/types'
 import { addressToScriptPubkey, BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import { EdgeTxidMap } from 'edge-core-js'
+import { AddressByPath } from '../db/Models/baselet'
 
 interface UtxoEngineStateConfig {
   currencyInfo: EngineCurrencyInfo
@@ -58,12 +59,15 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       ratio: 0
     }
 
-    const receivePath = account.path.clone().goTo(0, 0)
-    const changePath = account.path.clone().goToChange(1)
+    const receivePath = account.path.clone().goTo(0)
+    const changePath = receivePath.getChangePath()
+    if (changePath) {
+      changePath.goTo(0)
+    }
 
     const [ receiveAddresses, changeAddresses ] = await Promise.all([
       processor.fetchAddressesByPath(receivePath),
-      processor.fetchAddressesByPath(changePath)
+      changePath ? processor.fetchAddressesByPath(changePath) : [] as AddressByPath[]
     ])
     const addresses = receiveAddresses.concat(changeAddresses)
     progress.totalCount += addresses.length
@@ -81,7 +85,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       await processAccountGapFromPath(receivePath.goTo(receiveGapIndexStart))
     }
     // TODO: Process gap limit for change path?
-    if (receiveGapIndexStart < currencyInfo.gapLimit) {
+    if (changePath && receiveGapIndexStart < currencyInfo.gapLimit) {
       await processAccountGapFromPath(changePath.goTo(changeGapIndexStart))
     }
   }
@@ -136,9 +140,10 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   function updateFreshIndex(path: Path): void {
-    if (path.change === 0 && path.index === freshReceiveIndex) {
+    const changePath = path.getChangePath()
+    if (!changePath && path.index === freshReceiveIndex) {
       freshReceiveIndex++
-    } else if (path.change === 1 && path.index === freshChangeIndex) {
+    } else if (changePath && path.index === freshChangeIndex) {
       freshChangeIndex++
     }
   }
@@ -208,6 +213,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       let script: string
       let redeemScript: string | undefined
       switch (account.purpose) {
+        case BIP43PurposeTypeEnum.Airbitz:
         case BIP43PurposeTypeEnum.Legacy:
           script = (await fetchTransaction(txid)).hex
           scriptType = ScriptTypeEnum.p2pkh
@@ -274,7 +280,6 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   function addressToScriptPubKey(address: string): string {
     return addressToScriptPubkey({
       address,
-      addressType: account.path.addressType,
       network: account.networkType,
       coin: account.coinName
     })
@@ -316,7 +321,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     getFreshChangeAddress(): string {
       const path = account.path.clone()
-      path.goTo(freshChangeIndex, 1)
+      path.goTo(freshChangeIndex)
       return account.getAddress(path)
     },
 

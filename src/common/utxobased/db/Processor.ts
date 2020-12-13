@@ -142,7 +142,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
   ])
 
   async function processAndSaveAddress(path: Path, data: IAddress) {
-    const prefix = path.toChange(true)
+    const prefix = path.toPrefix(true)
 
     try {
       await Promise.all([
@@ -196,7 +196,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
   }
 
   async function innerFetchAddress(path: Path): Promise<AddressByPath> {
-    const prefix = path.toChange(true)
+    const prefix = path.toPrefix(true)
     const [ data ] = await addressByPath.query(prefix, path.index)
     return data
   }
@@ -312,7 +312,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       )
     }
 
-    const prefix = path.toChange(true)
+    const prefix = path.toPrefix(true)
     await Promise.all([
       ...promises,
       addressByPath.insert(prefix, path.index, address),
@@ -463,7 +463,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     },
 
     async fetchAddressesByPath(path: Path): Promise<AddressByPath[]> {
-      const prefix = path.toChange(true)
+      const prefix = path.toPrefix(true)
       const addresses = await fetchAddressesByPrefix(prefix)
 
       const now = Date.now()
@@ -478,7 +478,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     },
 
     fetchAddressCountFromPathPartition(path: Path): number {
-      const prefix = path.toChange(true)
+      const prefix = path.toPrefix(true)
       return addressByPath.length(prefix)
     },
 

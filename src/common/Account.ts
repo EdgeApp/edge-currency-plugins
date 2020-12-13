@@ -1,10 +1,14 @@
 import {
   AddressTypeEnum,
+  airbitzSeedToXPriv,
+  airbitzXPrivToPrivateKey,
   BIP43PurposeTypeEnum,
   mnemonicToXPriv,
   NetworkEnum,
   pubkeyToScriptPubkey,
-  scriptPubkeyToAddress, ScriptTypeEnum, xprivToPrivateKey,
+  scriptPubkeyToAddress,
+  ScriptTypeEnum,
+  xprivToPrivateKey,
   xprivToXPub,
   xpubToPubkey
 } from './utxobased/keymanager/keymanager'
@@ -72,13 +76,16 @@ export function makeAccount(xpub: string, config: IAccountConfig): Account {
     },
 
     getPubKey(p = account.path): string {
+      const bip44ChangeIndex = config.purpose === BIP43PurposeTypeEnum.Airbitz
+        ? undefined
+        : p.change
       return xpubToPubkey({
         xpub: xpub,
         network: account.networkType,
         type: account.purpose,
-        bip44AddressIndex: p.index,
-        bip44ChangeIndex: p.change,
-        coin: account.coinName
+        coin: account.coinName,
+        bip44ChangeIndex,
+        bip44AddressIndex: p.index
       })
     },
 
@@ -125,6 +132,18 @@ export function makePrivateAccount(xpriv: string, config: IAccountConfig): Priva
     coin: config.coinName
   })
 
+  const getAirbitzPrivateKey = (p: Path): string =>
+    airbitzXPrivToPrivateKey(xpriv, p.index)
+  const getBip43PrivateKey = (p: Path): string =>
+    xprivToPrivateKey({
+      xpriv,
+      network: account.networkType,
+      type: account.purpose,
+      coin: account.coinName,
+      bip44ChangeIndex: p.change,
+      bip44AddressIndex: p.index
+    })
+
   const account = makeAccount(xpub, config)
   return {
     ...account,
@@ -134,14 +153,9 @@ export function makePrivateAccount(xpriv: string, config: IAccountConfig): Priva
     },
 
     getPrivateKey(p = account.path): string {
-      return xprivToPrivateKey({
-        xpriv,
-        network: account.networkType,
-        type: account.purpose,
-        coin: account.coinName,
-        bip44ChangeIndex: p.change,
-        bip44AddressIndex: p.index
-      })
+      return p.purpose === BIP43PurposeTypeEnum.Airbitz
+        ? getAirbitzPrivateKey(p)
+        : getBip43PrivateKey(p)
     }
   }
 }
@@ -149,12 +163,14 @@ export function makePrivateAccount(xpriv: string, config: IAccountConfig): Priva
 export function makePrivateAccountFromMnemonic(mnemonic: string, config: IAccountConfig): PrivateAccount {
   const coin = getCoinFromString(config.coinName).coinType
   const path = makePath({ purpose: config.purpose, coin })
-  const xprv = mnemonicToXPriv({
-    mnemonic,
-    network: config.networkType,
-    coin: config.coinName,
-    type: config.purpose,
-    path: path.toAccount()
-  })
+  const xprv = config.purpose === BIP43PurposeTypeEnum.Airbitz
+    ? airbitzSeedToXPriv(mnemonic)
+    : mnemonicToXPriv({
+      mnemonic,
+      network: config.networkType,
+      coin: config.coinName,
+      type: config.purpose,
+      path: path.toAccount()
+    })
   return makePrivateAccount(xprv, config)
 }

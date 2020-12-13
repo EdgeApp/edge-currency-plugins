@@ -189,7 +189,6 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     async isAddressUsed(address: string): Promise<boolean> {
       const scriptPubKey = addressToScriptPubkey({
         address,
-        addressType: account.addressType,
         network: account.networkType,
         coin: account.coinName
       })

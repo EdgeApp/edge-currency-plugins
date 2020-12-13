@@ -1,7 +1,7 @@
 import { EdgeCurrencyTools, EdgeEncodeUri, EdgeIo, EdgeParsedUri, EdgeWalletInfo } from 'edge-core-js'
 import { JsonObject } from 'edge-core-js/lib/types'
 
-import { NetworkEnum } from '../utxobased/keymanager/keymanager'
+import { BIP43NameToPurposeType, NetworkEnum } from '../utxobased/keymanager/keymanager'
 import {
   Account,
   PrivateAccount,
@@ -11,7 +11,6 @@ import {
   makePrivateAccountFromMnemonic
 } from '../Account'
 import { EngineCurrencyInfo } from './types'
-import { BIP43NameToPurposeType } from '../Path'
 
 export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: EdgeWalletInfo): Account | PrivateAccount {
   const config: IAccountConfig = {
@@ -21,10 +20,9 @@ export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: Edge
   }
 
   const key = walletInfo.keys[`${currencyInfo.network}Key`]
-  const keyPrefix = key.substr(1)
-  if (keyPrefix.startsWith('pub')) {
+  if (key.startsWith('xpub')) {
     return makeAccount(key, config)
-  } else if (keyPrefix.startsWith('prv')) {
+  } else if (key.startsWith('xprv')) {
     return makePrivateAccount(key, config)
   } else {
     return makePrivateAccountFromMnemonic(key, config)
