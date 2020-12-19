@@ -473,7 +473,7 @@ describe('bitcoin transaction creation and signing test', () => {
     addressType: AddressTypeEnum.p2sh,
   })
 
-  it('Create transaction with one legacy input and one output', () => {
+  it('Create transaction with one legacy input and one output', async () => {
     /*
       This here is the rawtransaction as assembled below:
       0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000
@@ -519,7 +519,7 @@ describe('bitcoin transaction creation and signing test', () => {
         },
       ],
     }).psbt
-    const hexTxSigned: string = signTx({
+    const hexTxSigned: string = await signTx({
       psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin',
@@ -534,7 +534,7 @@ describe('bitcoin transaction creation and signing test', () => {
     )
   })
 
-  it('create a legacy tx with segwit outputs, then create another tx consuming these outputs', () => {
+  it('create a legacy tx with segwit outputs, then create another tx consuming these outputs', async () => {
     const nOutputs: number = 3
     const txInput: TxInput = {
       type: TransactionInputTypeEnum.Legacy,
@@ -563,7 +563,7 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false,
     }).psbt
 
-    const rawtransaction: string = signTx({
+    const rawtransaction: string = await signTx({
       psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin',
@@ -591,7 +591,7 @@ describe('bitcoin transaction creation and signing test', () => {
       network: NetworkEnum.Mainnet,
       rbf: false,
     }).psbt
-    const segwitRawTransaction: string = signTx({
+    const segwitRawTransaction: string = await signTx({
       psbt: segwitTx,
       privateKeys: Array(nOutputs).fill(privateKey),
       coin: 'bitcoin',
@@ -602,7 +602,7 @@ describe('bitcoin transaction creation and signing test', () => {
     )
   })
 
-  it(' create a mixed input and mixed output transaction', () => {
+  it(' create a mixed input and mixed output transaction', async () => {
     const txInputLegacy: TxInput = {
       type: TransactionInputTypeEnum.Legacy,
       prevTxid:
@@ -674,7 +674,7 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false,
     }).psbt
 
-    const rawtransaction: string = signTx({
+    const rawtransaction: string = await signTx({
       psbt: base64Tx,
       privateKeys: [privateKey, privateKey, privateKey],
       coin: 'bitcoin',
@@ -684,7 +684,7 @@ describe('bitcoin transaction creation and signing test', () => {
     )
   })
 
-  it('create a legacy tx with one input and 100 outputs, then create another legacy tx with 100 inputs and two outputs', () => {
+  it('create a legacy tx with one input and 100 outputs, then create another legacy tx with 100 inputs and two outputs', async () => {
     const nOutputs: number = 100
     const txInput: TxInput = {
       type: TransactionInputTypeEnum.Legacy,
@@ -720,7 +720,7 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false,
     }).psbt
 
-    const hexTxSigned: string = signTx({
+    const hexTxSigned: string = await signTx({
       psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin',
@@ -743,7 +743,7 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false,
     }).psbt
 
-    const hexTxMultiSigned: string = signTx({
+    const hexTxMultiSigned: string = await signTx({
       psbt: base64TxMulti,
       privateKeys: Array(nOutputs).fill(privateKey),
       coin: 'bitcoin',

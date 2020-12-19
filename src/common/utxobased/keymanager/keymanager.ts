@@ -14,7 +14,6 @@ import { cdsScriptTemplates } from './bitcoincashUtils/checkdatasig'
 import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
 import * as utxopicker from './utxopicker'
-import { IUTXO } from '../db/types'
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
@@ -766,6 +765,7 @@ export function scriptPubkeyToElectrumScriptHash(scriptPubkey: string): string {
   ).toString('hex')
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   let sequence: number = 0xffffffff
   if (args.rbf) {
@@ -790,17 +790,17 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
       script: Buffer.from(utxo.script, 'hex'),
       scriptType: utxo.scriptType,
       sequence,
-      sighashType
+      sighashType,
     }
     if (utxo.scriptType === ScriptTypeEnum.p2pkh) {
       input.nonWitnessUtxo = input.script
     } else {
       input.witnessUtxo = {
         script: input.script,
-        value: parseInt(utxo.value)
+        value: parseInt(utxo.value),
       }
 
-      if (utxo.redeemScript) {
+      if (typeof utxo.redeemScript !== 'undefined') {
         input.redeemScript = Buffer.from(utxo.redeemScript, 'hex')
       }
     }
@@ -811,17 +811,17 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     const script = addressToScriptPubkey({
       address: target.address,
       coin: coin.name,
-      network: args.network
+      network: args.network,
     })
     return {
       script,
-      value: target.value
+      value: target.value,
     }
   })
   const changeScript = addressToScriptPubkey({
     address: args.freshChangeAddress,
     coin: coin.name,
-    network: args.network
+    network: args.network,
   })
   const { inputs, outputs, changeUsed = false, fee } = utxopicker.accumulative(
     mappedUtxos,
@@ -958,6 +958,7 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
   return { psbt: psbt.toBase64(), vSize: txVSize }
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function signTx(args: SignTxArgs): Promise<string> {
   const psbt = bitcoin.Psbt.fromBase64(args.psbt)
   const coin = getCoinFromString(args.coin)
