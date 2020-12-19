@@ -8,7 +8,8 @@ import BN from './bn'
 
 export enum CashaddrPrefixEnum {
   mainnet = 'bitcoincash',
-  testnet = 'bitcoincashtestnet',
+  testnet = 'bchtest',
+  testnetalt = 'bitcoincashtestnet',
 }
 
 export enum CashaddrTypeEnum {
@@ -235,13 +236,12 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
     }
   } else {
     const netNames = Object.values(CashaddrPrefixEnum)
-    let i = netNames.shift()
-    while (prefix === null && typeof i !== 'undefined') {
-      const p = i
-      if (validChecksum(p, payload)) {
-        prefix = p
+    let candidatePrefix = netNames.shift()
+    while (prefix === null && typeof candidatePrefix !== 'undefined') {
+      if (validChecksum(candidatePrefix, payload)) {
+        prefix = candidatePrefix
       }
-      i = netNames.shift()
+      candidatePrefix = netNames.shift()
     }
     if (prefix === null) {
       throw new Error(`InvalidArgument: ${address} has invalid checksum`)
