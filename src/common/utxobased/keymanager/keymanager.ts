@@ -54,6 +54,18 @@ export enum TransactionInputTypeEnum {
   Segwit = 'segwit',
 }
 
+export interface VerifyAddressArgs {
+  address: string
+  coin: string
+  network: NetworkEnum
+}
+
+export enum VerifyAddressEnum {
+  good = 'good',
+  legacy = 'legacy',
+  bad = 'bad',
+}
+
 export interface SeedOrMnemonicToXPrivArgs {
   seed: string
   network: NetworkEnum
@@ -344,11 +356,32 @@ function bip32NetworkFromCoin(
   )
 }
 
+export function verifyAddress(args: VerifyAddressArgs): VerifyAddressEnum {
+  try {
+    const network: BitcoinJSNetwork = bip32NetworkFromCoin({
+      networkType: args.network,
+      coinString: args.coin,
+    })
+    guessAddressTypeFromAddress(args.address, network, args.coin, undefined)
+    return VerifyAddressEnum.good
+  } catch (e) {}
+  try {
+    const network: BitcoinJSNetwork = bip32NetworkFromCoin({
+      networkType: args.network,
+      coinString: args.coin,
+      legacy: true,
+    })
+    guessAddressTypeFromAddress(args.address, network, args.coin, undefined)
+    return VerifyAddressEnum.legacy
+  } catch (e) {}
+  return VerifyAddressEnum.bad
+}
+
 function guessAddressTypeFromAddress(
   address: string,
   network: BitcoinJSNetwork,
-  addressType: AddressTypeEnum | undefined,
-  coin: string
+  coin: string,
+  addressType: AddressTypeEnum | undefined
 ): AddressTypeEnum {
   if (typeof addressType !== 'undefined') {
     return addressType
@@ -488,8 +521,8 @@ export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
   const addressType: AddressTypeEnum = guessAddressTypeFromAddress(
     args.address,
     network,
-    args.addressType,
-    args.coin
+    args.coin,
+    args.addressType
   )
   const coinClass = getCoinFromString(args.coin)
   let payment: bitcoin.payments.PaymentCreator
