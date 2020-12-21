@@ -5,12 +5,12 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
@@ -20,8 +20,8 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip84 mnemonic to xpriv mainnet', () => {
-    const resultSegwit = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultSegwit = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/84'/2'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
@@ -33,8 +33,8 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip84 mnemonic to xpriv testnet', () => {
-    const resultSegwitTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultSegwitTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/84'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Segwit,
@@ -46,8 +46,8 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip49 mnemonic to xpriv mainnet', () => {
-    const resultWrappedSegwit = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultWrappedSegwit = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/49'/2'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
@@ -59,8 +59,8 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip49 mnemonic to xpriv testnet', () => {
-    const resultWrappedSegwitTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultWrappedSegwitTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/49'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
@@ -72,8 +72,8 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/44'/2'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
@@ -85,8 +85,8 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,

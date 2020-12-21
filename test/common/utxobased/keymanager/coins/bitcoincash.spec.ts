@@ -7,7 +7,6 @@ import {
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
   createTx,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToPubkey,
   privateKeyToWIF,
@@ -15,6 +14,7 @@ import {
   scriptPubkeyToAddress,
   scriptPubkeyToP2SH,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   signTx,
   TransactionInputTypeEnum,
   wifToPrivateKey,
@@ -26,8 +26,8 @@ describe('bitcoin cash mnemonic to xprv test vectors as compared with iancoleman
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/44'/145'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
@@ -39,8 +39,8 @@ describe('bitcoin cash mnemonic to xprv test vectors as compared with iancoleman
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,

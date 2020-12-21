@@ -1,9 +1,10 @@
 /* eslint-disable camelcase */
+import * as bitcoin from 'altcoin-js'
 import * as bip32 from 'bip32'
 import * as bip32grs from 'bip32grs'
 import * as bip39 from 'bip39'
-import * as bitcoin from 'altcoin-js'
 
+import { IUTXO } from '../db/types'
 import {
   cashAddressToHash,
   CashaddrPrefixEnum,
@@ -56,17 +57,12 @@ export enum TransactionInputTypeEnum {
   Segwit = 'segwit',
 }
 
-export interface MnemonicToXPrivArgs {
-  mnemonic: string
+export interface SeedOrMnemonicToXPrivArgs {
+  seed: string
   path: string
   network: NetworkEnum
   type: BIP43PurposeTypeEnum
   coin: string
-}
-
-export interface LegacySeedToPrivateKeyArgs {
-  seed: string
-  index: number
 }
 
 export interface XPrivToXPubArgs {
@@ -363,32 +359,18 @@ function guessAddressTypeFromAddress(
   throw new Error('Could not determine address type of ' + address)
 }
 
-export function legacySeedToXPriv(seed: string): string {
-  const xpriv = bip32
-    .fromSeed(Buffer.from(seed, 'hex'))
-    .derivePath('m/0')
-    .toBase58()
-  if (typeof xpriv === 'undefined') {
-    throw new Error('Failed to generate xpriv from legacy seed')
+export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
+  // match hexadecimal number from beginning to end of string
+  const regexpHex = /^[0-9a-fA-F]+$/
+  let seed = Buffer.from(args.seed, 'hex')
+  const isSeed = !!(
+    args.seed.length <= 128 &&
+    args.seed.length >= 32 &&
+    regexpHex.test(args.seed)
+  )
+  if (!isSeed) {
+    seed = bip39.mnemonicToSeedSync(args.seed)
   }
-  return xpriv
-}
-
-export function legacySeedToPrivateKey(
-  args: LegacySeedToPrivateKeyArgs
-): string {
-  const privateKey = bip32
-    .fromSeed(Buffer.from(args.seed, 'hex'))
-    .derivePath('m/0/0')
-    .derive(args.index).privateKey
-  if (typeof privateKey === 'undefined') {
-    throw new Error('Failed to generate private key from legacy seed')
-  }
-  return privateKey.toString('hex')
-}
-
-export function mnemonicToXPriv(args: MnemonicToXPrivArgs): string {
-  const seed = bip39.mnemonicToSeedSync(args.mnemonic)
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     args.network,
     args.coin,
@@ -401,6 +383,10 @@ export function mnemonicToXPriv(args: MnemonicToXPrivArgs): string {
   }
   const root: bip32.BIP32Interface = bip32.fromSeed(seed)
   root.network = network
+  // treat a detected seed as an airbitz seed
+  if (isSeed) {
+    return root.derive(0).toBase58()
+  }
   return root.derivePath(args.path).toBase58()
 }
 
@@ -706,14 +692,18 @@ export function xprivToPrivateKey(args: XPrivToPrivateKeyArgs): string {
   )
   if (args.coin === 'groestlcoin') {
     const node: bip32.BIP32Interface = bip32grs.fromBase58(args.xpriv, network)
-    const privateKey = node.derive(args.bip44ChangeIndex).derive(args.bip44AddressIndex).privateKey
+    const privateKey = node
+      .derive(args.bip44ChangeIndex)
+      .derive(args.bip44AddressIndex).privateKey
     if (typeof privateKey === 'undefined') {
       throw new Error('Failed to generate private key from xpriv')
     }
     return privateKey.toString('hex')
   }
   const node: bip32.BIP32Interface = bip32.fromBase58(args.xpriv, network)
-  const privateKey = node.derive(args.bip44ChangeIndex).derive(args.bip44AddressIndex).privateKey
+  const privateKey = node
+    .derive(args.bip44ChangeIndex)
+    .derive(args.bip44AddressIndex).privateKey
   if (typeof privateKey === 'undefined') {
     throw new Error('Failed to generate private key from xpriv')
   }
@@ -782,7 +772,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   const mappedUtxos: utxopicker.UTXO[] = []
   for (const utxo of args.utxos) {
     // Cannot use a utxo without a script
-    if (!utxo.script) continue
+    if (typeof utxo.script === 'undefined') continue
     const input: utxopicker.UTXO = {
       hash: Buffer.from(utxo.txid, 'hex').reverse(),
       index: utxo.vout,

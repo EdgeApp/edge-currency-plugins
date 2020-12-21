@@ -6,8 +6,6 @@ import {
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
   createTx,
-  legacySeedToPrivateKey,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToPubkey,
   privateKeyToWIF,
@@ -15,11 +13,13 @@ import {
   scriptPubkeyToAddress,
   scriptPubkeyToElectrumScriptHash,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   signTx,
   TransactionInputTypeEnum,
   TxInput,
   TxOutput,
   wifToPrivateKey,
+  xprivToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
@@ -28,8 +28,8 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip84 mnemonic to xpriv mainnet', () => {
-    const resultSegwit = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultSegwit = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/84'/0'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Segwit,
@@ -41,8 +41,8 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip84 mnemonic to xpriv testnet', () => {
-    const resultSegwitTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultSegwitTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/84'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Segwit,
@@ -54,8 +54,8 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip49 mnemonic to xpriv mainnet', () => {
-    const resultWrappedSegwit = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultWrappedSegwit = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/49'/0'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
@@ -67,8 +67,8 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip49 mnemonic to xpriv testnet', () => {
-    const resultWrappedSegwitTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultWrappedSegwitTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/49'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.WrappedSegwit,
@@ -80,8 +80,8 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/44'/0'/0'",
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
@@ -93,8 +93,8 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
       type: BIP43PurposeTypeEnum.Legacy,
@@ -287,11 +287,39 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
   })
 })
 
+describe('bitcoin bip32 seed, aka airbitz seed, to xpriv. Taken from official bip32 test vectors', () => {
+  it('seed to xpriv', () => {
+    const result = seedOrMnemonicToXPriv({
+      seed:
+        'fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542',
+      path: 'm/0',
+      network: NetworkEnum.Mainnet,
+      type: BIP43PurposeTypeEnum.Legacy,
+      coin: 'bitcoin',
+    })
+    expect(result).to.equal(
+      'xprv9vHkqa6EV4sPZHYqZznhT2NPtPCjKuDKGY38FBWLvgaDx45zo9WQRUT3dKYnjwih2yJD9mkrocEZXo1ex8G81dwSM1fwqWpWkeS3v86pgKt'
+    )
+  })
+})
+
 describe('bitcoin from bip32 seed to private key', () => {
   it('generate a wif key from a bip32 seed', () => {
-    const seed =
-      '1dafe5a826590b3f9558dd9e1ab1d8b86fda83a4bcc3aeeb95d81f0ab95c3d62'
-    const privateKey = legacySeedToPrivateKey({ seed, index: 0 })
+    const xpriv = seedOrMnemonicToXPriv({
+      seed: '1dafe5a826590b3f9558dd9e1ab1d8b86fda83a4bcc3aeeb95d81f0ab95c3d62',
+      path: 'm/0',
+      network: NetworkEnum.Mainnet,
+      type: BIP43PurposeTypeEnum.Legacy,
+      coin: 'bitcoin',
+    })
+    const privateKey = xprivToPrivateKey({
+      xpriv,
+      network: NetworkEnum.Mainnet,
+      type: BIP43PurposeTypeEnum.Legacy,
+      bip44ChangeIndex: 0,
+      bip44AddressIndex: 0,
+      coin: 'bitcoin',
+    })
     const wifKey = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
