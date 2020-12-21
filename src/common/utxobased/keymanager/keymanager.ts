@@ -1,7 +1,6 @@
 /* eslint-disable camelcase */
 import * as bitcoin from 'altcoin-js'
 import * as bip32 from 'bip32'
-import * as bip32grs from 'bip32grs'
 import * as bip39 from 'bip39'
 
 import { IUTXO } from '../db/types'
@@ -229,7 +228,7 @@ export interface SignTxArgs {
 
 // BitcoinJSNetwork and Bip32 are the same interfaces as declared in  bitcoin-js ts_src/network.ts
 // We redeclare them here for transparency reasons
-interface BitcoinJSNetwork {
+export interface BitcoinJSNetwork {
   wif: number
   bip32: Bip32
   messagePrefix: string
@@ -238,7 +237,7 @@ interface BitcoinJSNetwork {
   scriptHash: number
 }
 
-interface Bip32 {
+export interface Bip32 {
   public: number
   private: number
 }
@@ -446,16 +445,8 @@ export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
   let coinType = args.coinType ?? coin.coinType
   const account = args.account ?? 0
   coinType = args.network === 'testnet' ? 1 : coinType
-  if (args.coin === 'groestlcoin') {
-    const root: bip32.BIP32Interface = bip32grs.fromSeed(seed)
-    root.network = network
-    return root
-      .deriveHardened(purpose)
-      .deriveHardened(coinType)
-      .deriveHardened(account)
-      .toBase58()
-  }
-  const root: bip32.BIP32Interface = bip32.fromSeed(seed)
+  const bip32FromSeedFunc = coin.bip32FromSeedFunc ?? bip32.fromSeed
+  const root: bip32.BIP32Interface = bip32FromSeedFunc(seed)
   root.network = network
   // treat a detected seed as an airbitz seed
   if (isSeed) {
@@ -474,10 +465,9 @@ export function xprivToXPub(args: XPrivToXPubArgs): string {
     coinString: args.coin,
     sigType: args.type,
   })
-  if (args.coin === 'groestlcoin') {
-    return bip32grs.fromBase58(args.xpriv, network).neutered().toBase58()
-  }
-  return bip32.fromBase58(args.xpriv, network).neutered().toBase58()
+  const coin = getCoinFromString(args.coin)
+  const bip32FromBase58Func = coin.bip32FromBase58Func ?? bip32.fromBase58
+  return bip32FromBase58Func(args.xpriv, network).neutered().toBase58()
 }
 
 export function derivationLevelScriptHash(): number {
@@ -497,14 +487,9 @@ export function xpubToPubkey(args: XPubToPubkeyArgs): string {
     coinString: args.coin,
     sigType: args.type,
   })
-  if (args.coin === 'groestlcoin') {
-    const node: bip32.BIP32Interface = bip32grs.fromBase58(args.xpub, network)
-    return node
-      .derive(args.bip44ChangeIndex)
-      .derive(args.bip44AddressIndex)
-      .publicKey.toString('hex')
-  }
-  const node: bip32.BIP32Interface = bip32.fromBase58(args.xpub, network)
+  const coin = getCoinFromString(args.coin)
+  const bip32FromBase58Func = coin.bip32FromBase58Func ?? bip32.fromBase58
+  const node: bip32.BIP32Interface = bip32FromBase58Func(args.xpub, network)
   return node
     .derive(args.bip44ChangeIndex)
     .derive(args.bip44AddressIndex)
@@ -816,17 +801,9 @@ export function xprivToPrivateKey(args: XPrivToPrivateKeyArgs): string {
     coinString: args.coin,
     sigType: args.type,
   })
-  if (args.coin === 'groestlcoin') {
-    const node: bip32.BIP32Interface = bip32grs.fromBase58(args.xpriv, network)
-    const privateKey = node
-      .derive(args.bip44ChangeIndex)
-      .derive(args.bip44AddressIndex).privateKey
-    if (typeof privateKey === 'undefined') {
-      throw new Error('Failed to generate private key from xpriv')
-    }
-    return privateKey.toString('hex')
-  }
-  const node: bip32.BIP32Interface = bip32.fromBase58(args.xpriv, network)
+  const coin = getCoinFromString(args.coin)
+  const bip32FromBase58Func = coin.bip32FromBase58Func ?? bip32.fromBase58
+  const node: bip32.BIP32Interface = bip32FromBase58Func(args.xpriv, network)
   const privateKey = node
     .derive(args.bip44ChangeIndex)
     .derive(args.bip44AddressIndex).privateKey
