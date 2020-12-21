@@ -3,7 +3,6 @@ import { describe, it } from 'mocha'
 
 import {
   cashAddressToHash,
-  CashaddrPrefixEnum,
   CashaddrTypeEnum,
   hashToCashAddress,
 } from '../../../../../src/common/utxobased/keymanager/bitcoincashUtils/cashAddress'
@@ -31,7 +30,7 @@ describe('bitcoin cash address tests', () => {
     const address = hashToCashAddress(
       pubkeyHash,
       CashaddrTypeEnum.pubkeyhash,
-      CashaddrPrefixEnum.mainnet
+      NetworkEnum.Mainnet
     )
     expect(address).to.equal(
       'bitcoincash:qrvcdmgpk73zyfd8pmdl9wnuld36zh9n4gms8s0u59'
@@ -63,7 +62,7 @@ describe('bitcoin cash address tests', () => {
     const address = hashToCashAddress(
       scriptHash,
       CashaddrTypeEnum.scripthash,
-      CashaddrPrefixEnum.mainnet
+      NetworkEnum.Mainnet
     )
     expect(address).to.equal(
       'bitcoincash:pqlmd62cztjhhdrfr7dy5c5gv2np5nmknvhfvqp85n'

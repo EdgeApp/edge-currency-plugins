@@ -103,7 +103,7 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.cashaddrP2PKH,
+      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
     expect(p2pkhAddress).to.equals(
@@ -112,7 +112,7 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'bitcoincash:qqyx49mu0kkn9ftfj6hje6g2wfer34yfnq5tahq3q6',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.cashaddrP2PKH,
+      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
@@ -135,7 +135,7 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
     const p2pkhAddress = scriptPubkeyToAddress({
       scriptPubkey: scriptPubkeyP2PKH,
       network: NetworkEnum.Testnet,
-      addressType: AddressTypeEnum.cashaddrP2PKH,
+      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
     expect(p2pkhAddress).to.equals(
@@ -144,7 +144,7 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'bchtest:qqaz6s295ncfs53m86qj0uw6sl8u2kuw0ymst35fx4',
       network: NetworkEnum.Testnet,
-      addressType: AddressTypeEnum.cashaddrP2PKH,
+      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
@@ -174,7 +174,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bitcoincash:qr9q6dsyfcxupz3zwf805mm2q7cwcnre4g60ww9wd5',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.cashaddrP2PKH,
+      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
@@ -185,7 +185,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'qr9q6dsyfcxupz3zwf805mm2q7cwcnre4g60ww9wd5',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.cashaddrP2PKH,
+      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
@@ -196,7 +196,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bchtest:qrall9d5uddv4yvdyms4wwfw59jr5twzsvashd0fst',
       network: NetworkEnum.Testnet,
-      addressType: AddressTypeEnum.cashaddrP2PKH,
+      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
@@ -207,7 +207,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'qrall9d5uddv4yvdyms4wwfw59jr5twzsvashd0fst',
       network: NetworkEnum.Testnet,
-      addressType: AddressTypeEnum.cashaddrP2PKH,
+      addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
@@ -218,7 +218,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bitcoincash:pz689gnx6z7cnsfhq6jpxtx0k9hhcwulev5cpumfk0',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.cashaddrP2SH,
+      addressType: AddressTypeEnum.p2sh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
@@ -229,7 +229,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'pz689gnx6z7cnsfhq6jpxtx0k9hhcwulev5cpumfk0',
       network: NetworkEnum.Mainnet,
-      addressType: AddressTypeEnum.cashaddrP2SH,
+      addressType: AddressTypeEnum.p2sh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
@@ -240,7 +240,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bchtest:pq2wfeuppegjpnrg64ws8vmv7e4fatwzwq9rvngx8x',
       network: NetworkEnum.Testnet,
-      addressType: AddressTypeEnum.cashaddrP2SH,
+      addressType: AddressTypeEnum.p2sh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(
@@ -251,7 +251,7 @@ describe('bitcoin cash get script pubkeys from address', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'pq2wfeuppegjpnrg64ws8vmv7e4fatwzwq9rvngx8x',
       network: NetworkEnum.Testnet,
-      addressType: AddressTypeEnum.cashaddrP2SH,
+      addressType: AddressTypeEnum.p2sh,
       coin: 'bitcoincash',
     })
     expect(scriptPubkey).to.equal(

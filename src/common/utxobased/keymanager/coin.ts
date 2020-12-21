@@ -10,7 +10,7 @@ export interface CoinPrefixes {
   pubkeyHash: number
   scriptHash: number
   bech32?: string
-  cashAddr?: string
+  cashaddr?: string
 }
 
 export interface Coin {

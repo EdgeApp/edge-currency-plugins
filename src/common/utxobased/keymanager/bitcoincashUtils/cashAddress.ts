@@ -12,6 +12,12 @@ export enum CashaddrPrefixEnum {
   testnetalt = 'bitcoincashtestnet',
 }
 
+// this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
+export enum NetworkEnum {
+  Mainnet = 'mainnet',
+  Testnet = 'testnet',
+}
+
 export enum CashaddrTypeEnum {
   pubkeyhash = 'pubkeyhash',
   scripthash = 'scripthash',
@@ -108,7 +114,7 @@ const prefixToArray = (prefix: any): number[] => {
 export const hashToCashAddress = (
   scriptHash: string,
   type: CashaddrTypeEnum,
-  prefix: CashaddrPrefixEnum
+  network: NetworkEnum
 ): string => {
   // Not any, but a BN object
   function checksumToArray(checksum: any): number[] {
@@ -155,6 +161,10 @@ export const hashToCashAddress = (
     }
   }
 
+  const prefix: CashaddrPrefixEnum =
+    NetworkEnum.Mainnet === network
+      ? CashaddrPrefixEnum.mainnet
+      : CashaddrPrefixEnum.testnet
   const hashBuffer = Buffer.from(scriptHash, 'hex')
   const eight0 = [0, 0, 0, 0, 0, 0, 0, 0]
   const prefixData = prefixToArray(prefix).concat([0])
