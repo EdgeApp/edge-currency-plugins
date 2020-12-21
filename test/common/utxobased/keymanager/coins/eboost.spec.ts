@@ -22,22 +22,20 @@ describe('eboost mnemonic to xprv test vectors as compared with iancoleman', () 
   it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = seedOrMnemonicToXPriv({
       seed: mnemonic,
-      path: "m/44'/0'/0'",
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'eboost',
     })
     expect(resultLegacy).to.equal(
-      'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb'
+      'xprv9zYTou2k1nf6MGqBjTJPr2sE3uZxtNs189FwEEsmm35n5jNVsv3pwVyUPpxWfeDwbhz1ByQW6eh6EFnPp34oEnDC1VZ22xapWJu3Ham3JYK'
     )
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
     const resultLegacyTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
-      path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'eboost',
     })
     expect(resultLegacyTestnet).to.equal(

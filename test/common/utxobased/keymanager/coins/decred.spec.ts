@@ -20,22 +20,20 @@ describe('decred mnemonic to xprv test vectors as compared with iancoleman', () 
   it('bip44 mnemonic to xpriv mainnet', () => {
     const resultLegacy = seedOrMnemonicToXPriv({
       seed: mnemonic,
-      path: "m/44'/156'/0'",
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'decred',
     })
     expect(resultLegacy).to.equal(
-      'dprv3o8pLs3xWbQUcPFT19CVo7NgS6GKpRbR9ib9m6RR5TEzXhfCFUq1hHhHK7BUxqqpG7WP7KYuRH3rMibWqqYSnSRxeUxv57oXdV1BmJ6Qw5Y'
+      'dprv3ogcz7QBLrY3PzbYW9U6Lr9UraTUWZAjc8A4aDRX918Qg2ka6sokXV4EdmFHR85k3tubCvKxL3DASSZBUaz3jSobBwHAVmFbymS1tYT3kRm'
     )
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
     const resultLegacyTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
-      path: "m/44'/1'/0'",
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'decred',
     })
     expect(resultLegacyTestnet).to.equal(

@@ -56,9 +56,10 @@ export enum TransactionInputTypeEnum {
 
 export interface SeedOrMnemonicToXPrivArgs {
   seed: string
-  path: string
   network: NetworkEnum
-  type: BIP43PurposeTypeEnum
+  purpose: BIP43PurposeTypeEnum
+  coinType?: number // defaults to the coin type as defined in the coin class
+  account?: number // defaults to account 0'
   coin: string
 }
 
@@ -223,6 +224,17 @@ interface Bip32 {
   private: number
 }
 
+function bip43PurposeTypeEnumToNumber(purpose: BIP43PurposeTypeEnum): number {
+  switch (purpose) {
+    case BIP43PurposeTypeEnum.Legacy:
+      return 44
+    case BIP43PurposeTypeEnum.WrappedSegwit:
+      return 49
+    case BIP43PurposeTypeEnum.Segwit:
+      return 84
+  }
+}
+
 function bip32NetworkFromCoinPrefix(
   sigType: BIP43PurposeTypeEnum,
   coinPrefixes: CoinPrefixes,
@@ -371,12 +383,21 @@ export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin(
     args.network,
     args.coin,
-    args.type
+    args.purpose
   )
+  const coin = getCoinFromString(args.coin)
+  const purpose = bip43PurposeTypeEnumToNumber(args.purpose)
+  let coinType = args.coinType ?? coin.coinType
+  const account = args.account ?? 0
+  coinType = args.network === 'testnet' ? 1 : coinType
   if (args.coin === 'groestlcoin') {
     const root: bip32.BIP32Interface = bip32grs.fromSeed(seed)
     root.network = network
-    return root.derivePath(args.path).toBase58()
+    return root
+      .deriveHardened(purpose)
+      .deriveHardened(coinType)
+      .deriveHardened(account)
+      .toBase58()
   }
   const root: bip32.BIP32Interface = bip32.fromSeed(seed)
   root.network = network
@@ -384,7 +405,11 @@ export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
   if (isSeed) {
     return root.derive(0).toBase58()
   }
-  return root.derivePath(args.path).toBase58()
+  return root
+    .deriveHardened(purpose)
+    .deriveHardened(coinType)
+    .deriveHardened(account)
+    .toBase58()
 }
 
 export function xprivToXPub(args: XPrivToXPubArgs): string {
