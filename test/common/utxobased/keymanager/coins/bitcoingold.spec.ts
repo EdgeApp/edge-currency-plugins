@@ -99,7 +99,10 @@ describe('bitcoin gold xpub to address tests;  generate valid addresses by calli
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoingold',
     })
-    expect(p2pkhAddress).to.equals('GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9')
+    expect(p2pkhAddress.address).to.equals('GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9')
+    expect(p2pkhAddress.legacyAddress).to.equals(
+      '1McdhUQiZ2fatmKMvVn8sc8YemYpeDum1k'
+    )
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9',
       network: NetworkEnum.Mainnet,
@@ -129,7 +132,12 @@ describe('bitcoin gold xpub to address tests;  generate valid addresses by calli
       addressType: AddressTypeEnum.p2sh,
       coin: 'bitcoingold',
     })
-    expect(p2wpkhp2shAddress).to.equals('AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn')
+    expect(p2wpkhp2shAddress.address).to.equals(
+      'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn'
+    )
+    expect(p2wpkhp2shAddress.legacyAddress).to.equals(
+      '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i'
+    )
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn',
       network: NetworkEnum.Mainnet,
@@ -159,8 +167,11 @@ describe('bitcoin gold xpub to address tests;  generate valid addresses by calli
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'bitcoingold',
     })
-    expect(p2wpkhAddress).to.equals(
+    expect(p2wpkhAddress.address).to.equals(
       'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu'
+    )
+    expect(p2wpkhAddress.legacyAddress).to.equals(
+      'bc1qkwnu2phwvard2spr2n0a9d84x590ahywfczcd5'
     )
     const scriptPubkeyP2WPKHRoundTrip = addressToScriptPubkey({
       address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu',

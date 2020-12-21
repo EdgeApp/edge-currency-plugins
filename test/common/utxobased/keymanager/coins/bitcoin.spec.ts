@@ -207,7 +207,7 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
@@ -237,7 +237,7 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'bitcoin',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
@@ -267,7 +267,7 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'bitcoin',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
     )
@@ -479,19 +479,19 @@ describe('bitcoin transaction creation and signing test', () => {
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2pkh,
-  })
+  }).address
   const segwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: segwitScriptPubkey,
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2wpkh,
-  })
+  }).address
   const wrappedSegwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: wrappedSegwitScriptPubkey,
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2sh,
-  })
+  }).legacyAddress
 
   it('Create transaction with one legacy input and one output', async () => {
     /*

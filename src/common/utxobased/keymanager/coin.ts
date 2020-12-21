@@ -23,5 +23,7 @@ export interface Coin {
   bs58EncodeFunc?: (payload: any) => string
   wifEncodeFunc?: (prefix: any, key: any, compressed: any) => string
   mainnetConstants: CoinPrefixes
+  // by default should contain the bitcoin mainnet constants, useful for networks were multiple constants were in use.
+  legacyConstants?: CoinPrefixes
   testnetConstants: CoinPrefixes
 }

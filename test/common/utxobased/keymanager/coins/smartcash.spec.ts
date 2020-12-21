@@ -99,7 +99,7 @@ describe('smartcash xpub to address tests;  generate valid addresses by calling 
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'smartcash',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('SkYmjrcQQgc9XWFAfBRG61YEYRWUqGEZnG')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'SkYmjrcQQgc9XWFAfBRG61YEYRWUqGEZnG',

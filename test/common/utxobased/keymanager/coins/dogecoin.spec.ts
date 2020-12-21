@@ -98,7 +98,7 @@ describe('dogecoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'dogecoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC',

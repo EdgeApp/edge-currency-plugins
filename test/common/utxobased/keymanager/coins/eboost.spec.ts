@@ -98,7 +98,7 @@ describe('eboost xpub to address tests;  generate valid addresses by calling xpu
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'eboost',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4',

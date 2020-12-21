@@ -99,7 +99,10 @@ describe('bitcoin sv xpub to address tests;  generate valid addresses by calling
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoinsv',
     })
-    expect(p2pkhAddress).to.equals('1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f')
+    expect(p2pkhAddress.address).to.equals('1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f')
+    expect(p2pkhAddress.legacyAddress).to.equals(
+      'bitcoincash:qrr8ftywq56qg3che8hy2r2anuj7ysmy2qwc7tfd96'
+    )
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: '1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f',
       network: NetworkEnum.Mainnet,

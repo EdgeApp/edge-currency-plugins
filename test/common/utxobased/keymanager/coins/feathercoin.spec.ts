@@ -98,7 +98,7 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'feathercoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('6foXhTEUMC85RAhkPS2MfoxD6oS69x4rBS')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: '6foXhTEUMC85RAhkPS2MfoxD6oS69x4rBS',
@@ -128,7 +128,7 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'feathercoin',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i',
@@ -158,7 +158,7 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'feathercoin',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'fc1qkwnu2phwvard2spr2n0a9d84x590ahywnuszd4'
     )

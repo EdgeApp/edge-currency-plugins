@@ -104,8 +104,11 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
-    expect(p2pkhAddress).to.equals(
+    expect(p2pkhAddress.address).to.equals(
       'bitcoincash:qqyx49mu0kkn9ftfj6hje6g2wfer34yfnq5tahq3q6'
+    )
+    expect(p2pkhAddress.legacyAddress).to.equals(
+      '1mW6fDEMjKrDHvLvoEsaeLxSCzZBf3Bfg'
     )
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'bitcoincash:qqyx49mu0kkn9ftfj6hje6g2wfer34yfnq5tahq3q6',
@@ -113,7 +116,15 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
+    const scriptPubkeyP2PKHLegacyRoundTrip = addressToScriptPubkey({
+      address: '1mW6fDEMjKrDHvLvoEsaeLxSCzZBf3Bfg',
+      network: NetworkEnum.Mainnet,
+      addressType: AddressTypeEnum.p2pkh,
+      coin: 'bitcoincash',
+      legacy: true,
+    })
     expect(scriptPubkeyP2PKHRoundTrip).to.equals(scriptPubkeyP2PKH)
+    expect(scriptPubkeyP2PKHLegacyRoundTrip).to.equals(scriptPubkeyP2PKH)
   })
 
   it('given an xpub, generate p2pkh testnet address and cross verify script pubkey result', () => {
@@ -136,7 +147,7 @@ describe('bitcoin cash xpub to address tests;  generate valid addresses by calli
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoincash',
     })
-    expect(p2pkhAddress).to.equals(
+    expect(p2pkhAddress.address).to.equals(
       'bchtest:qqaz6s295ncfs53m86qj0uw6sl8u2kuw0ymst35fx4'
     )
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
@@ -359,7 +370,7 @@ describe('bitcoincash transaction creation and signing test', () => {
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2pkh,
-  })
+  }).address
   it('Create transaction with one legacy input and one output', async () => {
     /*
       This here is the rawtransaction as assembled below:
@@ -442,7 +453,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2pkh,
-  })
+  }).address
   it('Create transaction with one legacy input and one output', async () => {
     /*
       This here is the rawtransaction as assembled below:

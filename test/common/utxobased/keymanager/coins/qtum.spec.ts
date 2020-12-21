@@ -98,7 +98,7 @@ describe('qtum xpub to address tests;  generate valid addresses by calling xpubT
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'qtum',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('QXykR884CoPkbYHCFZ68bNVTMRvicWAFq2')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'QXykR884CoPkbYHCFZ68bNVTMRvicWAFq2',

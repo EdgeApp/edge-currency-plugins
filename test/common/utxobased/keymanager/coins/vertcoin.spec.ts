@@ -98,7 +98,7 @@ describe('vertcoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'vertcoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('Vce16eJifb7HpuoTFEBJyKNLsBJPo7fM83')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'Vce16eJifb7HpuoTFEBJyKNLsBJPo7fM83',
@@ -128,7 +128,7 @@ describe('vertcoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'vertcoin',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('3GKaSv31kZoxGwMs2Kp25ngoHRHi5pz2SP')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '3GKaSv31kZoxGwMs2Kp25ngoHRHi5pz2SP',
@@ -158,7 +158,7 @@ describe('vertcoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'vertcoin',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'vtc1qfe8v6c4r39fq8xnjgcpunt5spdfcxw63zzfwru'
     )

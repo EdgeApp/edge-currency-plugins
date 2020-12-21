@@ -98,7 +98,7 @@ describe('dash xpub to address tests;  generate valid addresses by calling xpubT
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'dash',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('XoJA8qE3N2Y3jMLEtZ3vcN42qseZ8LvFf5')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'XoJA8qE3N2Y3jMLEtZ3vcN42qseZ8LvFf5',

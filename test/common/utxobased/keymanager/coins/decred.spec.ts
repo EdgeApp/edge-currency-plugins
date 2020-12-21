@@ -91,7 +91,7 @@ describe('decred xpub to address tests;  generate valid addresses by calling xpu
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'decred',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg',
@@ -118,7 +118,7 @@ describe('decred guess script pubkeys from address', () => {
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'decred',
-    })
+    }).address
     expect(address).to.equal('DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg')
   })
   it('p2sh address to scriptPubkey', () => {
@@ -135,7 +135,7 @@ describe('decred guess script pubkeys from address', () => {
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'decred',
-    })
+    }).address
     expect(address).to.equal('DcbpczkMzqtYozqrX7vHcFQmCF5wqsW2hYW')
   })
 })

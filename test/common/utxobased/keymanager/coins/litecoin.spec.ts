@@ -197,7 +197,7 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'litecoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez')
     const scriptPukbeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez',
@@ -227,7 +227,7 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'litecoin',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('M7wtsL7wSHDBJVMWWhtQfTMSYYkyooAAXM')
     const scriptHashP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: 'M7wtsL7wSHDBJVMWWhtQfTMSYYkyooAAXM',
@@ -257,7 +257,7 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'litecoin',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh'
     )

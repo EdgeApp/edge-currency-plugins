@@ -103,7 +103,7 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'groestlcoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg',
@@ -133,7 +133,7 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'groestlcoin',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('3299Qf2x9BnzLaZu4HCLvm26RbBB3ZRf4u')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '3299Qf2x9BnzLaZu4HCLvm26RbBB3ZRf4u',
@@ -163,7 +163,7 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'groestlcoin',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'grs1qrm2uggqj846nljryvmuga56vtwfey0dtnc4z55'
     )

@@ -98,7 +98,7 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'digibyte',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('DG1KhhBKpsyWXTakHNezaDQ34focsXjN1i')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'DG1KhhBKpsyWXTakHNezaDQ34focsXjN1i',
@@ -128,7 +128,7 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'digibyte',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('SQ9EXABrHztGgefL9aH3FyeRjowdjtLfn4')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: 'SQ9EXABrHztGgefL9aH3FyeRjowdjtLfn4',
@@ -158,7 +158,7 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'digibyte',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'dgb1q9gmf0pv8jdymcly6lz6fl7lf6mhslsd72e2jq8'
     )

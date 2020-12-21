@@ -98,7 +98,7 @@ describe('zcoin xpub to address tests;  generate valid addresses by calling xpub
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'zcoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('a1bW3sVVUsLqgKuTMXtSaAHGvpxKwugxPH')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'a1bW3sVVUsLqgKuTMXtSaAHGvpxKwugxPH',

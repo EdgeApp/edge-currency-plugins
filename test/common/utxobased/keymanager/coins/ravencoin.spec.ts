@@ -98,7 +98,7 @@ describe('ravencoin xpub to address tests;  generate valid addresses by calling 
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'ravencoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('RDjNvZL1TJQ7R8L23jDutdEioQG4eTC38V')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'RDjNvZL1TJQ7R8L23jDutdEioQG4eTC38V',
