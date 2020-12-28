@@ -5,12 +5,12 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
@@ -20,11 +20,10 @@ describe('uniformfiscalobject mnemonic to xprv test vectors as compared with ian
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/202'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'uniformfiscalobject',
     })
     expect(resultLegacy).to.equal(
@@ -33,11 +32,10 @@ describe('uniformfiscalobject mnemonic to xprv test vectors as compared with ian
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'uniformfiscalobject',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -100,7 +98,7 @@ describe('uniformfiscalobject xpub to address tests;  generate valid addresses b
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'uniformfiscalobject',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('C3mUHE7dpemNsGoa4rahQoEworx5DkbnFA')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'C3mUHE7dpemNsGoa4rahQoEworx5DkbnFA',
@@ -130,7 +128,7 @@ describe('uniformfiscalobject xpub to address tests;  generate valid addresses b
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'uniformfiscalobject',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('USM3tijpLBdWpKrvHjPsdzSSpK55k9V79A')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: 'USM3tijpLBdWpKrvHjPsdzSSpK55k9V79A',
@@ -160,7 +158,7 @@ describe('uniformfiscalobject xpub to address tests;  generate valid addresses b
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'uniformfiscalobject',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'uf1qkwnu2phwvard2spr2n0a9d84x590ahywqd6hp9'
     )

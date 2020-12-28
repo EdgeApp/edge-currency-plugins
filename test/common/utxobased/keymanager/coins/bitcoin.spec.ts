@@ -6,8 +6,6 @@ import {
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
   createTx,
-  legacySeedToPrivateKey,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToPubkey,
   privateKeyToWIF,
@@ -15,11 +13,13 @@ import {
   scriptPubkeyToAddress,
   scriptPubkeyToElectrumScriptHash,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   signTx,
   TransactionInputTypeEnum,
   TxInput,
   TxOutput,
   wifToPrivateKey,
+  xprivToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
@@ -28,11 +28,10 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip84 mnemonic to xpriv mainnet', () => {
-    const resultSegwit = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/84'/0'/0'",
+    const resultSegwit = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Segwit,
+      purpose: BIP43PurposeTypeEnum.Segwit,
       coin: 'bitcoin',
     })
     expect(resultSegwit).to.equal(
@@ -41,11 +40,10 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip84 mnemonic to xpriv testnet', () => {
-    const resultSegwitTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/84'/1'/0'",
+    const resultSegwitTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Segwit,
+      purpose: BIP43PurposeTypeEnum.Segwit,
       coin: 'bitcoin',
     })
     expect(resultSegwitTestnet).to.equal(
@@ -54,11 +52,10 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip49 mnemonic to xpriv mainnet', () => {
-    const resultWrappedSegwit = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/49'/0'/0'",
+    const resultWrappedSegwit = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.WrappedSegwit,
+      purpose: BIP43PurposeTypeEnum.WrappedSegwit,
       coin: 'bitcoin',
     })
     expect(resultWrappedSegwit).to.equal(
@@ -67,11 +64,10 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip49 mnemonic to xpriv testnet', () => {
-    const resultWrappedSegwitTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/49'/1'/0'",
+    const resultWrappedSegwitTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.WrappedSegwit,
+      purpose: BIP43PurposeTypeEnum.WrappedSegwit,
       coin: 'bitcoin',
     })
     expect(resultWrappedSegwitTestnet).to.equal(
@@ -80,11 +76,10 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/0'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin',
     })
     expect(resultLegacy).to.equal(
@@ -93,11 +88,10 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -213,7 +207,7 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
@@ -243,7 +237,7 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'bitcoin',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
@@ -273,7 +267,7 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'bitcoin',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
     )
@@ -287,11 +281,37 @@ describe('bitcoin xpub to address tests;  generate valid addresses by calling xp
   })
 })
 
+describe('bitcoin bip32 seed, aka airbitz seed, to xpriv. Taken from official bip32 test vectors', () => {
+  it('seed to xpriv', () => {
+    const result = seedOrMnemonicToXPriv({
+      seed:
+        'fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542',
+      network: NetworkEnum.Mainnet,
+      purpose: BIP43PurposeTypeEnum.Legacy,
+      coin: 'bitcoin',
+    })
+    expect(result).to.equal(
+      'xprv9vHkqa6EV4sPZHYqZznhT2NPtPCjKuDKGY38FBWLvgaDx45zo9WQRUT3dKYnjwih2yJD9mkrocEZXo1ex8G81dwSM1fwqWpWkeS3v86pgKt'
+    )
+  })
+})
+
 describe('bitcoin from bip32 seed to private key', () => {
   it('generate a wif key from a bip32 seed', () => {
-    const seed =
-      '1dafe5a826590b3f9558dd9e1ab1d8b86fda83a4bcc3aeeb95d81f0ab95c3d62'
-    const privateKey = legacySeedToPrivateKey({ seed, index: 0 })
+    const xpriv = seedOrMnemonicToXPriv({
+      seed: '1dafe5a826590b3f9558dd9e1ab1d8b86fda83a4bcc3aeeb95d81f0ab95c3d62',
+      network: NetworkEnum.Mainnet,
+      purpose: BIP43PurposeTypeEnum.Legacy,
+      coin: 'bitcoin',
+    })
+    const privateKey = xprivToPrivateKey({
+      xpriv,
+      network: NetworkEnum.Mainnet,
+      type: BIP43PurposeTypeEnum.Legacy,
+      bip44ChangeIndex: 0,
+      bip44AddressIndex: 0,
+      coin: 'bitcoin',
+    })
     const wifKey = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
@@ -459,21 +479,21 @@ describe('bitcoin transaction creation and signing test', () => {
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2pkh,
-  })
+  }).address
   const segwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: segwitScriptPubkey,
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2wpkh,
-  })
+  }).address
   const wrappedSegwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: wrappedSegwitScriptPubkey,
     network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2sh,
-  })
+  }).legacyAddress
 
-  it('Create transaction with one legacy input and one output', () => {
+  it('Create transaction with one legacy input and one output', async () => {
     /*
       This here is the rawtransaction as assembled below:
       0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000
@@ -519,7 +539,7 @@ describe('bitcoin transaction creation and signing test', () => {
         },
       ],
     }).psbt
-    const hexTxSigned: string = signTx({
+    const hexTxSigned: string = await signTx({
       psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin',
@@ -534,7 +554,7 @@ describe('bitcoin transaction creation and signing test', () => {
     )
   })
 
-  it('create a legacy tx with segwit outputs, then create another tx consuming these outputs', () => {
+  it('create a legacy tx with segwit outputs, then create another tx consuming these outputs', async () => {
     const nOutputs: number = 3
     const txInput: TxInput = {
       type: TransactionInputTypeEnum.Legacy,
@@ -563,7 +583,7 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false,
     }).psbt
 
-    const rawtransaction: string = signTx({
+    const rawtransaction: string = await signTx({
       psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin',
@@ -591,7 +611,7 @@ describe('bitcoin transaction creation and signing test', () => {
       network: NetworkEnum.Mainnet,
       rbf: false,
     }).psbt
-    const segwitRawTransaction: string = signTx({
+    const segwitRawTransaction: string = await signTx({
       psbt: segwitTx,
       privateKeys: Array(nOutputs).fill(privateKey),
       coin: 'bitcoin',
@@ -602,7 +622,7 @@ describe('bitcoin transaction creation and signing test', () => {
     )
   })
 
-  it(' create a mixed input and mixed output transaction', () => {
+  it(' create a mixed input and mixed output transaction', async () => {
     const txInputLegacy: TxInput = {
       type: TransactionInputTypeEnum.Legacy,
       prevTxid:
@@ -674,7 +694,7 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false,
     }).psbt
 
-    const rawtransaction: string = signTx({
+    const rawtransaction: string = await signTx({
       psbt: base64Tx,
       privateKeys: [privateKey, privateKey, privateKey],
       coin: 'bitcoin',
@@ -684,7 +704,7 @@ describe('bitcoin transaction creation and signing test', () => {
     )
   })
 
-  it('create a legacy tx with one input and 100 outputs, then create another legacy tx with 100 inputs and two outputs', () => {
+  it('create a legacy tx with one input and 100 outputs, then create another legacy tx with 100 inputs and two outputs', async () => {
     const nOutputs: number = 100
     const txInput: TxInput = {
       type: TransactionInputTypeEnum.Legacy,
@@ -720,7 +740,7 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false,
     }).psbt
 
-    const hexTxSigned: string = signTx({
+    const hexTxSigned: string = await signTx({
       psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin',
@@ -743,7 +763,7 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false,
     }).psbt
 
-    const hexTxMultiSigned: string = signTx({
+    const hexTxMultiSigned: string = await signTx({
       psbt: base64TxMulti,
       privateKeys: Array(nOutputs).fill(privateKey),
       coin: 'bitcoin',

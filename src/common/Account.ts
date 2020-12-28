@@ -1,16 +1,18 @@
+import { makePath, makePathFromString, Path } from './Path'
+import { Coin } from './utxobased/keymanager/coin'
+import { getCoinFromString } from './utxobased/keymanager/coinmapper'
 import {
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   pubkeyToScriptPubkey,
-  scriptPubkeyToAddress, ScriptTypeEnum, xprivToPrivateKey,
+  scriptPubkeyToAddress,
+  ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
+  xprivToPrivateKey,
   xprivToXPub,
-  xpubToPubkey
+  xpubToPubkey,
 } from './utxobased/keymanager/keymanager'
-import { makePath, makePathFromString, Path } from './Path'
-import { getCoinFromString } from './utxobased/keymanager/coinmapper'
-import { Coin } from './utxobased/keymanager/coin'
 
 export interface IAccountConfig {
   purpose: BIP43PurposeTypeEnum
@@ -78,21 +80,21 @@ export function makeAccount(xpub: string, config: IAccountConfig): Account {
         type: account.purpose,
         bip44AddressIndex: p.index,
         bip44ChangeIndex: p.change,
-        coin: account.coinName
+        coin: account.coinName,
       })
     },
 
     getScriptPubKey(p = account.path): string {
       return pubkeyToScriptPubkey({
         pubkey: account.getPubKey(p),
-        scriptType: p.scriptType
+        scriptType: p.scriptType,
       }).scriptPubkey
     },
 
     getRedeemScript(p = account.path): string | undefined {
       return pubkeyToScriptPubkey({
         pubkey: account.getPubKey(p),
-        scriptType: p.scriptType
+        scriptType: p.scriptType,
       }).redeemScript
     },
 
@@ -101,7 +103,7 @@ export function makeAccount(xpub: string, config: IAccountConfig): Account {
         scriptPubkey: account.getScriptPubKey(p),
         network: account.networkType,
         addressType: p.addressType,
-        coin: account.coinName
+        coin: account.coinName,
       })
     },
 
@@ -111,18 +113,21 @@ export function makeAccount(xpub: string, config: IAccountConfig): Account {
 
     isPrivate(): boolean {
       return false
-    }
+    },
   }
 
   return account
 }
 
-export function makePrivateAccount(xpriv: string, config: IAccountConfig): PrivateAccount {
+export function makePrivateAccount(
+  xpriv: string,
+  config: IAccountConfig
+): PrivateAccount {
   const xpub = xprivToXPub({
     xpriv,
     network: config.networkType,
     type: config.purpose,
-    coin: config.coinName
+    coin: config.coinName,
   })
 
   const account = makeAccount(xpub, config)
@@ -140,21 +145,24 @@ export function makePrivateAccount(xpriv: string, config: IAccountConfig): Priva
         type: account.purpose,
         coin: account.coinName,
         bip44ChangeIndex: p.change,
-        bip44AddressIndex: p.index
+        bip44AddressIndex: p.index,
       })
-    }
+    },
   }
 }
 
-export function makePrivateAccountFromMnemonic(mnemonic: string, config: IAccountConfig): PrivateAccount {
+export function makePrivateAccountFromMnemonic(
+  mnemonic: string,
+  config: IAccountConfig
+): PrivateAccount {
   const coin = getCoinFromString(config.coinName).coinType
   const path = makePath({ purpose: config.purpose, coin })
-  const xprv = mnemonicToXPriv({
-    mnemonic,
+  const xprv = seedOrMnemonicToXPriv({
+    seed: mnemonic,
     network: config.networkType,
     coin: config.coinName,
     type: config.purpose,
-    path: path.toAccount()
+    path: path.toAccount(),
   })
   return makePrivateAccount(xprv, config)
 }

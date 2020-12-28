@@ -5,12 +5,12 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
@@ -20,11 +20,10 @@ describe('digibyte mnemonic to xprv test vectors as compared with iancoleman', (
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/20'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'digibyte',
     })
     expect(resultLegacy).to.equal(
@@ -33,11 +32,10 @@ describe('digibyte mnemonic to xprv test vectors as compared with iancoleman', (
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'digibyte',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -100,7 +98,7 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'digibyte',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('DG1KhhBKpsyWXTakHNezaDQ34focsXjN1i')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'DG1KhhBKpsyWXTakHNezaDQ34focsXjN1i',
@@ -130,7 +128,7 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'digibyte',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('SQ9EXABrHztGgefL9aH3FyeRjowdjtLfn4')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: 'SQ9EXABrHztGgefL9aH3FyeRjowdjtLfn4',
@@ -160,7 +158,7 @@ describe('digibyte xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'digibyte',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'dgb1q9gmf0pv8jdymcly6lz6fl7lf6mhslsd72e2jq8'
     )

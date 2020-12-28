@@ -8,7 +8,14 @@ import BN from './bn'
 
 export enum CashaddrPrefixEnum {
   mainnet = 'bitcoincash',
-  testnet = 'bitcoincashtestnet',
+  testnet = 'bchtest',
+  testnetalt = 'bitcoincashtestnet',
+}
+
+// this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
+export enum NetworkEnum {
+  Mainnet = 'mainnet',
+  Testnet = 'testnet',
 }
 
 export enum CashaddrTypeEnum {
@@ -107,7 +114,7 @@ const prefixToArray = (prefix: any): number[] => {
 export const hashToCashAddress = (
   scriptHash: string,
   type: CashaddrTypeEnum,
-  prefix: CashaddrPrefixEnum
+  network: NetworkEnum
 ): string => {
   // Not any, but a BN object
   function checksumToArray(checksum: any): number[] {
@@ -154,6 +161,10 @@ export const hashToCashAddress = (
     }
   }
 
+  const prefix: CashaddrPrefixEnum =
+    NetworkEnum.Mainnet === network
+      ? CashaddrPrefixEnum.mainnet
+      : CashaddrPrefixEnum.testnet
   const hashBuffer = Buffer.from(scriptHash, 'hex')
   const eight0 = [0, 0, 0, 0, 0, 0, 0, 0]
   const prefixData = prefixToArray(prefix).concat([0])
@@ -235,13 +246,12 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
     }
   } else {
     const netNames = Object.values(CashaddrPrefixEnum)
-    let i = netNames.shift()
-    while (prefix === null && typeof i !== 'undefined') {
-      const p = i
-      if (validChecksum(p, payload)) {
-        prefix = p
+    let candidatePrefix = netNames.shift()
+    while (prefix === null && typeof candidatePrefix !== 'undefined') {
+      if (validChecksum(candidatePrefix, payload)) {
+        prefix = candidatePrefix
       }
-      i = netNames.shift()
+      candidatePrefix = netNames.shift()
     }
     if (prefix === null) {
       throw new Error(`InvalidArgument: ${address} has invalid checksum`)

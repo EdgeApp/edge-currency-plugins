@@ -5,12 +5,12 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
@@ -20,11 +20,10 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip84 mnemonic to xpriv mainnet', () => {
-    const resultSegwit = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/84'/2'/0'",
+    const resultSegwit = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Segwit,
+      purpose: BIP43PurposeTypeEnum.Segwit,
       coin: 'litecoin',
     })
     expect(resultSegwit).to.equal(
@@ -33,11 +32,10 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip84 mnemonic to xpriv testnet', () => {
-    const resultSegwitTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/84'/1'/0'",
+    const resultSegwitTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Segwit,
+      purpose: BIP43PurposeTypeEnum.Segwit,
       coin: 'litecoin',
     })
     expect(resultSegwitTestnet).to.equal(
@@ -46,11 +44,10 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip49 mnemonic to xpriv mainnet', () => {
-    const resultWrappedSegwit = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/49'/2'/0'",
+    const resultWrappedSegwit = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.WrappedSegwit,
+      purpose: BIP43PurposeTypeEnum.WrappedSegwit,
       coin: 'litecoin',
     })
     expect(resultWrappedSegwit).to.equal(
@@ -59,11 +56,10 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip49 mnemonic to xpriv testnet', () => {
-    const resultWrappedSegwitTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/49'/1'/0'",
+    const resultWrappedSegwitTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.WrappedSegwit,
+      purpose: BIP43PurposeTypeEnum.WrappedSegwit,
       coin: 'litecoin',
     })
     expect(resultWrappedSegwitTestnet).to.equal(
@@ -72,11 +68,10 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/2'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'litecoin',
     })
     expect(resultLegacy).to.equal(
@@ -85,11 +80,10 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'litecoin',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -203,7 +197,7 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'litecoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez')
     const scriptPukbeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez',
@@ -233,7 +227,7 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'litecoin',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('M7wtsL7wSHDBJVMWWhtQfTMSYYkyooAAXM')
     const scriptHashP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: 'M7wtsL7wSHDBJVMWWhtQfTMSYYkyooAAXM',
@@ -263,7 +257,7 @@ describe('litecoin xpub to address tests;  generate valid addresses by calling x
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'litecoin',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh'
     )

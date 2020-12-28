@@ -5,12 +5,12 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
@@ -20,24 +20,22 @@ describe('eboost mnemonic to xprv test vectors as compared with iancoleman', () 
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/0'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'eboost',
     })
     expect(resultLegacy).to.equal(
-      'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb'
+      'xprv9zYTou2k1nf6MGqBjTJPr2sE3uZxtNs189FwEEsmm35n5jNVsv3pwVyUPpxWfeDwbhz1ByQW6eh6EFnPp34oEnDC1VZ22xapWJu3Ham3JYK'
     )
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'eboost',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -100,7 +98,7 @@ describe('eboost xpub to address tests;  generate valid addresses by calling xpu
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'eboost',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'eMvfrRkQqgc9igciD3j9tCrrmw2KzJ2yu4',

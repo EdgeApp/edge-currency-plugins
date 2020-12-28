@@ -5,11 +5,11 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   xprivToXPub,
   xpubToPubkey,
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
@@ -18,24 +18,22 @@ describe('decred mnemonic to xprv test vectors as compared with iancoleman', () 
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/156'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'decred',
     })
     expect(resultLegacy).to.equal(
-      'dprv3o8pLs3xWbQUcPFT19CVo7NgS6GKpRbR9ib9m6RR5TEzXhfCFUq1hHhHK7BUxqqpG7WP7KYuRH3rMibWqqYSnSRxeUxv57oXdV1BmJ6Qw5Y'
+      'dprv3ogcz7QBLrY3PzbYW9U6Lr9UraTUWZAjc8A4aDRX918Qg2ka6sokXV4EdmFHR85k3tubCvKxL3DASSZBUaz3jSobBwHAVmFbymS1tYT3kRm'
     )
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'decred',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -93,7 +91,7 @@ describe('decred xpub to address tests;  generate valid addresses by calling xpu
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'decred',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg',
@@ -120,7 +118,7 @@ describe('decred guess script pubkeys from address', () => {
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'decred',
-    })
+    }).address
     expect(address).to.equal('DsmaYBuL9cgEswnx4KjeLQC2uAWUdRyVXhg')
   })
   it('p2sh address to scriptPubkey', () => {
@@ -137,7 +135,7 @@ describe('decred guess script pubkeys from address', () => {
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'decred',
-    })
+    }).address
     expect(address).to.equal('DcbpczkMzqtYozqrX7vHcFQmCF5wqsW2hYW')
   })
 })

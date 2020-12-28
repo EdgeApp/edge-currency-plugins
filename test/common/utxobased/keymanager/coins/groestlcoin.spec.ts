@@ -6,13 +6,13 @@ import {
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
   createTx,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToPubkey,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   signTx,
   TransactionInputTypeEnum,
   wifToPrivateKey,
@@ -25,11 +25,10 @@ describe('groestlcoin mnemonic to xprv test vectors as compared with iancoleman'
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/17'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'groestlcoin',
     })
     expect(resultLegacy).to.equal(
@@ -38,11 +37,10 @@ describe('groestlcoin mnemonic to xprv test vectors as compared with iancoleman'
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'groestlcoin',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -105,7 +103,7 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'groestlcoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 'Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg',
@@ -135,7 +133,7 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'groestlcoin',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('3299Qf2x9BnzLaZu4HCLvm26RbBB3ZRf4u')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '3299Qf2x9BnzLaZu4HCLvm26RbBB3ZRf4u',
@@ -165,7 +163,7 @@ describe('groestlcoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'groestlcoin',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'grs1qrm2uggqj846nljryvmuga56vtwfey0dtnc4z55'
     )
@@ -274,7 +272,7 @@ describe('groestlcoin transaction creation and signing test', () => {
     scriptType: ScriptTypeEnum.p2wpkh,
   }).scriptPubkey
 
-  it('Create transaction with one input and one output', () => {
+  it('Create transaction with one input and one output', async () => {
     /*
       This here is the rawtransaction as assembled below:
       0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000
@@ -308,7 +306,7 @@ describe('groestlcoin transaction creation and signing test', () => {
         },
       ],
     }).psbt
-    const hexTxSigned: string = signTx({
+    const hexTxSigned: string = await signTx({
       psbt: base64Tx,
       privateKeys: [privateKey],
       coin: 'groestlcoin',

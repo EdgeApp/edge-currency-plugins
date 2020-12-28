@@ -1,4 +1,5 @@
 import { crypto } from 'altcoin-js'
+import * as bip32grs from 'bip32grs'
 import * as base58grs from 'bs58grscheck'
 import * as wifgrs from 'wifgrs'
 
@@ -12,6 +13,8 @@ export class Groestlcoin implements Coin {
   bs58DecodeFunc = base58grs.decode
   bs58EncodeFunc = base58grs.encode
   wifEncodeFunc = wifgrs.encode
+  bip32FromBase58Func = bip32grs.fromBase58
+  bip32FromSeedFunc = bip32grs.fromSeed
   mainnetConstants = {
     messagePrefix: '\x1cGroestlCoin Signed Message:\n',
     wif: 0x80,

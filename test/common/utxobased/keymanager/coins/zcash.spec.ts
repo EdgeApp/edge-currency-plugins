@@ -5,12 +5,12 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
@@ -20,11 +20,10 @@ describe('zcash mnemonic to xprv test vectors as compared with iancoleman', () =
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/133'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'zcash',
     })
     expect(resultLegacy).to.equal(
@@ -33,11 +32,10 @@ describe('zcash mnemonic to xprv test vectors as compared with iancoleman', () =
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'zcash',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -100,7 +98,7 @@ describe('zcash xpub to address tests;  generate valid addresses by calling xpub
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'zcash',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('t1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: 't1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F',

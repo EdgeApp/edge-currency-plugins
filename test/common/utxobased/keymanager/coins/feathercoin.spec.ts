@@ -5,12 +5,12 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
@@ -20,11 +20,10 @@ describe('feathercoin mnemonic to xprv test vectors as compared with iancoleman'
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/8'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'feathercoin',
     })
     expect(resultLegacy).to.equal(
@@ -33,11 +32,10 @@ describe('feathercoin mnemonic to xprv test vectors as compared with iancoleman'
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'feathercoin',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -100,7 +98,7 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'feathercoin',
-    })
+    }).address
     expect(p2pkhAddress).to.equals('6foXhTEUMC85RAhkPS2MfoxD6oS69x4rBS')
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: '6foXhTEUMC85RAhkPS2MfoxD6oS69x4rBS',
@@ -130,7 +128,7 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
       coin: 'feathercoin',
-    })
+    }).address
     expect(p2wpkhp2shAddress).to.equals('3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i')
     const scriptPubkeyP2WPKHP2SHRoundTrip = addressToScriptPubkey({
       address: '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i',
@@ -160,7 +158,7 @@ describe('feathercoin xpub to address tests;  generate valid addresses by callin
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'feathercoin',
-    })
+    }).address
     expect(p2wpkhAddress).to.equals(
       'fc1qkwnu2phwvard2spr2n0a9d84x590ahywnuszd4'
     )

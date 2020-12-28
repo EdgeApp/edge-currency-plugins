@@ -12,6 +12,7 @@
   ],
   "rules": {
     "@typescript-eslint/promise-function-async": "off",
+    "@typescript-eslint/camelcase": "off",
     "no-var": "error",
     "simple-import-sort/sort": "error"
   }

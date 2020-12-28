@@ -5,12 +5,12 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  mnemonicToXPriv,
   NetworkEnum,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
+  seedOrMnemonicToXPriv,
   wifToPrivateKey,
   xprivToXPub,
   xpubToPubkey,
@@ -20,11 +20,10 @@ describe('bitcoin sv mnemonic to xprv test vectors as compared with iancoleman',
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
   it('bip44 mnemonic to xpriv mainnet', () => {
-    const resultLegacy = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/236'/0'",
+    const resultLegacy = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoinsv',
     })
     expect(resultLegacy).to.equal(
@@ -33,11 +32,10 @@ describe('bitcoin sv mnemonic to xprv test vectors as compared with iancoleman',
   })
 
   it('bip44 mnemonic to xpriv testnet', () => {
-    const resultLegacyTestnet = mnemonicToXPriv({
-      mnemonic: mnemonic,
-      path: "m/44'/1'/0'",
+    const resultLegacyTestnet = seedOrMnemonicToXPriv({
+      seed: mnemonic,
       network: NetworkEnum.Testnet,
-      type: BIP43PurposeTypeEnum.Legacy,
+      purpose: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoinsv',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -101,7 +99,10 @@ describe('bitcoin sv xpub to address tests;  generate valid addresses by calling
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoinsv',
     })
-    expect(p2pkhAddress).to.equals('1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f')
+    expect(p2pkhAddress.address).to.equals('1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f')
+    expect(p2pkhAddress.legacyAddress).to.equals(
+      'bitcoincash:qrr8ftywq56qg3che8hy2r2anuj7ysmy2qwc7tfd96'
+    )
     const scriptPubkeyP2PKHRoundTrip = addressToScriptPubkey({
       address: '1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f',
       network: NetworkEnum.Mainnet,
