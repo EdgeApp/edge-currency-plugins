@@ -68,7 +68,7 @@ export enum VerifyAddressEnum {
 export interface SeedOrMnemonicToXPrivArgs {
   seed: string
   network: NetworkEnum
-  purpose: BIP43PurposeTypeEnum
+  type: BIP43PurposeTypeEnum
   coinType?: number // defaults to the coin type as defined in the coin class
   account?: number // defaults to account 0'
   coin: string
@@ -261,6 +261,20 @@ function bip43PurposeTypeEnumToNumber(purpose: BIP43PurposeTypeEnum): number {
   }
 }
 
+export function bip43PurposeNumberToTypeEnum(num: number): BIP43PurposeTypeEnum {
+  switch (num) {
+    case 32:
+    case 44:
+      return BIP43PurposeTypeEnum.Legacy
+    case 49:
+      return BIP43PurposeTypeEnum.WrappedSegwit
+    case 84:
+      return BIP43PurposeTypeEnum.Segwit
+    default:
+      throw new Error('InvalidPurposeNumber')
+  }
+}
+
 function bip32NetworkFromCoinPrefix(
   sigType: BIP43PurposeTypeEnum,
   coinPrefixes: CoinPrefixes,
@@ -438,10 +452,10 @@ export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
     networkType: args.network,
     coinString: args.coin,
-    sigType: args.purpose,
+    sigType: args.type,
   })
   const coin = getCoinFromString(args.coin)
-  const purpose = bip43PurposeTypeEnumToNumber(args.purpose)
+  const purpose = bip43PurposeTypeEnumToNumber(args.type)
   let coinType = args.coinType ?? coin.coinType
   const account = args.account ?? 0
   coinType = args.network === 'testnet' ? 1 : coinType

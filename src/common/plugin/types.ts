@@ -3,12 +3,16 @@ import { EdgeCurrencyEngineOptions, EdgeWalletInfo } from 'edge-core-js/lib/type
 import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
 import { ProcessorTransaction } from '../utxobased/db/Models/ProcessorTransaction'
 
-export enum EngineCoinType {
+type CurrencyFormats = 'bip32' | 'bip44' | 'bip49' | 'bip84'
+
+export enum EngineCurrencyType {
   UTXO
 }
 
 export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
-  coinType: EngineCoinType
+  formats?: CurrencyFormats[]
+  coinType: number
+  currencyType: EngineCurrencyType
   network: string // The offical network in lower case - Needs to match the Bitcoin Lib Network Type
   gapLimit: number
   defaultFee: number
