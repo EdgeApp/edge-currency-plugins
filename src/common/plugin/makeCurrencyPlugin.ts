@@ -9,14 +9,16 @@ import {
 
 import { makeCurrencyTools } from './makeCurrencyTools'
 import { makeUtxoEngine } from '../utxobased/plugin/makeUtxoEngine'
-import { EngineCurrencyType, EngineConfig, EngineCurrencyInfo, Emitter, EmitterEvent } from './types'
+import { Emitter, EmitterEvent, EngineConfig, EngineCurrencyInfo, EngineCurrencyType } from './types'
+import { makeWalletTools } from './makeWalletTools'
+import { NetworkEnum } from '../utxobased/keymanager/keymanager'
 
 export function makeCurrencyPlugin(
   pluginOptions: EdgeCorePluginOptions,
   info: EngineCurrencyInfo
 ): EdgeCurrencyPlugin {
   const { io } = pluginOptions
-  const tools = makeCurrencyTools(io, info)
+  const currencyTools = makeCurrencyTools(io, info)
 
   return {
     currencyInfo: info,
@@ -25,6 +27,13 @@ export function makeCurrencyPlugin(
       walletInfo: EdgeWalletInfo,
       engineOptions: EdgeCurrencyEngineOptions
     ): Promise<EdgeCurrencyEngine> {
+      const walletTools = await makeWalletTools({
+        currencyInfo: info,
+        walletInfo,
+        encryptedDisklet: engineOptions.walletLocalEncryptedDisklet,
+        network: NetworkEnum.Mainnet
+      })
+
       const emitter: Emitter = new EventEmitter() as any
       emitter.on(EmitterEvent.TRANSACTIONS_CHANGED, engineOptions.callbacks.onTransactionsChanged)
       emitter.on(EmitterEvent.BALANCE_CHANGED, engineOptions.callbacks.onBalanceChanged)
@@ -39,7 +48,8 @@ export function makeCurrencyPlugin(
       const engineConfig: EngineConfig = {
         walletInfo,
         info,
-        tools,
+        currencyTools,
+        walletTools,
         io,
         options: {
           ...pluginOptions,
@@ -59,7 +69,7 @@ export function makeCurrencyPlugin(
     },
 
     makeCurrencyTools(): Promise<EdgeCurrencyTools> {
-      return Promise.resolve(tools)
+      return Promise.resolve(currencyTools)
     }
   }
 }
