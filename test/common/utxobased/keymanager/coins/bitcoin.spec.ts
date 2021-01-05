@@ -31,7 +31,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
     const resultSegwit = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.Segwit,
+      type: BIP43PurposeTypeEnum.Segwit,
       coin: 'bitcoin',
     })
     expect(resultSegwit).to.equal(
@@ -43,7 +43,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
     const resultSegwitTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Testnet,
-      purpose: BIP43PurposeTypeEnum.Segwit,
+      type: BIP43PurposeTypeEnum.Segwit,
       coin: 'bitcoin',
     })
     expect(resultSegwitTestnet).to.equal(
@@ -55,7 +55,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
     const resultWrappedSegwit = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.WrappedSegwit,
+      type: BIP43PurposeTypeEnum.WrappedSegwit,
       coin: 'bitcoin',
     })
     expect(resultWrappedSegwit).to.equal(
@@ -67,7 +67,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
     const resultWrappedSegwitTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Testnet,
-      purpose: BIP43PurposeTypeEnum.WrappedSegwit,
+      type: BIP43PurposeTypeEnum.WrappedSegwit,
       coin: 'bitcoin',
     })
     expect(resultWrappedSegwitTestnet).to.equal(
@@ -79,7 +79,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
     const resultLegacy = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin',
     })
     expect(resultLegacy).to.equal(
@@ -91,7 +91,7 @@ describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 a
     const resultLegacyTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Testnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin',
     })
     expect(resultLegacyTestnet).to.equal(
@@ -287,7 +287,7 @@ describe('bitcoin bip32 seed, aka airbitz seed, to xpriv. Taken from official bi
       seed:
         'fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542',
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin',
     })
     expect(result).to.equal(
@@ -301,7 +301,7 @@ describe('bitcoin from bip32 seed to private key', () => {
     const xpriv = seedOrMnemonicToXPriv({
       seed: '1dafe5a826590b3f9558dd9e1ab1d8b86fda83a4bcc3aeeb95d81f0ab95c3d62',
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin',
     })
     const privateKey = xprivToPrivateKey({

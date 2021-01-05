@@ -23,7 +23,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
     const resultSegwit = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.Segwit,
+      type: BIP43PurposeTypeEnum.Segwit,
       coin: 'litecoin',
     })
     expect(resultSegwit).to.equal(
@@ -35,7 +35,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
     const resultSegwitTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Testnet,
-      purpose: BIP43PurposeTypeEnum.Segwit,
+      type: BIP43PurposeTypeEnum.Segwit,
       coin: 'litecoin',
     })
     expect(resultSegwitTestnet).to.equal(
@@ -47,7 +47,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
     const resultWrappedSegwit = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.WrappedSegwit,
+      type: BIP43PurposeTypeEnum.WrappedSegwit,
       coin: 'litecoin',
     })
     expect(resultWrappedSegwit).to.equal(
@@ -59,7 +59,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
     const resultWrappedSegwitTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Testnet,
-      purpose: BIP43PurposeTypeEnum.WrappedSegwit,
+      type: BIP43PurposeTypeEnum.WrappedSegwit,
       coin: 'litecoin',
     })
     expect(resultWrappedSegwitTestnet).to.equal(
@@ -71,7 +71,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
     const resultLegacy = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'litecoin',
     })
     expect(resultLegacy).to.equal(
@@ -83,7 +83,7 @@ describe('litecoin mnemonic to xprv test vectors as collected from BIP84, BIP49 
     const resultLegacyTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Testnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'litecoin',
     })
     expect(resultLegacyTestnet).to.equal(

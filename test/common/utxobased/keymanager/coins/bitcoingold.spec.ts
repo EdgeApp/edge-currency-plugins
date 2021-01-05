@@ -23,7 +23,7 @@ describe('bitcoin gold mnemonic to xprv test vectors as compared with iancoleman
     const resultLegacy = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoingold',
     })
     expect(resultLegacy).to.equal(
@@ -35,7 +35,7 @@ describe('bitcoin gold mnemonic to xprv test vectors as compared with iancoleman
     const resultLegacyTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Testnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoingold',
     })
     expect(resultLegacyTestnet).to.equal(

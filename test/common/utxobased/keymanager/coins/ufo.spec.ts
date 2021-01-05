@@ -23,7 +23,7 @@ describe('uniformfiscalobject mnemonic to xprv test vectors as compared with ian
     const resultLegacy = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Mainnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'uniformfiscalobject',
     })
     expect(resultLegacy).to.equal(
@@ -35,7 +35,7 @@ describe('uniformfiscalobject mnemonic to xprv test vectors as compared with ian
     const resultLegacyTestnet = seedOrMnemonicToXPriv({
       seed: mnemonic,
       network: NetworkEnum.Testnet,
-      purpose: BIP43PurposeTypeEnum.Legacy,
+      type: BIP43PurposeTypeEnum.Legacy,
       coin: 'uniformfiscalobject',
     })
     expect(resultLegacyTestnet).to.equal(

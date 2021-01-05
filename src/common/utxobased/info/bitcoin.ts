@@ -1,8 +1,10 @@
 import { imageServerUrl } from './constants'
-import { EngineCoinType, EngineCurrencyInfo } from '../../plugin/types'
+import { EngineCurrencyType, EngineCurrencyInfo } from '../../plugin/types'
 
 export const info: EngineCurrencyInfo = {
-  coinType: EngineCoinType.UTXO,
+  currencyType: EngineCurrencyType.UTXO,
+  coinType: 0,
+  formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   network: 'bitcoin',
   currencyCode: 'BTC',
   gapLimit: 25,

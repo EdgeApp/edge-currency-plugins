@@ -1,14 +1,20 @@
+import * as bip39 from 'bip39'
 import { EdgeCurrencyTools, EdgeEncodeUri, EdgeIo, EdgeParsedUri, EdgeWalletInfo } from 'edge-core-js'
 import { JsonObject } from 'edge-core-js/lib/types'
 
-import { NetworkEnum } from '../utxobased/keymanager/keymanager'
+import {
+  bip43PurposeNumberToTypeEnum,
+  NetworkEnum,
+  seedOrMnemonicToXPriv,
+  xprivToXPub
+} from '../utxobased/keymanager/keymanager'
 import {
   Account,
-  PrivateAccount,
   IAccountConfig,
   makeAccount,
   makePrivateAccount,
-  makePrivateAccountFromMnemonic
+  makePrivateAccountFromMnemonic,
+  PrivateAccount
 } from '../Account'
 import { EngineCurrencyInfo } from './types'
 import { BIP43NameToPurposeType } from '../Path'
@@ -37,15 +43,39 @@ export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: Edge
  * as well as generic (non-wallet) functionality.
  */
 export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo): EdgeCurrencyTools {
+  const mnemonicKey = `${currencyInfo.network}Key`
+  const xpubKey = `${currencyInfo.network}Xpub`
+
   const fns: EdgeCurrencyTools = {
     async createPrivateKey(walletType: string, opts?: JsonObject): Promise<JsonObject> {
-      return {}
+      const mnemonic = bip39.entropyToMnemonic(Buffer.from(io.random(32)))
+      const format = opts?.format ?? currencyInfo.formats?.[0] ?? 'bip44'
+      const coinType = opts?.coinType ?? currencyInfo.coinType ?? 0
+      return {
+        [mnemonicKey]: mnemonic,
+        format,
+        coinType
+      }
     },
 
-    async derivePublicKey(walletInfo: EdgeWalletInfo) {
-      const account = deriveAccount(currencyInfo, walletInfo)
+    async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
+      const formatNum = (walletInfo.keys.format as string).replace('bip', '')
+      const args = {
+        network: NetworkEnum.Mainnet,
+        type: bip43PurposeNumberToTypeEnum(Number(formatNum)),
+        coin: currencyInfo.network
+      }
+      const xpriv = seedOrMnemonicToXPriv({
+        ...args,
+        seed: walletInfo.keys[mnemonicKey],
+        coinType: walletInfo.keys.coinType
+      })
+      const xpub = xprivToXPub({
+        ...args,
+        xpriv
+      })
       return {
-        [`publicKey`]: account.xpub
+        [xpubKey]: xpub
       }
     },
 
