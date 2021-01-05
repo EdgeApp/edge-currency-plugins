@@ -1,41 +1,11 @@
 import * as bip39 from 'bip39'
-import { EdgeCurrencyTools, EdgeEncodeUri, EdgeIo, EdgeParsedUri, EdgeWalletInfo } from 'edge-core-js'
+import { EdgeEncodeUri, EdgeIo, EdgeParsedUri, EdgeWalletInfo } from 'edge-core-js'
 import { JsonObject } from 'edge-core-js/lib/types'
 
-import {
-  bip43PurposeNumberToTypeEnum,
-  NetworkEnum,
-  seedOrMnemonicToXPriv,
-  xprivToXPub
-} from '../utxobased/keymanager/keymanager'
-import {
-  Account,
-  IAccountConfig,
-  makeAccount,
-  makePrivateAccount,
-  makePrivateAccountFromMnemonic,
-  PrivateAccount
-} from '../Account'
+import { NetworkEnum, seedOrMnemonicToXPriv, xprivToXPub } from '../utxobased/keymanager/keymanager'
 import { EngineCurrencyInfo } from './types'
-import { BIP43NameToPurposeType } from '../Path'
-
-export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: EdgeWalletInfo): Account | PrivateAccount {
-  const config: IAccountConfig = {
-    purpose: BIP43NameToPurposeType[walletInfo.keys.format],
-    coinName: currencyInfo.network,
-    networkType: NetworkEnum.Mainnet
-  }
-
-  const key = walletInfo.keys[`${currencyInfo.network}Key`]
-  const keyPrefix = key.substr(1)
-  if (keyPrefix.startsWith('pub')) {
-    return makeAccount(key, config)
-  } else if (keyPrefix.startsWith('prv')) {
-    return makePrivateAccount(key, config)
-  } else {
-    return makePrivateAccountFromMnemonic(key, config)
-  }
-}
+import { EdgeCurrencyTools } from 'edge-core-js/lib/types/types'
+import { getMnemonicKey, getPurposeType, getXpubKey } from './makeWalletTools'
 
 /**
  * The core currency plugin.
@@ -43,8 +13,8 @@ export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: Edge
  * as well as generic (non-wallet) functionality.
  */
 export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo): EdgeCurrencyTools {
-  const mnemonicKey = `${currencyInfo.network}Key`
-  const xpubKey = `${currencyInfo.network}Xpub`
+  const mnemonicKey = getMnemonicKey(currencyInfo)
+  const xpubKey = getXpubKey(currencyInfo)
 
   const fns: EdgeCurrencyTools = {
     async createPrivateKey(walletType: string, opts?: JsonObject): Promise<JsonObject> {
@@ -59,10 +29,9 @@ export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo):
     },
 
     async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-      const formatNum = (walletInfo.keys.format as string).replace('bip', '')
       const args = {
         network: NetworkEnum.Mainnet,
-        type: bip43PurposeNumberToTypeEnum(Number(formatNum)),
+        type: getPurposeType(walletInfo),
         coin: currencyInfo.network
       }
       const xpriv = seedOrMnemonicToXPriv({

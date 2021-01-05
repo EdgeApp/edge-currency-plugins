@@ -2,8 +2,10 @@ import { EdgeCurrencyInfo, EdgeCurrencyTools, EdgeIo } from 'edge-core-js/lib/ty
 import { EdgeCurrencyEngineOptions, EdgeWalletInfo } from 'edge-core-js/lib/types/types'
 import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
 import { ProcessorTransaction } from '../utxobased/db/Models/ProcessorTransaction'
+import { BIP43PurposeTypeEnum } from '../utxobased/keymanager/keymanager'
+import { PluginWalletTools } from './makeWalletTools'
 
-type CurrencyFormats = 'bip32' | 'bip44' | 'bip49' | 'bip84'
+export type CurrencyFormats = 'bip32' | 'bip44' | 'bip49' | 'bip84'
 
 export enum EngineCurrencyType {
   UTXO
@@ -33,7 +35,8 @@ export interface SimpleFeeSettings {
 export interface EngineConfig {
   walletInfo: EdgeWalletInfo
   info: EngineCurrencyInfo
-  tools: EdgeCurrencyTools
+  currencyTools: EdgeCurrencyTools
+  walletTools: PluginWalletTools
   options: EngineOptions
   io: EdgeIo
 }
