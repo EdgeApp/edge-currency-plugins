@@ -2,17 +2,21 @@ import { EdgeCurrencyInfo, EdgeCurrencyTools, EdgeIo } from 'edge-core-js/lib/ty
 import { EdgeCurrencyEngineOptions, EdgeWalletInfo } from 'edge-core-js/lib/types/types'
 import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
 import { ProcessorTransaction } from '../utxobased/db/Models/ProcessorTransaction'
-import { BIP43PurposeTypeEnum } from '../utxobased/keymanager/keymanager'
-import { PluginWalletTools } from './makeWalletTools'
 
-export type CurrencyFormats = 'bip32' | 'bip44' | 'bip49' | 'bip84'
+// this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
+export enum NetworkEnum {
+  Mainnet = 'mainnet',
+  Testnet = 'testnet',
+}
+
+export type CurrencyFormat = 'bip32' | 'bip44' | 'bip49' | 'bip84'
 
 export enum EngineCurrencyType {
   UTXO
 }
 
 export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
-  formats?: CurrencyFormats[]
+  formats?: CurrencyFormat[]
   coinType: number
   currencyType: EngineCurrencyType
   network: string // The offical network in lower case - Needs to match the Bitcoin Lib Network Type
@@ -33,10 +37,10 @@ export interface SimpleFeeSettings {
 }
 
 export interface EngineConfig {
+  network: NetworkEnum
   walletInfo: EdgeWalletInfo
   info: EngineCurrencyInfo
   currencyTools: EdgeCurrencyTools
-  walletTools: PluginWalletTools
   options: EngineOptions
   io: EdgeIo
 }

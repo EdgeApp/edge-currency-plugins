@@ -12,64 +12,45 @@ import {
 import * as bs from 'biggystring'
 import * as bitcoin from 'altcoin-js'
 
-import { EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
+import { EmitterEvent, EngineConfig } from '../../plugin/types'
 import { makeUtxoEngineState } from './makeUtxoEngineState'
 import { makeProcessor } from '../db/Processor'
-import { addressToScriptPubkey, makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
+import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { calculateFeeRate } from './makeSpendHelper'
 import { makeBlockBook } from '../network/BlockBook'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
-
-const localWalletDataPath = `metadata.json`
-
-async function fetchLocalWalletMetadata(config: EngineConfig): Promise<LocalWalletMetadata> {
-  try {
-    const dataStr = await config.options.walletLocalDisklet.getText(localWalletDataPath)
-    return JSON.parse(dataStr)
-  } catch {
-    const data: LocalWalletMetadata = {
-      balance: '0',
-      lastSeenBlockHeight: 0
-    }
-    await setLocalWalletMetadata(config, data)
-    return data
-  }
-}
-
-async function setLocalWalletMetadata(config: EngineConfig, data: LocalWalletMetadata): Promise<void> {
-  await config.options.walletLocalDisklet.setText(localWalletDataPath, JSON.stringify(data))
-}
+import { makeUtxoWalletTools } from './makeUtxoWalletTools'
+import { fetchMetadata, setMetadata } from '../../plugin/utils'
 
 export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrencyEngine> {
   const {
+    network,
     info,
     walletInfo,
-    walletTools,
     options: {
       walletLocalDisklet,
       emitter
     }
   } = config
 
-  const network = makeBlockBook({
-    emitter
+  const walletTools = makeUtxoWalletTools({
+    keys: walletInfo.keys,
+    coin: info.network,
+    network
   })
 
-  const metadata = await fetchLocalWalletMetadata(config)
-
-  const processor = await makeProcessor({
-    disklet: walletLocalDisklet,
-    emitter
-  })
+  const blockBook = makeBlockBook({ emitter })
+  const metadata = await fetchMetadata(walletLocalDisklet)
+  const processor = await makeProcessor({ disklet: walletLocalDisklet, emitter })
   const state = makeUtxoEngineState({
     ...config,
+    walletTools,
     processor,
-    network,
+    blockBook,
     metadata
   })
 
   emitter.on(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, (tx: ProcessorTransaction) => {
-    console.log('tx change:', tx)
     emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, ([
       tx.toEdgeTransaction(info.currencyCode)
     ]))
@@ -77,19 +58,19 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
   emitter.on(EmitterEvent.BALANCE_CHANGED, async (currencyCode: string, nativeBalance: string) => {
     metadata.balance = nativeBalance
-    await setLocalWalletMetadata(config, metadata)
+    await setMetadata(walletLocalDisklet, metadata)
   })
 
   emitter.on(EmitterEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
     metadata.lastSeenBlockHeight = height
-    await setLocalWalletMetadata(config, metadata)
+    await setMetadata(walletLocalDisklet, metadata)
   })
 
   const fns: EdgeCurrencyEngine = {
     async startEngine(): Promise<void> {
-      await network.connect()
+      await blockBook.connect()
 
-      const { bestHeight } = await network.fetchInfo()
+      const { bestHeight } = await blockBook.fetchInfo()
       emitter.emit(EmitterEvent.BLOCK_HEIGHT_CHANGED, bestHeight)
 
       await state.start()
@@ -97,7 +78,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
     async killEngine(): Promise<void> {
       await state.stop()
-      await network.disconnect()
+      await blockBook.disconnect()
     },
 
     getBalance(opts: EdgeCurrencyCodeOptions): string {
@@ -116,7 +97,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
-      await network.broadcastTx(transaction)
+      await blockBook.broadcastTx(transaction)
       return transaction
     },
 
@@ -181,13 +162,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
     // @ts-ignore
     async isAddressUsed(address: string): Promise<boolean> {
-      const scriptPubKey = addressToScriptPubkey({
-        address,
-        addressType: walletTools.getAddressType(),
-        network: walletTools.getNetworkType(),
-        coin: info.network
-      })
-
+      const scriptPubKey = walletTools.addressToScriptPubkey(address)
       const path = await processor.fetchAddressPathBySPubKey(scriptPubKey)
       if (path) {
         const address = await processor.fetchAddress(path)
@@ -219,7 +194,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
         targets,
         feeRate,
         coin: info.network,
-        network: walletTools.getNetworkType(),
+        network,
         rbf: false,
         freshChangeAddress
       })

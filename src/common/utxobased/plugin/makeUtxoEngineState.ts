@@ -1,13 +1,16 @@
 import * as bs from 'biggystring'
+import { EdgeTxidMap } from 'edge-core-js'
 
 import { EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
 import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
 import { IAddressPartial, IUTXO } from '../db/types'
-import { addressToScriptPubkey, BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
+import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
-import { EdgeTxidMap } from 'edge-core-js'
 import { Processor } from '../db/Processor'
 import { AddressPath } from '../db/Models/baselet'
+import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
+import { getPurposeType } from '../../plugin/utils'
+import { validScriptPubkeyFromAddress } from './utils'
 
 interface SyncProgress {
   totalCount: number
@@ -26,13 +29,15 @@ export interface UtxoEngineState {
 }
 
 interface UtxoEngineStateConfig extends EngineConfig {
+  walletTools: UTXOPluginWalletTools
   processor: Processor
-  network: BlockBook
+  blockBook: BlockBook
   metadata: LocalWalletMetadata
 }
 
 export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineState {
   const {
+    network,
     info,
     walletInfo,
     walletTools,
@@ -40,7 +45,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       emitter
     },
     processor,
-    network,
+    blockBook,
     metadata
   } = config
 
@@ -125,7 +130,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
   async function processAddress(address: IAddressPartial, andTransactions = true): Promise<void> {
     addressesToWatch.add(walletTools.getAddress(address.path))
-    network.watchAddresses(Array.from(addressesToWatch), onNewTransaction)
+    blockBook.watchAddresses(Array.from(addressesToWatch), onNewTransaction)
 
     new Promise(async (resolve) => {
       andTransactions && await processAddressTransactions(address)
@@ -158,7 +163,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function calculateAddressBalance(address: IAddressPartial): Promise<void> {
-    const accountDetails = await network.fetchAddress(walletTools.getAddress(address.path))
+    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path))
     address.used = accountDetails.txs > 0 || accountDetails.unconfirmedTxs > 0
 
     const oldBalance = address.balance ?? '0'
@@ -174,7 +179,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function processAddressTransactions(address: IAddressPartial, page = 1): Promise<void> {
-    const accountDetails = await network.fetchAddress(walletTools.getAddress(address.path), {
+    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path), {
       details: 'txs',
       from: address.networkQueryVal,
       page
@@ -202,7 +207,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       ...obj,
       [utxo.id]: utxo
     }), {})
-    const accountUtxos = await network.fetchAddressUtxos(walletTools.getAddress(address.path))
+    const accountUtxos = await blockBook.fetchAddressUtxos(walletTools.getAddress(address.path))
 
     for (const { txid, vout, value, height = 0 } of accountUtxos) {
       const id = `${txid}_${vout}`
@@ -217,7 +222,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       let scriptType: ScriptTypeEnum
       let script: string
       let redeemScript: string | undefined
-      switch (walletTools.getPurposeType()) {
+      switch (getPurposeType({ keys: walletInfo.keys })) {
         case BIP43PurposeTypeEnum.Legacy:
           script = (await fetchTransaction(txid)).hex
           scriptType = ScriptTypeEnum.p2pkh
@@ -254,7 +259,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   async function fetchTransaction(txid: string): Promise<ProcessorTransaction> {
     let tx = await processor.fetchTransaction(txid)
     if (!tx) {
-      const rawTx = await network.fetchTransaction(txid)
+      const rawTx = await blockBook.fetchTransaction(txid)
       tx = processRawTransaction(rawTx)
     }
     return tx
@@ -280,15 +285,6 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     }
   }
 
-  function addressToScriptPubKey(address: string): string {
-    return addressToScriptPubkey({
-      address,
-      addressType: walletTools.getAddressType(),
-      network: walletTools.getNetworkType(),
-      coin: info.network
-    })
-  }
-
   function processRawTransaction(rawTx: ITransaction): ProcessorTransaction {
     return new ProcessorTransaction({
       txid: rawTx.txid,
@@ -299,13 +295,20 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       inputs: rawTx.vin.map((input) => ({
         txId: input.txid,
         outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
-        scriptPubKey: addressToScriptPubKey(input.addresses[0]),
+        scriptPubKey: validScriptPubkeyFromAddress({
+          address: input.addresses[0],
+          coin: info.network,
+          network
+        }),
         amount: input.value
       })),
       outputs: rawTx.vout.map((output) => ({
         index: output.n,
-        scriptPubKey:
-          output.hex ?? addressToScriptPubKey(output.addresses[0]),
+        scriptPubKey: output.hex ?? validScriptPubkeyFromAddress({
+          address: output.addresses[0],
+          coin: info.network,
+          network
+        }),
         amount: output.value
       })),
       ourIns: [],
@@ -331,7 +334,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     },
 
     async markAddressUsed(address: string) {
-      const scriptPubKey = addressToScriptPubKey(address)
+      const scriptPubKey = walletTools.addressToScriptPubkey(address)
       const path = await processor.fetchAddressPathBySPubKey(scriptPubKey)
       if (!path) {
         throw new Error('Invalid address: not stored in database')
