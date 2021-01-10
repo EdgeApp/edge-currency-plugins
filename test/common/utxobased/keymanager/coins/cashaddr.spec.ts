@@ -9,10 +9,10 @@ import {
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
-  NetworkEnum,
   scriptPubkeyToScriptHash,
   ScriptTypeEnum,
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
+import { NetworkEnum } from '../../../../../src/common/plugin/types'
 
 describe('bitcoin cash address tests', () => {
   const pubkeyHash = scriptPubkeyToScriptHash({

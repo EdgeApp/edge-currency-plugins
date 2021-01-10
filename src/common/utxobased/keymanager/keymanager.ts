@@ -435,7 +435,7 @@ function guessAddressTypeFromAddress(
 export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
   // match hexadecimal number from beginning to end of string
   const regexpHex = /^[0-9a-fA-F]+$/
-  let seed = Buffer.from(args.seed, 'hex')
+  let seed = Buffer.from(args.seed, 'base64')
   const isSeed = !!(
     args.seed.length <= 128 &&
     args.seed.length >= 32 &&

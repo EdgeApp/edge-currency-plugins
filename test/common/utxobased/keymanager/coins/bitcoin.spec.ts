@@ -6,7 +6,6 @@ import {
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
   createTx,
-  NetworkEnum,
   privateKeyToPubkey,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
@@ -23,6 +22,7 @@ import {
   xprivToXPub,
   xpubToPubkey,
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
+import { NetworkEnum } from '../../../../../src/common/plugin/types'
 
 describe('bitcoin mnemonic to xprv test vectors as collected from BIP84, BIP49 and some generated cases to test xpub prefix bytes', () => {
   const mnemonic =

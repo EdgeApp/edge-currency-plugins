@@ -6,7 +6,6 @@ import {
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
   createTx,
-  NetworkEnum,
   privateKeyToPubkey,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
@@ -20,6 +19,7 @@ import {
   xprivToXPub,
   xpubToPubkey,
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
+import { NetworkEnum } from '../../../../../src/common/plugin/types'
 
 describe('groestlcoin mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
