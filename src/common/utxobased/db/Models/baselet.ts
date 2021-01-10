@@ -1,13 +1,13 @@
 import { BaseType } from 'baselet'
 import { BaseletConfig, IAddress, IUTXO } from '../types'
 import { ProcessorTransaction } from './ProcessorTransaction'
-import { CurrencyFormats } from '../../../plugin/types'
+import { CurrencyFormat } from '../../../plugin/types'
 
 export const RANGE_ID_KEY = 'idKey'
 export const RANGE_KEY = 'rangeKey'
 
 export interface AddressPath {
-  format: CurrencyFormats
+  format: CurrencyFormat
   changeIndex: 0 | 1
   addressIndex: number
 }

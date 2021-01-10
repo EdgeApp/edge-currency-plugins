@@ -9,31 +9,23 @@ import {
 
 import { makeCurrencyTools } from './makeCurrencyTools'
 import { makeUtxoEngine } from '../utxobased/plugin/makeUtxoEngine'
-import { Emitter, EmitterEvent, EngineConfig, EngineCurrencyInfo, EngineCurrencyType } from './types'
-import { makeWalletTools } from './makeWalletTools'
-import { NetworkEnum } from '../utxobased/keymanager/keymanager'
+import { Emitter, EmitterEvent, EngineConfig, EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
+import { fetchOrDeriveXpriv, getXprivKey } from './utils'
 
 export function makeCurrencyPlugin(
   pluginOptions: EdgeCorePluginOptions,
-  info: EngineCurrencyInfo
+  currencyInfo: EngineCurrencyInfo
 ): EdgeCurrencyPlugin {
   const { io } = pluginOptions
-  const currencyTools = makeCurrencyTools(io, info)
+  const currencyTools = makeCurrencyTools(io, currencyInfo)
 
   return {
-    currencyInfo: info,
+    currencyInfo,
 
     async makeCurrencyEngine(
       walletInfo: EdgeWalletInfo,
       engineOptions: EdgeCurrencyEngineOptions
     ): Promise<EdgeCurrencyEngine> {
-      const walletTools = await makeWalletTools({
-        currencyInfo: info,
-        walletInfo,
-        encryptedDisklet: engineOptions.walletLocalEncryptedDisklet,
-        network: NetworkEnum.Mainnet
-      })
-
       const emitter: Emitter = new EventEmitter() as any
       emitter.on(EmitterEvent.TRANSACTIONS_CHANGED, engineOptions.callbacks.onTransactionsChanged)
       emitter.on(EmitterEvent.BALANCE_CHANGED, engineOptions.callbacks.onBalanceChanged)
@@ -45,11 +37,20 @@ export function makeCurrencyPlugin(
         console.log('progress:', progress)
       })
 
+      const network = NetworkEnum.Mainnet
+
+      walletInfo.keys[getXprivKey({ coin: currencyInfo.network })] = await fetchOrDeriveXpriv({
+        keys: walletInfo.keys,
+        walletLocalEncryptedDisklet: engineOptions.walletLocalEncryptedDisklet,
+        coin: currencyInfo.network,
+        network
+      })
+
       const engineConfig: EngineConfig = {
+        network,
         walletInfo,
-        info,
+        info: currencyInfo,
         currencyTools,
-        walletTools,
         io,
         options: {
           ...pluginOptions,
@@ -59,7 +60,7 @@ export function makeCurrencyPlugin(
       }
 
       let engine: EdgeCurrencyEngine
-      switch (info.currencyType) {
+      switch (currencyInfo.currencyType) {
         case EngineCurrencyType.UTXO:
           engine = await makeUtxoEngine(engineConfig)
           break
