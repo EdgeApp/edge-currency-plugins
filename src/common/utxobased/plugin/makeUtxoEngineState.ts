@@ -1,16 +1,14 @@
 import * as bs from 'biggystring'
 import { EdgeTxidMap } from 'edge-core-js'
 
-import { EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
+import { AddressPath, EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
 import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
 import { IAddressPartial, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import { Processor } from '../db/Processor'
-import { AddressPath } from '../db/Models/baselet'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
-import { getPurposeType } from '../../plugin/utils'
-import { validScriptPubkeyFromAddress } from './utils'
+import { getCurrencyFormatFromPurposeType, validScriptPubkeyFromAddress, getPurposeTypeFromKeys, getWalletFormat  } from './utils'
 
 interface SyncProgress {
   totalCount: number
@@ -63,12 +61,12 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     }
 
     const receivePath: AddressPath = {
-      format: walletInfo.keys.format,
+      format: getWalletFormat(walletInfo),
       changeIndex: 0,
       addressIndex: 0
     }
     const changePath: AddressPath = {
-      format: walletInfo.keys.format,
+      format: getWalletFormat(walletInfo),
       changeIndex: 1,
       addressIndex: 0
     }
@@ -109,10 +107,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
       let address: IAddressPartial = await processor.fetchAddress(path) ?? {
         path,
-        scriptPubKey: walletTools.getScriptPubKey({
-          changeIndex: path.changeIndex,
-          addressIndex: path.addressIndex
-        }),
+        scriptPubKey: walletTools.getScriptPubKey(path).scriptPubkey,
         networkQueryVal: 0
       }
       await calculateAddressBalance(address)
@@ -222,7 +217,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       let scriptType: ScriptTypeEnum
       let script: string
       let redeemScript: string | undefined
-      switch (getPurposeType({ keys: walletInfo.keys })) {
+      switch (getPurposeTypeFromKeys({ keys: walletInfo.keys })) {
         case BIP43PurposeTypeEnum.Legacy:
           script = (await fetchTransaction(txid)).hex
           scriptType = ScriptTypeEnum.p2pkh
@@ -230,7 +225,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         case BIP43PurposeTypeEnum.WrappedSegwit:
           script = address.scriptPubKey
           scriptType = ScriptTypeEnum.p2wpkhp2sh
-          redeemScript = walletTools.getRedeemScript(address.path)
+          redeemScript = walletTools.getScriptPubKey(address.path).scriptPubkey
           break
         case BIP43PurposeTypeEnum.Segwit:
           script = address.scriptPubKey

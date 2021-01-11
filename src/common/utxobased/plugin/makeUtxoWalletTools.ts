@@ -2,12 +2,18 @@ import {
   addressToScriptPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
-  xprivToPrivateKey,
+  xprivToPrivateKey, xprivToXPub,
   xpubToPubkey
 } from '../keymanager/keymanager'
-import { getAddressType, getScriptType } from './utils'
-import { getPurposeType, getXpriv, getXpub } from '../../plugin/utils'
-import { NetworkEnum } from '../../plugin/types'
+import {
+  currencyFormatToPurposeType,
+  getAddressTypeFromKeys,
+  getAddressTypeFromPurposeType,
+  getScriptTypeFromPurposeType,
+  getXpriv,
+  getXpub
+} from './utils'
+import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 
 interface WalletToolsConfig {
   keys: any
@@ -15,77 +21,79 @@ interface WalletToolsConfig {
   network: NetworkEnum
 }
 
-interface Args {
-  changeIndex: 0 | 1
-  addressIndex: number
-}
-
 export interface UTXOPluginWalletTools {
-  getPubkey(args: Args): string
+  getPubkey(args: AddressPath): string
 
-  getScriptPubKey(args: Args): string
+  getScriptPubKey(args: AddressPath): { scriptPubkey: string, redeemScript?: string }
 
-  getRedeemScript(args: Args): string | undefined
-
-  getAddress(args: Args): string
+  getAddress(args: AddressPath): string
 
   addressToScriptPubkey(address: string): string
 
-  getPrivateKey(args: Args): string
+  getPrivateKey(args: AddressPath): string
 }
 
 export function makeUtxoWalletTools(config: WalletToolsConfig): UTXOPluginWalletTools {
   const { coin, network } = config
-  const type = getPurposeType(config)
-  const xpub = getXpub(config)
-  const xpriv = getXpriv(config)
-  const scriptType = getScriptType(config)
-  const addressType = getAddressType(config)
+
+  const scriptType = getScriptTypeFromPurposeType(config.keys)
+
+  const xprivKeys = getXpriv(config)
+  // Convert xprivs to xpubs
+  const xpubKeys = Object.assign({}, xprivKeys)
+  for (const key in xpubKeys) {
+    const format = <CurrencyFormat>key
+    xpubKeys[format] = xprivToXPub({
+      xpriv: xpubKeys[format]!,
+      type: currencyFormatToPurposeType(format),
+      coin,
+      network
+    })
+  }
 
   const fns: UTXOPluginWalletTools = {
-    getPubkey(args: Args): string {
+    getPubkey(args: AddressPath): string {
       return xpubToPubkey({
-        xpub,
+        xpub: xpubKeys[args.format]!,
         network,
-        type,
         coin,
+        type: currencyFormatToPurposeType(args.format),
         bip44ChangeIndex: args.changeIndex,
         bip44AddressIndex: args.addressIndex
       })
     },
 
-    getScriptPubKey(args: Args): string {
+    getScriptPubKey(args: AddressPath): { scriptPubkey: string, redeemScript?: string } {
       return pubkeyToScriptPubkey({
         pubkey: fns.getPubkey(args),
-        scriptType
-      }).scriptPubkey
+        scriptType: getScriptTypeFromPurposeType(currencyFormatToPurposeType(args.format))
+      })
     },
 
-    getRedeemScript(args: Args): string | undefined {
-      return pubkeyToScriptPubkey({
-        pubkey: fns.getPubkey(args),
-        scriptType
-      }).redeemScript
-    },
-
-    getAddress(args: Args): string {
+    getAddress(args: AddressPath): string {
+      const purposeType = currencyFormatToPurposeType(args.format)
       return scriptPubkeyToAddress({
-        scriptPubkey: fns.getScriptPubKey(args),
+        scriptPubkey: fns.getScriptPubKey(args).scriptPubkey,
         network,
-        addressType,
+        addressType: getAddressTypeFromPurposeType(purposeType),
         coin
       }).address
     },
 
     addressToScriptPubkey(address: string): string {
-      return addressToScriptPubkey({ address, addressType, network, coin })
+      return addressToScriptPubkey({
+        address,
+        addressType: getAddressTypeFromKeys(config),
+        network,
+        coin
+      })
     },
 
-    getPrivateKey(args: Args) {
+    getPrivateKey(args: AddressPath) {
       return xprivToPrivateKey({
-        xpriv,
+        xpriv: xprivKeys[args.format]!,
         network,
-        type,
+        type: currencyFormatToPurposeType(args.format),
         coin,
         bip44ChangeIndex: args.changeIndex,
         bip44AddressIndex: args.addressIndex

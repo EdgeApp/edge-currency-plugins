@@ -11,6 +11,12 @@ export enum NetworkEnum {
 
 export type CurrencyFormat = 'bip32' | 'bip44' | 'bip49' | 'bip84'
 
+export interface AddressPath {
+  format: CurrencyFormat
+  changeIndex: 0 | 1
+  addressIndex: number
+}
+
 export enum EngineCurrencyType {
   UTXO
 }

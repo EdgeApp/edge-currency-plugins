@@ -10,7 +10,6 @@ import {
 import { makeCurrencyTools } from './makeCurrencyTools'
 import { makeUtxoEngine } from '../utxobased/plugin/makeUtxoEngine'
 import { Emitter, EmitterEvent, EngineConfig, EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
-import { fetchOrDeriveXpriv, getXprivKey } from './utils'
 
 export function makeCurrencyPlugin(
   pluginOptions: EdgeCorePluginOptions,
@@ -38,13 +37,6 @@ export function makeCurrencyPlugin(
       })
 
       const network = NetworkEnum.Mainnet
-
-      walletInfo.keys[getXprivKey({ coin: currencyInfo.network })] = await fetchOrDeriveXpriv({
-        keys: walletInfo.keys,
-        walletLocalEncryptedDisklet: engineOptions.walletLocalEncryptedDisklet,
-        coin: currencyInfo.network,
-        network
-      })
 
       const engineConfig: EngineConfig = {
         network,

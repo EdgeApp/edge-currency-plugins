@@ -3,7 +3,7 @@ import { HashBase } from 'baselet/src/HashBase'
 import { CountBase } from 'baselet/src/CountBase'
 import { RangeBase } from 'baselet/src/RangeBase'
 import { ScriptTypeEnum } from '../keymanager/keymanager'
-import { CurrencyFormat } from '../../plugin/types'
+import { AddressPath } from '../../plugin/types'
 
 export type IAddress = Required<IAddressPartial>
 
@@ -13,11 +13,7 @@ export interface IAddressPartial extends IAddressRequired, IAddressOptional {
 export interface IAddressRequired {
   scriptPubKey: string
   networkQueryVal: number
-  path: {
-    format: CurrencyFormat
-    changeIndex: 0 | 1
-    addressIndex: number
-  }
+  path: AddressPath
 }
 
 export interface IAddressOptional {
