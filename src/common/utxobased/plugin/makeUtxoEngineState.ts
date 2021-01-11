@@ -1,23 +1,14 @@
 import * as bs from 'biggystring'
-
-import { Emitter, EmitterEvent, EngineCurrencyInfo, LocalWalletMetadata } from '../../plugin/types'
-import { Processor } from '../db/Processor'
-import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
-import { Account } from '../../Account'
-import { makePathFromString, Path } from '../../Path'
-import { IAddressPartial, IUTXO } from '../db/types'
-import { addressToScriptPubkey, BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
-import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import { EdgeTxidMap } from 'edge-core-js'
 
-interface UtxoEngineStateConfig {
-  currencyInfo: EngineCurrencyInfo
-  processor: Processor
-  metadata: LocalWalletMetadata
-  account: Account
-  emitter: Emitter
-  network: BlockBook
-}
+import { AddressPath, EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
+import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
+import { IAddressPartial, IUTXO } from '../db/types'
+import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
+import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
+import { Processor } from '../db/Processor'
+import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
+import { getCurrencyFormatFromPurposeType, validScriptPubkeyFromAddress, getPurposeTypeFromKeys, getWalletFormat  } from './utils'
 
 interface SyncProgress {
   totalCount: number
@@ -35,14 +26,25 @@ export interface UtxoEngineState {
   markAddressUsed(address: string): Promise<void>
 }
 
+interface UtxoEngineStateConfig extends EngineConfig {
+  walletTools: UTXOPluginWalletTools
+  processor: Processor
+  blockBook: BlockBook
+  metadata: LocalWalletMetadata
+}
+
 export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineState {
   const {
-    currencyInfo,
+    network,
+    info,
+    walletInfo,
+    walletTools,
+    options: {
+      emitter
+    },
     processor,
-    metadata,
-    account,
-    emitter,
-    network
+    blockBook,
+    metadata
   } = config
 
   const addressesToWatch: Set<string> = new Set()
@@ -58,8 +60,16 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       ratio: 0
     }
 
-    const receivePath = account.path.clone().goTo(0, 0)
-    const changePath = account.path.clone().goToChange(1)
+    const receivePath: AddressPath = {
+      format: getWalletFormat(walletInfo),
+      changeIndex: 0,
+      addressIndex: 0
+    }
+    const changePath: AddressPath = {
+      format: getWalletFormat(walletInfo),
+      changeIndex: 1,
+      addressIndex: 0
+    }
 
     const [ receiveAddresses, changeAddresses ] = await Promise.all([
       processor.fetchAddressesByPath(receivePath),
@@ -77,53 +87,57 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     const receiveGapIndexStart = receiveAddresses.length - freshReceiveIndex
     const changeGapIndexStart = changeAddresses.length - freshChangeIndex
-    if (receiveGapIndexStart < currencyInfo.gapLimit) {
-      await processAccountGapFromPath(receivePath.goTo(receiveGapIndexStart))
+    if (receiveGapIndexStart < info.gapLimit) {
+      receivePath.addressIndex = receiveGapIndexStart
+      await processAccountGapFromPath(receivePath)
     }
     // TODO: Process gap limit for change path?
-    if (receiveGapIndexStart < currencyInfo.gapLimit) {
-      await processAccountGapFromPath(changePath.goTo(changeGapIndexStart))
+    if (changeGapIndexStart < info.gapLimit) {
+      changePath.addressIndex = changeGapIndexStart
+      await processAccountGapFromPath(changePath)
     }
   }
 
-  async function processAccountGapFromPath(path: Path): Promise<void> {
-    let gap = path.index
-    while (gap < currencyInfo.gapLimit) {
-      console.log(path.toString(true), gap)
+  async function processAccountGapFromPath(path: AddressPath): Promise<void> {
+    let gap = path.addressIndex
+    while (gap < info.gapLimit) {
+      console.log(path)
       progress.totalCount++
 
-      let address: IAddressPartial = await processor.fetchAddress(path.clone()) ?? {
-        scriptPubKey: account.getScriptPubKey(path),
-        networkQueryVal: 0,
-        path: path.toString(true)
+
+      let address: IAddressPartial = await processor.fetchAddress(path) ?? {
+        path,
+        scriptPubKey: walletTools.getScriptPubKey(path).scriptPubkey,
+        networkQueryVal: 0
       }
       await calculateAddressBalance(address)
-      processor.saveAddress(path.clone(), address, () => {
+      processor.saveAddress(address, () => {
         processAddress(address)
       })
 
       gap = address.used ? 0 : gap + 1
-      path.next()
+      path = {
+        ...path,
+        addressIndex: path.addressIndex + 1
+      }
     }
   }
 
   async function processAddress(address: IAddressPartial, andTransactions = true): Promise<void> {
-    const path = makePathFromString(address.path)
-    addressesToWatch.add(account.getAddress(path))
-    network.watchAddresses(Array.from(addressesToWatch), onNewTransaction)
+    addressesToWatch.add(walletTools.getAddress(address.path))
+    blockBook.watchAddresses(Array.from(addressesToWatch), onNewTransaction)
 
     new Promise(async (resolve) => {
       andTransactions && await processAddressTransactions(address)
       await processAddressUTXOs(address)
-      await afterProcessAddress(address, path)
+      await afterProcessAddress(address)
       resolve()
     })
   }
 
-  async function afterProcessAddress(address: IAddressPartial, path: Path): Promise<void> {
+  async function afterProcessAddress(address: IAddressPartial): Promise<void> {
     if (!address.used) {
-      const path = makePathFromString(address.path)
-      updateFreshIndex(path)
+      updateFreshIndex(address.path)
     }
 
     progress.processedCount++
@@ -132,20 +146,19 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     address.networkQueryVal = metadata.lastSeenBlockHeight + 1
 
-    processor.updateAddress(path, address)
+    processor.updateAddress(address.path, address)
   }
 
-  function updateFreshIndex(path: Path): void {
-    if (path.change === 0 && path.index === freshReceiveIndex) {
+  function updateFreshIndex(path: AddressPath): void {
+    if (path.changeIndex === 0 && path.addressIndex === freshReceiveIndex) {
       freshReceiveIndex++
-    } else if (path.change === 1 && path.index === freshChangeIndex) {
+    } else if (path.changeIndex === 1 && path.addressIndex === freshChangeIndex) {
       freshChangeIndex++
     }
   }
 
   async function calculateAddressBalance(address: IAddressPartial): Promise<void> {
-    const addressStr = account.getAddressFromPathString(address.path)
-    const accountDetails = await network.fetchAddress(addressStr)
+    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path))
     address.used = accountDetails.txs > 0 || accountDetails.unconfirmedTxs > 0
 
     const oldBalance = address.balance ?? '0'
@@ -156,13 +169,12 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     const diff = bs.sub(address.balance, oldBalance)
     if (diff !== '0') {
       metadata.balance = bs.add(metadata.balance, diff)
-      emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, metadata.balance)
+      emitter.emit(EmitterEvent.BALANCE_CHANGED, info.currencyCode, metadata.balance)
     }
   }
 
   async function processAddressTransactions(address: IAddressPartial, page = 1): Promise<void> {
-    const addressStr = account.getAddressFromPathString(address.path)
-    const accountDetails = await network.fetchAddress(addressStr, {
+    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path), {
       details: 'txs',
       from: address.networkQueryVal,
       page
@@ -190,8 +202,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       ...obj,
       [utxo.id]: utxo
     }), {})
-    const addressStr = account.getAddressFromPathString(address.path)
-    const accountUtxos = await network.fetchAddressUtxos(addressStr)
+    const accountUtxos = await blockBook.fetchAddressUtxos(walletTools.getAddress(address.path))
 
     for (const { txid, vout, value, height = 0 } of accountUtxos) {
       const id = `${txid}_${vout}`
@@ -203,11 +214,10 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         continue
       }
 
-      const path = makePathFromString(address.path)
       let scriptType: ScriptTypeEnum
       let script: string
       let redeemScript: string | undefined
-      switch (account.purpose) {
+      switch (getPurposeTypeFromKeys({ keys: walletInfo.keys })) {
         case BIP43PurposeTypeEnum.Legacy:
           script = (await fetchTransaction(txid)).hex
           scriptType = ScriptTypeEnum.p2pkh
@@ -215,7 +225,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         case BIP43PurposeTypeEnum.WrappedSegwit:
           script = address.scriptPubKey
           scriptType = ScriptTypeEnum.p2wpkhp2sh
-          redeemScript = account.getRedeemScript(path)
+          redeemScript = walletTools.getScriptPubKey(address.path).scriptPubkey
           break
         case BIP43PurposeTypeEnum.Segwit:
           script = address.scriptPubKey
@@ -244,7 +254,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   async function fetchTransaction(txid: string): Promise<ProcessorTransaction> {
     let tx = await processor.fetchTransaction(txid)
     if (!tx) {
-      const rawTx = await network.fetchTransaction(txid)
+      const rawTx = await blockBook.fetchTransaction(txid)
       tx = processRawTransaction(rawTx)
     }
     return tx
@@ -260,24 +270,14 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     ourInOuts.push(...tx.ourIns.map((index: string) => tx.inputs[parseInt(index)]))
     ourInOuts.push(...tx.ourOuts.map((index: string) => tx.outputs[parseInt(index)]))
     for (const { scriptPubKey } of ourInOuts) {
-      const pathStr = await processor.fetchAddressPathBySPubKey(
+      const path = await processor.fetchAddressPathBySPubKey(
         scriptPubKey
       )
-      if (pathStr) {
-        const path = makePathFromString(pathStr)
+      if (path) {
         const address = await processor.fetchAddress(path)
         address && await processAddress(address, false)
       }
     }
-  }
-
-  function addressToScriptPubKey(address: string): string {
-    return addressToScriptPubkey({
-      address,
-      addressType: account.path.addressType,
-      network: account.networkType,
-      coin: account.coinName
-    })
   }
 
   function processRawTransaction(rawTx: ITransaction): ProcessorTransaction {
@@ -290,13 +290,20 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       inputs: rawTx.vin.map((input) => ({
         txId: input.txid,
         outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
-        scriptPubKey: addressToScriptPubKey(input.addresses[0]),
+        scriptPubKey: validScriptPubkeyFromAddress({
+          address: input.addresses[0],
+          coin: info.network,
+          network
+        }),
         amount: input.value
       })),
       outputs: rawTx.vout.map((output) => ({
         index: output.n,
-        scriptPubKey:
-          output.hex ?? addressToScriptPubKey(output.addresses[0]),
+        scriptPubKey: output.hex ?? validScriptPubkeyFromAddress({
+          address: output.addresses[0],
+          coin: info.network,
+          network
+        }),
         amount: output.value
       })),
       ourIns: [],
@@ -315,24 +322,19 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     },
 
     getFreshChangeAddress(): string {
-      const path = account.path.clone()
-      path.goTo(freshChangeIndex, 1)
-      return account.getAddress(path)
+      return walletTools.getAddress({
+        changeIndex: 1,
+        addressIndex: freshChangeIndex
+      })
     },
 
     async markAddressUsed(address: string) {
-      const scriptPubKey = addressToScriptPubkey({
-        address,
-        addressType: account.addressType,
-        network: account.networkType,
-        coin: account.coinName
-      })
-      const pathStr = await processor.fetchAddressPathBySPubKey(scriptPubKey)
-      if (!pathStr) {
+      const scriptPubKey = walletTools.addressToScriptPubkey(address)
+      const path = await processor.fetchAddressPathBySPubKey(scriptPubKey)
+      if (!path) {
         throw new Error('Invalid address: not stored in database')
       }
 
-      const path = makePathFromString(pathStr)
       updateFreshIndex(path)
       processor.updateAddress(path, {
         used: true

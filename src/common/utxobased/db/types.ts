@@ -3,14 +3,19 @@ import { HashBase } from 'baselet/src/HashBase'
 import { CountBase } from 'baselet/src/CountBase'
 import { RangeBase } from 'baselet/src/RangeBase'
 import { ScriptTypeEnum } from '../keymanager/keymanager'
+import { AddressPath } from '../../plugin/types'
 
 export type IAddress = Required<IAddressPartial>
-export interface IAddressPartial extends IAddressRequired, IAddressOptional {}
+
+export interface IAddressPartial extends IAddressRequired, IAddressOptional {
+}
+
 export interface IAddressRequired {
   scriptPubKey: string
   networkQueryVal: number
-  path: string
+  path: AddressPath
 }
+
 export interface IAddressOptional {
   lastQuery?: number
   lastTouched?: number
@@ -47,6 +52,7 @@ export interface ITransactionOutput {
   amount: string
   scriptPubKey: string
 }
+
 export interface ITransactionInput extends ITransactionOutput {
   txId: string
   outputIndex: number
@@ -57,4 +63,5 @@ export interface BaseletConfig<T extends BaseType> {
   type: T
   bucketSize: number
 }
+
 export type Baselet = HashBase | CountBase | RangeBase

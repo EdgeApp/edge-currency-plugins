@@ -9,17 +9,17 @@ import {
 
 import { makeCurrencyTools } from './makeCurrencyTools'
 import { makeUtxoEngine } from '../utxobased/plugin/makeUtxoEngine'
-import { EngineCurrencyType, EngineConfig, EngineCurrencyInfo, Emitter, EmitterEvent } from './types'
+import { Emitter, EmitterEvent, EngineConfig, EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
 
 export function makeCurrencyPlugin(
   pluginOptions: EdgeCorePluginOptions,
-  info: EngineCurrencyInfo
+  currencyInfo: EngineCurrencyInfo
 ): EdgeCurrencyPlugin {
   const { io } = pluginOptions
-  const tools = makeCurrencyTools(io, info)
+  const currencyTools = makeCurrencyTools(io, currencyInfo)
 
   return {
-    currencyInfo: info,
+    currencyInfo,
 
     async makeCurrencyEngine(
       walletInfo: EdgeWalletInfo,
@@ -36,10 +36,13 @@ export function makeCurrencyPlugin(
         console.log('progress:', progress)
       })
 
+      const network = NetworkEnum.Mainnet
+
       const engineConfig: EngineConfig = {
+        network,
         walletInfo,
-        info,
-        tools,
+        info: currencyInfo,
+        currencyTools,
         io,
         options: {
           ...pluginOptions,
@@ -49,7 +52,7 @@ export function makeCurrencyPlugin(
       }
 
       let engine: EdgeCurrencyEngine
-      switch (info.currencyType) {
+      switch (currencyInfo.currencyType) {
         case EngineCurrencyType.UTXO:
           engine = await makeUtxoEngine(engineConfig)
           break
@@ -59,7 +62,7 @@ export function makeCurrencyPlugin(
     },
 
     makeCurrencyTools(): Promise<EdgeCurrencyTools> {
-      return Promise.resolve(tools)
+      return Promise.resolve(currencyTools)
     }
   }
 }

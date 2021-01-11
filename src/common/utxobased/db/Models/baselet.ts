@@ -1,9 +1,13 @@
 import { BaseType } from 'baselet'
 import { BaseletConfig, IAddress, IUTXO } from '../types'
 import { ProcessorTransaction } from './ProcessorTransaction'
+import { AddressPath } from '../../../plugin/types'
 
 export const RANGE_ID_KEY = 'idKey'
 export const RANGE_KEY = 'rangeKey'
+
+export const addressPathToPrefix = (path: Omit<AddressPath, 'addressIndex'>) =>
+  `${path.format}_${path.changeIndex}`
 
 export type AddressByPath = IAddress | null
 export const addressByPathConfig: BaseletConfig<BaseType.CountBase> = {
@@ -12,7 +16,7 @@ export const addressByPathConfig: BaseletConfig<BaseType.CountBase> = {
   bucketSize: 50
 }
 
-export type AddressPathByScriptPubKey = string | null
+export type AddressPathByScriptPubKey = AddressPath
 export const addressPathByScriptPubKeyConfig: BaseletConfig<BaseType.HashBase> = {
   dbName: 'addressPathByScriptPubKey',
   type: BaseType.HashBase,
