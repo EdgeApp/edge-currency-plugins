@@ -6,7 +6,10 @@ export const info: EngineCurrencyInfo = {
   coinType: 0,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   network: 'bitcoin',
+  pluginId: 'bitcoin',
+  walletType: 'wallet:bitcoin',
   currencyCode: 'BTC',
+  displayName: 'Bitcoin',
   gapLimit: 25,
   defaultFee: 1000,
   feeUpdateInterval: 60000,
@@ -19,17 +22,12 @@ export const info: EngineCurrencyInfo = {
     standardFeeLowAmount: '173200',
     standardFeeHighAmount: '8670000'
   },
-
-  // Basic currency information:
-  displayName: 'Bitcoin',
-  pluginId: 'bitcoin',
   denominations: [
     { name: 'BTC', multiplier: '100000000', symbol: '₿' },
     { name: 'mBTC', multiplier: '100000', symbol: 'm₿' },
     { name: 'bits', multiplier: '100', symbol: 'ƀ' },
     { name: 'sats', multiplier: '1', symbol: 's' }
   ],
-  walletType: 'wallet:bitcoin',
 
   // Configuration options:
   defaultSettings: {

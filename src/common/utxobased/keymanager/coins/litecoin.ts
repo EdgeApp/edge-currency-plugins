@@ -5,7 +5,7 @@ export class Litecoin implements Coin {
   segwit = true
   coinType = 2
   mainnetConstants = {
-    messagePrefix: '\x19Litecoin Signed Message:\n',
+    messagePrefix: '\x18Litecoin Signed Message:\n',
     wif: 0xb0,
     legacyXPriv: 0x019d9cfe,
     legacyXPub: 0x019da462,
@@ -18,8 +18,13 @@ export class Litecoin implements Coin {
     bech32: 'ltc',
   }
 
+  legacyConstants = {
+    ...this.mainnetConstants,
+    scriptHash: 0x05,
+  }
+
   testnetConstants = {
-    messagePrefix: '\x19Litecoin Signed Message:\n',
+    messagePrefix: '\x18Litecoin Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,
