@@ -3,8 +3,9 @@ import { EdgeEncodeUri, EdgeIo, EdgeParsedUri, EdgeWalletInfo } from 'edge-core-
 import { JsonObject } from 'edge-core-js/lib/types'
 import { EdgeCurrencyTools } from 'edge-core-js/lib/types/types'
 
-import { EngineCurrencyInfo, NetworkEnum } from './types'
-import { deriveXpub, getMnemonicKey, getXpubKey } from './utils'
+import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
+import * as pluginUtils from './utils'
+import * as utxoUtils from '../utxobased/plugin/utils'
 
 /**
  * The core currency plugin.
@@ -14,24 +15,36 @@ import { deriveXpub, getMnemonicKey, getXpubKey } from './utils'
 export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo): EdgeCurrencyTools {
   const fns: EdgeCurrencyTools = {
     async createPrivateKey(walletType: string, opts?: JsonObject): Promise<JsonObject> {
-      const mnemonicKey = getMnemonicKey({ coin: currencyInfo.network })
+      const mnemonicKey = pluginUtils.getMnemonicKey({ coin: currencyInfo.network })
       const mnemonic = bip39.entropyToMnemonic(Buffer.from(io.random(32)))
-      const format = opts?.format ?? currencyInfo.formats?.[0] ?? 'bip44'
-      const coinType = opts?.coinType ?? currencyInfo.coinType ?? 0
-      return {
+      const keys: JsonObject = {
         [mnemonicKey]: mnemonic,
-        format,
-        coinType
+      }
+
+      switch (currencyInfo.currencyType) {
+        case EngineCurrencyType.UTXO:
+          return {
+            ...keys,
+            format: opts?.format ?? currencyInfo.formats?.[0] ?? 'bip44',
+            coinType: opts?.coinType ?? currencyInfo.coinType ?? 0
+          }
       }
     },
 
     async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-      const xpubKey = getXpubKey({ coin: currencyInfo.network })
-      walletInfo.keys[xpubKey] = deriveXpub({
-        keys: walletInfo.keys,
-        coin: currencyInfo.network,
-        network: NetworkEnum.Mainnet
-      })
+      let key = 'publicKey'
+      let publicKey: string
+      switch (currencyInfo.currencyType) {
+        case EngineCurrencyType.UTXO:
+          key = utxoUtils.getXpubKey({ coin: currencyInfo.network })
+          // TODO: which xpub should be saved? the root path (m) or hardened path with the wallet format path (m/{purpose}'/{coinType}'/{account}')?
+          publicKey = utxoUtils.deriveXpubFromKeys({
+            keys: walletInfo.keys,
+            coin: currencyInfo.network,
+            network: NetworkEnum.Mainnet
+          })
+      }
+      walletInfo.keys[key] = publicKey
       return walletInfo.keys
     },
 

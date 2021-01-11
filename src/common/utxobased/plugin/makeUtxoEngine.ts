@@ -21,6 +21,7 @@ import { makeBlockBook } from '../network/BlockBook'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { fetchMetadata, setMetadata } from '../../plugin/utils'
+import { fetchOrDeriveXprivFromKeys, getXprivKey } from './utils'
 
 export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrencyEngine> {
   const {
@@ -29,9 +30,18 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     walletInfo,
     options: {
       walletLocalDisklet,
+      walletLocalEncryptedDisklet,
       emitter
     }
   } = config
+
+  // Merge in the xpriv into the local copy of wallet keys
+  walletInfo.keys[getXprivKey({ coin: info.network })] = await fetchOrDeriveXprivFromKeys({
+    keys: walletInfo.keys,
+    walletLocalEncryptedDisklet,
+    coin: info.network,
+    network
+  })
 
   const walletTools = makeUtxoWalletTools({
     keys: walletInfo.keys,

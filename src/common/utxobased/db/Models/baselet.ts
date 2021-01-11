@@ -1,16 +1,10 @@
 import { BaseType } from 'baselet'
 import { BaseletConfig, IAddress, IUTXO } from '../types'
 import { ProcessorTransaction } from './ProcessorTransaction'
-import { CurrencyFormat } from '../../../plugin/types'
+import { AddressPath } from '../../../plugin/types'
 
 export const RANGE_ID_KEY = 'idKey'
 export const RANGE_KEY = 'rangeKey'
-
-export interface AddressPath {
-  format: CurrencyFormat
-  changeIndex: 0 | 1
-  addressIndex: number
-}
 
 export const addressPathToPrefix = (path: Omit<AddressPath, 'addressIndex'>) =>
   `${path.format}_${path.changeIndex}`
