@@ -4,11 +4,13 @@ import {
   EdgeEncodeUri,
   EdgeIo,
   EdgeMetadata,
+  EdgeMetaToken,
   EdgeParsedUri,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js'
 import * as bn from 'biggystring'
+import * as uri from 'uri-js'
 import urlParse from 'url-parse'
 
 import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
@@ -107,8 +109,42 @@ export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo):
       return parsedUri
     },
 
-    encodeUri(obj: EdgeEncodeUri): Promise<string> {
-      return Promise.resolve('')
+    async encodeUri(obj: EdgeEncodeUri, customTokens?: EdgeMetaToken[]): Promise<string> {
+      const { publicAddress } = obj
+      if (!publicAddress) {
+        throw new Error('InvalidPublicAddressError')
+      }
+
+      // TODO: validate network address
+
+      const query: string[] = []
+
+      if (obj.nativeAmount) {
+        const currencyCode = obj.currencyCode ?? currencyInfo.currencyCode
+        const denomination = currencyInfo.denominations.find(({ name }) => name === currencyCode)
+        if (!denomination) {
+          throw new Error('InvalidDenominationError')
+        }
+
+        const amount = bn.div(obj.nativeAmount, denomination.multiplier, 8)
+        query.push(`amount=${amount}`)
+      }
+
+      if (obj.label) {
+        query.push(`label=${obj.label}`)
+      }
+
+      if (obj.message) {
+        query.push(`message=${obj.message}`)
+      }
+
+      return query.length > 0
+        ? uri.serialize({
+          scheme: currencyInfo.uriPrefix ?? currencyInfo.pluginId,
+          path: publicAddress,
+          query: query.join('&')
+        })
+        : publicAddress
     },
 
     getSplittableTypes(_walletInfo: EdgeWalletInfo): string[] {

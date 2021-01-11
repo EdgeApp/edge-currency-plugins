@@ -34,6 +34,24 @@ describe('currencyPlugins', function() {
           })
         })
       })
+
+      describe('encodeUri', function() {
+        Object.keys(fixture.encodeUri).forEach(test => {
+          // @ts-ignore
+          const [ data, expectedEncodeUri ] = fixture.encodeUri[test] as any
+
+          const promise = tools.encodeUri(data)
+
+          it(test, async function() {
+            if (/invalid/.test(test)) {
+              return promise.should.be.rejected
+            } else {
+              const encodedUri = await promise
+              encodedUri.should.equal(expectedEncodeUri)
+            }
+          })
+        })
+      })
     })
   }
 })

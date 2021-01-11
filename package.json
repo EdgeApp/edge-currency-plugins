@@ -79,6 +79,7 @@
     "disklet": "^0.4.5",
     "edge-core-js": "^0.17.14",
     "lodash": "^4.17.20",
+    "uri-js": "^4.4.0",
     "url-parse": "^1.4.7",
     "wif-smart": "^2.0.0",
     "wifgrs": "^2.0.6",
