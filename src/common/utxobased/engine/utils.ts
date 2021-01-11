@@ -9,6 +9,7 @@ import {
   seedOrMnemonicToXPriv,
   verifyAddress,
   VerifyAddressEnum,
+  wifToPrivateKey,
   xprivToXPub
 } from '../keymanager/keymanager'
 import { CurrencyFormat, NetworkEnum } from '../../plugin/types'
@@ -154,3 +155,37 @@ export const deriveXpub = (args: { keys: any, type: BIP43PurposeTypeEnum, coin: 
     ...args,
     xpriv: deriveXprivFromKeys(args)[getCurrencyFormatFromPurposeType(args.type)]!
   })
+
+interface ParsePathNameResponse {
+  privateKeys?: string[]
+  publicAddress?: string
+}
+
+export const parsePathname = (args: { pathname: string, coin: string, network: NetworkEnum }): ParsePathNameResponse => {
+  const parsedAddress: ParsePathNameResponse = {}
+
+  // Check if the pathname type is a wif
+  try {
+    wifToPrivateKey({
+      wifKey: args.pathname,
+      network: args.network,
+      coin: args.coin
+    })
+    parsedAddress.privateKeys = [ args.pathname ]
+  } catch (e) {
+    // If the pathname is non of the above, then assume it's an address and check for validity
+    const addressFormat = verifyAddress({
+      address: args.pathname,
+      network: args.network,
+      coin: args.coin
+    })
+
+    if (addressFormat === VerifyAddressEnum.bad) {
+      throw new Error('InvalidPublicAddressError')
+    } else {
+      parsedAddress.publicAddress = args.pathname
+    }
+  }
+
+  return parsedAddress
+}
