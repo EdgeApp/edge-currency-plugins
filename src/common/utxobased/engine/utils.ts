@@ -1,4 +1,5 @@
 import { Disklet } from 'disklet'
+import { EdgeParsedUri } from 'edge-core-js'
 
 import {
   addressToScriptPubkey,
@@ -156,13 +157,8 @@ export const deriveXpub = (args: { keys: any, type: BIP43PurposeTypeEnum, coin: 
     xpriv: deriveXprivFromKeys(args)[getCurrencyFormatFromPurposeType(args.type)]!
   })
 
-interface ParsePathNameResponse {
-  privateKeys?: string[]
-  publicAddress?: string
-}
-
-export const parsePathname = (args: { pathname: string, coin: string, network: NetworkEnum }): ParsePathNameResponse => {
-  const parsedAddress: ParsePathNameResponse = {}
+export const parsePathname = (args: { pathname: string, coin: string, network: NetworkEnum }): EdgeParsedUri => {
+  const edgeParsedUri: EdgeParsedUri = {}
 
   // Check if the pathname type is a wif
   try {
@@ -171,7 +167,7 @@ export const parsePathname = (args: { pathname: string, coin: string, network: N
       network: args.network,
       coin: args.coin
     })
-    parsedAddress.privateKeys = [ args.pathname ]
+    edgeParsedUri.privateKeys = [ args.pathname ]
   } catch (e) {
     // If the pathname is non of the above, then assume it's an address and check for validity
     const addressFormat = verifyAddress({
@@ -180,12 +176,17 @@ export const parsePathname = (args: { pathname: string, coin: string, network: N
       coin: args.coin
     })
 
-    if (addressFormat === VerifyAddressEnum.bad) {
-      throw new Error('InvalidPublicAddressError')
-    } else {
-      parsedAddress.publicAddress = args.pathname
+    switch (addressFormat) {
+      case VerifyAddressEnum.good:
+        edgeParsedUri.publicAddress = args.pathname
+        break
+      case VerifyAddressEnum.legacy:
+        edgeParsedUri.legacyAddress = args.pathname
+        break
+      case VerifyAddressEnum.bad:
+        throw new Error('InvalidPublicAddressError')
     }
   }
 
-  return parsedAddress
+  return edgeParsedUri
 }
