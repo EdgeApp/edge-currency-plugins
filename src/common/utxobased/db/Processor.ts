@@ -69,7 +69,7 @@ export interface Processor {
 
   fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<ProcessorTransaction[]>
 
-  saveTransaction(tx: ProcessorTransaction): void
+  saveTransaction(tx: ProcessorTransaction, withQueue?: boolean): Promise<void>
 
   updateTransaction(txId: string, data: Pick<IProcessorTransaction, 'blockHeight'>): void
 
@@ -542,8 +542,11 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       return Promise.all(txPromises)
     },
 
-    saveTransaction(tx: ProcessorTransaction): void {
-      queue.add(() => innerSaveTransaction(tx))
+    async saveTransaction(tx: ProcessorTransaction, withQueue = true): Promise<void> {
+      const saveTx = () => innerSaveTransaction(tx)
+      return withQueue
+        ? queue.add(saveTx)
+        : saveTx()
     },
 
     updateTransaction(
