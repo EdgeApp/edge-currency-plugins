@@ -1,17 +1,17 @@
 import {
   addressToScriptPubkey,
+  AddressTypeEnum,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
-  xprivToPrivateKey, xprivToXPub,
+  xprivToPrivateKey,
+  xprivToXPub,
   xpubToPubkey
 } from '../keymanager/keymanager'
 import {
   currencyFormatToPurposeType,
-  getAddressTypeFromKeys,
   getAddressTypeFromPurposeType,
   getScriptTypeFromPurposeType,
-  getXpriv,
-  getXpub
+  getXpriv
 } from './utils'
 import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 
@@ -26,7 +26,7 @@ export interface UTXOPluginWalletTools {
 
   getScriptPubKey(args: AddressPath): { scriptPubkey: string, redeemScript?: string }
 
-  getAddress(args: AddressPath): string
+  getAddress(args: AddressPath): { address: string, legacyAddress: string }
 
   addressToScriptPubkey(address: string): string
 
@@ -35,8 +35,6 @@ export interface UTXOPluginWalletTools {
 
 export function makeUtxoWalletTools(config: WalletToolsConfig): UTXOPluginWalletTools {
   const { coin, network } = config
-
-  const scriptType = getScriptTypeFromPurposeType(config.keys)
 
   const xprivKeys = getXpriv(config)
   // Convert xprivs to xpubs
@@ -70,23 +68,18 @@ export function makeUtxoWalletTools(config: WalletToolsConfig): UTXOPluginWallet
       })
     },
 
-    getAddress(args: AddressPath): string {
+    getAddress(args: AddressPath): { address: string, legacyAddress: string } {
       const purposeType = currencyFormatToPurposeType(args.format)
       return scriptPubkeyToAddress({
         scriptPubkey: fns.getScriptPubKey(args).scriptPubkey,
         network,
         addressType: getAddressTypeFromPurposeType(purposeType),
         coin
-      }).address
+      })
     },
 
     addressToScriptPubkey(address: string): string {
-      return addressToScriptPubkey({
-        address,
-        addressType: getAddressTypeFromKeys(config),
-        network,
-        coin
-      })
+      return addressToScriptPubkey({ address, network, coin })
     },
 
     getPrivateKey(args: AddressPath) {

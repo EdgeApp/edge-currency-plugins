@@ -1,14 +1,20 @@
 import * as bs from 'biggystring'
-import { EdgeTxidMap } from 'edge-core-js'
+import { EdgeFreshAddress, EdgeTxidMap } from 'edge-core-js'
 
-import { AddressPath, EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
+import { AddressPath, CurrencyFormat, EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
 import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
 import { IAddressPartial, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import { Processor } from '../db/Processor'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
-import { getCurrencyFormatFromPurposeType, validScriptPubkeyFromAddress, getPurposeTypeFromKeys, getWalletFormat  } from './utils'
+import {
+  currencyFormatToPurposeType,
+  getCurrencyFormatFromPurposeType,
+  getPurposeTypeFromKeys,
+  getWalletFormat,
+  validScriptPubkeyFromAddress
+} from './utils'
 
 interface SyncProgress {
   totalCount: number
@@ -21,7 +27,7 @@ export interface UtxoEngineState {
 
   stop(): Promise<void>
 
-  getFreshChangeAddress(): string
+  getFreshAddress(change?: boolean): EdgeFreshAddress
 
   markAddressUsed(address: string): Promise<void>
 }
@@ -49,26 +55,28 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
   const addressesToWatch: Set<string> = new Set()
   let progress: SyncProgress
-  let freshReceiveIndex: number = 0
-  let freshChangeIndex: number = 0
-
-  async function processAccount(): Promise<void> {
-    // Reset the progress count
-    progress = {
-      totalCount: 0,
-      processedCount: 0,
-      ratio: 0
+  type FreshIndices = {
+    [format in CurrencyFormat]?: {
+      receive: number
+      change: number
     }
+  }
+  const freshIndices: FreshIndices = {}
 
+  async function processAccount(format: CurrencyFormat): Promise<void> {
     const receivePath: AddressPath = {
-      format: getWalletFormat(walletInfo),
+      format,
       changeIndex: 0,
       addressIndex: 0
     }
     const changePath: AddressPath = {
-      format: getWalletFormat(walletInfo),
+      format,
       changeIndex: 1,
       addressIndex: 0
+    }
+
+    if (!freshIndices[format]) {
+      await updateFreshIndex(receivePath)
     }
 
     const [ receiveAddresses, changeAddresses ] = await Promise.all([
@@ -85,8 +93,8 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       await processAddress(address)
     }
 
-    const receiveGapIndexStart = receiveAddresses.length - freshReceiveIndex
-    const changeGapIndexStart = changeAddresses.length - freshChangeIndex
+    const receiveGapIndexStart = receiveAddresses.length - freshIndices[format]!.receive
+    const changeGapIndexStart = changeAddresses.length - freshIndices[format]!.change
     if (receiveGapIndexStart < info.gapLimit) {
       receivePath.addressIndex = receiveGapIndexStart
       await processAccountGapFromPath(receivePath)
@@ -124,7 +132,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function processAddress(address: IAddressPartial, andTransactions = true): Promise<void> {
-    addressesToWatch.add(walletTools.getAddress(address.path))
+    addressesToWatch.add(walletTools.getAddress(address.path).address)
     blockBook.watchAddresses(Array.from(addressesToWatch), onNewTransaction)
 
     new Promise(async (resolve) => {
@@ -136,9 +144,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function afterProcessAddress(address: IAddressPartial): Promise<void> {
-    if (!address.used) {
-      updateFreshIndex(address.path)
-    }
+    await updateFreshIndex(address.path)
 
     progress.processedCount++
     progress.ratio = progress.processedCount / progress.totalCount
@@ -149,16 +155,38 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     processor.updateAddress(address.path, address)
   }
 
-  function updateFreshIndex(path: AddressPath): void {
-    if (path.changeIndex === 0 && path.addressIndex === freshReceiveIndex) {
-      freshReceiveIndex++
-    } else if (path.changeIndex === 1 && path.addressIndex === freshChangeIndex) {
-      freshChangeIndex++
+  async function updateFreshIndex(path: AddressPath): Promise<void> {
+    if (!freshIndices[path.format]) {
+      freshIndices[path.format] = {
+        receive: 0,
+        change: 0
+      }
+    } else {
+      const address = await processor.fetchAddress(path)
+      if (address && !address.used) {
+        if (address.path.addressIndex > 0) {
+          const prevPath = {
+            ...path,
+            addressIndex: path.addressIndex - 1
+          }
+          const prevAddress = await processor.fetchAddress(prevPath)
+          if (prevAddress?.used) {
+            const fresh = freshIndices[path.format]!
+            if (path.changeIndex === 0) {
+              fresh.receive = path.addressIndex
+            } else {
+              fresh.change = path.addressIndex
+            }
+          } else {
+            await updateFreshIndex(prevPath)
+          }
+        }
+      }
     }
   }
 
   async function calculateAddressBalance(address: IAddressPartial): Promise<void> {
-    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path))
+    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path).address)
     address.used = accountDetails.txs > 0 || accountDetails.unconfirmedTxs > 0
 
     const oldBalance = address.balance ?? '0'
@@ -174,7 +202,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function processAddressTransactions(address: IAddressPartial, page = 1): Promise<void> {
-    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path), {
+    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path).address, {
       details: 'txs',
       from: address.networkQueryVal,
       page
@@ -202,7 +230,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       ...obj,
       [utxo.id]: utxo
     }), {})
-    const accountUtxos = await blockBook.fetchAddressUtxos(walletTools.getAddress(address.path))
+    const accountUtxos = await blockBook.fetchAddressUtxos(walletTools.getAddress(address.path).address)
 
     for (const { txid, vout, value, height = 0 } of accountUtxos) {
       const id = `${txid}_${vout}`
@@ -217,7 +245,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       let scriptType: ScriptTypeEnum
       let script: string
       let redeemScript: string | undefined
-      switch (getPurposeTypeFromKeys({ keys: walletInfo.keys })) {
+      switch (currencyFormatToPurposeType(address.path.format)) {
         case BIP43PurposeTypeEnum.Legacy:
           script = (await fetchTransaction(txid)).hex
           scriptType = ScriptTypeEnum.p2pkh
@@ -225,7 +253,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         case BIP43PurposeTypeEnum.WrappedSegwit:
           script = address.scriptPubKey
           scriptType = ScriptTypeEnum.p2wpkhp2sh
-          redeemScript = walletTools.getScriptPubKey(address.path).scriptPubkey
+          redeemScript = walletTools.getScriptPubKey(address.path).redeemScript
           break
         case BIP43PurposeTypeEnum.Segwit:
           script = address.scriptPubKey
@@ -314,18 +342,63 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
   return {
     async start(): Promise<void> {
-      await processAccount()
-        .catch(console.error)
+      // Reset the progress count
+      progress = {
+        totalCount: 0,
+        processedCount: 0,
+        ratio: 0
+      }
+
+      const walletFormat = getWalletFormat(walletInfo)
+      const formatsToProcess: CurrencyFormat[] = [ walletFormat ]
+      if (walletFormat === getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit)) {
+        formatsToProcess.push(getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit))
+      }
+      formatsToProcess.forEach(processAccount)
     },
 
     async stop(): Promise<void> {
     },
 
-    getFreshChangeAddress(): string {
-      return walletTools.getAddress({
-        changeIndex: 1,
-        addressIndex: freshChangeIndex
-      })
+    getFreshAddress(change = false): EdgeFreshAddress {
+      const walletPurpose = getPurposeTypeFromKeys(walletInfo)
+      const changeIndex = change ? 1 : 0
+
+      if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
+        const wrappedSegwitFormat = getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)
+        const freshWrappedSegwit = freshIndices[wrappedSegwitFormat]!
+        const { address: publicAddress } = walletTools.getAddress({
+          format: wrappedSegwitFormat,
+          changeIndex,
+          addressIndex: change ? freshWrappedSegwit.change : freshWrappedSegwit.receive
+        })
+
+        const segwitFormat = getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit)
+        const freshSegwit = freshIndices[segwitFormat]!
+        const segwitAddress = walletTools.getAddress({
+          format: segwitFormat,
+          changeIndex,
+          addressIndex: change ? freshSegwit.change : freshSegwit.receive
+        }).address
+
+        return {
+          publicAddress,
+          segwitAddress
+        }
+      } else {
+        const walletFormat = getWalletFormat(walletInfo)
+        const fresh = freshIndices[walletFormat]!
+        const { address: publicAddress, legacyAddress } = walletTools.getAddress({
+          format: walletFormat,
+          changeIndex,
+          addressIndex: change ? fresh.change : fresh.receive
+        })
+
+        return {
+          publicAddress,
+          legacyAddress: legacyAddress !== publicAddress ? legacyAddress : undefined
+        }
+      }
     },
 
     async markAddressUsed(address: string) {
@@ -335,9 +408,12 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         throw new Error('Invalid address: not stored in database')
       }
 
-      updateFreshIndex(path)
       processor.updateAddress(path, {
         used: true
+      })
+      await updateFreshIndex({
+        ...path,
+        addressIndex: path.addressIndex + 1
       })
     }
   }

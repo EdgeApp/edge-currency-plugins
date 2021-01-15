@@ -17,11 +17,10 @@ import {
 } from './types'
 import { ProcessorTransaction } from './Models/ProcessorTransaction'
 import { makeQueue } from './makeQueue'
-import { EmitterEvent } from '../../plugin/types'
+import { AddressPath, EmitterEvent } from '../../plugin/types'
 import {
   AddressByPath,
   addressByPathConfig,
-  AddressPath,
   addressPathByMRUConfig,
   AddressPathByScriptPubKey,
   addressPathByScriptPubKeyConfig,

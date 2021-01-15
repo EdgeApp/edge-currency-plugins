@@ -146,10 +146,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     getFreshAddress(_opts: EdgeCurrencyCodeOptions): EdgeFreshAddress {
-      const freshAddress = state.getFreshChangeAddress()
-      return {
-        publicAddress: freshAddress
-      }
+      return state.getFreshAddress()
     },
 
     getNumTransactions(_opts: EdgeCurrencyCodeOptions): number {
@@ -190,13 +187,19 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
           throw new Error('Invalid spend target')
         }
 
+        const scriptPubkey = walletTools.addressToScriptPubkey(target.publicAddress)
+        if (await processor.hasSPubKey(scriptPubkey)) {
+          ourReceiveAddresses.push(target.publicAddress)
+        }
+
         targets.push({
           address: target.publicAddress,
           value: parseInt(target.nativeAmount)
         })
       }
 
-      const freshChangeAddress = await state.getFreshChangeAddress()
+      const freshAddress = state.getFreshAddress(true)
+      const freshChangeAddress = freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = await processor.fetchAllUtxos()
       const feeRate = parseInt(calculateFeeRate(info, edgeSpendInfo))
       const tx = await makeTx({
