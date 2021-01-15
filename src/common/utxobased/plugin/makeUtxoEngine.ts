@@ -273,8 +273,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return Promise.resolve(undefined)
     },
 
-    saveTx(_transaction: EdgeTransaction): Promise<unknown> {
-      return Promise.resolve(undefined)
+    saveTx(tx: EdgeTransaction): Promise<void> {
+      return processor.saveTransaction(ProcessorTransaction.fromEdgeTransaction(tx), false)
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
