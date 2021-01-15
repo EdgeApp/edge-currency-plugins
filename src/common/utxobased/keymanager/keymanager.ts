@@ -434,16 +434,10 @@ function guessAddressTypeFromAddress(
 
 export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
   // match hexadecimal number from beginning to end of string
-  const regexpHex = /^[0-9a-fA-F]+$/
-  let seed = Buffer.from(args.seed, 'base64')
-  const isSeed = !!(
-    args.seed.length <= 128 &&
-    args.seed.length >= 32 &&
-    regexpHex.test(args.seed)
-  )
-  if (!isSeed) {
-    seed = bip39.mnemonicToSeedSync(args.seed)
-  }
+  const isMnemonic = args.seed.includes(' ')
+  const seed = isMnemonic
+    ? bip39.mnemonicToSeedSync(args.seed)
+    : Buffer.from(args.seed, 'base64')
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
     networkType: args.network,
     coinString: args.coin,
@@ -458,14 +452,13 @@ export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
   const root: bip32.BIP32Interface = bip32FromSeedFunc(seed)
   root.network = network
   // treat a detected seed as an airbitz seed
-  if (isSeed) {
-    return root.derive(0).toBase58()
-  }
-  return root
-    .deriveHardened(purpose)
-    .deriveHardened(coinType)
-    .deriveHardened(account)
-    .toBase58()
+  return isMnemonic
+    ? root
+      .deriveHardened(purpose)
+      .deriveHardened(coinType)
+      .deriveHardened(account)
+      .toBase58()
+    : root.derive(0).toBase58()
 }
 
 export function xprivToXPub(args: XPrivToXPubArgs): string {

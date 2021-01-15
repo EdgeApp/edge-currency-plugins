@@ -285,7 +285,7 @@ describe('bitcoin bip32 seed, aka airbitz seed, to xpriv. Taken from official bi
   it('seed to xpriv', () => {
     const result = seedOrMnemonicToXPriv({
       seed:
-        'fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542',
+        '//z59vPw7ern5OHe29jV0s/MycbDwL26t7SxrquopaKfnJmWk5CNioeEgX57eHVyb2xpZmNgXVpXVFFOS0hFQg==',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin',
@@ -299,7 +299,7 @@ describe('bitcoin bip32 seed, aka airbitz seed, to xpriv. Taken from official bi
 describe('bitcoin from bip32 seed to private key', () => {
   it('generate a wif key from a bip32 seed', () => {
     const xpriv = seedOrMnemonicToXPriv({
-      seed: '1dafe5a826590b3f9558dd9e1ab1d8b86fda83a4bcc3aeeb95d81f0ab95c3d62',
+      seed: 'Ha/lqCZZCz+VWN2eGrHYuG/ag6S8w67rldgfCrlcPWI=',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin',
