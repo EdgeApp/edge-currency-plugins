@@ -117,7 +117,6 @@ export const deriveXprivFromKeys = (args: { keys: any, coin: string, network: Ne
   }
   switch (getPurposeTypeFromKeys(args)) {
     case BIP43PurposeTypeEnum.Segwit:
-    case BIP43PurposeTypeEnum.WrappedSegwit:
       keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit)] = seedOrMnemonicToXPriv({
         ...xprivArgs,
         type: BIP43PurposeTypeEnum.Segwit
@@ -127,7 +126,14 @@ export const deriveXprivFromKeys = (args: { keys: any, coin: string, network: Ne
         type: BIP43PurposeTypeEnum.WrappedSegwit
       })
       break
+    case BIP43PurposeTypeEnum.WrappedSegwit:
+      keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)] = seedOrMnemonicToXPriv({
+        ...xprivArgs,
+        type: BIP43PurposeTypeEnum.WrappedSegwit
+      })
+      break
     case BIP43PurposeTypeEnum.Legacy:
+    default:
       keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Legacy)] = seedOrMnemonicToXPriv({
         ...xprivArgs,
         type: BIP43PurposeTypeEnum.Legacy
