@@ -36,7 +36,7 @@ interface UtxoEngineStateConfig extends EngineConfig {
 export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineState {
   const {
     network,
-    info,
+    currencyInfo,
     walletInfo,
     walletTools,
     options: {
@@ -87,12 +87,12 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     const receiveGapIndexStart = receiveAddresses.length - freshReceiveIndex
     const changeGapIndexStart = changeAddresses.length - freshChangeIndex
-    if (receiveGapIndexStart < info.gapLimit) {
+    if (receiveGapIndexStart < currencyInfo.gapLimit) {
       receivePath.addressIndex = receiveGapIndexStart
       await processAccountGapFromPath(receivePath)
     }
     // TODO: Process gap limit for change path?
-    if (changeGapIndexStart < info.gapLimit) {
+    if (changeGapIndexStart < currencyInfo.gapLimit) {
       changePath.addressIndex = changeGapIndexStart
       await processAccountGapFromPath(changePath)
     }
@@ -100,7 +100,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
   async function processAccountGapFromPath(path: AddressPath): Promise<void> {
     let gap = path.addressIndex
-    while (gap < info.gapLimit) {
+    while (gap < currencyInfo.gapLimit) {
       console.log(path)
       progress.totalCount++
 
@@ -169,7 +169,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     const diff = bs.sub(address.balance, oldBalance)
     if (diff !== '0') {
       metadata.balance = bs.add(metadata.balance, diff)
-      emitter.emit(EmitterEvent.BALANCE_CHANGED, info.currencyCode, metadata.balance)
+      emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, metadata.balance)
     }
   }
 
@@ -292,7 +292,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
         scriptPubKey: validScriptPubkeyFromAddress({
           address: input.addresses[0],
-          coin: info.network,
+          coin: currencyInfo.network,
           network
         }),
         amount: input.value
@@ -301,7 +301,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         index: output.n,
         scriptPubKey: output.hex ?? validScriptPubkeyFromAddress({
           address: output.addresses[0],
-          coin: info.network,
+          coin: currencyInfo.network,
           network
         }),
         amount: output.value
@@ -323,6 +323,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     getFreshChangeAddress(): string {
       return walletTools.getAddress({
+        format: getWalletFormat(walletInfo),
         changeIndex: 1,
         addressIndex: freshChangeIndex
       })

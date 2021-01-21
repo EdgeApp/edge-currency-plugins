@@ -76,10 +76,10 @@ export const getXpub = (args: { keys: any, coin: string }): string =>
   args.keys[getXpubKey(args)]
 
 export const getWalletCoinType = (args: { keys: any }): number =>
-  args.keys.coinType
+  args.keys.coinType ?? 0
 
 export const getWalletFormat = (args: { keys: any }): CurrencyFormat =>
-  args.keys.format
+  args.keys.format ?? 'bip32'
 
 export const getPurposeTypeFromKeys = (args: { keys: any }): BIP43PurposeTypeEnum => {
   return currencyFormatToPurposeType(getWalletFormat(args))

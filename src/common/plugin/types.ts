@@ -45,7 +45,7 @@ export interface SimpleFeeSettings {
 export interface EngineConfig {
   network: NetworkEnum
   walletInfo: EdgeWalletInfo
-  info: EngineCurrencyInfo
+  currencyInfo: EngineCurrencyInfo
   currencyTools: EdgeCurrencyTools
   options: EngineOptions
   io: EdgeIo

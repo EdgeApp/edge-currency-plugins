@@ -5,7 +5,7 @@ import { EdgeCurrencyTools } from 'edge-core-js/lib/types/types'
 
 import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
 import * as pluginUtils from './utils'
-import * as utxoUtils from '../utxobased/plugin/utils'
+import * as utxoUtils from '../utxobased/engine/utils'
 
 /**
  * The core currency plugin.

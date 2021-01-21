@@ -26,7 +26,7 @@ import { fetchOrDeriveXprivFromKeys, getXprivKey } from './utils'
 export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrencyEngine> {
   const {
     network,
-    info,
+    currencyInfo,
     walletInfo,
     options: {
       walletLocalDisklet,
@@ -36,16 +36,16 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
   } = config
 
   // Merge in the xpriv into the local copy of wallet keys
-  walletInfo.keys[getXprivKey({ coin: info.network })] = await fetchOrDeriveXprivFromKeys({
+  walletInfo.keys[getXprivKey({ coin: currencyInfo.network })] = await fetchOrDeriveXprivFromKeys({
     keys: walletInfo.keys,
     walletLocalEncryptedDisklet,
-    coin: info.network,
+    coin: currencyInfo.network,
     network
   })
 
   const walletTools = makeUtxoWalletTools({
     keys: walletInfo.keys,
-    coin: info.network,
+    coin: currencyInfo.network,
     network
   })
 
@@ -62,7 +62,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
   emitter.on(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, (tx: ProcessorTransaction) => {
     emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, ([
-      tx.toEdgeTransaction(info.currencyCode)
+      tx.toEdgeTransaction(currencyInfo.currencyCode)
     ]))
   })
 
@@ -167,7 +167,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
     async getTransactions(opts: EdgeGetTransactionsOptions): Promise<EdgeTransaction[]> {
       const txs = await processor.fetchTransactions(opts)
-      return txs.map((tx) => tx.toEdgeTransaction(info.currencyCode))
+      return txs.map((tx) => tx.toEdgeTransaction(currencyInfo.currencyCode))
     },
 
     // @ts-ignore
@@ -198,12 +198,12 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
       const freshChangeAddress = await state.getFreshChangeAddress()
       const utxos = await processor.fetchAllUtxos()
-      const feeRate = parseInt(calculateFeeRate(info, edgeSpendInfo))
+      const feeRate = parseInt(calculateFeeRate(currencyInfo, edgeSpendInfo))
       const tx = await makeTx({
         utxos,
         targets,
         feeRate,
-        coin: info.network,
+        coin: currencyInfo.network,
         network,
         rbf: false,
         freshChangeAddress
@@ -230,7 +230,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
           psbt: tx.psbt.toBase64(),
           edgeSpendInfo
         },
-        currencyCode: info.currencyCode,
+        currencyCode: currencyInfo.currencyCode,
         txid: '',
         date: 0,
         blockHeight: 0,
@@ -267,7 +267,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       }))
       transaction.signedTx = await signTx({
         psbt,
-        coin: info.network,
+        coin: currencyInfo.network,
         privateKeys
       })
 

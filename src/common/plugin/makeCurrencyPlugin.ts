@@ -8,7 +8,7 @@ import {
 } from 'edge-core-js/lib/types/types'
 
 import { makeCurrencyTools } from './makeCurrencyTools'
-import { makeUtxoEngine } from '../utxobased/plugin/makeUtxoEngine'
+import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
 import { Emitter, EmitterEvent, EngineConfig, EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
 
 export function makeCurrencyPlugin(
@@ -41,7 +41,7 @@ export function makeCurrencyPlugin(
       const engineConfig: EngineConfig = {
         network,
         walletInfo,
-        info: currencyInfo,
+        currencyInfo,
         currencyTools,
         io,
         options: {
