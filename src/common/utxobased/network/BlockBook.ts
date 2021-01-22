@@ -165,7 +165,7 @@ export interface BlockBook {
   broadcastTx(transaction: EdgeTransaction): Promise<void>
 }
 
-interface BlockHeightEmitter {
+export interface BlockHeightEmitter {
   emit(event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number): this
 }
 

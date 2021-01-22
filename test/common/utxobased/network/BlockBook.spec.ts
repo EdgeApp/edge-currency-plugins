@@ -1,8 +1,7 @@
 import * as chai from 'chai'
 import { EventEmitter } from 'events'
 
-import { BlockBook, makeBlockBook } from '../../../../src/common/utxobased/network/BlockBook'
-import { BlockHeightEmitter } from '../../../../src/common/plugin/types'
+import { BlockBook, BlockHeightEmitter, makeBlockBook } from '../../../../src/common/utxobased/network/BlockBook'
 
 chai.should()
 
@@ -36,15 +35,19 @@ describe('BlockBook', function() {
     })
   })
 
-  describe('fetchBlock', function() {
-    it('should fetch the most recent block without a specified height', async function() {
-      const block = await blockBook.fetchBlock()
-      chai.expect(block).to.exist
-    })
-    it('should fetch a block for a specified height', async function() {
-      const height = 12345
-      const block = await blockBook.fetchBlock(height)
-      block.height.should.equal(height)
+  describe('fetchInfo', function() {
+    it('should fetch the BlockBook server info', async function() {
+      const info = await blockBook.fetchInfo()
+      info.should.have.keys(
+        'name',
+        'shortcut',
+        'decimals',
+        'version',
+        'bestHeight',
+        'bestHash',
+        'block0Hash',
+        'testnet'
+      )
     })
   })
 

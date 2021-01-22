@@ -13,12 +13,7 @@ import { cdsScriptTemplates } from './bitcoincashUtils/checkdatasig'
 import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
 import * as utxopicker from './utxopicker'
-
-// this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
-export enum NetworkEnum {
-  Mainnet = 'mainnet',
-  Testnet = 'testnet',
-}
+import { NetworkEnum } from '../../plugin/types'
 
 // in bitcoin these are bip44, bip49, bip84 xpub prefixes
 // other coins contain different formats which still need to be gathered.

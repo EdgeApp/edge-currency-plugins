@@ -1,41 +1,11 @@
 import * as bip39 from 'bip39'
-import { EdgeCurrencyTools, EdgeEncodeUri, EdgeIo, EdgeParsedUri, EdgeWalletInfo } from 'edge-core-js'
+import { EdgeEncodeUri, EdgeIo, EdgeParsedUri, EdgeWalletInfo } from 'edge-core-js'
 import { JsonObject } from 'edge-core-js/lib/types'
+import { EdgeCurrencyTools } from 'edge-core-js/lib/types/types'
 
-import {
-  bip43PurposeNumberToTypeEnum,
-  NetworkEnum,
-  seedOrMnemonicToXPriv,
-  xprivToXPub
-} from '../utxobased/keymanager/keymanager'
-import {
-  Account,
-  IAccountConfig,
-  makeAccount,
-  makePrivateAccount,
-  makePrivateAccountFromMnemonic,
-  PrivateAccount
-} from '../Account'
-import { EngineCurrencyInfo } from './types'
-import { BIP43NameToPurposeType } from '../Path'
-
-export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: EdgeWalletInfo): Account | PrivateAccount {
-  const config: IAccountConfig = {
-    purpose: BIP43NameToPurposeType[walletInfo.keys.format],
-    coinName: currencyInfo.network,
-    networkType: NetworkEnum.Mainnet
-  }
-
-  const key = walletInfo.keys[`${currencyInfo.network}Key`]
-  const keyPrefix = key.substr(1)
-  if (keyPrefix.startsWith('pub')) {
-    return makeAccount(key, config)
-  } else if (keyPrefix.startsWith('prv')) {
-    return makePrivateAccount(key, config)
-  } else {
-    return makePrivateAccountFromMnemonic(key, config)
-  }
-}
+import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
+import * as pluginUtils from './utils'
+import * as utxoUtils from '../utxobased/engine/utils'
 
 /**
  * The core currency plugin.
@@ -43,40 +13,39 @@ export function deriveAccount(currencyInfo: EngineCurrencyInfo, walletInfo: Edge
  * as well as generic (non-wallet) functionality.
  */
 export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo): EdgeCurrencyTools {
-  const mnemonicKey = `${currencyInfo.network}Key`
-  const xpubKey = `${currencyInfo.network}Xpub`
-
   const fns: EdgeCurrencyTools = {
     async createPrivateKey(walletType: string, opts?: JsonObject): Promise<JsonObject> {
+      const mnemonicKey = pluginUtils.getMnemonicKey({ coin: currencyInfo.network })
       const mnemonic = bip39.entropyToMnemonic(Buffer.from(io.random(32)))
-      const format = opts?.format ?? currencyInfo.formats?.[0] ?? 'bip44'
-      const coinType = opts?.coinType ?? currencyInfo.coinType ?? 0
-      return {
+      const keys: JsonObject = {
         [mnemonicKey]: mnemonic,
-        format,
-        coinType
+      }
+
+      switch (currencyInfo.currencyType) {
+        case EngineCurrencyType.UTXO:
+          return {
+            ...keys,
+            format: opts?.format ?? currencyInfo.formats?.[0] ?? 'bip44',
+            coinType: opts?.coinType ?? currencyInfo.coinType ?? 0
+          }
       }
     },
 
     async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-      const formatNum = (walletInfo.keys.format as string).replace('bip', '')
-      const args = {
-        network: NetworkEnum.Mainnet,
-        type: bip43PurposeNumberToTypeEnum(Number(formatNum)),
-        coin: currencyInfo.network
+      let key = 'publicKey'
+      let publicKey: string
+      switch (currencyInfo.currencyType) {
+        case EngineCurrencyType.UTXO:
+          key = utxoUtils.getXpubKey({ coin: currencyInfo.network })
+          // TODO: which xpub should be saved? the root path (m) or hardened path with the wallet format path (m/{purpose}'/{coinType}'/{account}')?
+          publicKey = utxoUtils.deriveXpubFromKeys({
+            keys: walletInfo.keys,
+            coin: currencyInfo.network,
+            network: NetworkEnum.Mainnet
+          })
       }
-      const xpriv = seedOrMnemonicToXPriv({
-        ...args,
-        seed: walletInfo.keys[mnemonicKey],
-        coinType: walletInfo.keys.coinType
-      })
-      const xpub = xprivToXPub({
-        ...args,
-        xpriv
-      })
-      return {
-        [xpubKey]: xpub
-      }
+      walletInfo.keys[key] = publicKey
+      return walletInfo.keys
     },
 
     parseUri(uri: string): Promise<EdgeParsedUri> {
