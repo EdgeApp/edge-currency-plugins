@@ -23,9 +23,11 @@ export enum EngineCurrencyType {
 
 export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
   formats?: CurrencyFormat[]
+  forks?: string[]
   coinType: number
   currencyType: EngineCurrencyType
   network: string // The offical network in lower case - Needs to match the Bitcoin Lib Network Type
+  uriPrefix?: string
   gapLimit: number
   defaultFee: number
   feeUpdateInterval: number

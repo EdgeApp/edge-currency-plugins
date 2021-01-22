@@ -1,6 +1,6 @@
-import { EdgeCurrencyInfo } from 'edge-core-js'
-
-import { info as bitcoin } from './bitcoin'
-import { EngineCurrencyInfo } from '../../plugin/types'
-
-export const allInfo: Array<EngineCurrencyInfo & EdgeCurrencyInfo> = [bitcoin]
+export { info as bitcoin } from './bitcoin'
+export { info as bitcoincash } from './bitcoincash'
+export { info as bitcoinsv } from './bitcoinsv'
+export { info as feathercoin } from './feathercoin'
+export { info as litecoin } from './litecoin'
+export { info as zcoin } from './zcoin'

@@ -1,7 +1,17 @@
 import * as bip39 from 'bip39'
-import { EdgeEncodeUri, EdgeIo, EdgeParsedUri, EdgeWalletInfo } from 'edge-core-js'
-import { JsonObject } from 'edge-core-js/lib/types'
-import { EdgeCurrencyTools } from 'edge-core-js/lib/types/types'
+import {
+  EdgeCurrencyTools,
+  EdgeEncodeUri,
+  EdgeIo,
+  EdgeMetadata,
+  EdgeMetaToken,
+  EdgeParsedUri,
+  EdgeWalletInfo,
+  JsonObject
+} from 'edge-core-js'
+import * as bn from 'biggystring'
+import * as uri from 'uri-js'
+import urlParse from 'url-parse'
 
 import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
 import * as pluginUtils from './utils'
@@ -18,7 +28,7 @@ export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo):
       const mnemonicKey = pluginUtils.getMnemonicKey({ coin: currencyInfo.network })
       const mnemonic = bip39.entropyToMnemonic(Buffer.from(io.random(32)))
       const keys: JsonObject = {
-        [mnemonicKey]: mnemonic,
+        [mnemonicKey]: mnemonic
       }
 
       switch (currencyInfo.currencyType) {
@@ -48,12 +58,93 @@ export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo):
       return walletInfo.keys
     },
 
-    parseUri(uri: string): Promise<EdgeParsedUri> {
-      return Promise.resolve({})
+    async parseUri(uri: string): Promise<EdgeParsedUri> {
+      const uriObj = urlParse(uri, {}, true)
+      const protocol = uriObj.protocol.replace(':', '').toLowerCase()
+
+      // If the currency URI belongs to the wrong network then error
+      if (protocol && (protocol !== currencyInfo.pluginId && protocol !== currencyInfo.uriPrefix && protocol !== 'pay')) {
+        throw new Error('InvalidUriError')
+      }
+
+      // Get all possible query params
+      const { pathname, query } = uriObj
+      // If we don't have a pathname or a paymentProtocolURL uri then we bail
+      if (!pathname && !query.r) throw new Error('InvalidUriError')
+
+      // Create the returned object
+      const parsedUri: EdgeParsedUri = {}
+      // Parse the pathname and add it to the result object
+      if (pathname) {
+        if (currencyInfo.currencyType === EngineCurrencyType.UTXO) {
+          const parsedPath = utxoUtils.parsePathname({
+            pathname: uriObj.pathname,
+            coin: currencyInfo.network,
+            network: NetworkEnum.Mainnet
+          })
+          if (!parsedPath) throw new Error('InvalidUriError')
+
+          Object.assign(parsedUri, parsedPath)
+        }
+      }
+
+      // Assign the query params to the parsedUri object
+      const metadata: EdgeMetadata = {}
+      if (query.label) metadata.name = query.label
+      if (query.message) metadata.notes = query.message
+      if (query.category) metadata.category = query.category
+      if (query.r) parsedUri.paymentProtocolUrl = query.r
+      Object.assign(parsedUri, { metadata })
+
+      // Get amount in native denomination if exists
+      const denomination = currencyInfo.denominations.find(({ name }) =>
+        name === currencyInfo.currencyCode
+      )
+      if (denomination && query.amount) {
+        const { multiplier = '1' } = denomination
+        const t = bn.mul(query.amount, multiplier.toString())
+        parsedUri.currencyCode = currencyInfo.currencyCode
+        parsedUri.nativeAmount = bn.toFixed(t, 0, 0)
+      }
+      return parsedUri
     },
 
-    encodeUri(obj: EdgeEncodeUri): Promise<string> {
-      return Promise.resolve('')
+    async encodeUri(obj: EdgeEncodeUri, customTokens?: EdgeMetaToken[]): Promise<string> {
+      const { publicAddress } = obj
+      if (!publicAddress) {
+        throw new Error('InvalidPublicAddressError')
+      }
+
+      // TODO: validate network address
+
+      const query: string[] = []
+
+      if (obj.nativeAmount) {
+        const currencyCode = obj.currencyCode ?? currencyInfo.currencyCode
+        const denomination = currencyInfo.denominations.find(({ name }) => name === currencyCode)
+        if (!denomination) {
+          throw new Error('InvalidDenominationError')
+        }
+
+        const amount = bn.div(obj.nativeAmount, denomination.multiplier, 8)
+        query.push(`amount=${amount}`)
+      }
+
+      if (obj.label) {
+        query.push(`label=${obj.label}`)
+      }
+
+      if (obj.message) {
+        query.push(`message=${obj.message}`)
+      }
+
+      return query.length > 0
+        ? uri.serialize({
+          scheme: currencyInfo.uriPrefix ?? currencyInfo.pluginId,
+          path: publicAddress,
+          query: query.join('&')
+        })
+        : publicAddress
     },
 
     getSplittableTypes(_walletInfo: EdgeWalletInfo): string[] {
