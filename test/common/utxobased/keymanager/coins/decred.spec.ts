@@ -5,7 +5,6 @@ import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  NetworkEnum,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
@@ -13,6 +12,7 @@ import {
   xprivToXPub,
   xpubToPubkey,
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
+import { NetworkEnum } from '../../../../../src/common/plugin/types'
 
 describe('decred mnemonic to xprv test vectors as compared with iancoleman', () => {
   const mnemonic =
