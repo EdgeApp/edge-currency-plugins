@@ -33,6 +33,8 @@ export interface UtxoEngineState {
 
   getFreshAddress(change?: boolean): Promise<EdgeFreshAddress>
 
+  addGapLimitAddresses(addresses: string[]): Promise<void>
+
   markAddressUsed(address: string): Promise<void>
 }
 
@@ -142,20 +144,21 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
       }
     },
 
+    async addGapLimitAddresses(addresses: string[]): Promise<void> {
+      const addNewPromises = addresses.map(async (address) => {
+        const scriptPubkey = walletTools.addressToScriptPubkey(address)
+        await saveNewAddressByScriptPubkey({
+          scriptPubkey,
+          processor
+        })
+      })
+      await Promise.all(addNewPromises)
+    },
+
     async markAddressUsed(address: string): Promise<void> {
     }
   }
 }
-
-// 1. set look ahead (get format)
-//   - get fresh index
-//   - create missing addresses
-//   - save to db
-// 2. process all addresses in db
-//   - watch all addresses
-//   - process data from BlockBook for each address
-// 3. when address is marked used, set look ahead for same format
-// 4. after loading address from db, run set look ahead
 
 interface SetLookAheadArgs extends CommonArgs {
   format: CurrencyFormat
@@ -191,18 +194,12 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
           addressIndex: i
         }
         const { scriptPubkey } = walletTools.getScriptPubkey(path)
-        let addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+        const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
         if (!addressData) {
-          addressData = {
+          await saveNewAddressByScriptPubkey({
             scriptPubkey,
-            path,
-            networkQueryVal: 0,
-            lastQuery: 0,
-            lastTouched: 0,
-            used: false,
-            balance: '0'
-          }
-          await processor.saveAddress(addressData)
+            processor
+          })
         } else if (addressData && !addressData.path) {
           await processor.updateAddressByScriptPubkey(scriptPubkey, { path })
         }
@@ -214,6 +211,27 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
   } finally {
     release()
   }
+}
+
+interface SaveNewAddressByScriptPubkeyArgs {
+  scriptPubkey: string
+  processor: Processor
+}
+
+const saveNewAddressByScriptPubkey = async (args: SaveNewAddressByScriptPubkeyArgs): Promise<void> => {
+  const {
+    scriptPubkey,
+    processor
+  } = args
+
+  await processor.saveAddress({
+    scriptPubkey,
+    networkQueryVal: 0,
+    lastQuery: 0,
+    lastTouched: 0,
+    used: false,
+    balance: '0'
+  })
 }
 
 interface GetTotalAddressCountArgs {

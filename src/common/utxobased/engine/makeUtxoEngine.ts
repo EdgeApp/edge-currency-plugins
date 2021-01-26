@@ -1,5 +1,6 @@
-import { EdgeCurrencyCodeOptions, EdgeCurrencyEngine } from 'edge-core-js'
 import {
+  EdgeCurrencyCodeOptions,
+  EdgeCurrencyEngine,
   EdgeDataDump,
   EdgeFreshAddress,
   EdgeGetTransactionsOptions,
@@ -8,7 +9,7 @@ import {
   EdgeTokenInfo,
   EdgeTransaction,
   JsonObject
-} from 'edge-core-js/lib/types'
+} from 'edge-core-js'
 import * as bs from 'biggystring'
 import * as bitcoin from 'altcoin-js'
 
@@ -106,7 +107,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return Promise.resolve(undefined)
     },
 
-    addGapLimitAddresses(_addresses: string[]): void {
+    async addGapLimitAddresses(addresses: string[]): Promise<void> {
+      await state.addGapLimitAddresses(addresses)
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
