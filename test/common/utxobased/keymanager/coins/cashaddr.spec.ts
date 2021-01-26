@@ -1,18 +1,18 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
+import { NetworkEnum } from '../../../../../src/common/plugin/types'
 import {
   cashAddressToHash,
   CashaddrTypeEnum,
-  hashToCashAddress,
+  hashToCashAddress
 } from '../../../../../src/common/utxobased/keymanager/bitcoincashUtils/cashAddress'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
   scriptPubkeyToScriptHash,
-  ScriptTypeEnum,
+  ScriptTypeEnum
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
-import { NetworkEnum } from '../../../../../src/common/plugin/types'
 
 describe('bitcoin cash address tests', () => {
   const pubkeyHash = scriptPubkeyToScriptHash({
