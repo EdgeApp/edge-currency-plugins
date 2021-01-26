@@ -52,7 +52,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
   const blockBook = makeBlockBook({ emitter })
   const metadata = await fetchMetadata(walletLocalDisklet)
   const processor = await makeProcessor({ disklet: walletLocalDisklet, emitter })
-  const state = makeUtxoEngineState({
+  const state = await makeUtxoEngineState({
     ...config,
     walletTools,
     processor,
@@ -61,17 +61,20 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
   })
 
   emitter.on(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, (tx: ProcessorTransaction) => {
+    console.log('tx changed', tx.txid)
     emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, ([
       tx.toEdgeTransaction(currencyInfo.currencyCode)
     ]))
   })
 
   emitter.on(EmitterEvent.BALANCE_CHANGED, async (currencyCode: string, nativeBalance: string) => {
+    console.log('balance changed', nativeBalance)
     metadata.balance = nativeBalance
     await setMetadata(walletLocalDisklet, metadata)
   })
 
   emitter.on(EmitterEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
+    console.log('block height changed', height)
     metadata.lastSeenBlockHeight = height
     await setMetadata(walletLocalDisklet, metadata)
   })
@@ -145,11 +148,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return Promise.resolve([])
     },
 
-    getFreshAddress(_opts: EdgeCurrencyCodeOptions): EdgeFreshAddress {
-      const freshAddress = state.getFreshChangeAddress()
-      return {
-        publicAddress: freshAddress
-      }
+    getFreshAddress(_opts: EdgeCurrencyCodeOptions): Promise<EdgeFreshAddress> {
+      return state.getFreshAddress()
     },
 
     getNumTransactions(_opts: EdgeCurrencyCodeOptions): number {
@@ -172,14 +172,9 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
     // @ts-ignore
     async isAddressUsed(address: string): Promise<boolean> {
-      const scriptPubKey = walletTools.addressToScriptPubkey(address)
-      const path = await processor.fetchAddressPathBySPubKey(scriptPubKey)
-      if (path) {
-        const address = await processor.fetchAddress(path)
-        return address?.used ?? false
-      }
-
-      return false
+      const scriptPubkey = walletTools.addressToScriptPubkey(address)
+      const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+      return !!addressData?.used
     },
 
     async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
@@ -190,13 +185,19 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
           throw new Error('Invalid spend target')
         }
 
+        const scriptPubkey = walletTools.addressToScriptPubkey(target.publicAddress)
+        if (await processor.hasSPubKey(scriptPubkey)) {
+          ourReceiveAddresses.push(target.publicAddress)
+        }
+
         targets.push({
           address: target.publicAddress,
           value: parseInt(target.nativeAmount)
         })
       }
 
-      const freshChangeAddress = await state.getFreshChangeAddress()
+      const freshAddress = await state.getFreshAddress(true)
+      const freshChangeAddress = freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = await processor.fetchAllUtxos()
       const feeRate = parseInt(calculateFeeRate(currencyInfo, edgeSpendInfo))
       const tx = await makeTx({
@@ -214,8 +215,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
       let nativeAmount = '0'
       for (const output of tx.psbt.txOutputs) {
-        const scriptPubKey = output.script.toString('hex')
-        const own = await processor.hasSPubKey(scriptPubKey)
+        const scriptPubkey = output.script.toString('hex')
+        const own = await processor.hasSPubKey(scriptPubkey)
         if (!own) {
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
         }
@@ -260,10 +261,10 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
         const utxo = await processor.fetchUtxo(`${txid}_${index}`)
         if (!utxo) throw new Error('Invalid UTXO')
 
-        const path = await processor.fetchAddressPathBySPubKey(utxo.scriptPubKey)
-        if (!path) throw new Error('Invalid script pubkey')
+        const address = await processor.fetchAddressByScriptPubkey(utxo.scriptPubkey)
+        if (!address?.path) throw new Error('Invalid script pubkey')
 
-        return walletTools.getPrivateKey(path)
+        return walletTools.getPrivateKey(address.path)
       }))
       transaction.signedTx = await signTx({
         psbt,

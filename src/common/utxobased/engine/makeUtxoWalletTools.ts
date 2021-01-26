@@ -2,19 +2,19 @@ import {
   addressToScriptPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
-  xprivToPrivateKey, xprivToXPub,
+  xprivToPrivateKey,
+  xprivToXPub,
   xpubToPubkey
 } from '../keymanager/keymanager'
 import {
   currencyFormatToPurposeType,
-  getAddressTypeFromKeys,
   getAddressTypeFromPurposeType,
   getScriptTypeFromPurposeType,
   getXpriv
 } from './utils'
 import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 
-interface UtxoKeyFormat {
+export interface UtxoKeyFormat {
   [mnemonicKey: string]: any // ${coinName}Key = mnemonic or seed string
   format?: CurrencyFormat
   coinType?: number
@@ -34,9 +34,9 @@ export interface BitcoinWalletToolsConfig extends WalletToolsConfig {
 export interface UTXOPluginWalletTools {
   getPubkey(args: AddressPath): string
 
-  getScriptPubKey(args: AddressPath): { scriptPubkey: string, redeemScript?: string }
+  getScriptPubkey(args: AddressPath): { scriptPubkey: string, redeemScript?: string }
 
-  getAddress(args: AddressPath): string
+  getAddress(args: AddressPath): { address: string, legacyAddress: string }
 
   addressToScriptPubkey(address: string): string
 
@@ -71,30 +71,25 @@ export function makeUtxoWalletTools(config: WalletToolsConfig): UTXOPluginWallet
       })
     },
 
-    getScriptPubKey(args: AddressPath): { scriptPubkey: string, redeemScript?: string } {
+    getScriptPubkey(args: AddressPath): { scriptPubkey: string, redeemScript?: string } {
       return pubkeyToScriptPubkey({
         pubkey: fns.getPubkey(args),
         scriptType: getScriptTypeFromPurposeType(currencyFormatToPurposeType(args.format))
       })
     },
 
-    getAddress(args: AddressPath): string {
+    getAddress(args: AddressPath): { address: string, legacyAddress: string } {
       const purposeType = currencyFormatToPurposeType(args.format)
       return scriptPubkeyToAddress({
-        scriptPubkey: fns.getScriptPubKey(args).scriptPubkey,
+        scriptPubkey: fns.getScriptPubkey(args).scriptPubkey,
         network,
         addressType: getAddressTypeFromPurposeType(purposeType),
         coin
-      }).address
+      })
     },
 
     addressToScriptPubkey(address: string): string {
-      return addressToScriptPubkey({
-        address,
-        addressType: getAddressTypeFromKeys(config),
-        network,
-        coin
-      })
+      return addressToScriptPubkey({ address, network, coin })
     },
 
     getPrivateKey(args: AddressPath) {
