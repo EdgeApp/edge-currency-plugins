@@ -100,7 +100,8 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
         const segwitIndex = await getFreshIndex({
           ...config,
           format: segwitFormat,
-          changeIndex
+          changeIndex,
+          find: false
         })
         const { address: segwitAddress } = walletTools.getAddress({
           format: segwitFormat,
@@ -112,7 +113,8 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
         const wrappedSegwitIndex = await getFreshIndex({
           ...config,
           format: wrappedSegwitFormat,
-          changeIndex
+          changeIndex,
+          find: false
         })
         const { address: publicAddress } = walletTools.getAddress({
           format: wrappedSegwitFormat,
@@ -129,7 +131,8 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
         const walletIndex = await getFreshIndex({
           ...config,
           format: walletFormat,
-          changeIndex
+          changeIndex,
+          find: false
         })
         const { address: publicAddress, legacyAddress } = walletTools.getAddress({
           format: walletFormat,
@@ -277,6 +280,7 @@ interface GetFreshIndexArgs {
   walletTools: UTXOPluginWalletTools
   currencyInfo: EngineCurrencyInfo
   processor: Processor
+  find?: boolean
 }
 
 const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
@@ -285,7 +289,8 @@ const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
     changeIndex,
     walletTools,
     currencyInfo,
-    processor
+    processor,
+    find = true
   } = args
 
   const path: AddressPath = {
@@ -295,7 +300,9 @@ const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
   }
   const addressCount = await processor.fetchAddressCountFromPathPartition(path)
   path.addressIndex = addressCount - currencyInfo.gapLimit
-  return findFreshIndex({ fromPath: path, walletTools, processor })
+  return find
+    ? findFreshIndex({ fromPath: path, walletTools, processor })
+    : path.addressIndex
 }
 
 interface FindFreshIndexArgs {
