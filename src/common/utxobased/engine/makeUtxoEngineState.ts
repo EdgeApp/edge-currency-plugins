@@ -159,6 +159,8 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
     },
 
     async markAddressUsed(address: string): Promise<void> {
+      const scriptPubkey = walletTools.addressToScriptPubkey(address)
+      return processor.updateAddressByScriptPubkey(scriptPubkey, { used: true })
     }
   }
 }
