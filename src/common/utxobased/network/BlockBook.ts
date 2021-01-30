@@ -158,6 +158,8 @@ export interface BlockBook {
     cb?: (response: INewTransactionResponse) => void
   ): void
 
+  watchBlocks(cb: () => void): void
+
   fetchAddressUtxos(account: string): Promise<IAccountUTXO[]>
 
   fetchTransaction(hash: string): Promise<ITransaction>
@@ -171,13 +173,15 @@ export interface BlockHeightEmitter {
 
 interface BlockBookConfig {
   emitter: BlockHeightEmitter
+  wsAddress?: string
 }
 
 const baseUri = 'btc1.trezor.io'
 const PING_TIMEOUT = 30000
 
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
-  const { emitter } = config
+  const emitter = config.emitter
+  const baseWSAddress = config.wsAddress ?? `wss://${baseUri}/websocket`
 
   const instance: BlockBook = {
     isConnected: false,
@@ -186,6 +190,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     fetchInfo,
     fetchAddress,
     watchAddresses,
+    watchBlocks,
     fetchAddressUtxos,
     fetchTransaction,
     broadcastTx,
@@ -197,11 +202,12 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   let addressWatcherCallback:
     | undefined
     | ((response: INewTransactionResponse) => void)
+  let blockWatcherCallback: undefined | (() => void)
   const PING_ID = 'ping'
   const WATCH_NEW_BLOCK_EVENT_ID = 'WATCH_NEW_BLOCK_EVENT_ID'
   const WATCH_ADDRESS_TX_EVENT_ID = 'WATCH_ADDRESS_TX_EVENT_ID'
 
-  const socket = makeSocket(`wss://${baseUri}/websocket`, {
+  const socket = makeSocket(baseWSAddress, {
     callbacks: {
       onMessage(message: string) {
         if (!instance.isConnected) return
@@ -213,6 +219,9 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
             pingTimeout = setTimeout(ping, PING_TIMEOUT)
             break
           case WATCH_NEW_BLOCK_EVENT_ID:
+            if (typeof blockWatcherCallback !== 'undefined') {
+              blockWatcherCallback()
+            }
             emitter.emit(EmitterEvent.BLOCK_HEIGHT_CHANGED, response.data)
             break
           case WATCH_ADDRESS_TX_EVENT_ID:
@@ -237,15 +246,13 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   async function connect(): Promise<void> {
     await socket.connect()
 
-    console.log('connected to websocket')
-
     instance.isConnected = true
     // Ping the server for a pong response and start a timeout
     ping()
     watchAddresses(addressesToWatch, addressWatcherCallback)
     sendWsMessage({
       id: WATCH_NEW_BLOCK_EVENT_ID,
-      method: 'subscribeNewBlock',
+      method: 'subscribeNewBlock'
     })
   }
 
@@ -302,6 +309,10 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
       ...opts,
       descriptor: address
     })
+  }
+
+  function watchBlocks(cb: () => Promise<void>): void {
+    blockWatcherCallback = cb
   }
 
   function watchAddresses(

@@ -29,6 +29,8 @@ import {
   RANGE_KEY,
   ScriptPubKeysByBalance,
   scriptPubKeysByBalanceConfig,
+  TxIdsByConfirmations,
+  txIdsByConfirmationsConfig,
   TxById,
   txByIdConfig,
   txsByDateConfig,
@@ -68,6 +70,14 @@ export interface Processor {
   updateAddress(path: AddressPath, data: Partial<IAddress>): void
 
   updateAddressByScriptPubKey(scriptPubKey: string, data: Partial<IAddress>): void
+
+  insertAddressPathBySPubKey(scriptPubKey: string, addressPath: string): Promise<void>
+
+  fetchTxIdsByConfirmations(confirmations: number): Promise<string[]>
+
+  insertTxIdByConfirmations(confirmations: number, data: string): Promise<void>
+
+  removeTxIdByConfirmations(confirmations: number, txId: string): Promise<void>
 
   fetchTransaction(txId: string): Promise<TxById>
 
@@ -129,6 +139,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     addressPathByMRU,
     scriptPubKeysByBalance,
     txById,
+    txIdsByConfirmations,
     txsByScriptPubKey,
     txsByDate,
     utxoById,
@@ -140,6 +151,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     createOrOpen(disklet, addressPathByMRUConfig),
     createOrOpen(disklet, scriptPubKeysByBalanceConfig),
     createOrOpen(disklet, txByIdConfig),
+    createOrOpen(disklet, txIdsByConfirmationsConfig),
     createOrOpen(disklet, txsByScriptPubKeyConfig),
     createOrOpen(disklet, txsByDateConfig),
     createOrOpen(disklet, utxoByIdConfig),
@@ -365,7 +377,9 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
         }
       }
     }
-
+    if (tx.blockHeight === 0) {
+      await fns.insertTxIdByConfirmations(0, tx.txid)
+    }
     await txById.insert('', tx.txid, tx)
     queue.add(() => calculateTransactionAmount(tx.txid))
   }
@@ -381,7 +395,9 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     } else {
       txData = new ProcessorTransaction(data)
     }
-
+    if (txData.blockHeight < data.blockHeight) {
+      await fns.removeTxIdByConfirmations(0, data.txid)
+    }
     txData.blockHeight = data.blockHeight
 
     if (merge) {
@@ -450,10 +466,48 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       return address
     },
 
+    async fetchTxIdsByConfirmations(
+      confirmations: number
+    ): Promise<TxIdsByConfirmations> {
+      const [data] = await txIdsByConfirmations.query('', confirmations)
+      return data
+    },
+
+    async insertTxIdByConfirmations(
+      confirmations: number,
+      txId: string
+    ): Promise<void> {
+      // this needs to be tuned to the corresponding tx maturity thresholds
+      if (confirmations < 0 || confirmations > 6) {
+        return
+      }
+      let data = await this.fetchTxIdsByConfirmations(confirmations)
+      data = data ?? []
+      if (data.includes(txId)) {
+        return
+      }
+      data.push(txId)
+      return txIdsByConfirmations.insert('', confirmations, data)
+    },
+
+    async removeTxIdByConfirmations(
+      confirmations: number,
+      txId: string
+    ): Promise<void> {
+      const data = await this.fetchTxIdsByConfirmations(confirmations)
+      if (typeof data === 'undefined') {
+        return
+      }
+      const filteredData = data.filter(iter => {
+        return iter !== txId
+      })
+      return txIdsByConfirmations.insert('', confirmations, filteredData)
+    },
+
     async fetchAddressPathBySPubKey(
       scriptPubKey: string
     ): Promise<AddressPathByScriptPubKey> {
-      const [ path ] = await addressPathByScriptPubKey.query('', [ scriptPubKey ])
+      const [ path ] = await addressPathByScriptPubKey.query('', [scriptPubKey])
       return path
     },
 

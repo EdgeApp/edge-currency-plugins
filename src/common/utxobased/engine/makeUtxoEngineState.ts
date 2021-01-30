@@ -26,7 +26,7 @@ export interface UtxoEngineState {
   markAddressUsed(address: string): Promise<void>
 }
 
-interface UtxoEngineStateConfig extends EngineConfig {
+export interface UtxoEngineStateConfig extends EngineConfig {
   walletTools: UTXOPluginWalletTools
   processor: Processor
   blockBook: BlockBook
@@ -51,6 +51,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   let progress: SyncProgress
   let freshReceiveIndex: number = 0
   let freshChangeIndex: number = 0
+  blockBook.watchBlocks(onNewBlock)
 
   async function processAccount(): Promise<void> {
     // Reset the progress count
@@ -101,7 +102,6 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   async function processAccountGapFromPath(path: AddressPath): Promise<void> {
     let gap = path.addressIndex
     while (gap < currencyInfo.gapLimit) {
-      console.log(path)
       progress.totalCount++
 
 
@@ -258,6 +258,23 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       tx = processRawTransaction(rawTx)
     }
     return tx
+  }
+
+  async function onNewBlock(): Promise<void> {
+    const txIds = await processor.fetchTxIdsByConfirmations(0)
+    if (typeof txIds === 'undefined') {
+      return
+    }
+    for (const txId of txIds) {
+      const rawTx = await blockBook.fetchTransaction(txId)
+      const tx = processRawTransaction(rawTx)
+      // check if tx is still not confirmed, if so, don't change anything
+      if (tx.blockHeight < 1) {
+        return
+      }
+      await processor.removeTxIdByConfirmations(0, txId)
+      await processor.updateTransaction(txId, tx)
+    }
   }
 
   // TODO: watch transaction status in case it is dropped
