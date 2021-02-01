@@ -1,6 +1,5 @@
 import { EdgeFreshAddress, EdgeTxidMap, EdgeWalletInfo } from 'edge-core-js'
 import { Mutex } from 'async-mutex'
-import { isEqual as lodashIsEqual } from 'lodash'
 
 import {
   AddressPath,
@@ -165,15 +164,21 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
   const release = await mutex.acquire()
 
   try {
-    const changeIndicies: [ 0, 1 ] = [ 0, 1 ]
-    const lookAheadPromises = changeIndicies.map(async (changeIndex) => {
-      let freshIndex = 0
-      for (let i = 0; i < freshIndex + currencyInfo.gapLimit; i++) {
+    for (const changeIndex of <[ 0, 1 ]>[ 0, 1 ]) {
+      const partialPath: Omit<AddressPath, 'addressIndex'> = {
+        format,
+        changeIndex
+      }
+      let freshIndex = await getFreshIndex({
+        ...args,
+        ...partialPath
+      })
+      const addressCount = await processor.fetchAddressCountFromPathPartition(partialPath)
+      for (let i = addressCount; i < freshIndex + currencyInfo.gapLimit; i++) {
         await saveNewOrUpdateAddressPathIfNeeded({
           ...args,
           path: {
-            format,
-            changeIndex,
+            ...partialPath,
             addressIndex: i
           }
         })
@@ -184,8 +189,7 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
           changeIndex
         })
       }
-    })
-    await Promise.all(lookAheadPromises)
+    }
 
     processFormatAddresses(args)
   } finally {
@@ -289,8 +293,9 @@ const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
     addressIndex: 0 // tmp
   }
   const addressCount = await processor.fetchAddressCountFromPathPartition(path)
-  const freshIndex = addressCount - currencyInfo.gapLimit
-  path.addressIndex = freshIndex < 0 ? 0 : freshIndex
+  path.addressIndex = addressCount - currencyInfo.gapLimit
+  if (path.addressIndex < 0) return 0
+
   return find
     ? findFreshIndex({ path, processor })
     : path.addressIndex
@@ -421,14 +426,14 @@ interface ProcessPathAddressesArgs extends ProcessFormatAddressesArgs {
 
 const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
   const {
+    currencyInfo,
     walletTools,
     processor,
     format,
     changeIndex
   } = args
 
-  const processAddressPromises: Promise<any>[] = []
-
+  let processAddressPromises: Promise<any>[] = []
   const addressCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex })
   for (let i = 0; i < addressCount; i++) {
     const path: AddressPath = {
@@ -440,9 +445,13 @@ const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
     processAddressPromises.push(
       processAddress({ ...args, address })
     )
-  }
 
-  return Promise.all(processAddressPromises)
+    if (processAddressPromises.length >= currencyInfo.gapLimit) {
+      await Promise.all(processAddressPromises)
+      processAddressPromises = []
+    }
+  }
+  await Promise.all(processAddressPromises)
 }
 
 interface FetchTransactionArgs {
@@ -504,6 +513,8 @@ const processAddress = async (args: ProcessAddressArgs) => {
     })
   ])
 
+  firstProcess && await onAddressChecked?.()
+
   // If address was previously not used and now it is, call setLookAhead
   // Make sure we have the path saved
   if (!previouslyUsed && used && addressData!.path) {
@@ -512,8 +523,6 @@ const processAddress = async (args: ProcessAddressArgs) => {
       format: addressData!.path!.format
     })
   }
-
-  firstProcess && await onAddressChecked?.()
 }
 
 interface ProcessAddressTxsArgs {
@@ -543,6 +552,7 @@ const processAddressTransactions = async (args: ProcessAddressTxsArgs, page = 1)
   } = await blockBook.fetchAddress(address, {
     details: 'txs',
     from: addressData?.networkQueryVal,
+    perPage: 10,
     page
   })
 
