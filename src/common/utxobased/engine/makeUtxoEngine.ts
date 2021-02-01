@@ -8,6 +8,7 @@ import {
   EdgeSpendInfo,
   EdgeTokenInfo,
   EdgeTransaction,
+  EdgeTxidMap,
   JsonObject
 } from 'edge-core-js'
 import * as bs from 'biggystring'
@@ -19,10 +20,11 @@ import { makeProcessor } from '../db/Processor'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { calculateFeeRate } from './makeSpendHelper'
 import { makeBlockBook } from '../network/BlockBook'
-import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
+import { toEdgeTransaction, toProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { fetchMetadata, setMetadata } from '../../plugin/utils'
 import { fetchOrDeriveXprivFromKeys, getXprivKey } from './utils'
+import { IProcessorTransaction } from '../db/types'
 
 export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrencyEngine> {
   const {
@@ -61,27 +63,51 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     metadata
   })
 
-  emitter.on(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, (tx: ProcessorTransaction) => {
-    console.log('tx changed', tx.txid)
-    emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, ([
-      tx.toEdgeTransaction(currencyInfo.currencyCode)
-    ]))
-  })
+  let changedTransactionsMap: { [txid: string]: IProcessorTransaction } = {}
+  let changedTxIntervalId: NodeJS.Timeout
+  const watchMessages = () => {
+    changedTxIntervalId = setInterval(() => {
+      const changedTxs: EdgeTransaction[] = []
+      const txidMap: EdgeTxidMap = {}
+      for (const txid in changedTransactionsMap) {
+        console.log('tx changed', txid)
+        const tx = changedTransactionsMap[txid]
+        const edgeTx = toEdgeTransaction(tx, currencyInfo.currencyCode)
+        changedTxs.push(edgeTx)
+        txidMap[txid] = tx.date
+      }
+      changedTransactionsMap = {}
 
-  emitter.on(EmitterEvent.BALANCE_CHANGED, async (currencyCode: string, nativeBalance: string) => {
-    console.log('balance changed', nativeBalance)
-    metadata.balance = nativeBalance
-    await setMetadata(walletLocalDisklet, metadata)
-  })
+      emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, changedTxs)
+      emitter.emit(EmitterEvent.TXIDS_CHANGED, txidMap)
+    }, 5000)
+    emitter.on(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, (tx: IProcessorTransaction) => {
+      changedTransactionsMap[tx.txid] = tx
+    })
 
-  emitter.on(EmitterEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
-    console.log('block height changed', height)
-    metadata.lastSeenBlockHeight = height
-    await setMetadata(walletLocalDisklet, metadata)
-  })
+    emitter.on(EmitterEvent.BALANCE_CHANGED, async (currencyCode: string, nativeBalance: string) => {
+      // Extra check to avoid race condition
+      if (metadata.balance !== nativeBalance) {
+        console.log('balance changed', nativeBalance)
+        metadata.balance = nativeBalance
+        await setMetadata(walletLocalDisklet, metadata)
+      }
+    })
+
+    emitter.on(EmitterEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
+      console.log('block height changed', height)
+      metadata.lastSeenBlockHeight = height
+      await setMetadata(walletLocalDisklet, metadata)
+    })
+  }
+  const stopWatchingMessages = () => {
+    clearInterval(changedTxIntervalId)
+    emitter.removeAllListeners()
+  }
 
   const fns: EdgeCurrencyEngine = {
     async startEngine(): Promise<void> {
+      watchMessages()
       await blockBook.connect()
 
       const { bestHeight } = await blockBook.fetchInfo()
@@ -91,6 +117,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     async killEngine(): Promise<void> {
+      stopWatchingMessages()
       await state.stop()
       await blockBook.disconnect()
     },
@@ -170,7 +197,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
     async getTransactions(opts: EdgeGetTransactionsOptions): Promise<EdgeTransaction[]> {
       const txs = await processor.fetchTransactions(opts)
-      return txs.map((tx) => tx.toEdgeTransaction(currencyInfo.currencyCode))
+      return txs.map((tx) => toEdgeTransaction(tx, currencyInfo.currencyCode))
     },
 
     // @ts-ignore
@@ -252,7 +279,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     saveTx(tx: EdgeTransaction): Promise<void> {
-      return processor.saveTransaction(ProcessorTransaction.fromEdgeTransaction(tx), false)
+      return processor.saveTransaction(toProcessorTransaction(tx), false)
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {

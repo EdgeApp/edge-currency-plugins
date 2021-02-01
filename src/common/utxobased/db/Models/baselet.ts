@@ -1,6 +1,5 @@
 import { BaseType } from 'baselet'
-import { BaseletConfig, IAddress, IUTXO } from '../types'
-import { ProcessorTransaction } from './ProcessorTransaction'
+import { BaseletConfig, IAddress, IProcessorTransaction, IUTXO } from '../types'
 import { AddressPath } from '../../../plugin/types'
 
 export const RANGE_ID_KEY = 'idKey'
@@ -40,7 +39,7 @@ export const scriptPubkeysByBalanceConfig: BaseletConfig<BaseType.RangeBase> = {
   bucketSize: 100000
 }
 
-export type TxById = ProcessorTransaction | undefined
+export type TxById = IProcessorTransaction | undefined
 export const txByIdConfig: BaseletConfig<BaseType.HashBase> = {
   dbName: 'txById',
   type: BaseType.HashBase,

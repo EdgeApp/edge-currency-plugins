@@ -166,7 +166,7 @@ export interface BlockBook {
 }
 
 export interface BlockHeightEmitter {
-  emit(event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number): this
+  emit(event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number): boolean
 }
 
 interface BlockBookConfig {
