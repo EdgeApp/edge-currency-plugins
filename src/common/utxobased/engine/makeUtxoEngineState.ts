@@ -78,14 +78,17 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
 
       const formatsToProcess = getWalletSupportedFormats(walletInfo)
       formatsToProcess.map(async (format) => {
-        await setLookAhead({
+        const args = {
           ...config,
           format,
           emitter: config.options.emitter,
           addressesToWatch,
           onAddressChecked,
           mutex
-        })
+        }
+
+        await setLookAhead(args)
+        await processFormatAddresses(args)
       })
     },
 
@@ -150,6 +153,7 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
 
 interface SetLookAheadArgs extends CommonArgs {
   format: CurrencyFormat
+  processNewAddresses?: boolean
   onAddressChecked?: () => Promise<void>
 }
 
@@ -157,8 +161,10 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
   const {
     format,
     currencyInfo,
+    walletTools,
     processor,
-    mutex
+    mutex,
+    processNewAddresses = false
   } = args
 
   const release = await mutex.acquire()
@@ -175,13 +181,26 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
       })
       const addressCount = await processor.fetchAddressCountFromPathPartition(partialPath)
       for (let i = addressCount; i < freshIndex + currencyInfo.gapLimit; i++) {
-        await saveNewOrUpdateAddressPathIfNeeded({
+        const path: AddressPath = {
+          ...partialPath,
+          addressIndex: i
+        }
+        const isNew = await saveNewOrUpdateAddressPathIfNeeded({
           ...args,
-          path: {
-            ...partialPath,
-            addressIndex: i
-          }
+          path
         })
+
+        if (isNew && processNewAddresses) {
+          const scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
+          const { address } = walletTools.scriptPubkeyToAddress({
+            scriptPubkey: scriptPubkey!,
+            format
+          })
+          await processAddress({
+            ...args,
+            address
+          })
+        }
 
         freshIndex = await getFreshIndex({
           ...args,
@@ -190,8 +209,6 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
         })
       }
     }
-
-    processFormatAddresses(args)
   } finally {
     release()
   }
@@ -204,7 +221,7 @@ interface SaveNewAddressByScriptPubkeyArgs {
   walletTools: UTXOPluginWalletTools
 }
 
-const saveNewOrUpdateAddressPathIfNeeded = async (args: SaveNewAddressByScriptPubkeyArgs): Promise<void> => {
+const saveNewOrUpdateAddressPathIfNeeded = async (args: SaveNewAddressByScriptPubkeyArgs): Promise<boolean> => {
   const {
     path,
     processor,
@@ -218,7 +235,8 @@ const saveNewOrUpdateAddressPathIfNeeded = async (args: SaveNewAddressByScriptPu
   }
 
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  if (!addressData) {
+  const isNew = !addressData
+  if (isNew) {
     await processor.saveAddress({
       scriptPubkey,
       path,
@@ -228,9 +246,11 @@ const saveNewOrUpdateAddressPathIfNeeded = async (args: SaveNewAddressByScriptPu
       used: false,
       balance: '0'
     })
-  } else if (!addressData.path) {
+  } else if (!addressData!.path) {
     await processor.updateAddressByScriptPubkey(scriptPubkey, { path })
   }
+
+  return isNew
 }
 
 interface GetTotalAddressCountArgs {
@@ -413,11 +433,9 @@ interface ProcessFormatAddressesArgs extends CommonArgs {
   onAddressChecked?: () => Promise<void>
 }
 
-const processFormatAddresses = (args: ProcessFormatAddressesArgs) => {
-  return Promise.all([
-    processPathAddresses({ ...args, changeIndex: 0 }),
-    processPathAddresses({ ...args, changeIndex: 1 })
-  ])
+const processFormatAddresses = async (args: ProcessFormatAddressesArgs) => {
+  await processPathAddresses({ ...args, changeIndex: 0 })
+  await processPathAddresses({ ...args, changeIndex: 1 })
 }
 
 interface ProcessPathAddressesArgs extends ProcessFormatAddressesArgs {
@@ -441,7 +459,12 @@ const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
       changeIndex,
       addressIndex: i
     }
-    const { address } = walletTools.getAddress(path)
+    let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
+    scriptPubkey = scriptPubkey ?? walletTools.getScriptPubkey(path).scriptPubkey
+    const { address } = walletTools.scriptPubkeyToAddress({
+      scriptPubkey,
+      format
+    })
     processAddressPromises.push(
       processAddress({ ...args, address })
     )
@@ -520,7 +543,8 @@ const processAddress = async (args: ProcessAddressArgs) => {
   if (!previouslyUsed && used && addressData!.path) {
     await setLookAhead({
       ...args,
-      format: addressData!.path!.format
+      format: addressData!.path!.format,
+      processNewAddresses: true
     })
   }
 }
