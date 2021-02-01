@@ -15,7 +15,7 @@ import {
   addressPathByMRUConfig,
   addressPathToPrefix,
   RANGE_ID_KEY,
-  RANGE_KEY,
+  RANGE_KEY, ScriptPubkeyByPath,
   scriptPubkeyByPathConfig,
   ScriptPubkeysByBalance,
   scriptPubkeysByBalanceConfig,
@@ -41,6 +41,8 @@ interface ProcessorConfig {
 }
 
 export interface Processor {
+  fetchScriptPubkeyByPath(path: AddressPath): Promise<ScriptPubkeyByPath>
+
   fetchAddressByScriptPubkey(scriptPubkey: string): Promise<AddressByScriptPubkey>
 
   hasSPubKey(scriptPubkey: string): Promise<boolean>
@@ -390,6 +392,14 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
   }
 
   const fns: Processor = {
+    async fetchScriptPubkeyByPath(path: AddressPath): Promise<ScriptPubkeyByPath> {
+      const [ scriptPubkey ] = await scriptPubkeyByPath.query(
+        addressPathToPrefix(path),
+        path.addressIndex
+      )
+      return scriptPubkey
+    },
+
     async fetchAddressByScriptPubkey(scriptPubkey: string): Promise<AddressByScriptPubkey> {
       const [ address ] = await innerFetchAddressesByScriptPubkeys([ scriptPubkey ])
       return address

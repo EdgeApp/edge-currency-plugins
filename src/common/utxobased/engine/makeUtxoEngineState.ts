@@ -1,5 +1,6 @@
 import { EdgeFreshAddress, EdgeTxidMap, EdgeWalletInfo } from 'edge-core-js'
 import { Mutex } from 'async-mutex'
+import { isEqual as lodashIsEqual } from 'lodash'
 
 import {
   AddressPath,
@@ -14,7 +15,7 @@ import {
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import { Processor } from '../db/Processor'
 import { BlockBook, ITransaction } from '../network/BlockBook'
-import { IUTXO } from '../db/types'
+import { IAddress, IUTXO } from '../db/types'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import {
   currencyFormatToPurposeType,
@@ -96,30 +97,18 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
       const walletPurpose = getPurposeTypeFromKeys(walletInfo)
       const changeIndex = change ? 1 : 0
       if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
-        const segwitFormat = getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit)
-        const segwitIndex = await getFreshIndex({
+        const { address: publicAddress } = await getFreshAddress({
           ...config,
-          format: segwitFormat,
+          format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit),
           changeIndex,
           find: false
-        })
-        const { address: segwitAddress } = walletTools.getAddress({
-          format: segwitFormat,
-          changeIndex,
-          addressIndex: segwitIndex
         })
 
-        const wrappedSegwitFormat = getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)
-        const wrappedSegwitIndex = await getFreshIndex({
+        const { address: segwitAddress } = await getFreshAddress({
           ...config,
-          format: wrappedSegwitFormat,
+          format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit),
           changeIndex,
           find: false
-        })
-        const { address: publicAddress } = walletTools.getAddress({
-          format: wrappedSegwitFormat,
-          changeIndex,
-          addressIndex: wrappedSegwitIndex
         })
 
         return {
@@ -127,17 +116,11 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
           segwitAddress
         }
       } else {
-        const walletFormat = getCurrencyFormatFromPurposeType(walletPurpose)
-        const walletIndex = await getFreshIndex({
+        const { address: publicAddress, legacyAddress } = await getFreshAddress({
           ...config,
-          format: walletFormat,
+          format: getCurrencyFormatFromPurposeType(walletPurpose),
           changeIndex,
           find: false
-        })
-        const { address: publicAddress, legacyAddress } = walletTools.getAddress({
-          format: walletFormat,
-          changeIndex,
-          addressIndex: walletIndex
         })
 
         return {
@@ -150,9 +133,10 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
       const addNewPromises = addresses.map(async (address) => {
         const scriptPubkey = walletTools.addressToScriptPubkey(address)
-        await saveNewAddressByScriptPubkey({
+        await saveNewOrUpdateAddressPathIfNeeded({
           scriptPubkey,
-          processor
+          processor,
+          walletTools
         })
       })
       await Promise.all(addNewPromises)
@@ -173,7 +157,6 @@ interface SetLookAheadArgs extends CommonArgs {
 const setLookAhead = async (args: SetLookAheadArgs) => {
   const {
     format,
-    walletTools,
     currencyInfo,
     processor,
     mutex
@@ -184,30 +167,22 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
   try {
     const changeIndicies: [ 0, 1 ] = [ 0, 1 ]
     const lookAheadPromises = changeIndicies.map(async (changeIndex) => {
-      let freshIndex = await getFreshIndex({
-        ...args,
-        format,
-        changeIndex
-      })
+      let freshIndex = 0
+      for (let i = 0; i < freshIndex + currencyInfo.gapLimit; i++) {
+        await saveNewOrUpdateAddressPathIfNeeded({
+          ...args,
+          path: {
+            format,
+            changeIndex,
+            addressIndex: i
+          }
+        })
 
-      const addressCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex })
-
-      for (let i = addressCount; i < freshIndex + currencyInfo.gapLimit; i++) {
-        const path: AddressPath = {
+        freshIndex = await getFreshIndex({
+          ...args,
           format,
-          changeIndex,
-          addressIndex: i
-        }
-        const { scriptPubkey } = walletTools.getScriptPubkey(path)
-        const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-        if (!addressData) {
-          await saveNewAddressByScriptPubkey({
-            scriptPubkey,
-            processor
-          })
-        } else if (addressData && !addressData.path) {
-          await processor.updateAddressByScriptPubkey(scriptPubkey, { path })
-        }
+          changeIndex
+        })
       }
     })
     await Promise.all(lookAheadPromises)
@@ -219,24 +194,39 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
 }
 
 interface SaveNewAddressByScriptPubkeyArgs {
-  scriptPubkey: string
+  path?: AddressPath
+  scriptPubkey?: string
   processor: Processor
+  walletTools: UTXOPluginWalletTools
 }
 
-const saveNewAddressByScriptPubkey = async (args: SaveNewAddressByScriptPubkeyArgs): Promise<void> => {
+const saveNewOrUpdateAddressPathIfNeeded = async (args: SaveNewAddressByScriptPubkeyArgs): Promise<void> => {
   const {
-    scriptPubkey,
-    processor
+    path,
+    processor,
+    walletTools
   } = args
 
-  await processor.saveAddress({
-    scriptPubkey,
-    networkQueryVal: 0,
-    lastQuery: 0,
-    lastTouched: 0,
-    used: false,
-    balance: '0'
-  })
+  let { scriptPubkey } = args
+  if (!scriptPubkey) {
+    if (!path) throw new Error('Cannot save/update address without scriptPubkey or path')
+    scriptPubkey = walletTools.getScriptPubkey(path).scriptPubkey
+  }
+
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (!addressData) {
+    await processor.saveAddress({
+      scriptPubkey,
+      path,
+      networkQueryVal: 0,
+      lastQuery: 0,
+      lastTouched: 0,
+      used: false,
+      balance: '0'
+    })
+  } else if (!addressData.path) {
+    await processor.updateAddressByScriptPubkey(scriptPubkey, { path })
+  }
 }
 
 interface GetTotalAddressCountArgs {
@@ -279,7 +269,6 @@ const getFormatAddressCount = async (args: GetFormatAddressCountArgs): Promise<n
 interface GetFreshIndexArgs {
   format: CurrencyFormat
   changeIndex: 0 | 1
-  walletTools: UTXOPluginWalletTools
   currencyInfo: EngineCurrencyInfo
   processor: Processor
   find?: boolean
@@ -289,7 +278,6 @@ const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
   const {
     format,
     changeIndex,
-    walletTools,
     currencyInfo,
     processor,
     find = true
@@ -301,38 +289,99 @@ const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
     addressIndex: 0 // tmp
   }
   const addressCount = await processor.fetchAddressCountFromPathPartition(path)
-  path.addressIndex = addressCount - currencyInfo.gapLimit
+  const freshIndex = addressCount - currencyInfo.gapLimit
+  path.addressIndex = freshIndex < 0 ? 0 : freshIndex
   return find
-    ? findFreshIndex({ fromPath: path, walletTools, processor })
+    ? findFreshIndex({ path, processor })
     : path.addressIndex
 }
 
 interface FindFreshIndexArgs {
-  fromPath: AddressPath
-  walletTools: UTXOPluginWalletTools
+  path: AddressPath
   processor: Processor
 }
 
 const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
   const {
-    fromPath,
-    walletTools,
-    processor
+    path,
+    processor,
   } = args
 
-  // Make sure the address index starts from 0
-  if (fromPath.addressIndex < 0) {
-    fromPath.addressIndex = 0
-  }
-
-  const { scriptPubkey } = walletTools.getScriptPubkey(fromPath)
-  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  if (addressData?.used) {
-    fromPath.addressIndex++
+  const addressData = await fetchAddressDataByPath(args)
+  // If this address is not used check the previous one
+  if (!addressData.used && path.addressIndex > 0) {
+    const prevPath = {
+      ...path,
+      addressIndex: path.addressIndex - 1
+    }
+    const prevAddressData = await fetchAddressDataByPath({
+      processor,
+      path: prevPath
+    })
+    // If previous address is used we know this address is the last used
+    if (prevAddressData.used){
+      return path.addressIndex
+    } else if (path.addressIndex > 1) {
+      // Since we know the previous address is also unused, start the search from 2nd previous address
+      path.addressIndex -= 2
+      return findFreshIndex(args)
+    }
+  } else if (addressData.used) {
+    // If this address is used, traverse forward to find an unused address
+    path.addressIndex++
     return findFreshIndex(args)
   }
 
-  return fromPath.addressIndex
+  return path.addressIndex
+}
+
+interface FetchAddressDataByPath {
+  path: AddressPath
+  processor: Processor
+}
+
+const fetchAddressDataByPath = async (args: FetchAddressDataByPath): Promise<IAddress> => {
+  const {
+    path,
+    processor
+  } = args
+
+  const scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
+  if (!scriptPubkey) throw new Error('Address path unknown')
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (!addressData) throw new Error('Address data unknown')
+  return addressData
+}
+
+interface GetFreshAddressArgs extends GetFreshIndexArgs {
+  walletTools: UTXOPluginWalletTools
+}
+
+interface GetFreshAddressReturn {
+  address: string
+  legacyAddress: string
+}
+
+const getFreshAddress = async (args: GetFreshAddressArgs): Promise<GetFreshAddressReturn> => {
+  const {
+    format,
+    changeIndex,
+    walletTools,
+    processor,
+  } = args
+
+  const scriptPubkey = await processor.fetchScriptPubkeyByPath({
+    format,
+    changeIndex,
+    addressIndex: await getFreshIndex(args)
+  })
+  if (!scriptPubkey) {
+    throw new Error('Unknown address path')
+  }
+  return walletTools.scriptPubkeyToAddress({
+    scriptPubkey,
+    format
+  })
 }
 
 interface CommonArgs {
