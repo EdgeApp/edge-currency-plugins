@@ -32,10 +32,6 @@ export function makeCurrencyPlugin(
       emitter.on(EmitterEvent.ADDRESSES_CHECKED, engineOptions.callbacks.onAddressesChecked)
       emitter.on(EmitterEvent.TXIDS_CHANGED, engineOptions.callbacks.onTxidsChanged)
 
-      emitter.on(EmitterEvent.ADDRESSES_CHECKED, (progress) => {
-        console.log('progress:', progress)
-      })
-
       const network = NetworkEnum.Mainnet
 
       const engineConfig: EngineConfig = {

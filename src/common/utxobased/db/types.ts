@@ -5,22 +5,14 @@ import { RangeBase } from 'baselet/src/RangeBase'
 import { ScriptTypeEnum } from '../keymanager/keymanager'
 import { AddressPath } from '../../plugin/types'
 
-export type IAddress = Required<IAddressPartial>
-
-export interface IAddressPartial extends IAddressRequired, IAddressOptional {
-}
-
-export interface IAddressRequired {
-  scriptPubKey: string
+export type IAddress = {
+  scriptPubkey: string
   networkQueryVal: number
-  path: AddressPath
-}
-
-export interface IAddressOptional {
-  lastQuery?: number
-  lastTouched?: number
-  used?: boolean
-  balance?: string
+  path?: AddressPath
+  lastQuery: number
+  lastTouched: number
+  used: boolean
+  balance: string
 }
 
 export interface IUTXO {
@@ -28,7 +20,7 @@ export interface IUTXO {
   txid: string
   vout: number
   value: string
-  scriptPubKey: string
+  scriptPubkey: string
   script: string
   redeemScript?: string
   scriptType: ScriptTypeEnum
@@ -50,7 +42,7 @@ export interface IProcessorTransaction {
 
 export interface ITransactionOutput {
   amount: string
-  scriptPubKey: string
+  scriptPubkey: string
 }
 
 export interface ITransactionInput extends ITransactionOutput {
