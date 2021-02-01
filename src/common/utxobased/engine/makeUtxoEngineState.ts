@@ -544,14 +544,20 @@ const processAddressTransactions = async (args: ProcessAddressTxsArgs, page = 1)
     page
   })
 
+  // TODO: process transactions and check if they changed
   const changeTxidMap: EdgeTxidMap = {}
-  for (const rawTx of transactions) {
+  let changed = false
+  const transactionPromises = transactions.map(async (rawTx) => {
     const tx = processRawTx({ ...args, tx: rawTx })
-    processor.saveTransaction(tx)
-
-    changeTxidMap[tx.txid] = tx.date
-  }
-  if (transactions.length ?? 0 > 0) {
+    await processor.saveTransaction(tx)
+    const processedTx = await processor.fetchTransaction(tx.txid)
+    if (!lodashIsEqual(tx, processedTx)) {
+      changed = true
+      changeTxidMap[tx.txid] = tx.date
+    }
+  })
+  await Promise.all(transactionPromises)
+  if (changed) {
     emitter.emit(EmitterEvent.TXIDS_CHANGED, changeTxidMap)
   }
 
