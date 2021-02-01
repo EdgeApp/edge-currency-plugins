@@ -183,24 +183,18 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     return txs
   }
 
-  async function calculateTransactionAmount(txId: string) {
-    const tx = await fns.fetchTransaction(txId)
-    if (!tx) {
-      throw new Error(`Cannot calculate amount for non-existent transaction: ${txId}`)
-    }
-
-    let total = '0'
+  async function calculateTransactionAmount(tx: IProcessorTransaction): Promise<string> {
+    let ourAmount = '0'
     for (const i of tx.ourIns) {
       const { amount } = tx.inputs[parseInt(i)]
-      total = bs.sub(total, amount)
+      ourAmount = bs.sub(ourAmount, amount)
     }
     for (const i of tx.ourOuts) {
       const { amount } = tx.outputs[parseInt(i)]
-      total = bs.add(total, amount)
+      ourAmount = bs.add(ourAmount, amount)
     }
-    tx.ourAmount = total
 
-    await innerUpdateTransaction(tx.txid, tx, true)
+    return ourAmount
   }
 
   async function processScriptPubkeyTransactions(scriptPubkey: string): Promise<void> {
@@ -218,8 +212,8 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
           used: true
         })
 
+        txData.ourAmount = await calculateTransactionAmount(txData)
         await innerUpdateTransaction(txId, txData, true)
-        queue.add(() => calculateTransactionAmount(txId))
       }
     }
   }
@@ -316,8 +310,8 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       }
     }
 
+    tx.ourAmount = await calculateTransactionAmount(tx)
     await txById.insert('', tx.txid, tx)
-    queue.add(() => calculateTransactionAmount(tx.txid))
   }
 
   async function innerUpdateTransaction(
