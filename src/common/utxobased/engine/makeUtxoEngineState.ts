@@ -370,11 +370,13 @@ const getFreshAddress = async (args: GetFreshAddressArgs): Promise<GetFreshAddre
     processor,
   } = args
 
-  const scriptPubkey = await processor.fetchScriptPubkeyByPath({
+  const path = {
     format,
     changeIndex,
     addressIndex: await getFreshIndex(args)
-  })
+  }
+  let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
+  scriptPubkey = scriptPubkey ?? (await walletTools.getScriptPubkey(path)).scriptPubkey
   if (!scriptPubkey) {
     throw new Error('Unknown address path')
   }
