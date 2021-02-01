@@ -636,16 +636,11 @@ const processAddressTransactions = async (args: ProcessAddressTxsArgs, page = 1)
     page
   })
 
-  const changeTxidMap: EdgeTxidMap = {}
-  for (const rawTx of transactions) {
+  const transactionPromises = transactions.map(async (rawTx) => {
     const tx = processRawTx({ ...args, tx: rawTx })
-    processor.saveTransaction(tx)
-
-    changeTxidMap[tx.txid] = tx.date
-  }
-  if (transactions.length ?? 0 > 0) {
-    emitter.emit(EmitterEvent.TXIDS_CHANGED, changeTxidMap)
-  }
+    await processor.saveTransaction(tx)
+  })
+  await Promise.all(transactionPromises)
 
   if (page < totalPages) {
     await processAddressTransactions(args, ++page)
