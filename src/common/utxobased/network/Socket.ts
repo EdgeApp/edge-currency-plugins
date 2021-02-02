@@ -9,7 +9,7 @@ export enum ReadyState {
 
 // cb?: (ev: MessageEvent) => any
 export interface Socket extends InnerSocket {
-  connect(): void
+  connect: () => Promise<void>
 }
 
 interface InnerSocket {
@@ -40,10 +40,10 @@ export function makeSocket(uri: string, config?: SocketConfig): Socket {
       return socket?.readyState ?? ReadyState.CLOSED
     },
 
-    connect() {
+    async connect() {
       socket?.disconnect()
 
-      return new Promise((resolve) => {
+      return await new Promise(resolve => {
         const callbacks: InnerSocketCallbacks = {
           ...config?.callbacks,
           onOpen() {
