@@ -67,7 +67,8 @@
   },
   "dependencies": {
     "altcoin-js": "git://github.com/EdgeApp/altcoin-js.git#master",
-    "baselet": "git://github.com/EdgeApp/baselet.git#noah/range-page",
+    "async-mutex": "^0.2.6",
+    "baselet": "^0.0.5",
     "biggystring": "^4.0.0",
     "bip32": "^2.0.5",
     "bip32grs": "^2.0.5",
@@ -77,7 +78,7 @@
     "bs58grscheck": "^2.1.2",
     "bs58smartcheck": "^2.0.4",
     "disklet": "^0.4.5",
-    "edge-core-js": "^0.17.14",
+    "edge-core-js": "^0.17.22",
     "lodash": "^4.17.20",
     "uri-js": "^4.4.0",
     "url-parse": "^1.4.7",

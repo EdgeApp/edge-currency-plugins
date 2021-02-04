@@ -15,26 +15,28 @@ import {
 } from '../keymanager/keymanager'
 import { CurrencyFormat, NetworkEnum } from '../../plugin/types'
 import * as pluginUtils from '../../plugin/utils'
+import { UtxoKeyFormat } from './makeUtxoWalletTools'
 
 export const getCurrencyFormatFromPurposeType = (purpose: BIP43PurposeTypeEnum): CurrencyFormat => {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
+      return 'bip32'
     case BIP43PurposeTypeEnum.Legacy:
       return 'bip44'
-
     case BIP43PurposeTypeEnum.WrappedSegwit:
       return 'bip49'
-
     case BIP43PurposeTypeEnum.Segwit:
       return 'bip84'
   }
 }
 
-export const getAddressTypeFromKeys = (keys: any): AddressTypeEnum => {
+export const getAddressTypeFromKeys = (keys: UtxoKeyFormat): AddressTypeEnum => {
   return getAddressTypeFromPurposeType(getPurposeTypeFromKeys({ keys }))
 }
 
 export const getAddressTypeFromPurposeType = (purpose: BIP43PurposeTypeEnum): AddressTypeEnum => {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
       return AddressTypeEnum.p2pkh
 
@@ -48,6 +50,7 @@ export const getAddressTypeFromPurposeType = (purpose: BIP43PurposeTypeEnum): Ad
 
 export const getScriptTypeFromPurposeType = (purpose: BIP43PurposeTypeEnum): ScriptTypeEnum => {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
       return ScriptTypeEnum.p2pkh
 
@@ -71,19 +74,38 @@ export const getXprivKey = ({ coin }: { coin: string }): string =>
 export const getXpubKey = ({ coin }: { coin: string }): string =>
   `${coin}Xpub`
 
-export const getXpriv = (args: { keys: any, coin: string }): CurrencyFormatKeys =>
+export const getXpriv = (args: { keys: UtxoKeyFormat, coin: string }): CurrencyFormatKeys =>
   args.keys[getXprivKey(args)]
 
-export const getXpub = (args: { keys: any, coin: string }): string =>
+export const getXpub = (args: { keys: UtxoKeyFormat, coin: string }): string =>
   args.keys[getXpubKey(args)]
 
-export const getWalletCoinType = (args: { keys: any }): number =>
+export const getWalletCoinType = (args: { keys: UtxoKeyFormat }): number =>
   args.keys.coinType ?? 0
 
-export const getWalletFormat = (args: { keys: any }): CurrencyFormat =>
+export const getWalletFormat = (args: { keys: UtxoKeyFormat }): CurrencyFormat =>
   args.keys.format ?? 'bip32'
 
-export const getPurposeTypeFromKeys = (args: { keys: any }): BIP43PurposeTypeEnum => {
+export const getWalletSupportedFormats = (args: { keys: UtxoKeyFormat }): CurrencyFormat[] => {
+  const formats: CurrencyFormat[] = [ getWalletFormat(args) ]
+  // If wallet is Segwit, it also should support WrappedSegwit
+  if (getPurposeTypeFromKeys(args) === BIP43PurposeTypeEnum.Segwit) {
+    formats.push(
+      getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)
+    )
+  }
+  return formats
+}
+
+export const getFormatSupportedBranches = (format: CurrencyFormat): number[] => {
+  const branches = [ 0 ]
+  if (currencyFormatToPurposeType(format) !== BIP43PurposeTypeEnum.Airbitz) {
+    branches.push(1)
+  }
+  return branches
+}
+
+export const getPurposeTypeFromKeys = (args: { keys: UtxoKeyFormat }): BIP43PurposeTypeEnum => {
   return currencyFormatToPurposeType(getWalletFormat(args))
 }
 
@@ -96,7 +118,7 @@ type CurrencyFormatKeys = {
   [format in CurrencyFormat]?: string
 }
 
-export const fetchOrDeriveXprivFromKeys = async (args: { keys: any, walletLocalEncryptedDisklet: Disklet, coin: string, network: NetworkEnum, }): Promise<CurrencyFormatKeys> => {
+export const fetchOrDeriveXprivFromKeys = async (args: { keys: UtxoKeyFormat, walletLocalEncryptedDisklet: Disklet, coin: string, network: NetworkEnum, }): Promise<CurrencyFormatKeys> => {
   const filename = 'privateKeys.json'
   let keys: CurrencyFormatKeys
   try {
@@ -109,7 +131,7 @@ export const fetchOrDeriveXprivFromKeys = async (args: { keys: any, walletLocalE
   return keys
 }
 
-export const deriveXprivFromKeys = (args: { keys: any, coin: string, network: NetworkEnum }): CurrencyFormatKeys => {
+export const deriveXprivFromKeys = (args: { keys: UtxoKeyFormat, coin: string, network: NetworkEnum }): CurrencyFormatKeys => {
   const keys: CurrencyFormatKeys = {}
   const xprivArgs = {
     seed: pluginUtils.getMnemonic(args),
@@ -117,41 +139,33 @@ export const deriveXprivFromKeys = (args: { keys: any, coin: string, network: Ne
     coin: args.coin,
     network: args.network
   }
-  switch (getPurposeTypeFromKeys(args)) {
-    case BIP43PurposeTypeEnum.Segwit:
-      keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit)] = seedOrMnemonicToXPriv({
-        ...xprivArgs,
-        type: BIP43PurposeTypeEnum.Segwit
-      })
-      keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)] = seedOrMnemonicToXPriv({
-        ...xprivArgs,
-        type: BIP43PurposeTypeEnum.WrappedSegwit
-      })
-      break
-    case BIP43PurposeTypeEnum.WrappedSegwit:
-      keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)] = seedOrMnemonicToXPriv({
-        ...xprivArgs,
-        type: BIP43PurposeTypeEnum.WrappedSegwit
-      })
-      break
-    case BIP43PurposeTypeEnum.Legacy:
-    default:
-      keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Legacy)] = seedOrMnemonicToXPriv({
-        ...xprivArgs,
-        type: BIP43PurposeTypeEnum.Legacy
-      })
+  const walletPurpose = getPurposeTypeFromKeys(args)
+  if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
+    keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit)] = seedOrMnemonicToXPriv({
+      ...xprivArgs,
+      type: BIP43PurposeTypeEnum.Segwit
+    })
+    keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)] = seedOrMnemonicToXPriv({
+      ...xprivArgs,
+      type: BIP43PurposeTypeEnum.WrappedSegwit
+    })
+  } else {
+    keys[getCurrencyFormatFromPurposeType(walletPurpose)] = seedOrMnemonicToXPriv({
+      ...xprivArgs,
+      type: walletPurpose
+    })
   }
 
   return keys
 }
 
-export const deriveXpubFromKeys = (args: { keys: any, coin: string, network: NetworkEnum }): string =>
+export const deriveXpubFromKeys = (args: { keys: UtxoKeyFormat, coin: string, network: NetworkEnum }): string =>
   deriveXpub({
     ...args,
     type: getPurposeTypeFromKeys(args)
   })
 
-export const deriveXpub = (args: { keys: any, type: BIP43PurposeTypeEnum, coin: string, network: NetworkEnum }): string =>
+export const deriveXpub = (args: { keys: UtxoKeyFormat, type: BIP43PurposeTypeEnum, coin: string, network: NetworkEnum }): string =>
   xprivToXPub({
     ...args,
     xpriv: deriveXprivFromKeys(args)[getCurrencyFormatFromPurposeType(args.type)]!
