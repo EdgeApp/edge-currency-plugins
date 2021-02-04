@@ -1,5 +1,6 @@
 import { EdgeFreshAddress, EdgeTxidMap, EdgeWalletInfo } from 'edge-core-js'
 import { Mutex } from 'async-mutex'
+import * as bs from 'biggystring'
 
 import {
   AddressPath,
@@ -25,7 +26,7 @@ import {
   validScriptPubkeyFromAddress
 } from './utils'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
-import * as bs from 'biggystring'
+import { batchFunctions } from '../../utils'
 
 export interface UtxoEngineState {
   start(): Promise<void>
@@ -78,7 +79,7 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
       }
 
       const formatsToProcess = getWalletSupportedFormats(walletInfo)
-      formatsToProcess.map(async (format) => {
+      for (const format of formatsToProcess) {
         const args = {
           ...config,
           format,
@@ -90,7 +91,7 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
 
         await setLookAhead(args)
         await processFormatAddresses(args)
-      })
+      }
     },
 
     async stop(): Promise<void> {
@@ -134,15 +135,18 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
     },
 
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
-      const addNewPromises = addresses.map(async (address) => {
+      const batchSize = 10
+      const fns = addresses.map((address) => async () => {
         const scriptPubkey = walletTools.addressToScriptPubkey(address)
-        await saveNewOrUpdateAddressPathIfNeeded({
+        await saveAddress({
           scriptPubkey,
-          processor,
-          walletTools
+          processor
         })
       })
-      await Promise.all(addNewPromises)
+      await batchFunctions({
+        fns,
+        batchSize
+      })
     },
 
     async markAddressUsed(address: string): Promise<void> {
@@ -154,8 +158,6 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
 
 interface SetLookAheadArgs extends CommonArgs {
   format: CurrencyFormat
-  processNewAddresses?: boolean
-  onAddressChecked?: () => Promise<void>
 }
 
 const setLookAhead = async (args: SetLookAheadArgs) => {
@@ -164,8 +166,7 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
     currencyInfo,
     walletTools,
     processor,
-    mutex,
-    processNewAddresses = false
+    mutex
   } = args
 
   const release = await mutex.acquire()
@@ -177,40 +178,34 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
         format,
         changeIndex: branch
       }
-      let freshIndex = await getFreshIndex({
-        ...args,
-        ...partialPath
-      })
-      const addressCount = await processor.fetchAddressCountFromPathPartition(partialPath)
-      for (let i = addressCount; i < freshIndex + currencyInfo.gapLimit; i++) {
+
+      let i = await processor.fetchAddressCountFromPathPartition(partialPath)
+      let freshIndex = 0
+      const updateFreshIndex = async () => {
+        freshIndex = await getFreshIndex({ ...args, ...partialPath })
+      }
+      await updateFreshIndex()
+
+      while (i < freshIndex + currencyInfo.gapLimit) {
         const path: AddressPath = {
           ...partialPath,
           addressIndex: i
         }
-        const isNew = await saveNewOrUpdateAddressPathIfNeeded({
+        const { address } = walletTools.getAddress(path)
+        const scriptPubkey = walletTools.addressToScriptPubkey(address)
+
+        await saveAddress({
           ...args,
+          scriptPubkey,
           path
         })
-
-        if (isNew && processNewAddresses) {
-          const scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
-          const { address } = walletTools.scriptPubkeyToAddress({
-            scriptPubkey: scriptPubkey!,
-            format
-          })
-          mutex.runExclusive(() => {
-            processAddress({
-              ...args,
-              address
-            })
-          })
-        }
-
-        freshIndex = await getFreshIndex({
+        await processAddressBalance({
           ...args,
-          format,
-          changeIndex: branch
+          address
         })
+
+        i++
+        await updateFreshIndex()
       }
     }
   } finally {
@@ -218,46 +213,47 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
   }
 }
 
-interface SaveNewAddressByScriptPubkeyArgs {
+interface SaveAddressArgs {
+  scriptPubkey: string
   path?: AddressPath
-  scriptPubkey?: string
   processor: Processor
-  walletTools: UTXOPluginWalletTools
 }
 
-const saveNewOrUpdateAddressPathIfNeeded = async (args: SaveNewAddressByScriptPubkeyArgs): Promise<boolean> => {
+const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
   const {
+    scriptPubkey,
     path,
-    processor,
-    walletTools
+    processor
   } = args
 
-  let { scriptPubkey } = args
-  if (!scriptPubkey) {
-    if (!path) throw new Error('Cannot save/update address without scriptPubkey or path')
-    scriptPubkey = walletTools.getScriptPubkey(path).scriptPubkey
-  }
-
-  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  if (!addressData) {
-    await processor.saveAddress({
+  const saveNewAddress = () =>
+    processor.saveAddress({
       scriptPubkey,
       path,
+      used: false,
       networkQueryVal: 0,
       lastQuery: 0,
       lastTouched: 0,
-      used: false,
       balance: '0'
     })
-    return true
-  } else if (!addressData.path) {
-    await processor.saveAddress({
-      ...addressData,
-      path
-    })
-  }
 
-  return false
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (!addressData) {
+    await saveNewAddress()
+  } else if (!addressData.path && path) {
+    try {
+      await processor.updateAddressByScriptPubkey(scriptPubkey, {
+        ...addressData,
+        path
+      })
+    } catch (err) {
+      if (err.message === 'Cannot update address that does not exist') {
+        await saveNewAddress()
+      } else {
+        throw err
+      }
+    }
+  }
 }
 
 interface GetTotalAddressCountArgs {
@@ -305,6 +301,7 @@ interface GetFreshIndexArgs {
   changeIndex: number
   currencyInfo: EngineCurrencyInfo
   processor: Processor
+  walletTools: UTXOPluginWalletTools
   find?: boolean
 }
 
@@ -314,6 +311,7 @@ const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
     changeIndex,
     currencyInfo,
     processor,
+    walletTools,
     find = true
   } = args
 
@@ -327,13 +325,14 @@ const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
   if (path.addressIndex < 0) return 0
 
   return find
-    ? findFreshIndex({ path, processor })
+    ? findFreshIndex({ path, processor, walletTools })
     : path.addressIndex
 }
 
 interface FindFreshIndexArgs {
   path: AddressPath
   processor: Processor
+  walletTools: UTXOPluginWalletTools
 }
 
 const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
@@ -353,7 +352,7 @@ const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
       addressIndex: path.addressIndex - 1
     }
     const prevAddressData = await fetchAddressDataByPath({
-      processor,
+      ...args,
       path: prevPath
     })
     // If previous address is used we know this address is the last used
@@ -376,16 +375,20 @@ const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
 interface FetchAddressDataByPath {
   path: AddressPath
   processor: Processor
+  walletTools: UTXOPluginWalletTools
 }
 
 const fetchAddressDataByPath = async (args: FetchAddressDataByPath): Promise<IAddress> => {
   const {
     path,
-    processor
+    processor,
+    walletTools
   } = args
 
-  const scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
-  if (!scriptPubkey) throw new Error('Address path unknown')
+  const scriptPubkey =
+    await processor.fetchScriptPubkeyByPath(path) ??
+    walletTools.getScriptPubkey(path).scriptPubkey
+
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
   if (!addressData) throw new Error('Address data unknown')
   return addressData
@@ -436,11 +439,6 @@ interface CommonArgs {
   mutex: Mutex
 }
 
-interface ProcessAddressArgs extends CommonArgs {
-  address: string
-  onAddressChecked?: () => Promise<void>
-}
-
 interface ProcessFormatAddressesArgs extends CommonArgs {
   format: CurrencyFormat
   onAddressChecked?: () => Promise<void>
@@ -484,7 +482,7 @@ const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
       processAddress({ ...args, address })
     )
 
-    if (processAddressPromises.length >= currencyInfo.gapLimit) {
+    if (processAddressPromises.length >= 5) {
       await Promise.all(processAddressPromises)
       processAddressPromises = []
     }
@@ -510,58 +508,72 @@ const fetchTransaction = async (args: FetchTransactionArgs): Promise<ProcessorTr
   return tx
 }
 
+interface ProcessAddressArgs extends CommonArgs {
+  address: string
+  format: CurrencyFormat
+  onAddressChecked?: () => Promise<void>
+}
+
 const processAddress = async (args: ProcessAddressArgs) => {
   const {
     address,
-    currencyInfo,
-    walletTools,
-    processor,
     blockBook,
-    emitter,
     addressesToWatch,
     onAddressChecked
   } = args
 
-  const scriptPubkey = walletTools.addressToScriptPubkey(address)
-  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  const previouslyUsed = addressData!.used
-
   const firstProcess = !addressesToWatch.has(address)
   if (firstProcess) {
     addressesToWatch.add(address)
-    blockBook.watchAddresses(Array.from(addressesToWatch), (response) => {
-      processAddress({ ...args, address: response.address })
+    blockBook.watchAddresses(Array.from(addressesToWatch), async (response) => {
+      await setLookAhead(args)
+      await processAddress({ ...args, address: response.address })
     })
   }
 
+  await Promise.all([
+    processAddressBalance(args),
+    processAddressTransactions(args),
+    processAddressUtxos(args)
+  ])
+
+  firstProcess && await onAddressChecked?.()
+}
+
+interface ProcessAddressBalanceArgs {
+  address: string
+  processor: Processor
+  currencyInfo: EngineCurrencyInfo
+  walletTools: UTXOPluginWalletTools
+  blockBook: BlockBook
+  emitter: Emitter
+}
+
+const processAddressBalance = async (args: ProcessAddressBalanceArgs): Promise<void> => {
+  const {
+    address,
+    processor,
+    currencyInfo,
+    walletTools,
+    blockBook,
+    emitter
+  } = args
+
+  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+
   const accountDetails = await blockBook.fetchAddress(address)
-  const oldBalance = addressData!.balance ?? '0'
+  const oldBalance = addressData?.balance ?? '0'
   const balance = bs.add(accountDetails.balance, accountDetails.unconfirmedBalance)
   if (oldBalance !== balance) {
     emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, balance)
   }
   const used = accountDetails.txs > 0 || accountDetails.unconfirmedTxs > 0
 
-  await Promise.all([
-    processAddressTransactions(args),
-    processAddressUtxos(args),
-    processor.updateAddressByScriptPubkey(scriptPubkey, {
-      balance,
-      used
-    })
-  ])
-
-  firstProcess && await onAddressChecked?.()
-
-  // If address was previously not used and now it is, call setLookAhead
-  // Make sure we have the path saved
-  if (!previouslyUsed && used && addressData!.path) {
-    await setLookAhead({
-      ...args,
-      format: addressData!.path!.format,
-      processNewAddresses: true
-    })
-  }
+  await processor.updateAddressByScriptPubkey(scriptPubkey, {
+    balance,
+    used
+  })
 }
 
 interface ProcessAddressTxsArgs {
@@ -571,7 +583,6 @@ interface ProcessAddressTxsArgs {
   processor: Processor
   walletTools: UTXOPluginWalletTools
   blockBook: BlockBook
-  emitter: Emitter
 }
 
 const processAddressTransactions = async (args: ProcessAddressTxsArgs, page = 1): Promise<void> => {
@@ -579,8 +590,7 @@ const processAddressTransactions = async (args: ProcessAddressTxsArgs, page = 1)
     address,
     processor,
     walletTools,
-    blockBook,
-    emitter
+    blockBook
   } = args
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)

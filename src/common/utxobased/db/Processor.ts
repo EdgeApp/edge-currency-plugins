@@ -480,10 +480,11 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       scriptPubkey: string,
       data: Partial<IAddress>
     ): Promise<void> {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         queue.add(async () => {
-          await innerUpdateAddressByScriptPubkey(scriptPubkey, data)
-          resolve()
+          innerUpdateAddressByScriptPubkey(scriptPubkey, data)
+            .then(() => resolve())
+            .catch(reject)
         })
       })
     },
