@@ -179,17 +179,15 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
         changeIndex: branch
       }
 
-      let i = await processor.fetchAddressCountFromPathPartition(partialPath)
-      let freshIndex = 0
-      const updateFreshIndex = async () => {
-        freshIndex = await getFreshIndex({ ...args, ...partialPath })
-      }
-      await updateFreshIndex()
+      const getLastUsed = () => findLastUsedIndex({ ...args, ...partialPath })
+      const getAddressCount = () => processor.fetchAddressCountFromPathPartition(partialPath)
 
-      while (i < freshIndex + currencyInfo.gapLimit) {
+      let lastUsed = await getLastUsed()
+      let addressCount = await getAddressCount()
+      while (lastUsed + currencyInfo.gapLimit > addressCount) {
         const path: AddressPath = {
           ...partialPath,
-          addressIndex: i
+          addressIndex: addressCount
         }
         const { address } = walletTools.getAddress(path)
         const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -204,8 +202,8 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
           address
         })
 
-        i++
-        await updateFreshIndex()
+        lastUsed = await getLastUsed()
+        addressCount = await getAddressCount()
       }
     }
   } finally {
@@ -321,12 +319,42 @@ const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
     addressIndex: 0 // tmp
   }
   const addressCount = await processor.fetchAddressCountFromPathPartition(path)
-  path.addressIndex = addressCount - currencyInfo.gapLimit
-  if (path.addressIndex < 0) return 0
+  path.addressIndex = Math.max(addressCount - currencyInfo.gapLimit, 0)
 
   return find
     ? findFreshIndex({ path, processor, walletTools })
     : path.addressIndex
+}
+
+const findLastUsedIndex = async (args: GetFreshIndexArgs): Promise<number> => {
+  const {
+    format,
+    changeIndex,
+    processor,
+    walletTools
+  } = args
+
+  const freshIndex = await getFreshIndex(args)
+  const addressCount = await processor.fetchAddressCountFromPathPartition({
+    format,
+    changeIndex
+  })
+  let lastUsedIndex = freshIndex - 1
+  if (lastUsedIndex >= 0) {
+    for (let i = lastUsedIndex; i < addressCount; i++) {
+      const addressData = await fetchAddressDataByPath({
+        processor,
+        walletTools,
+        path: {
+          format,
+          changeIndex,
+          addressIndex: i
+        }
+      })
+      if (addressData.used && i > lastUsedIndex) lastUsedIndex = i
+    }
+  }
+  return lastUsedIndex
 }
 
 interface FindFreshIndexArgs {
@@ -436,6 +464,7 @@ interface CommonArgs {
   blockBook: BlockBook
   addressesToWatch: Set<string>
   emitter: Emitter
+  metadata: LocalWalletMetadata
   mutex: Mutex
 }
 
@@ -457,7 +486,6 @@ interface ProcessPathAddressesArgs extends ProcessFormatAddressesArgs {
 
 const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
   const {
-    currencyInfo,
     walletTools,
     processor,
     format,
@@ -547,6 +575,7 @@ interface ProcessAddressBalanceArgs {
   walletTools: UTXOPluginWalletTools
   blockBook: BlockBook
   emitter: Emitter
+  metadata: LocalWalletMetadata
 }
 
 const processAddressBalance = async (args: ProcessAddressBalanceArgs): Promise<void> => {
@@ -556,7 +585,8 @@ const processAddressBalance = async (args: ProcessAddressBalanceArgs): Promise<v
     currencyInfo,
     walletTools,
     blockBook,
-    emitter
+    emitter,
+    metadata
   } = args
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -565,8 +595,10 @@ const processAddressBalance = async (args: ProcessAddressBalanceArgs): Promise<v
   const accountDetails = await blockBook.fetchAddress(address)
   const oldBalance = addressData?.balance ?? '0'
   const balance = bs.add(accountDetails.balance, accountDetails.unconfirmedBalance)
-  if (oldBalance !== balance) {
-    emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, balance)
+  const diff = bs.sub(balance, oldBalance)
+  if (diff !== '0') {
+    const newWalletBalance = bs.add(metadata.balance, diff)
+    emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, newWalletBalance)
   }
   const used = accountDetails.txs > 0 || accountDetails.unconfirmedTxs > 0
 
