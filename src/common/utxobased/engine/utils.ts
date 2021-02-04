@@ -19,12 +19,12 @@ import { UtxoKeyFormat } from './makeUtxoWalletTools'
 
 export const getCurrencyFormatFromPurposeType = (purpose: BIP43PurposeTypeEnum): CurrencyFormat => {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
+      return 'bip32'
     case BIP43PurposeTypeEnum.Legacy:
       return 'bip44'
-
     case BIP43PurposeTypeEnum.WrappedSegwit:
       return 'bip49'
-
     case BIP43PurposeTypeEnum.Segwit:
       return 'bip84'
   }
@@ -36,6 +36,7 @@ export const getAddressTypeFromKeys = (keys: UtxoKeyFormat): AddressTypeEnum => 
 
 export const getAddressTypeFromPurposeType = (purpose: BIP43PurposeTypeEnum): AddressTypeEnum => {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
       return AddressTypeEnum.p2pkh
 
@@ -49,6 +50,7 @@ export const getAddressTypeFromPurposeType = (purpose: BIP43PurposeTypeEnum): Ad
 
 export const getScriptTypeFromPurposeType = (purpose: BIP43PurposeTypeEnum): ScriptTypeEnum => {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
       return ScriptTypeEnum.p2pkh
 
@@ -95,6 +97,14 @@ export const getWalletSupportedFormats = (args: { keys: UtxoKeyFormat }): Curren
   return formats
 }
 
+export const getFormatSupportedBranches = (format: CurrencyFormat): number[] => {
+  const branches = [ 0 ]
+  if (currencyFormatToPurposeType(format) !== BIP43PurposeTypeEnum.Airbitz) {
+    branches.push(1)
+  }
+  return branches
+}
+
 export const getPurposeTypeFromKeys = (args: { keys: UtxoKeyFormat }): BIP43PurposeTypeEnum => {
   return currencyFormatToPurposeType(getWalletFormat(args))
 }
@@ -129,29 +139,21 @@ export const deriveXprivFromKeys = (args: { keys: UtxoKeyFormat, coin: string, n
     coin: args.coin,
     network: args.network
   }
-  switch (getPurposeTypeFromKeys(args)) {
-    case BIP43PurposeTypeEnum.Segwit:
-      keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit)] = seedOrMnemonicToXPriv({
-        ...xprivArgs,
-        type: BIP43PurposeTypeEnum.Segwit
-      })
-      keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)] = seedOrMnemonicToXPriv({
-        ...xprivArgs,
-        type: BIP43PurposeTypeEnum.WrappedSegwit
-      })
-      break
-    case BIP43PurposeTypeEnum.WrappedSegwit:
-      keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)] = seedOrMnemonicToXPriv({
-        ...xprivArgs,
-        type: BIP43PurposeTypeEnum.WrappedSegwit
-      })
-      break
-    case BIP43PurposeTypeEnum.Legacy:
-    default:
-      keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Legacy)] = seedOrMnemonicToXPriv({
-        ...xprivArgs,
-        type: BIP43PurposeTypeEnum.Legacy
-      })
+  const walletPurpose = getPurposeTypeFromKeys(args)
+  if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
+    keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit)] = seedOrMnemonicToXPriv({
+      ...xprivArgs,
+      type: BIP43PurposeTypeEnum.Segwit
+    })
+    keys[getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)] = seedOrMnemonicToXPriv({
+      ...xprivArgs,
+      type: BIP43PurposeTypeEnum.WrappedSegwit
+    })
+  } else {
+    keys[getCurrencyFormatFromPurposeType(walletPurpose)] = seedOrMnemonicToXPriv({
+      ...xprivArgs,
+      type: walletPurpose
+    })
   }
 
   return keys

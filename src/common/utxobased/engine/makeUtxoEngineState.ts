@@ -19,6 +19,7 @@ import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import {
   currencyFormatToPurposeType,
   getCurrencyFormatFromPurposeType,
+  getFormatSupportedBranches,
   getPurposeTypeFromKeys,
   getWalletSupportedFormats,
   validScriptPubkeyFromAddress
@@ -97,7 +98,7 @@ export async function makeUtxoEngineState(config: UtxoEngineStateConfig): Promis
 
     async getFreshAddress(change?: boolean): Promise<EdgeFreshAddress> {
       const walletPurpose = getPurposeTypeFromKeys(walletInfo)
-      const changeIndex = change ? 1 : 0
+      const changeIndex = change && walletPurpose !== BIP43PurposeTypeEnum.Airbitz ? 1 : 0
       if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
         const { address: publicAddress } = await getFreshAddress({
           ...config,
@@ -170,10 +171,11 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
   const release = await mutex.acquire()
 
   try {
-    for (const changeIndex of <[ 0, 1 ]>[ 0, 1 ]) {
+    const branches = getFormatSupportedBranches(format)
+    for (const branch of branches) {
       const partialPath: Omit<AddressPath, 'addressIndex'> = {
         format,
-        changeIndex
+        changeIndex: branch
       }
       let freshIndex = await getFreshIndex({
         ...args,
@@ -196,16 +198,18 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
             scriptPubkey: scriptPubkey!,
             format
           })
-          await processAddress({
-            ...args,
-            address
+          mutex.runExclusive(() => {
+            processAddress({
+              ...args,
+              address
+            })
           })
         }
 
         freshIndex = await getFreshIndex({
           ...args,
           format,
-          changeIndex
+          changeIndex: branch
         })
       }
     }
@@ -235,8 +239,7 @@ const saveNewOrUpdateAddressPathIfNeeded = async (args: SaveNewAddressByScriptPu
   }
 
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  const isNew = !addressData
-  if (isNew) {
+  if (!addressData) {
     await processor.saveAddress({
       scriptPubkey,
       path,
@@ -246,11 +249,15 @@ const saveNewOrUpdateAddressPathIfNeeded = async (args: SaveNewAddressByScriptPu
       used: false,
       balance: '0'
     })
-  } else if (!addressData!.path) {
-    await processor.updateAddressByScriptPubkey(scriptPubkey, { path })
+    return true
+  } else if (!addressData.path) {
+    await processor.saveAddress({
+      ...addressData,
+      path
+    })
   }
 
-  return isNew
+  return false
 }
 
 interface GetTotalAddressCountArgs {
@@ -281,18 +288,21 @@ const getFormatAddressCount = async (args: GetFormatAddressCountArgs): Promise<n
     processor
   } = args
 
-  let receiveCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex: 0 })
-  let changeCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex: 1 })
+  let count = 0
 
-  if (receiveCount < currencyInfo.gapLimit) receiveCount = currencyInfo.gapLimit
-  if (changeCount < currencyInfo.gapLimit) changeCount = currencyInfo.gapLimit
+  const branches = getFormatSupportedBranches(format)
+  for (const branch of branches) {
+    let branchCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex: branch })
+    if (branchCount < currencyInfo.gapLimit) branchCount = currencyInfo.gapLimit
+    count += branchCount
+  }
 
-  return receiveCount + changeCount
+  return count
 }
 
 interface GetFreshIndexArgs {
   format: CurrencyFormat
-  changeIndex: 0 | 1
+  changeIndex: number
   currencyInfo: EngineCurrencyInfo
   processor: Processor
   find?: boolean
@@ -329,8 +339,11 @@ interface FindFreshIndexArgs {
 const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
   const {
     path,
-    processor,
+    processor
   } = args
+
+  const addressCount = await processor.fetchAddressCountFromPathPartition(path)
+  if (path.addressIndex >= addressCount) return path.addressIndex
 
   const addressData = await fetchAddressDataByPath(args)
   // If this address is not used check the previous one
@@ -344,7 +357,7 @@ const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
       path: prevPath
     })
     // If previous address is used we know this address is the last used
-    if (prevAddressData.used){
+    if (prevAddressData.used) {
       return path.addressIndex
     } else if (path.addressIndex > 1) {
       // Since we know the previous address is also unused, start the search from 2nd previous address
@@ -392,7 +405,7 @@ const getFreshAddress = async (args: GetFreshAddressArgs): Promise<GetFreshAddre
     format,
     changeIndex,
     walletTools,
-    processor,
+    processor
   } = args
 
   const path = {
@@ -434,12 +447,14 @@ interface ProcessFormatAddressesArgs extends CommonArgs {
 }
 
 const processFormatAddresses = async (args: ProcessFormatAddressesArgs) => {
-  await processPathAddresses({ ...args, changeIndex: 0 })
-  await processPathAddresses({ ...args, changeIndex: 1 })
+  const branches = getFormatSupportedBranches(args.format)
+  for (const branch of branches) {
+    await processPathAddresses({ ...args, changeIndex: branch })
+  }
 }
 
 interface ProcessPathAddressesArgs extends ProcessFormatAddressesArgs {
-  changeIndex: 0 | 1
+  changeIndex: number
 }
 
 const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
@@ -678,6 +693,7 @@ const processAddressUtxos = async (args: ProcessAddressUtxosArgs): Promise<void>
     let script: string
     let redeemScript: string | undefined
     switch (currencyFormatToPurposeType(addressData.path.format)) {
+      case BIP43PurposeTypeEnum.Airbitz:
       case BIP43PurposeTypeEnum.Legacy:
         script = (await fetchTransaction({ ...args, txid: utxo.txid })).hex
         scriptType = ScriptTypeEnum.p2pkh
