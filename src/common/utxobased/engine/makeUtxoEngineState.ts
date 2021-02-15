@@ -6,7 +6,7 @@ import { BlockBook, INewTransactionResponse, ITransaction } from '../network/Blo
 import { IAddressPartial, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
-import { Processor } from '../db/Processor'
+import { Processor } from '../db/makeProcessor'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import { getCurrencyFormatFromPurposeType, validScriptPubkeyFromAddress, getPurposeTypeFromKeys, getWalletFormat  } from './utils'
 
