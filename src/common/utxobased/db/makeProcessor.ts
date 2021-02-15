@@ -5,16 +5,7 @@ import { RangeBase } from 'baselet/src/RangeBase'
 import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
 
-import {
-  Baselet,
-  BaseletConfig,
-  IAddress,
-  IAddressOptional,
-  IAddressPartial,
-  IAddressRequired,
-  IProcessorTransaction,
-  IUTXO
-} from './types'
+import { Baselet, BaseletConfig, IAddress, IProcessorTransaction, IUTXO } from './types'
 import { ProcessorTransaction } from './Models/ProcessorTransaction'
 import { makeQueue } from './makeQueue'
 import { AddressPath, EmitterEvent } from '../../plugin/types'
@@ -63,7 +54,7 @@ export interface Processor {
 
   fetchScriptPubKeysByBalance(): Promise<Array<ScriptPubKeysByBalance>>
 
-  saveAddress(data: IAddressRequired & IAddressOptional, onComplete?: () => void): void
+  saveAddress(data: IAddress, onComplete?: () => void): void
 
   updateAddress(path: AddressPath, data: Partial<IAddress>): void
 
@@ -150,7 +141,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
   async function processAndSaveAddress(data: IAddress) {
     try {
       await Promise.all([
-        addressByPath.insert(addressPathToPrefix(data.path), data.path.addressIndex, data),
+        addressByPath.insert(addressPathToPrefix(data.path!), data.path!.addressIndex, data),
 
         scriptPubKeysByBalance.insert('', {
           [RANGE_ID_KEY]: data.scriptPubKey,
@@ -264,17 +255,9 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
   }
 
   async function innerSaveAddress(
-    data: IAddressPartial
+    data: IAddress
   ) {
-    const values: IAddress = {
-      lastQuery: 0,
-      lastTouched: 0,
-      used: false,
-      balance: '0',
-      ...data
-    }
-
-    await processAndSaveAddress(values)
+    await processAndSaveAddress(data)
   }
 
   async function innerUpdateAddress(path: AddressPath, data: Partial<IAddress>): Promise<IAddress> {
@@ -471,7 +454,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
         if (address) {
           const addressPath: AddressPath = {
             ...path,
-            addressIndex: address.path.addressIndex
+            addressIndex: address.path!.addressIndex
           }
           queue.add(() => innerUpdateAddress(addressPath, { ...address, lastQuery: now }))
         }
@@ -491,7 +474,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     },
 
     saveAddress(
-      data: IAddressPartial,
+      data: IAddress,
       onComplete?: () => void
     ): void {
       queue.add(async () => {

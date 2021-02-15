@@ -5,22 +5,14 @@ import { RangeBase } from 'baselet/src/RangeBase'
 import { ScriptTypeEnum } from '../keymanager/keymanager'
 import { AddressPath } from '../../plugin/types'
 
-export type IAddress = Required<IAddressPartial>
-
-export interface IAddressPartial extends IAddressRequired, IAddressOptional {
-}
-
-export interface IAddressRequired {
+export type IAddress = {
   scriptPubKey: string
   networkQueryVal: number
-  path: AddressPath
-}
-
-export interface IAddressOptional {
-  lastQuery?: number
-  lastTouched?: number
-  used?: boolean
-  balance?: string
+  path?: AddressPath
+  lastQuery: number
+  lastTouched: number
+  used: boolean
+  balance: string
 }
 
 export interface IUTXO {
