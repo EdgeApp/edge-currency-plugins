@@ -280,7 +280,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     )
   }
 
-  async function innerUpdateAddress(scriptPubKey: string, data: Partial<IAddress>): Promise<IAddress> {
+  async function innerUpdateAddressByScriptPubKey(scriptPubKey: string, data: Partial<IAddress>): Promise<IAddress> {
     const [ address ] = await addressByScriptPubKey.query('', [ scriptPubKey ])
     if (!address) {
       throw new Error('Cannot update address that does not exist')
@@ -332,18 +332,6 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     return address
   }
 
-  async function innerUpdateAddressByScriptPubKey(
-    scriptPubKey: string,
-    data: Partial<IAddress>
-  ) {
-    const path = await fns.fetchAddressPathBySPubKey(scriptPubKey)
-    if (!path) {
-      throw new Error(`Cannot update address by scriptPubKey that does not exist: ${scriptPubKey}`)
-    }
-
-    await innerUpdateAddress(path, data)
-  }
-
   async function innerSaveTransaction(tx: ProcessorTransaction): Promise<void> {
     const existingTx = await fns.fetchTransaction(tx.txid)
     if (!existingTx) {
@@ -367,7 +355,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
             tx.ourOuts = Object.keys(txs[tx.txid].outs)
           }
 
-          await fns.updateAddressByScriptPubKey(scriptPubKey, {
+          await innerUpdateAddressByScriptPubKey(scriptPubKey, {
             lastTouched: tx.date,
             used: true
           })
