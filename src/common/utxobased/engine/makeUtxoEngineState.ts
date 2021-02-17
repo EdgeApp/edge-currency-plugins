@@ -105,15 +105,20 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       progress.totalCount++
 
 
-      let address: IAddress = await processor.fetchAddress(path) ?? {
-        path,
-        scriptPubKey: walletTools.getScriptPubKey(path).scriptPubkey,
-        networkQueryVal: 0,
-        lastQuery: 0,
-        lastTouched: 0,
-        used: false,
-        balance: '0'
-      }
+      const scriptPubKey =
+        await processor.fetchScriptPubKeyByPath(path) ??
+        walletTools.getScriptPubKey(path).scriptPubkey
+      const address: IAddress =
+        await processor.fetchAddressByScriptPubKey(scriptPubKey) ??
+        {
+          path,
+          scriptPubKey,
+          networkQueryVal: 0,
+          lastQuery: 0,
+          lastTouched: 0,
+          used: false,
+          balance: '0'
+        }
       await calculateAddressBalance(address)
       processor.saveAddress(address, () => {
         processAddress(address)
@@ -150,7 +155,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     address.networkQueryVal = metadata.lastSeenBlockHeight + 1
 
-    processor.updateAddress(address.path!, address)
+    processor.updateAddressByScriptPubKey(address.scriptPubKey, address)
   }
 
   function updateFreshIndex(path: AddressPath): void {
@@ -274,13 +279,10 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     ourInOuts.push(...tx.ourIns.map((index: string) => tx.inputs[parseInt(index)]))
     ourInOuts.push(...tx.ourOuts.map((index: string) => tx.outputs[parseInt(index)]))
     for (const { scriptPubKey } of ourInOuts) {
-      const path = await processor.fetchAddressPathBySPubKey(
+      const address = await processor.fetchAddressByScriptPubKey(
         scriptPubKey
       )
-      if (path) {
-        const address = await processor.fetchAddress(path)
-        address && await processAddress(address, false)
-      }
+      address && await processAddress(address, false)
     }
   }
 
@@ -333,15 +335,15 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       })
     },
 
-    async markAddressUsed(address: string) {
-      const scriptPubKey = walletTools.addressToScriptPubkey(address)
-      const path = await processor.fetchAddressPathBySPubKey(scriptPubKey)
-      if (!path) {
+    async markAddressUsed(addressStr: string) {
+      const scriptPubKey = walletTools.addressToScriptPubkey(addressStr)
+      const address = await processor.fetchAddressByScriptPubKey(scriptPubKey)
+      if (!address?.path) {
         throw new Error('Invalid address: not stored in database')
       }
 
-      updateFreshIndex(path)
-      processor.updateAddress(path, {
+      updateFreshIndex(address.path)
+      processor.updateAddressByScriptPubKey(scriptPubKey, {
         used: true
       })
     }
