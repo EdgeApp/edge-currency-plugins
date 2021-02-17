@@ -1,20 +1,26 @@
 import * as chai from 'chai'
+import { expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { makeMemoryDisklet } from 'disklet'
+import { EventEmitter } from 'events'
 
-import { makeProcessor, Processor } from '../../../../src/common/utxobased/db/makeProcessor'
-import { CurrencyFormat, NetworkEnum } from '../../../../src/common/plugin/types'
+import {
+  CurrencyFormat,
+  NetworkEnum
+} from '../../../../src/common/plugin/types'
+import {
+  makeProcessor,
+  Processor
+} from '../../../../src/common/utxobased/db/makeProcessor'
 import {
   BitcoinWalletToolsConfig,
   makeUtxoWalletTools
 } from '../../../../src/common/utxobased/engine/makeUtxoWalletTools'
-import { EventEmitter } from 'events'
-import { expect } from 'chai'
 
 chai.should()
 chai.use(chaiAsPromised)
 
-describe('Processor', function() {
+describe('Processor', function () {
   const storage = {}
   const disklet = makeMemoryDisklet(storage)
   const emitter = new EventEmitter() as any
@@ -23,7 +29,8 @@ describe('Processor', function() {
   const format: CurrencyFormat = 'bip44'
   const walletToolsConfig: BitcoinWalletToolsConfig = {
     keys: {
-      bitcoinKey: 'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb',
+      bitcoinKey:
+        'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb',
       format,
       coinType: 0
     },
@@ -32,7 +39,7 @@ describe('Processor', function() {
   }
   const walletTools = makeUtxoWalletTools(walletToolsConfig)
 
-  before(async () => {
+  beforeEach(async () => {
     processor = await makeProcessor({ disklet, emitter })
   })
 
@@ -52,5 +59,40 @@ describe('Processor', function() {
     await processor.removeTxIdByBlockHeight(0, 'this')
     zeroConf = await processor.fetchTxIdsByBlockHeight(0)
     expect(zeroConf).to.eql(['that'])
+  })
+
+  it('test reset', async () => {
+    await processor.saveAddress({
+      lastQuery: 0,
+      lastTouched: 0,
+      used: false,
+      balance: '0',
+      scriptPubkey: 'justatest',
+      networkQueryVal: 0,
+      path: {
+        format: 'bip32',
+        changeIndex: 0,
+        addressIndex: 0
+      }
+    })
+    const testAddress = await processor.fetchAddressByScriptPubkey('justatest')
+    let lastQuery: number
+    if (testAddress != null) {
+      lastQuery = testAddress.lastQuery
+    } else {
+      lastQuery = 0
+    }
+    expect(testAddress).to.eql({
+      lastQuery,
+      lastTouched: 0,
+      used: false,
+      balance: '0',
+      scriptPubkey: 'justatest',
+      networkQueryVal: 0,
+      path: { format: 'bip32', changeIndex: 0, addressIndex: 0 }
+    })
+    await processor.clearAll()
+    const emptyAddress = await processor.fetchAddressByScriptPubkey('justatest')
+    expect(emptyAddress).to.equal(undefined)
   })
 })
