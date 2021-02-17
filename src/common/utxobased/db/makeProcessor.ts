@@ -61,7 +61,7 @@ export interface Processor {
 
   fetchAddressCountFromPathPartition(path: AddressPath): number
 
-  fetchScriptPubKeysByBalance(): Promise<Array<ScriptPubKeysByBalance>>
+  fetchScriptPubKeysByBalance(): Promise<ScriptPubKeysByBalance[]>
 
   saveAddress(data: IAddressRequired & IAddressOptional, onComplete?: () => void): void
 
@@ -485,7 +485,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     },
 
     // Returned in lowest first due to RangeBase
-    async fetchScriptPubKeysByBalance(): Promise<Array<{ [RANGE_ID_KEY]: string; [RANGE_KEY]: string }>> {
+    async fetchScriptPubKeysByBalance(): Promise<ScriptPubKeysByBalance[]> {
       const max = scriptPubKeysByBalance.max('') ?? 0
       return scriptPubKeysByBalance.query('', 0, max)
     },
@@ -518,9 +518,9 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       queue.add(() => innerUpdateAddressByScriptPubKey(scriptPubKey, data))
     },
 
-    async fetchTransaction(txId: string): Promise<ProcessorTransaction | null> {
+    async fetchTransaction(txId: string): Promise<TxById> {
       const [ data ] = await txById.query('', [ txId ])
-      return data ? new ProcessorTransaction(data) : null
+      return data ? new ProcessorTransaction(data) : undefined
     },
 
     async fetchTransactionsByScriptPubKey(
