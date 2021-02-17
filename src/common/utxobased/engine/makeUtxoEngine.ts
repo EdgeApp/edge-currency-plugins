@@ -21,7 +21,7 @@ import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { calculateFeeRate } from './makeSpendHelper'
 import { makeBlockBook } from '../network/BlockBook'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
-import { fetchMetadata, setMetadata } from '../../plugin/utils'
+import { clearMetadata, fetchMetadata, setMetadata } from '../../plugin/utils'
 import { fetchOrDeriveXprivFromKeys, getWalletFormat, getWalletSupportedFormats, getXprivKey } from './utils'
 import { IProcessorTransaction } from '../db/types'
 import { fromEdgeTransaction, toEdgeTransaction } from '../db/Models/ProcessorTransaction'
@@ -59,7 +59,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
   })
 
   const blockBook = makeBlockBook({ emitter })
-  const metadata = await fetchMetadata(walletLocalDisklet)
+  let metadata = await fetchMetadata(walletLocalDisklet)
   const processor = await makeProcessor({ disklet: walletLocalDisklet, emitter })
   const state = makeUtxoEngineState({
     ...config,
@@ -106,6 +106,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       await state.stop()
       await blockBook.disconnect()
     },
+
+  
 
     getBalance(opts: EdgeCurrencyCodeOptions): string {
       return metadata.balance
@@ -294,8 +296,15 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       }
     },
 
-    resyncBlockchain(): Promise<unknown> {
-      return Promise.resolve(undefined)
+    async resyncBlockchain(): Promise<void> {
+      // stops and resets the state
+      await state.stop()
+      // now get rid of all the db information
+      await processor.clearAll()
+      metadata = await clearMetadata(walletLocalDisklet)
+
+      // finally restart the state
+      await state.start()
     },
 
     saveTx(tx: EdgeTransaction): Promise<void> {
