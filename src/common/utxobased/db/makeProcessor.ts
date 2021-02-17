@@ -198,7 +198,19 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
   async function innerFetchAddressesByScriptPubKeys(scriptPubKeys: string[]): Promise<AddressByScriptPubKey[]> {
     if (scriptPubKeys.length === 0) return []
-    return await addressByScriptPubKey.query('', scriptPubKeys)
+    const addresses: AddressByScriptPubKey[] = await addressByScriptPubKey.query('', scriptPubKeys)
+
+    // Update the last query values
+    const now = Date.now()
+    addresses.map(async (address) => {
+      if (address) {
+        return innerUpdateAddressByScriptPubKey(address.scriptPubKey, {
+          lastQuery: now
+        })
+      }
+    })
+
+    return addresses
   }
 
   async function saveTransactionByScriptPubKey(
@@ -459,21 +471,9 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       )
     },
 
-    async fetchAddressesByPath(path: Omit<AddressPath, 'addressIndex'>): Promise<AddressByPath[]> {
-      const addresses = await fetchAddressesByPrefix(path)
-
-      const now = Date.now()
-      for (const address of addresses) {
-        if (address) {
-          const addressPath: AddressPath = {
-            ...path,
-            addressIndex: address.path!.addressIndex
-          }
-          queue.add(() => innerUpdateAddress(addressPath, { ...address, lastQuery: now }))
-        }
-      }
-
-      return addresses
+    async fetchAddressesByPath(path: Omit<AddressPath, 'addressIndex'>): Promise<AddressByScriptPubKey[]> {
+      const scriptPubKeys = await scriptPubKeyByPath.query(addressPathToPrefix(path), 0)
+      return innerFetchAddressesByScriptPubKeys(scriptPubKeys)
     },
 
     fetchAddressCountFromPathPartition(path: Omit<AddressPath, 'addressIndex'>): number {
