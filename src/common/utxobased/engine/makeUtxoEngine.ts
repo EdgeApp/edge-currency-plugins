@@ -14,7 +14,7 @@ import * as bitcoin from 'altcoin-js'
 
 import { EmitterEvent, EngineConfig } from '../../plugin/types'
 import { makeUtxoEngineState } from './makeUtxoEngineState'
-import { makeProcessor } from '../db/Processor'
+import { makeProcessor } from '../db/makeProcessor'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { calculateFeeRate } from './makeSpendHelper'
 import { makeBlockBook } from '../network/BlockBook'

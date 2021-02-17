@@ -2,7 +2,7 @@ import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { makeMemoryDisklet } from 'disklet'
 
-import { makeProcessor, Processor } from '../../../../src/common/utxobased/db/Processor'
+import { makeProcessor, Processor } from '../../../../src/common/utxobased/db/makeProcessor'
 import { CurrencyFormat, NetworkEnum } from '../../../../src/common/plugin/types'
 import {
   BitcoinWalletToolsConfig,
