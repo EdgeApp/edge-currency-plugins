@@ -266,12 +266,6 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     await innerUpdateTransaction(tx.txid, tx, true)
   }
 
-  async function innerSaveAddress(
-    data: IAddress
-  ) {
-    await processAndSaveAddress(data)
-  }
-
   async function innerSaveScriptPubKeyByPath(scriptPubKey: string, path: AddressPath): Promise<void> {
     await scriptPubKeyByPath.insert(
       addressPathToPrefix(path),
@@ -479,7 +473,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       onComplete?: () => void
     ): void {
       queue.add(async () => {
-        await innerSaveAddress(data)
+        await processAndSaveAddress(data)
         onComplete?.()
       })
     },
