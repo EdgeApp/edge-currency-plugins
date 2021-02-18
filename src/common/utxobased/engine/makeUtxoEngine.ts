@@ -172,8 +172,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
     // @ts-ignore
     async isAddressUsed(address: string): Promise<boolean> {
-      const scriptPubKey = walletTools.addressToScriptPubkey(address)
-      const addressData = await processor.fetchAddressByScriptPubKey(scriptPubKey)
+      const scriptPubkey = walletTools.addressToScriptPubkey(address)
+      const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
       return !!addressData?.used
     },
 
@@ -214,8 +214,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
       let nativeAmount = '0'
       for (const output of tx.psbt.txOutputs) {
-        const scriptPubKey = output.script.toString('hex')
-        const own = await processor.hasSPubKey(scriptPubKey)
+        const scriptPubkey = output.script.toString('hex')
+        const own = await processor.hasSPubKey(scriptPubkey)
         if (!own) {
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
         }
@@ -260,7 +260,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
         const utxo = await processor.fetchUtxo(`${txid}_${index}`)
         if (!utxo) throw new Error('Invalid UTXO')
 
-        const address = await processor.fetchAddressByScriptPubKey(utxo.scriptPubKey)
+        const address = await processor.fetchAddressByScriptPubkey(utxo.scriptPubkey)
         if (!address?.path) throw new Error('Invalid script pubkey')
 
         return walletTools.getPrivateKey(address.path)

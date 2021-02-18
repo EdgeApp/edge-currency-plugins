@@ -34,7 +34,7 @@ export interface BitcoinWalletToolsConfig extends WalletToolsConfig {
 export interface UTXOPluginWalletTools {
   getPubkey(args: AddressPath): string
 
-  getScriptPubKey(args: AddressPath): { scriptPubkey: string, redeemScript?: string }
+  getScriptPubkey(args: AddressPath): { scriptPubkey: string, redeemScript?: string }
 
   getAddress(args: AddressPath): string
 
@@ -71,7 +71,7 @@ export function makeUtxoWalletTools(config: WalletToolsConfig): UTXOPluginWallet
       })
     },
 
-    getScriptPubKey(args: AddressPath): { scriptPubkey: string, redeemScript?: string } {
+    getScriptPubkey(args: AddressPath): { scriptPubkey: string, redeemScript?: string } {
       return pubkeyToScriptPubkey({
         pubkey: fns.getPubkey(args),
         scriptType: getScriptTypeFromPurposeType(currencyFormatToPurposeType(args.format))
@@ -81,7 +81,7 @@ export function makeUtxoWalletTools(config: WalletToolsConfig): UTXOPluginWallet
     getAddress(args: AddressPath): string {
       const purposeType = currencyFormatToPurposeType(args.format)
       return scriptPubkeyToAddress({
-        scriptPubkey: fns.getScriptPubKey(args).scriptPubkey,
+        scriptPubkey: fns.getScriptPubkey(args).scriptPubkey,
         network,
         addressType: getAddressTypeFromPurposeType(purposeType),
         coin

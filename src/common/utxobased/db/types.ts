@@ -6,7 +6,7 @@ import { ScriptTypeEnum } from '../keymanager/keymanager'
 import { AddressPath } from '../../plugin/types'
 
 export type IAddress = {
-  scriptPubKey: string
+  scriptPubkey: string
   networkQueryVal: number
   path?: AddressPath
   lastQuery: number
@@ -20,7 +20,7 @@ export interface IUTXO {
   txid: string
   vout: number
   value: string
-  scriptPubKey: string
+  scriptPubkey: string
   script: string
   redeemScript?: string
   scriptType: ScriptTypeEnum
@@ -42,7 +42,7 @@ export interface IProcessorTransaction {
 
 export interface ITransactionOutput {
   amount: string
-  scriptPubKey: string
+  scriptPubkey: string
 }
 
 export interface ITransactionInput extends ITransactionOutput {
