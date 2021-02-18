@@ -9,18 +9,18 @@ export const RANGE_KEY = 'rangeKey'
 export const addressPathToPrefix = (path: Omit<AddressPath, 'addressIndex'>) =>
   `${path.format}_${path.changeIndex}`
 
-export type AddressByPath = IAddress | null
-export const addressByPathConfig: BaseletConfig<BaseType.CountBase> = {
-  dbName: 'addressByPath',
+export type ScriptPubKeyByPath = string | undefined
+export const scriptPubKeyByPathConfig: BaseletConfig<BaseType.CountBase> = {
+  dbName: 'scriptPubKeyByPath',
   type: BaseType.CountBase,
   bucketSize: 50
 }
 
-export type AddressPathByScriptPubKey = AddressPath
-export const addressPathByScriptPubKeyConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'addressPathByScriptPubKey',
+export type AddressByScriptPubKey = IAddress | undefined
+export const addressByScriptPubKeyConfig: BaseletConfig<BaseType.HashBase> = {
+  dbName: 'addressByScriptPubKey',
   type: BaseType.HashBase,
-  bucketSize: 6
+  bucketSize: 8
 }
 
 export type AddressPathByMRU = string
