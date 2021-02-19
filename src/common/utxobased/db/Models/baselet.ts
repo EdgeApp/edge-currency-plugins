@@ -9,16 +9,16 @@ export const RANGE_KEY = 'rangeKey'
 export const addressPathToPrefix = (path: Omit<AddressPath, 'addressIndex'>) =>
   `${path.format}_${path.changeIndex}`
 
-export type ScriptPubKeyByPath = string | undefined
-export const scriptPubKeyByPathConfig: BaseletConfig<BaseType.CountBase> = {
-  dbName: 'scriptPubKeyByPath',
+export type ScriptPubkeyByPath = string | undefined
+export const scriptPubkeyByPathConfig: BaseletConfig<BaseType.CountBase> = {
+  dbName: 'scriptPubkeyByPath',
   type: BaseType.CountBase,
   bucketSize: 50
 }
 
-export type AddressByScriptPubKey = IAddress | undefined
-export const addressByScriptPubKeyConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'addressByScriptPubKey',
+export type AddressByScriptPubkey = IAddress | undefined
+export const addressByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
+  dbName: 'addressByScriptPubkey',
   type: BaseType.HashBase,
   bucketSize: 8
 }
@@ -30,12 +30,12 @@ export const addressPathByMRUConfig: BaseletConfig<BaseType.CountBase> = {
   bucketSize: 100
 }
 
-export type ScriptPubKeysByBalance = {
+export type ScriptPubkeysByBalance = {
   [RANGE_ID_KEY]: string
   [RANGE_KEY]: string
 }
-export const scriptPubKeysByBalanceConfig: BaseletConfig<BaseType.RangeBase> = {
-  dbName: 'scriptPubKeysByBalance',
+export const scriptPubkeysByBalanceConfig: BaseletConfig<BaseType.RangeBase> = {
+  dbName: 'scriptPubkeysByBalance',
   type: BaseType.RangeBase,
   bucketSize: 100000
 }
@@ -47,14 +47,14 @@ export const txByIdConfig: BaseletConfig<BaseType.HashBase> = {
   bucketSize: 6
 }
 
-export type TxsByScriptPubKey = {
+export type TxsByScriptPubkey = {
   [hash: string]: {
     ins: { [index: number]: true }
     outs: { [index: number]: true }
   }
 }
-export const txsByScriptPubKeyConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'txsByScriptPubKey',
+export const txsByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
+  dbName: 'txsByScriptPubkey',
   type: BaseType.HashBase,
   bucketSize: 8
 }
@@ -77,12 +77,12 @@ export const utxoByIdConfig: BaseletConfig<BaseType.HashBase> = {
   bucketSize: 6
 }
 
-export type UtxosByScriptPubKey = Array<{
+export type UtxosByScriptPubkey = Array<{
   hash: string
   vout: number
 }>
-export const utxoIdsByScriptPubKeyConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'utxoIdsByScriptPubKey',
+export const utxoIdsByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
+  dbName: 'utxoIdsByScriptPubkey',
   type: BaseType.HashBase,
   bucketSize: 8
 }

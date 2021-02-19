@@ -105,14 +105,14 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       progress.totalCount++
 
 
-      const scriptPubKey =
-        await processor.fetchScriptPubKeyByPath(path) ??
-        walletTools.getScriptPubKey(path).scriptPubkey
+      const scriptPubkey =
+        await processor.fetchScriptPubkeyByPath(path) ??
+        walletTools.getScriptPubkey(path).scriptPubkey
       const address: IAddress =
-        await processor.fetchAddressByScriptPubKey(scriptPubKey) ??
+        await processor.fetchAddressByScriptPubkey(scriptPubkey) ??
         {
           path,
-          scriptPubKey,
+          scriptPubkey,
           networkQueryVal: 0,
           lastQuery: 0,
           lastTouched: 0,
@@ -155,7 +155,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     address.networkQueryVal = metadata.lastSeenBlockHeight + 1
 
-    processor.updateAddressByScriptPubKey(address.scriptPubKey, address)
+    processor.updateAddressByScriptPubkey(address.scriptPubkey, address)
   }
 
   function updateFreshIndex(path: AddressPath): void {
@@ -206,7 +206,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function processAddressUTXOs(address: IAddress): Promise<void> {
-    const oldUtxos = await processor.fetchUtxosByScriptPubKey(address.scriptPubKey)
+    const oldUtxos = await processor.fetchUtxosByScriptPubkey(address.scriptPubkey)
     const oldUtxoMap = oldUtxos.reduce<{ [id: string]: IUTXO }>((obj, utxo) => ({
       ...obj,
       [utxo.id]: utxo
@@ -232,12 +232,12 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
           scriptType = ScriptTypeEnum.p2pkh
           break
         case BIP43PurposeTypeEnum.WrappedSegwit:
-          script = address.scriptPubKey
+          script = address.scriptPubkey
           scriptType = ScriptTypeEnum.p2wpkhp2sh
-          redeemScript = walletTools.getScriptPubKey(address.path!).scriptPubkey
+          redeemScript = walletTools.getScriptPubkey(address.path!).scriptPubkey
           break
         case BIP43PurposeTypeEnum.Segwit:
-          script = address.scriptPubKey
+          script = address.scriptPubkey
           scriptType = ScriptTypeEnum.p2wpkh
           break
       }
@@ -247,7 +247,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
         txid,
         vout,
         value,
-        scriptPubKey: address.scriptPubKey,
+        scriptPubkey: address.scriptPubkey,
         script,
         redeemScript,
         scriptType,
@@ -275,12 +275,12 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     const tx = await processRawTransaction(response.tx)
 
     // Process any of addresses' balances from the transaction
-    const ourInOuts: Array<{ scriptPubKey: string }> = []
+    const ourInOuts: Array<{ scriptPubkey: string }> = []
     ourInOuts.push(...tx.ourIns.map((index: string) => tx.inputs[parseInt(index)]))
     ourInOuts.push(...tx.ourOuts.map((index: string) => tx.outputs[parseInt(index)]))
-    for (const { scriptPubKey } of ourInOuts) {
-      const address = await processor.fetchAddressByScriptPubKey(
-        scriptPubKey
+    for (const { scriptPubkey } of ourInOuts) {
+      const address = await processor.fetchAddressByScriptPubkey(
+        scriptPubkey
       )
       address && await processAddress(address, false)
     }
@@ -296,7 +296,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       inputs: rawTx.vin.map((input) => ({
         txId: input.txid,
         outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
-        scriptPubKey: validScriptPubkeyFromAddress({
+        scriptPubkey: validScriptPubkeyFromAddress({
           address: input.addresses[0],
           coin: currencyInfo.network,
           network
@@ -305,7 +305,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       })),
       outputs: rawTx.vout.map((output) => ({
         index: output.n,
-        scriptPubKey: output.hex ?? validScriptPubkeyFromAddress({
+        scriptPubkey: output.hex ?? validScriptPubkeyFromAddress({
           address: output.addresses[0],
           coin: currencyInfo.network,
           network
@@ -336,14 +336,14 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     },
 
     async markAddressUsed(addressStr: string) {
-      const scriptPubKey = walletTools.addressToScriptPubkey(addressStr)
-      const address = await processor.fetchAddressByScriptPubKey(scriptPubKey)
+      const scriptPubkey = walletTools.addressToScriptPubkey(addressStr)
+      const address = await processor.fetchAddressByScriptPubkey(scriptPubkey)
       if (!address?.path) {
         throw new Error('Invalid address: not stored in database')
       }
 
       updateFreshIndex(address.path)
-      processor.updateAddressByScriptPubKey(scriptPubKey, {
+      processor.updateAddressByScriptPubkey(scriptPubkey, {
         used: true
       })
     }
