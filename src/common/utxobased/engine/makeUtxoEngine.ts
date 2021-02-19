@@ -185,6 +185,11 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
           throw new Error('Invalid spend target')
         }
 
+        const scriptPubkey = walletTools.addressToScriptPubkey(target.publicAddress)
+        if (await processor.hasSPubKey(scriptPubkey)) {
+          ourReceiveAddresses.push(target.publicAddress)
+        }
+
         targets.push({
           address: target.publicAddress,
           value: parseInt(target.nativeAmount)
