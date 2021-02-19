@@ -165,24 +165,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
         // addressByMRU.insert('', index, data)
       ])
 
-      // Find transactions associated with this scriptPubKey, process the balances and save it
-      const byScriptPubKey = await fns.fetchTransactionsByScriptPubKey(data.scriptPubKey)
-      for (const txId in byScriptPubKey) {
-        const tx = byScriptPubKey[txId]
-        const txData = await fns.fetchTransaction(txId)
-        if (txData) {
-          txData.ourIns = Object.keys(tx.ins)
-          txData.ourOuts = Object.keys(tx.outs)
-
-          await fns.updateAddressByScriptPubKey(data.scriptPubKey, {
-            lastTouched: txData.date,
-            used: true
-          })
-
-          await innerUpdateTransaction(txId, txData, true)
-          queue.add(() => calculateTransactionAmount(txId))
-        }
-      }
+      await processScriptPubKeyTransactions(data.scriptPubKey)
     } catch (err) {
       // Undo any changes we made on a fail
       await Promise.all([
@@ -193,6 +176,27 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
         // TODO:
         // addressByMRU.delete()
       ])
+    }
+  }
+
+  // Find transactions associated with this scriptPubKey, process the balances and save it
+  async function processScriptPubKeyTransactions(scriptPubKey: string): Promise<void> {
+    const byScriptPubKey = await fns.fetchTransactionsByScriptPubKey(scriptPubKey)
+    for (const txId in byScriptPubKey) {
+      const tx = byScriptPubKey[txId]
+      const txData = await fns.fetchTransaction(txId)
+      if (txData) {
+        txData.ourIns = Object.keys(tx.ins)
+        txData.ourOuts = Object.keys(tx.outs)
+
+        await fns.updateAddressByScriptPubKey(scriptPubKey, {
+          lastTouched: txData.date,
+          used: true
+        })
+
+        await innerUpdateTransaction(txId, txData, true)
+        queue.add(() => calculateTransactionAmount(txId))
+      }
     }
   }
 
@@ -264,12 +268,6 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     tx.ourAmount = total
 
     await innerUpdateTransaction(tx.txid, tx, true)
-  }
-
-  async function innerSaveAddress(
-    data: IAddress
-  ) {
-    await processAndSaveAddress(data)
   }
 
   async function innerSaveScriptPubKeyByPath(scriptPubKey: string, path: AddressPath): Promise<void> {
@@ -479,7 +477,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       onComplete?: () => void
     ): void {
       queue.add(async () => {
-        await innerSaveAddress(data)
+        await processAndSaveAddress(data)
         onComplete?.()
       })
     },
