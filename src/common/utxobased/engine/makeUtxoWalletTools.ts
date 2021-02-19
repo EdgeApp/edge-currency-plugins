@@ -14,7 +14,7 @@ import {
 } from './utils'
 import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 
-interface UtxoKeyFormat {
+export interface UtxoKeyFormat {
   [mnemonicKey: string]: any // ${coinName}Key = mnemonic or seed string
   format?: CurrencyFormat
   coinType?: number
