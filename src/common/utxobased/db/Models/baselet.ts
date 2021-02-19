@@ -40,11 +40,11 @@ export const scriptPubKeysByBalanceConfig: BaseletConfig<BaseType.RangeBase> = {
   bucketSize: 100000
 }
 
-export type TxById = ProcessorTransaction | null
+export type TxById = ProcessorTransaction | undefined
 export const txByIdConfig: BaseletConfig<BaseType.HashBase> = {
   dbName: 'txById',
   type: BaseType.HashBase,
-  bucketSize: 2
+  bucketSize: 6
 }
 
 export type TxsByScriptPubKey = {
@@ -56,10 +56,11 @@ export type TxsByScriptPubKey = {
 export const txsByScriptPubKeyConfig: BaseletConfig<BaseType.HashBase> = {
   dbName: 'txsByScriptPubKey',
   type: BaseType.HashBase,
-  bucketSize: 5
+  bucketSize: 8
 }
 
-export type TxsByDate = {
+export type TxsByDate = TxByDate[]
+type TxByDate = {
   [RANGE_ID_KEY]: string
   [RANGE_KEY]: string
 }
@@ -69,11 +70,11 @@ export const txsByDateConfig: BaseletConfig<BaseType.RangeBase> = {
   bucketSize: 30 * 24 * 60 * 60 * 1000
 }
 
-export type UtxoById = IUTXO | null
+export type UtxoById = IUTXO | undefined
 export const utxoByIdConfig: BaseletConfig<BaseType.HashBase> = {
   dbName: 'utxoById',
   type: BaseType.HashBase,
-  bucketSize: 2
+  bucketSize: 6
 }
 
 export type UtxosByScriptPubKey = Array<{
@@ -83,7 +84,7 @@ export type UtxosByScriptPubKey = Array<{
 export const utxoIdsByScriptPubKeyConfig: BaseletConfig<BaseType.HashBase> = {
   dbName: 'utxoIdsByScriptPubKey',
   type: BaseType.HashBase,
-  bucketSize: 6
+  bucketSize: 8
 }
 
 export type UtxosBySize = {
