@@ -19,12 +19,12 @@ import { UtxoKeyFormat } from './makeUtxoWalletTools'
 
 export const getCurrencyFormatFromPurposeType = (purpose: BIP43PurposeTypeEnum): CurrencyFormat => {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
+      return 'bip32'
     case BIP43PurposeTypeEnum.Legacy:
       return 'bip44'
-
     case BIP43PurposeTypeEnum.WrappedSegwit:
       return 'bip49'
-
     case BIP43PurposeTypeEnum.Segwit:
       return 'bip84'
   }
@@ -36,6 +36,7 @@ export const getAddressTypeFromKeys = (keys: UtxoKeyFormat): AddressTypeEnum => 
 
 export const getAddressTypeFromPurposeType = (purpose: BIP43PurposeTypeEnum): AddressTypeEnum => {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
       return AddressTypeEnum.p2pkh
 
@@ -49,6 +50,7 @@ export const getAddressTypeFromPurposeType = (purpose: BIP43PurposeTypeEnum): Ad
 
 export const getScriptTypeFromPurposeType = (purpose: BIP43PurposeTypeEnum): ScriptTypeEnum => {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
       return ScriptTypeEnum.p2pkh
 
