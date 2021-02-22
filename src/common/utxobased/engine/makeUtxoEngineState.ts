@@ -9,12 +9,6 @@ import { Processor } from '../db/makeProcessor'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import { getCurrencyFormatFromPurposeType, validScriptPubkeyFromAddress, getPurposeTypeFromKeys, getWalletFormat  } from './utils'
 
-interface SyncProgress {
-  totalCount: number
-  processedCount: number
-  ratio: number
-}
-
 export interface UtxoEngineState {
   start(): Promise<void>
 
