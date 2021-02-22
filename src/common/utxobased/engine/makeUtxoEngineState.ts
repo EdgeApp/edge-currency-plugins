@@ -1,5 +1,5 @@
 import * as bs from 'biggystring'
-import { EdgeTxidMap } from 'edge-core-js'
+import { EdgeTxidMap, EdgeFreshAddress } from 'edge-core-js'
 
 import { AddressPath, EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
 import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
@@ -21,7 +21,7 @@ export interface UtxoEngineState {
 
   stop(): Promise<void>
 
-  getFreshChangeAddress(): string
+  getFreshAddress(branch?: number): EdgeFreshAddress
 
   markAddressUsed(address: string): Promise<void>
 }
@@ -327,12 +327,16 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     async stop(): Promise<void> {
     },
 
-    getFreshChangeAddress(): string {
-      return walletTools.getAddress({
+    getFreshAddress(branch = 0): EdgeFreshAddress {
+      const publicAddress = walletTools.getAddress({
         format: getWalletFormat(walletInfo),
-        changeIndex: 1,
+        changeIndex: branch,
         addressIndex: freshChangeIndex
       })
+
+      return {
+        publicAddress
+      }
     },
 
     async markAddressUsed(addressStr: string) {
