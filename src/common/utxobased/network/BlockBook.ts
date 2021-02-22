@@ -213,7 +213,11 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
             pingTimeout = setTimeout(ping, PING_TIMEOUT)
             break
           case WATCH_NEW_BLOCK_EVENT_ID:
-            emitter.emit(EmitterEvent.BLOCK_HEIGHT_CHANGED, response.data)
+            // Don't notify on successful subscribe
+            if (response.data?.subscribed === true) {
+              return
+            }
+            emitter.emit(EmitterEvent.BLOCK_HEIGHT_CHANGED, response.data.height)
             break
           case WATCH_ADDRESS_TX_EVENT_ID:
             // Don't notify on successful subscribe
@@ -235,6 +239,8 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   })
 
   async function connect(): Promise<void> {
+    if (instance.isConnected) return
+
     await socket.connect()
 
     console.log('connected to websocket')
