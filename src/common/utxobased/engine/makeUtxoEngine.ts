@@ -146,10 +146,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     getFreshAddress(_opts: EdgeCurrencyCodeOptions): EdgeFreshAddress {
-      const freshAddress = state.getFreshChangeAddress()
-      return {
-        publicAddress: freshAddress
-      }
+      return state.getFreshAddress()
     },
 
     getNumTransactions(_opts: EdgeCurrencyCodeOptions): number {
@@ -196,7 +193,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
         })
       }
 
-      const freshChangeAddress = await state.getFreshChangeAddress()
+      const { publicAddress: freshChangeAddress } = await state.getFreshAddress(1)
       const utxos = await processor.fetchAllUtxos()
       const feeRate = parseInt(calculateFeeRate(currencyInfo, edgeSpendInfo))
       const tx = await makeTx({

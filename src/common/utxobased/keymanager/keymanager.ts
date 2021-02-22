@@ -80,7 +80,7 @@ export interface XPrivToPrivateKeyArgs {
   xpriv: string
   network: NetworkEnum
   type: BIP43PurposeTypeEnum
-  bip44ChangeIndex: 0 | 1
+  bip44ChangeIndex: number
   bip44AddressIndex: number
   coin: string
 }
@@ -89,7 +89,7 @@ export interface XPubToPubkeyArgs {
   xpub: string
   network: NetworkEnum
   type: BIP43PurposeTypeEnum
-  bip44ChangeIndex: 0 | 1
+  bip44ChangeIndex: number
   bip44AddressIndex: number
   coin: string
 }
