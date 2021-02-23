@@ -119,9 +119,8 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
           balance: '0'
         }
       await calculateAddressBalance(address)
-      processor.saveAddress(address, () => {
-        processAddress(address)
-      })
+      await processor.saveAddress(address)
+      await processAddress(address)
 
       gap = address.used ? 0 : gap + 1
       path = {
@@ -154,7 +153,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     address.networkQueryVal = metadata.lastSeenBlockHeight + 1
 
-    processor.updateAddressByScriptPubkey(address.scriptPubkey, address)
+    await processor.updateAddressByScriptPubkey(address.scriptPubkey, address)
   }
 
   function updateFreshIndex(path: AddressPath): void {
@@ -346,7 +345,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       }
 
       updateFreshIndex(address.path)
-      processor.updateAddressByScriptPubkey(scriptPubkey, {
+      await processor.updateAddressByScriptPubkey(scriptPubkey, {
         used: true
       })
     }

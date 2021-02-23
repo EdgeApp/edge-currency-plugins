@@ -53,9 +53,9 @@ export interface Processor {
 
   fetchScriptPubkeysByBalance(): Promise<ScriptPubkeysByBalance[]>
 
-  saveAddress(data: IAddress, onComplete?: () => void): void
+  saveAddress(data: IAddress): Promise<void>
 
-  updateAddressByScriptPubkey(scriptPubkey: string, data: Partial<IAddress>): void
+  updateAddressByScriptPubkey(scriptPubkey: string, data: Partial<IAddress>): Promise<void>
 
   fetchTransaction(txId: string): Promise<TxById>
 
@@ -465,21 +465,15 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       return scriptPubkeysByBalance.query('', 0, max)
     },
 
-    saveAddress(
-      data: IAddress,
-      onComplete?: () => void
-    ): void {
-      queue.add(async () => {
-        await processAndSaveAddress(data)
-        onComplete?.()
-      })
+    async saveAddress(data: IAddress): Promise<void> {
+      await processAndSaveAddress(data)
     },
 
-    updateAddressByScriptPubkey(
+    async updateAddressByScriptPubkey(
       scriptPubkey: string,
       data: Partial<IAddress>
-    ): void {
-      queue.add(() => innerUpdateAddressByScriptPubkey(scriptPubkey, data))
+    ): Promise<void> {
+      await innerUpdateAddressByScriptPubkey(scriptPubkey, data)
     },
 
     async fetchTransaction(txId: string): Promise<TxById> {
