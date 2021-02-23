@@ -6,7 +6,6 @@ import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
 
 import { Baselet, BaseletConfig, IAddress, IProcessorTransaction, IUTXO } from './types'
-import { ProcessorTransaction } from './Models/ProcessorTransaction'
 import { makeQueue } from './makeQueue'
 import { AddressPath, EmitterEvent } from '../../plugin/types'
 import {
@@ -33,7 +32,7 @@ import {
 import { EdgeGetTransactionsOptions } from 'edge-core-js/lib/types'
 
 interface ProcessorEmitter {
-  emit(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, transaction: ProcessorTransaction): this
+  emit(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, transaction: IProcessorTransaction): this
 }
 
 interface ProcessorConfig {
@@ -62,9 +61,9 @@ export interface Processor {
 
   fetchTransactionsByScriptPubkey(scriptHash: string): Promise<TxsByScriptPubkey>
 
-  fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<ProcessorTransaction[]>
+  fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<IProcessorTransaction[]>
 
-  saveTransaction(tx: ProcessorTransaction, withQueue?: boolean): Promise<void>
+  saveTransaction(tx: IProcessorTransaction, withQueue?: boolean): Promise<void>
 
   updateTransaction(txId: string, data: Pick<IProcessorTransaction, 'blockHeight'>): void
 
@@ -219,7 +218,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
   async function saveTransactionByScriptPubkey(
     scriptPubkey: string,
-    tx: ProcessorTransaction,
+    tx: IProcessorTransaction,
     isInput: boolean,
     index: number,
     save = true
@@ -330,7 +329,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     return address
   }
 
-  async function innerSaveTransaction(tx: ProcessorTransaction): Promise<void> {
+  async function innerSaveTransaction(tx: IProcessorTransaction): Promise<void> {
     const existingTx = await fns.fetchTransaction(tx.txid)
     if (!existingTx) {
       await txsByDate.insert('', {
@@ -374,7 +373,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     if (!txData && !merge) {
       throw new Error('Cannot update transaction that does not exists')
     } else {
-      txData = new ProcessorTransaction(data)
+      txData = data
     }
 
     txData.blockHeight = data.blockHeight
@@ -491,7 +490,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
     async fetchTransaction(txId: string): Promise<TxById> {
       const [ data ] = await txById.query('', [ txId ])
-      return data ? new ProcessorTransaction(data) : undefined
+      return data
     },
 
     async fetchTransactionsByScriptPubkey(
@@ -501,20 +500,20 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       return txs ?? {}
     },
 
-    async fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<ProcessorTransaction[]> {
+    async fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<IProcessorTransaction[]> {
       const {
         startEntries = 10,
         startIndex = 0
       } = opts
       const txData = await txsByDate.queryByCount('', startEntries, startIndex)
-      const txPromises = txData.map(({ [RANGE_ID_KEY]: txId }) =>
-        txById.query('', [ txId ])
-          .then(([ tx ]) => new ProcessorTransaction(tx))
-      )
+      const txPromises = txData.map(async ({ [RANGE_ID_KEY]: txId }) => {
+        const [ tx ] = await txById.query('', [ txId ])
+        return tx
+      })
       return Promise.all(txPromises)
     },
 
-    async saveTransaction(tx: ProcessorTransaction, withQueue = true): Promise<void> {
+    async saveTransaction(tx: IProcessorTransaction, withQueue = true): Promise<void> {
       const saveTx = () => innerSaveTransaction(tx)
       return withQueue
         ? queue.add(saveTx)

@@ -18,10 +18,11 @@ import { makeProcessor } from '../db/makeProcessor'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { calculateFeeRate } from './makeSpendHelper'
 import { makeBlockBook } from '../network/BlockBook'
-import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { fetchMetadata, setMetadata } from '../../plugin/utils'
 import { fetchOrDeriveXprivFromKeys, getXprivKey } from './utils'
+import { IProcessorTransaction } from '../db/types'
+import { fromEdgeTransaction, toEdgeTransaction } from '../db/Models/ProcessorTransaction'
 
 export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrencyEngine> {
   const {
@@ -60,9 +61,9 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     metadata
   })
 
-  emitter.on(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, (tx: ProcessorTransaction) => {
+  emitter.on(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, (tx: IProcessorTransaction) => {
     emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, ([
-      tx.toEdgeTransaction(currencyInfo.currencyCode)
+      toEdgeTransaction(tx, currencyInfo.currencyCode)
     ]))
   })
 
@@ -167,7 +168,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
     async getTransactions(opts: EdgeGetTransactionsOptions): Promise<EdgeTransaction[]> {
       const txs = await processor.fetchTransactions(opts)
-      return txs.map((tx) => tx.toEdgeTransaction(currencyInfo.currencyCode))
+      return txs.map((tx) => toEdgeTransaction(tx, currencyInfo.currencyCode))
     },
 
     // @ts-ignore
@@ -248,7 +249,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     saveTx(tx: EdgeTransaction): Promise<void> {
-      return processor.saveTransaction(ProcessorTransaction.fromEdgeTransaction(tx), false)
+      return processor.saveTransaction(fromEdgeTransaction(tx), false)
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {

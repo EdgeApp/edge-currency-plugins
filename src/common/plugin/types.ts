@@ -1,7 +1,8 @@
 import { EdgeCurrencyInfo, EdgeCurrencyTools, EdgeIo } from 'edge-core-js/lib/types'
 import { EdgeCurrencyEngineOptions, EdgeWalletInfo } from 'edge-core-js/lib/types/types'
 import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
-import { ProcessorTransaction } from '../utxobased/db/Models/ProcessorTransaction'
+import { IProcessorTransaction } from '../utxobased/db/types'
+
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
@@ -60,7 +61,7 @@ interface EngineOptions extends EdgeCurrencyEngineOptions {
 export interface Emitter {
   emit(event: EmitterEvent.TRANSACTIONS_CHANGED, transactions: EdgeTransaction[]): this
 
-  emit(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, transaction: ProcessorTransaction): this
+  emit(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, transaction: IProcessorTransaction): this
 
   emit(event: EmitterEvent.BALANCE_CHANGED, currencyCode: string, nativeBalance: string): this
 
@@ -72,7 +73,7 @@ export interface Emitter {
 
   on(event: EmitterEvent.TRANSACTIONS_CHANGED, listener: (transactions: EdgeTransaction[]) => void): this
 
-  on(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, listener: (transaction: ProcessorTransaction) => void): this
+  on(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, listener: (transaction: IProcessorTransaction) => void): this
 
   on(event: EmitterEvent.BALANCE_CHANGED, listener: (currencyCode: string, nativeBalance: string) => void): this
 

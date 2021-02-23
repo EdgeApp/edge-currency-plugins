@@ -3,9 +3,8 @@ import { EdgeTxidMap } from 'edge-core-js'
 
 import { AddressPath, EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
 import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
-import { IAddress, IUTXO } from '../db/types'
+import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
-import { ProcessorTransaction } from '../db/Models/ProcessorTransaction'
 import { Processor } from '../db/makeProcessor'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import { getCurrencyFormatFromPurposeType, validScriptPubkeyFromAddress, getPurposeTypeFromKeys, getWalletFormat  } from './utils'
@@ -260,7 +259,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     }
   }
 
-  async function fetchTransaction(txid: string): Promise<ProcessorTransaction> {
+  async function fetchTransaction(txid: string): Promise<IProcessorTransaction> {
     let tx = await processor.fetchTransaction(txid)
     if (!tx) {
       const rawTx = await blockBook.fetchTransaction(txid)
@@ -286,8 +285,8 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     }
   }
 
-  function processRawTransaction(rawTx: ITransaction): ProcessorTransaction {
-    return new ProcessorTransaction({
+  function processRawTransaction(rawTx: ITransaction): IProcessorTransaction {
+    return {
       txid: rawTx.txid,
       hex: rawTx.hex,
       blockHeight: rawTx.blockHeight,
@@ -315,7 +314,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       ourIns: [],
       ourOuts: [],
       ourAmount: '0'
-    })
+    }
   }
 
   return {
