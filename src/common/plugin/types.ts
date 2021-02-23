@@ -14,7 +14,7 @@ export type CurrencyFormat = 'bip32' | 'bip44' | 'bip49' | 'bip84'
 
 export interface AddressPath {
   format: CurrencyFormat
-  changeIndex: 0 | 1
+  changeIndex: number
   addressIndex: number
 }
 
