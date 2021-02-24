@@ -19,6 +19,8 @@ import {
   scriptPubkeyByPathConfig,
   ScriptPubkeysByBalance,
   scriptPubkeysByBalanceConfig,
+  TxIdsByBlockHeight,
+  txIdsByBlockHeightConfig,
   TxById,
   txByIdConfig,
   txsByDateConfig,
@@ -56,6 +58,12 @@ export interface Processor {
   saveAddress(data: IAddress): Promise<void>
 
   updateAddressByScriptPubkey(scriptPubkey: string, data: Partial<IAddress>): Promise<void>
+
+  fetchTxIdsByBlockHeight(blockHeightMin: number, blockHeightMax?: number): Promise<string[]>
+
+  insertTxIdByBlockHeight(blockHeight: number, data: string): Promise<void>
+
+  removeTxIdByBlockHeight(blockHeight: number, txId: string): Promise<void>
 
   fetchTransaction(txId: string): Promise<TxById>
 
@@ -117,6 +125,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     addressPathByMRU,
     scriptPubkeysByBalance,
     txById,
+    txIdsByBlockHeight,
     txsByScriptPubkey,
     txsByDate,
     utxoById,
@@ -128,6 +137,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     createOrOpen(disklet, addressPathByMRUConfig),
     createOrOpen(disklet, scriptPubkeysByBalanceConfig),
     createOrOpen(disklet, txByIdConfig),
+    createOrOpen(disklet, txIdsByBlockHeightConfig),
     createOrOpen(disklet, txsByScriptPubkeyConfig),
     createOrOpen(disklet, txsByDateConfig),
     createOrOpen(disklet, utxoByIdConfig),
@@ -353,6 +363,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
         }
       }
     }
+    await fns.insertTxIdByBlockHeight(tx.blockHeight, tx.txid)
 
     tx.ourAmount = await calculateTransactionAmount(tx)
     await txById.insert('', tx.txid, tx)
@@ -369,7 +380,10 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     } else {
       txData = data
     }
-
+    if (txData.blockHeight < data.blockHeight) {
+      await fns.removeTxIdByBlockHeight(txData.blockHeight, data.txid)
+      await fns.insertTxIdByBlockHeight(data.blockHeight, txId)
+    }
     txData.blockHeight = data.blockHeight
 
     if (merge) {
@@ -405,6 +419,8 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       await saveTransactionByScriptPubkey(output.scriptPubkey, tx, false, i, false)
     }
 
+    await fns.removeTxIdByBlockHeight(tx.blockHeight, tx.txid)
+
     tx.blockHeight = -1
     await txById.insert('', tx.txid, tx)
 
@@ -437,6 +453,40 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
         path.addressIndex
       )
       return scriptPubkey
+    },
+
+    async fetchTxIdsByBlockHeight(blockHeightMin: number, blockHeightMax?: number): Promise<string[]> {
+      const result = await txIdsByBlockHeight.query(
+        '',
+        blockHeightMin,
+        blockHeightMax
+      )
+      return result.map(({ [RANGE_ID_KEY]: id }) => id)
+    },
+
+    async insertTxIdByBlockHeight(
+      blockHeight: number,
+      txId: string
+    ): Promise<void> {
+      const data = await this.fetchTxIdsByBlockHeight(blockHeight)
+      if (data.includes(txId)) {
+        return
+      }
+      return txIdsByBlockHeight.insert('', {
+        [RANGE_ID_KEY]: txId,
+        [RANGE_KEY]: blockHeight
+      })
+    },
+
+    async removeTxIdByBlockHeight(
+      blockHeight: number,
+      txId: string
+    ): Promise<void> {
+      const data = await this.fetchTxIdsByBlockHeight(blockHeight)
+      if (data === []) {
+        return
+      }
+      txIdsByBlockHeight.delete('', blockHeight, txId)
     },
 
     async fetchAddressByScriptPubkey(scriptPubkey: string): Promise<AddressByScriptPubkey> {

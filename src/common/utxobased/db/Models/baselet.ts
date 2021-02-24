@@ -29,6 +29,16 @@ export const addressPathByMRUConfig: BaseletConfig<BaseType.CountBase> = {
   bucketSize: 100
 }
 
+export interface TxIdsByBlockHeight {
+  [RANGE_ID_KEY]: string
+  [RANGE_KEY]: string
+}
+export const txIdsByBlockHeightConfig: BaseletConfig<BaseType.RangeBase> = {
+  dbName: 'txIdByConfirmations',
+  type: BaseType.RangeBase,
+  bucketSize: 100000
+}
+
 export type ScriptPubkeysByBalance = {
   [RANGE_ID_KEY]: string
   [RANGE_KEY]: string
