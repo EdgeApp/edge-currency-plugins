@@ -1,5 +1,6 @@
-import { EdgeCurrencyCodeOptions, EdgeCurrencyEngine } from 'edge-core-js'
 import {
+  EdgeCurrencyCodeOptions,
+  EdgeCurrencyEngine,
   EdgeDataDump,
   EdgeFreshAddress,
   EdgeGetTransactionsOptions,
@@ -7,8 +8,9 @@ import {
   EdgeSpendInfo,
   EdgeTokenInfo,
   EdgeTransaction,
+  EdgeTxidMap,
   JsonObject
-} from 'edge-core-js/lib/types'
+} from 'edge-core-js'
 import * as bs from 'biggystring'
 import * as bitcoin from 'altcoin-js'
 
@@ -104,7 +106,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return Promise.resolve(undefined)
     },
 
-    addGapLimitAddresses(_addresses: string[]): void {
+    async addGapLimitAddresses(_addresses: string[]): Promise<void> {
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
@@ -146,7 +148,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return Promise.resolve([])
     },
 
-    getFreshAddress(_opts: EdgeCurrencyCodeOptions): EdgeFreshAddress {
+    getFreshAddress(_opts: EdgeCurrencyCodeOptions): Promise<EdgeFreshAddress> {
       return state.getFreshAddress()
     },
 
@@ -194,7 +196,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
         })
       }
 
-      const { publicAddress: freshChangeAddress } = await state.getFreshAddress(1)
+      const freshAddress = await state.getFreshAddress(1)
+      const freshChangeAddress = freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = await processor.fetchAllUtxos()
       const feeRate = parseInt(calculateFeeRate(currencyInfo, edgeSpendInfo))
       const tx = await makeTx({
