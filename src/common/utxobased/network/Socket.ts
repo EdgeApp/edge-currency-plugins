@@ -43,7 +43,7 @@ export function makeSocket(uri: string, config?: SocketConfig): Socket {
     async connect() {
       socket?.disconnect()
 
-      return await new Promise(resolve => {
+      return new Promise<void>((resolve) => {
         const callbacks: InnerSocketCallbacks = {
           ...config?.callbacks,
           onOpen() {
