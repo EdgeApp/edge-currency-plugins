@@ -118,6 +118,8 @@ interface IServerInfo {
   testnet: boolean
 }
 
+type Callback = () => void | Promise<void>
+
 export interface BlockBook {
   isConnected: boolean
 
@@ -158,7 +160,7 @@ export interface BlockBook {
     cb?: (response: INewTransactionResponse) => void
   ): void
 
-  watchBlocks(cb: () => void): void
+  watchBlocks(cb: () => void | Promise<void>): void
 
   fetchAddressUtxos(account: string): Promise<IAccountUTXO[]>
 
@@ -202,7 +204,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   let addressWatcherCallback:
     | undefined
     | ((response: INewTransactionResponse) => void)
-  let blockWatcherCallback: undefined | (() => void)
+  let blockWatcherCallback: Callback = () => {}
   const PING_ID = 'ping'
   const WATCH_NEW_BLOCK_EVENT_ID = 'WATCH_NEW_BLOCK_EVENT_ID'
   const WATCH_ADDRESS_TX_EVENT_ID = 'WATCH_ADDRESS_TX_EVENT_ID'
@@ -223,9 +225,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
             if (response.data?.subscribed === true) {
               return
             }
-            if (typeof blockWatcherCallback !== 'undefined') {
-              blockWatcherCallback()
-            }
+            blockWatcherCallback()
             emitter.emit(EmitterEvent.BLOCK_HEIGHT_CHANGED, response.data.height)
             break
           case WATCH_ADDRESS_TX_EVENT_ID:
@@ -317,7 +317,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     })
   }
 
-  function watchBlocks(cb: () => Promise<void>): void {
+  function watchBlocks(cb: Callback): void {
     blockWatcherCallback = cb
   }
 
