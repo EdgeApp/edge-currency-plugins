@@ -86,6 +86,25 @@ export const getWalletCoinType = (args: { keys: UtxoKeyFormat }): number =>
 export const getWalletFormat = (args: { keys: UtxoKeyFormat }): CurrencyFormat =>
   args.keys.format ?? 'bip32'
 
+export const getWalletSupportedFormats = (args: { keys: UtxoKeyFormat }): CurrencyFormat[] => {
+  const formats: CurrencyFormat[] = [ getWalletFormat(args) ]
+  // If wallet is Segwit, it also should support WrappedSegwit
+  if (getPurposeTypeFromKeys(args) === BIP43PurposeTypeEnum.Segwit) {
+    formats.push(
+      getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)
+    )
+  }
+  return formats
+}
+
+export const getFormatSupportedBranches = (format: CurrencyFormat): number[] => {
+  const branches = [ 0 ]
+  if (currencyFormatToPurposeType(format) !== BIP43PurposeTypeEnum.Airbitz) {
+    branches.push(1)
+  }
+  return branches
+}
+
 export const getPurposeTypeFromKeys = (args: { keys: UtxoKeyFormat }): BIP43PurposeTypeEnum => {
   return currencyFormatToPurposeType(getWalletFormat(args))
 }
