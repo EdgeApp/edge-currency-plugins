@@ -4,7 +4,8 @@ import { EdgeTxidMap, EdgeFreshAddress, EdgeWalletInfo } from 'edge-core-js'
 
 import {
   AddressPath,
-  CurrencyFormat, Emitter,
+  CurrencyFormat,
+  Emitter,
   EmitterEvent,
   EngineConfig,
   EngineCurrencyInfo,
@@ -390,6 +391,11 @@ const processAddress = async (args: ProcessAddressArgs) => {
       await processAddress({ ...args, address: response.address })
     })
   }
+
+  await Promise.all([
+    processAddressBalance(args),
+    processAddressTransactions(args)
+  ])
 }
 
 interface ProcessAddressBalanceArgs {
@@ -430,4 +436,90 @@ const processAddressBalance = async (args: ProcessAddressBalanceArgs): Promise<v
     balance,
     used
   })
+}
+
+interface ProcessAddressTxsArgs {
+  address: string
+  page?: number
+  networkQueryVal?: number
+  network: NetworkEnum
+  currencyInfo: EngineCurrencyInfo
+  processor: Processor
+  walletTools: UTXOPluginWalletTools
+  blockBook: BlockBook
+}
+
+const processAddressTransactions = async (args: ProcessAddressTxsArgs): Promise<void> => {
+  const {
+    address,
+    page = 1,
+    processor,
+    walletTools,
+    blockBook
+  } = args
+
+  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  let networkQueryVal = args.networkQueryVal ?? addressData?.networkQueryVal
+  const {
+    transactions = [],
+    totalPages
+  } = await blockBook.fetchAddress(address, {
+    details: 'txs',
+    from: networkQueryVal,
+    perPage: 10,
+    page
+  })
+
+  for (const rawTx of transactions) {
+    const tx = processRawTx({ ...args, tx: rawTx })
+    processor.saveTransaction(tx)
+  }
+
+  if (page < totalPages) {
+    await processAddressTransactions({
+      ...args,
+      page: page + 1,
+      networkQueryVal
+    })
+  }
+}
+
+interface ProcessRawTxArgs {
+  tx: ITransaction
+  network: NetworkEnum
+  currencyInfo: EngineCurrencyInfo
+}
+
+const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
+  const { tx, currencyInfo } = args
+  return {
+    txid: tx.txid,
+    hex: tx.hex,
+    blockHeight: tx.blockHeight,
+    date: tx.blockTime,
+    fees: tx.fees,
+    inputs: tx.vin.map((input) => ({
+      txId: input.txid,
+      outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
+      scriptPubkey: validScriptPubkeyFromAddress({
+        address: input.addresses[0],
+        coin: currencyInfo.network,
+        network: args.network
+      }),
+      amount: input.value
+    })),
+    outputs: tx.vout.map((output) => ({
+      index: output.n,
+      scriptPubkey: output.hex ?? validScriptPubkeyFromAddress({
+        address: output.addresses[0],
+        coin: currencyInfo.network,
+        network: args.network
+      }),
+      amount: output.value
+    })),
+    ourIns: [],
+    ourOuts: [],
+    ourAmount: '0'
+  }
 }
