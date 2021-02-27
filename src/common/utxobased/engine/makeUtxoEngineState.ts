@@ -3,7 +3,7 @@ import { EdgeTxidMap, EdgeFreshAddress } from 'edge-core-js'
 
 import {
   AddressPath,
-  CurrencyFormat,
+  CurrencyFormat, Emitter,
   EmitterEvent,
   EngineConfig,
   EngineCurrencyInfo,
@@ -192,4 +192,44 @@ const fetchAddressDataByPath = async (args: FetchAddressDataByPath): Promise<IAd
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
   if (!addressData) throw new Error('Address data unknown')
   return addressData
+}
+
+interface ProcessAddressBalanceArgs {
+  address: string
+  processor: Processor
+  currencyInfo: EngineCurrencyInfo
+  walletTools: UTXOPluginWalletTools
+  blockBook: BlockBook
+  emitter: Emitter
+  metadata: LocalWalletMetadata
+}
+
+const processAddressBalance = async (args: ProcessAddressBalanceArgs): Promise<void> => {
+  const {
+    address,
+    processor,
+    currencyInfo,
+    walletTools,
+    blockBook,
+    emitter,
+    metadata
+  } = args
+
+  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+
+  const accountDetails = await blockBook.fetchAddress(address)
+  const oldBalance = addressData?.balance ?? '0'
+  const balance = bs.add(accountDetails.balance, accountDetails.unconfirmedBalance)
+  const diff = bs.sub(balance, oldBalance)
+  if (diff !== '0') {
+    const newWalletBalance = bs.add(metadata.balance, diff)
+    emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, newWalletBalance)
+  }
+  const used = accountDetails.txs > 0 || accountDetails.unconfirmedTxs > 0
+
+  await processor.updateAddressByScriptPubkey(scriptPubkey, {
+    balance,
+    used
+  })
 }
