@@ -56,6 +56,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     metadata
   } = config
 
+  const addressesToWatch = new Set<string>()
   const mutex = new Mutex()
 
   return {
@@ -66,10 +67,12 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
           ...config,
           format,
           emitter: config.options.emitter,
+          addressesToWatch,
           mutex
         }
 
         await setLookAhead(args)
+        await processFormatAddresses(args)
       }
     },
 
@@ -95,6 +98,7 @@ interface CommonArgs {
   processor: Processor
   blockBook: BlockBook
   emitter: Emitter
+  addressesToWatch: Set<string>
   metadata: LocalWalletMetadata
   mutex: Mutex
 }
@@ -323,6 +327,69 @@ const fetchAddressDataByPath = async (args: FetchAddressDataByPath): Promise<IAd
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
   if (!addressData) throw new Error('Address data unknown')
   return addressData
+}
+
+interface ProcessFormatAddressesArgs extends CommonArgs {
+  format: CurrencyFormat
+}
+
+const processFormatAddresses = async (args: ProcessFormatAddressesArgs) => {
+  const branches = getFormatSupportedBranches(args.format)
+  for (const branch of branches) {
+    await processPathAddresses({ ...args, changeIndex: branch })
+  }
+}
+
+interface ProcessPathAddressesArgs extends ProcessFormatAddressesArgs {
+  changeIndex: number
+}
+
+const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
+  const {
+    walletTools,
+    processor,
+    format,
+    changeIndex
+  } = args
+
+  const addressCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex })
+  for (let i = 0; i < addressCount; i++) {
+    const path: AddressPath = {
+      format,
+      changeIndex,
+      addressIndex: i
+    }
+    let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
+    scriptPubkey = scriptPubkey ?? walletTools.getScriptPubkey(path).scriptPubkey
+    const { address } = walletTools.scriptPubkeyToAddress({
+      scriptPubkey,
+      format
+    })
+
+    await processAddress({ ...args, address })
+  }
+}
+
+interface ProcessAddressArgs extends CommonArgs {
+  address: string
+  format: CurrencyFormat
+}
+
+const processAddress = async (args: ProcessAddressArgs) => {
+  const {
+    address,
+    blockBook,
+    addressesToWatch
+  } = args
+
+  const firstProcess = !addressesToWatch.has(address)
+  if (firstProcess) {
+    addressesToWatch.add(address)
+    blockBook.watchAddresses(Array.from(addressesToWatch), async (response) => {
+      await setLookAhead(args)
+      await processAddress({ ...args, address: response.address })
+    })
+  }
 }
 
 interface ProcessAddressBalanceArgs {
