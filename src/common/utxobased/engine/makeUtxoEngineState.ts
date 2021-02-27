@@ -23,7 +23,8 @@ import {
   getPurposeTypeFromKeys,
   getWalletFormat,
   getWalletSupportedFormats,
-  getFormatSupportedBranches
+  getFormatSupportedBranches,
+  currencyFormatToPurposeType
 } from './utils'
 
 export interface UtxoEngineState {
@@ -394,7 +395,8 @@ const processAddress = async (args: ProcessAddressArgs) => {
 
   await Promise.all([
     processAddressBalance(args),
-    processAddressTransactions(args)
+    processAddressTransactions(args),
+    processAddressUtxos(args)
   ])
 }
 
@@ -521,5 +523,100 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
     ourIns: [],
     ourOuts: [],
     ourAmount: '0'
+  }
+}
+
+interface FetchTransactionArgs {
+  txid: string
+  network: NetworkEnum
+  currencyInfo: EngineCurrencyInfo
+  processor: Processor
+  blockBook: BlockBook
+}
+
+const fetchTransaction = async (args: FetchTransactionArgs): Promise<IProcessorTransaction> => {
+  const { txid, processor, blockBook } = args
+  let tx = await processor.fetchTransaction(txid)
+  if (!tx) {
+    const rawTx = await blockBook.fetchTransaction(txid)
+    tx = processRawTx({ ...args, tx: rawTx })
+  }
+  return tx
+}
+
+interface ProcessAddressUtxosArgs {
+  address: string
+  network: NetworkEnum
+  currencyInfo: EngineCurrencyInfo
+  walletTools: UTXOPluginWalletTools
+  processor: Processor
+  blockBook: BlockBook
+}
+
+const processAddressUtxos = async (args: ProcessAddressUtxosArgs): Promise<void> => {
+  const {
+    address,
+    walletTools,
+    processor,
+    blockBook
+  } = args
+  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (!addressData || !addressData.path) {
+    return
+  }
+
+  const oldUtxos = await processor.fetchUtxosByScriptPubkey(scriptPubkey)
+  const oldUtxoMap = oldUtxos.reduce<{ [id: string]: IUTXO }>((obj, utxo) => ({
+    ...obj,
+    [utxo.id]: utxo
+  }), {})
+  const accountUtxos = await blockBook.fetchAddressUtxos(address)
+
+  for (const utxo of accountUtxos) {
+    const id = `${utxo.txid}_${utxo.vout}`
+
+    // Any UTXOs listed in the oldUtxoMap after the for loop will be deleted from the database.
+    // If we do not already know about this UTXO, lets process it and add it to the database.
+    if (oldUtxoMap[id]) {
+      delete oldUtxoMap[id]
+      continue
+    }
+
+    let scriptType: ScriptTypeEnum
+    let script: string
+    let redeemScript: string | undefined
+    switch (currencyFormatToPurposeType(addressData.path.format)) {
+      case BIP43PurposeTypeEnum.Airbitz:
+      case BIP43PurposeTypeEnum.Legacy:
+        script = (await fetchTransaction({ ...args, txid: utxo.txid })).hex
+        scriptType = ScriptTypeEnum.p2pkh
+        break
+      case BIP43PurposeTypeEnum.WrappedSegwit:
+        script = scriptPubkey
+        scriptType = ScriptTypeEnum.p2wpkhp2sh
+        redeemScript = walletTools.getScriptPubkey(addressData.path).redeemScript
+        break
+      case BIP43PurposeTypeEnum.Segwit:
+        script = scriptPubkey
+        scriptType = ScriptTypeEnum.p2wpkh
+        break
+    }
+
+    processor.saveUtxo({
+      id,
+      txid: utxo.txid,
+      vout: utxo.vout,
+      value: utxo.value,
+      scriptPubkey,
+      script,
+      redeemScript,
+      scriptType,
+      blockHeight: utxo.height ?? 0
+    })
+  }
+
+  for (const id in oldUtxoMap) {
+    processor.removeUtxo(oldUtxoMap[id])
   }
 }
