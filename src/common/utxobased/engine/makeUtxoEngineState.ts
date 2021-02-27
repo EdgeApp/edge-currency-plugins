@@ -66,6 +66,49 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 }
 
+interface SaveAddressArgs {
+  scriptPubkey: string
+  path?: AddressPath
+  processor: Processor
+}
+
+const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
+  const {
+    scriptPubkey,
+    path,
+    processor
+  } = args
+
+  const saveNewAddress = () =>
+    processor.saveAddress({
+      scriptPubkey,
+      path,
+      used: false,
+      networkQueryVal: 0,
+      lastQuery: 0,
+      lastTouched: 0,
+      balance: '0'
+    })
+
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (!addressData) {
+    await saveNewAddress()
+  } else if (!addressData.path && path) {
+    try {
+      await processor.updateAddressByScriptPubkey(scriptPubkey, {
+        ...addressData,
+        path
+      })
+    } catch (err) {
+      if (err.message === 'Cannot update address that does not exist') {
+        await saveNewAddress()
+      } else {
+        throw err
+      }
+    }
+  }
+}
+
 interface GetFreshIndexArgs {
   format: CurrencyFormat
   changeIndex: number
