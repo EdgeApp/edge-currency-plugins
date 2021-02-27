@@ -1,7 +1,14 @@
 import * as bs from 'biggystring'
 import { EdgeTxidMap, EdgeFreshAddress } from 'edge-core-js'
 
-import { AddressPath, EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
+import {
+  AddressPath,
+  CurrencyFormat,
+  EmitterEvent,
+  EngineConfig,
+  EngineCurrencyInfo,
+  LocalWalletMetadata
+} from '../../plugin/types'
 import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
 import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
@@ -57,4 +64,132 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     async markAddressUsed(addressStr: string) {
     }
   }
+}
+
+interface GetFreshIndexArgs {
+  format: CurrencyFormat
+  changeIndex: number
+  currencyInfo: EngineCurrencyInfo
+  processor: Processor
+  walletTools: UTXOPluginWalletTools
+  find?: boolean
+}
+
+const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
+  const {
+    format,
+    changeIndex,
+    currencyInfo,
+    processor,
+    walletTools,
+    find = true
+  } = args
+
+  const path: AddressPath = {
+    format,
+    changeIndex,
+    addressIndex: 0 // tmp
+  }
+  const addressCount = await processor.fetchAddressCountFromPathPartition(path)
+  path.addressIndex = Math.max(addressCount - currencyInfo.gapLimit, 0)
+
+  return find
+    ? findFreshIndex({ path, processor, walletTools })
+    : path.addressIndex
+}
+
+const findLastUsedIndex = async (args: GetFreshIndexArgs): Promise<number> => {
+  const {
+    format,
+    changeIndex,
+    processor,
+    walletTools
+  } = args
+
+  const freshIndex = await getFreshIndex(args)
+  const addressCount = await processor.fetchAddressCountFromPathPartition({
+    format,
+    changeIndex
+  })
+  let lastUsedIndex = freshIndex - 1
+  if (lastUsedIndex >= 0) {
+    for (let i = lastUsedIndex; i < addressCount; i++) {
+      const addressData = await fetchAddressDataByPath({
+        processor,
+        walletTools,
+        path: {
+          format,
+          changeIndex,
+          addressIndex: i
+        }
+      })
+      if (addressData.used && i > lastUsedIndex) lastUsedIndex = i
+    }
+  }
+  return lastUsedIndex
+}
+
+interface FindFreshIndexArgs {
+  path: AddressPath
+  processor: Processor
+  walletTools: UTXOPluginWalletTools
+}
+
+const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
+  const {
+    path,
+    processor
+  } = args
+
+  const addressCount = await processor.fetchAddressCountFromPathPartition(path)
+  if (path.addressIndex >= addressCount) return path.addressIndex
+
+  const addressData = await fetchAddressDataByPath(args)
+  // If this address is not used check the previous one
+  if (!addressData.used && path.addressIndex > 0) {
+    const prevPath = {
+      ...path,
+      addressIndex: path.addressIndex - 1
+    }
+    const prevAddressData = await fetchAddressDataByPath({
+      ...args,
+      path: prevPath
+    })
+    // If previous address is used we know this address is the last used
+    if (prevAddressData.used) {
+      return path.addressIndex
+    } else if (path.addressIndex > 1) {
+      // Since we know the previous address is also unused, start the search from 2nd previous address
+      path.addressIndex -= 2
+      return findFreshIndex(args)
+    }
+  } else if (addressData.used) {
+    // If this address is used, traverse forward to find an unused address
+    path.addressIndex++
+    return findFreshIndex(args)
+  }
+
+  return path.addressIndex
+}
+
+interface FetchAddressDataByPath {
+  path: AddressPath
+  processor: Processor
+  walletTools: UTXOPluginWalletTools
+}
+
+const fetchAddressDataByPath = async (args: FetchAddressDataByPath): Promise<IAddress> => {
+  const {
+    path,
+    processor,
+    walletTools
+  } = args
+
+  const scriptPubkey =
+    await processor.fetchScriptPubkeyByPath(path) ??
+    walletTools.getScriptPubkey(path).scriptPubkey
+
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (!addressData) throw new Error('Address data unknown')
+  return addressData
 }
