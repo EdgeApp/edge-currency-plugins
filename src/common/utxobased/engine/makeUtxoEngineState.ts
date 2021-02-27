@@ -1,5 +1,6 @@
+import { Mutex } from 'async-mutex'
 import * as bs from 'biggystring'
-import { EdgeTxidMap, EdgeFreshAddress } from 'edge-core-js'
+import { EdgeTxidMap, EdgeFreshAddress, EdgeWalletInfo } from 'edge-core-js'
 
 import {
   AddressPath,
@@ -7,14 +8,22 @@ import {
   EmitterEvent,
   EngineConfig,
   EngineCurrencyInfo,
-  LocalWalletMetadata
+  LocalWalletMetadata,
+  NetworkEnum
 } from '../../plugin/types'
 import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
 import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { Processor } from '../db/makeProcessor'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
-import { getCurrencyFormatFromPurposeType, validScriptPubkeyFromAddress, getPurposeTypeFromKeys, getWalletFormat  } from './utils'
+import {
+  getCurrencyFormatFromPurposeType,
+  validScriptPubkeyFromAddress,
+  getPurposeTypeFromKeys,
+  getWalletFormat,
+  getWalletSupportedFormats,
+  getFormatSupportedBranches
+} from './utils'
 
 export interface UtxoEngineState {
   start(): Promise<void>
@@ -47,9 +56,21 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     metadata
   } = config
 
+  const mutex = new Mutex()
 
   return {
     async start(): Promise<void> {
+      const formatsToProcess = getWalletSupportedFormats(walletInfo)
+      for (const format of formatsToProcess) {
+        const args = {
+          ...config,
+          format,
+          emitter: config.options.emitter,
+          mutex
+        }
+
+        await setLookAhead(args)
+      }
     },
 
     async stop(): Promise<void> {
@@ -63,6 +84,73 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
 
     async markAddressUsed(addressStr: string) {
     }
+  }
+}
+
+interface CommonArgs {
+  network: NetworkEnum
+  currencyInfo: EngineCurrencyInfo
+  walletInfo: EdgeWalletInfo
+  walletTools: UTXOPluginWalletTools
+  processor: Processor
+  blockBook: BlockBook
+  emitter: Emitter
+  metadata: LocalWalletMetadata
+  mutex: Mutex
+}
+
+interface SetLookAheadArgs extends CommonArgs {
+  format: CurrencyFormat
+}
+
+const setLookAhead = async (args: SetLookAheadArgs) => {
+  const {
+    format,
+    currencyInfo,
+    walletTools,
+    processor,
+    mutex
+  } = args
+
+  const release = await mutex.acquire()
+
+  try {
+    const branches = getFormatSupportedBranches(format)
+    for (const branch of branches) {
+      const partialPath: Omit<AddressPath, 'addressIndex'> = {
+        format,
+        changeIndex: branch
+      }
+
+      const getLastUsed = () => findLastUsedIndex({ ...args, ...partialPath })
+      const getAddressCount = () => processor.fetchAddressCountFromPathPartition(partialPath)
+
+      let lastUsed = await getLastUsed()
+      let addressCount = await getAddressCount()
+      while (lastUsed + currencyInfo.gapLimit > addressCount) {
+        const path: AddressPath = {
+          ...partialPath,
+          addressIndex: addressCount
+        }
+        const { address } = walletTools.getAddress(path)
+        const scriptPubkey = walletTools.addressToScriptPubkey(address)
+
+        await saveAddress({
+          ...args,
+          scriptPubkey,
+          path
+        })
+        await processAddressBalance({
+          ...args,
+          address
+        })
+
+        lastUsed = await getLastUsed()
+        addressCount = await getAddressCount()
+      }
+    }
+  } finally {
+    release()
   }
 }
 
