@@ -119,31 +119,42 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     emitter
   } = config
 
-  const [
-    scriptPubkeyByPath,
-    addressByScriptPubkey,
-    addressPathByMRU,
-    scriptPubkeysByBalance,
-    txById,
-    txIdsByBlockHeight,
-    txsByScriptPubkey,
-    txsByDate,
-    utxoById,
-    utxoIdsByScriptPubkey,
-    utxoIdsBySize
-  ] = await Promise.all([
+  const countBases = Promise.all([
     createOrOpen(disklet, scriptPubkeyByPathConfig),
-    createOrOpen(disklet, addressByScriptPubkeyConfig),
     createOrOpen(disklet, addressPathByMRUConfig),
+  ])
+  const rangeBases = Promise.all([
     createOrOpen(disklet, scriptPubkeysByBalanceConfig),
-    createOrOpen(disklet, txByIdConfig),
     createOrOpen(disklet, txIdsByBlockHeightConfig),
-    createOrOpen(disklet, txsByScriptPubkeyConfig),
     createOrOpen(disklet, txsByDateConfig),
-    createOrOpen(disklet, utxoByIdConfig),
-    createOrOpen(disklet, utxoIdsByScriptPubkeyConfig),
     createOrOpen(disklet, utxoIdsBySizeConfig)
   ])
+  const hashBases = Promise.all([
+    createOrOpen(disklet, addressByScriptPubkeyConfig),
+    createOrOpen(disklet, txByIdConfig),
+    createOrOpen(disklet, txsByScriptPubkeyConfig),
+    createOrOpen(disklet, utxoByIdConfig),
+    createOrOpen(disklet, utxoIdsByScriptPubkeyConfig)
+  ])
+  await Promise.all([countBases, rangeBases, hashBases])
+
+  const [
+    scriptPubkeyByPath,
+    addressPathByMRU
+  ] = await countBases
+  const [
+    scriptPubkeysByBalance,
+    txIdsByBlockHeight,
+    txsByDate,
+    utxoIdsBySize
+  ] = await rangeBases
+  const [
+    addressByScriptPubkey,
+    txById,
+    txsByScriptPubkey,
+    utxoById,
+    utxoIdsByScriptPubkey
+  ] = await hashBases
 
   async function processAndSaveAddress(data: IAddress) {
     const [ addressData ] = await addressByScriptPubkey.query('', [ data.scriptPubkey ])
@@ -472,7 +483,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       if (data.includes(txId)) {
         return
       }
-      return txIdsByBlockHeight.insert('', {
+      await txIdsByBlockHeight.insert('', {
         [RANGE_ID_KEY]: txId,
         [RANGE_KEY]: blockHeight
       })
@@ -486,7 +497,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       if (data === []) {
         return
       }
-      txIdsByBlockHeight.delete('', blockHeight, txId)
+      await txIdsByBlockHeight.delete('', blockHeight, txId)
     },
 
     async fetchAddressByScriptPubkey(scriptPubkey: string): Promise<AddressByScriptPubkey> {
