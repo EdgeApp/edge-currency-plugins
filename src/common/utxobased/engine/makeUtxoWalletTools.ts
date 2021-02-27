@@ -40,12 +40,19 @@ export interface UTXOPluginWalletTools {
 
   addressToScriptPubkey(address: string): string
 
+  scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): AddressReturn
+
   getPrivateKey(args: AddressPath): string
 }
 
 interface ScriptPubkeyReturn {
   scriptPubkey: string
   redeemScript?: string
+}
+
+interface ScriptPubkeyToAddressArgs {
+  scriptPubkey: string
+  format: CurrencyFormat
 }
 
 interface AddressReturn {
@@ -104,6 +111,17 @@ export function makeUtxoWalletTools(config: WalletToolsConfig): UTXOPluginWallet
 
     addressToScriptPubkey(address: string): string {
       return addressToScriptPubkey({ address, network, coin })
+    },
+
+    scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): AddressReturn {
+      const purposeType = currencyFormatToPurposeType(args.format)
+      const addressType = getAddressTypeFromPurposeType(purposeType)
+      return scriptPubkeyToAddress({
+        scriptPubkey: args.scriptPubkey,
+        network,
+        addressType,
+        coin
+      })
     },
 
     getPrivateKey(args: AddressPath) {
