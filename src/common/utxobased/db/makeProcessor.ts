@@ -195,8 +195,8 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       const tx = byScriptPubkey[txId]
       const txData = await fns.fetchTransaction(txId)
       if (txData) {
-        const ourIns = Object.keys(tx.ins)
-        const ourOuts = Object.keys(tx.outs)
+        const ourIns = [ ...txData.ourIns, ...Object.keys(tx.ins) ]
+        const ourOuts = [ ...txData.ourOuts, ...Object.keys(tx.outs) ]
 
         await fns.updateAddressByScriptPubkey(scriptPubkey, {
           lastTouched: txData.date,
@@ -255,8 +255,6 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     }
 
     await txsByScriptPubkey.insert('', scriptPubkey, txs)
-
-    return txs
   }
 
   async function calculateTransactionAmount(tx: IProcessorTransaction): Promise<string> {
@@ -345,15 +343,15 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     for (const inOout of [ true, false ]) {
       const arr = inOout ? tx.inputs : tx.outputs
       for (let i = 0; i < arr.length; i++) {
-        const { scriptPubkey, amount } = arr[i]
+        const { scriptPubkey } = arr[i]
 
-        const txs = await saveTransactionByScriptPubkey(scriptPubkey, tx, inOout, i)
+        await saveTransactionByScriptPubkey(scriptPubkey, tx, inOout, i)
         const own = await fns.hasSPubKey(scriptPubkey)
         if (own) {
           if (inOout) {
-            tx.ourIns = Object.keys(txs[tx.txid].ins)
+            tx.ourIns.push(i.toString())
           } else {
-            tx.ourOuts = Object.keys(txs[tx.txid].outs)
+            tx.ourOuts.push(i.toString())
           }
 
           await innerUpdateAddressByScriptPubkey(scriptPubkey, {
