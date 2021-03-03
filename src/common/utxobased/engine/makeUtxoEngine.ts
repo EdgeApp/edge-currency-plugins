@@ -148,7 +148,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return Promise.resolve([])
     },
 
-    getFreshAddress(_opts: EdgeCurrencyCodeOptions): Promise<EdgeFreshAddress> {
+    getFreshAddress(_opts: EdgeCurrencyCodeOptions): Promise<EdgeFreshAddress> | EdgeFreshAddress {
       return state.getFreshAddress()
     },
 
