@@ -18,6 +18,7 @@ import { NetworkEnum } from '../../plugin/types'
 // in bitcoin these are bip44, bip49, bip84 xpub prefixes
 // other coins contain different formats which still need to be gathered.
 export enum BIP43PurposeTypeEnum {
+  Airbitz = 'airbitz',
   Legacy = 'legacy', // xpub/xprv tpub/tprv etc.
   Segwit = 'segwit', // zpub/zprv vpub/vprv etc.
   WrappedSegwit = 'wrappedSegwit', // ypub/yprv upub/uprv etc.
@@ -247,6 +248,8 @@ interface Bip32NetworkFromCoinArgs {
 
 function bip43PurposeTypeEnumToNumber(purpose: BIP43PurposeTypeEnum): number {
   switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
+      return 32
     case BIP43PurposeTypeEnum.Legacy:
       return 44
     case BIP43PurposeTypeEnum.WrappedSegwit:
@@ -259,6 +262,7 @@ function bip43PurposeTypeEnumToNumber(purpose: BIP43PurposeTypeEnum): number {
 export function bip43PurposeNumberToTypeEnum(num: number): BIP43PurposeTypeEnum {
   switch (num) {
     case 32:
+      return BIP43PurposeTypeEnum.Airbitz
     case 44:
       return BIP43PurposeTypeEnum.Legacy
     case 49:
@@ -303,6 +307,7 @@ function bip32NetworkFromCoinPrefix(
       }
       break
     case BIP43PurposeTypeEnum.Legacy:
+    case BIP43PurposeTypeEnum.Airbitz:
       xKeyPrefixes = {
         public: coinPrefixes.legacyXPub,
         private: coinPrefixes.legacyXPriv,
