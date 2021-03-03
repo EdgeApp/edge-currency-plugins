@@ -195,8 +195,8 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       const tx = byScriptPubkey[txId]
       const txData = await fns.fetchTransaction(txId)
       if (txData) {
-        txData.ourIns = Object.keys(tx.ins)
-        txData.ourOuts = Object.keys(tx.outs)
+        const ourIns = [ ...txData.ourIns, ...Object.keys(tx.ins) ]
+        const ourOuts = [ ...txData.ourOuts, ...Object.keys(tx.outs) ]
 
         await fns.updateAddressByScriptPubkey(scriptPubkey, {
           lastTouched: txData.date,
@@ -204,7 +204,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
         })
 
         txData.ourAmount = await calculateTransactionAmount(txData)
-        await innerUpdateTransaction(txId, txData, true)
+        await innerUpdateTransaction(txId, { ourIns, ourOuts })
       }
     }
   }
@@ -255,8 +255,6 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     }
 
     await txsByScriptPubkey.insert('', scriptPubkey, txs)
-
-    return txs
   }
 
   async function calculateTransactionAmount(tx: IProcessorTransaction): Promise<string> {
@@ -345,15 +343,15 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     for (const inOout of [ true, false ]) {
       const arr = inOout ? tx.inputs : tx.outputs
       for (let i = 0; i < arr.length; i++) {
-        const { scriptPubkey, amount } = arr[i]
+        const { scriptPubkey } = arr[i]
 
-        const txs = await saveTransactionByScriptPubkey(scriptPubkey, tx, inOout, i)
+        await saveTransactionByScriptPubkey(scriptPubkey, tx, inOout, i)
         const own = await fns.hasSPubKey(scriptPubkey)
         if (own) {
           if (inOout) {
-            tx.ourIns = Object.keys(txs[tx.txid].ins)
+            tx.ourIns.push(i.toString())
           } else {
-            tx.ourOuts = Object.keys(txs[tx.txid].outs)
+            tx.ourOuts.push(i.toString())
           }
 
           await innerUpdateAddressByScriptPubkey(scriptPubkey, {
@@ -371,36 +369,33 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
   async function innerUpdateTransaction(
     txId: string,
-    data: IProcessorTransaction,
-    merge = false
+    data: Partial<IProcessorTransaction>
   ) {
-    let txData = await fns.fetchTransaction(txId)
-    if (!txData && !merge) {
+    let tx = await fns.fetchTransaction(txId)
+    if (!tx) {
       throw new Error('Cannot update transaction that does not exists')
-    } else {
-      txData = data
     }
-    if (txData.blockHeight < data.blockHeight) {
-      await fns.removeTxIdByBlockHeight(txData.blockHeight, data.txid)
-      await fns.insertTxIdByBlockHeight(data.blockHeight, txId)
+    
+    if (data.blockHeight) {
+      if (tx.blockHeight < data.blockHeight) {
+        await fns.removeTxIdByBlockHeight(tx.blockHeight, txId)
+        await fns.insertTxIdByBlockHeight(data.blockHeight, txId)
+      }
+      tx.blockHeight = data.blockHeight
     }
-    txData.blockHeight = data.blockHeight
-
-    if (merge) {
-      const ins = new Set(txData.ourIns.concat(data.ourIns))
-      const outs = new Set(txData.ourOuts.concat(data.ourOuts))
-      txData.ourIns = Array.from(ins)
-      txData.ourOuts = Array.from(outs)
-    } else {
-      txData.ourIns = data.ourIns
-      txData.ourOuts = data.ourOuts
+    if (data.ourIns) {
+      tx.ourIns = data.ourIns
+    }
+    if (data.ourOuts) {
+      tx.ourOuts = data.ourOuts
+    }
+    if (data.ourAmount) {
+      tx.ourAmount = data.ourAmount
     }
 
-    txData.ourAmount = data.ourAmount
+    emitter.emit(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
 
-    emitter.emit(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, txData)
-
-    await txById.insert('', txId, txData)
+    await txById.insert('', txId, tx)
   }
 
   async function innerDropTransaction(txId: string) {
@@ -560,7 +555,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
     updateTransaction(
       txId: string,
-      data: IProcessorTransaction
+      data: Pick<IProcessorTransaction, 'blockHeight'>
     ): void {
       queue.add(() => innerUpdateTransaction(txId, data))
     },
