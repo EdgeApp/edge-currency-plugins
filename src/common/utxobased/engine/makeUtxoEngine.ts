@@ -25,6 +25,7 @@ import { fetchMetadata, setMetadata } from '../../plugin/utils'
 import { fetchOrDeriveXprivFromKeys, getXprivKey } from './utils'
 import { IProcessorTransaction } from '../db/types'
 import { fromEdgeTransaction, toEdgeTransaction } from '../db/Models/ProcessorTransaction'
+import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 
 export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrencyEngine> {
   const {
@@ -35,7 +36,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       walletLocalDisklet,
       walletLocalEncryptedDisklet,
       emitter
-    }
+    },
+    io
   } = config
 
   // Merge in the xpriv into the local copy of wallet keys
@@ -110,6 +112,23 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
+      const { otherParams } = transaction
+      if (
+        otherParams?.paymentProtocolInfo?.payment != null &&
+        otherParams?.paymentProtocolInfo?.paymentUrl != null
+      ) {
+        const paymentAck = await sendPayment(
+          io.fetch,
+          otherParams.paymentProtocolInfo.paymentUrl,
+          otherParams.paymentProtocolInfo.payment
+        )
+        if (typeof paymentAck === 'undefined') {
+          throw new Error(
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+            `Error when sending to ${otherParams.paymentProtocolInfo.paymentUrl}`
+          )
+        }
+      }
       await blockBook.broadcastTx(transaction)
       return transaction
     },
@@ -156,9 +175,13 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return 0
     },
 
-    getPaymentProtocolInfo(_paymentProtocolUrl: string): Promise<EdgePaymentProtocolInfo> {
-      // @ts-ignore
-      return Promise.resolve(undefined)
+    async getPaymentProtocolInfo(paymentProtocolUrl: string): Promise<EdgePaymentProtocolInfo> {
+      return await getPaymentDetails(
+        paymentProtocolUrl,
+        network,
+        currencyInfo.currencyCode,
+        io.fetch
+      )
     },
 
     getTokenStatus(_token: string): boolean {
@@ -271,6 +294,17 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
         coin: currencyInfo.network,
         privateKeys
       })
+      const { edgeSpendInfo } = transaction.otherParams
+      const { paymentProtocolInfo } = edgeSpendInfo.otherParams
+      if (paymentProtocolInfo != null) {
+        const payment = createPayment(
+          transaction.signedTx,
+          transaction.currencyCode
+        )
+        Object.assign(transaction.otherParams, {
+          paymentProtocolInfo: { ...paymentProtocolInfo, payment }
+        })
+      }
 
       return transaction
     },
