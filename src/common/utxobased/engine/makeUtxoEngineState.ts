@@ -131,7 +131,8 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function processAddress(address: IAddress, andTransactions = true): Promise<void> {
-    addressesToWatch.add(walletTools.getAddress(address.path!))
+    const addressStr = walletTools.getAddress(address.path!).address
+    addressesToWatch.add(addressStr)
     blockBook.watchAddresses(Array.from(addressesToWatch), onNewTransaction)
 
     new Promise<void>(async (resolve) => {
@@ -165,7 +166,8 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function calculateAddressBalance(address: IAddress): Promise<void> {
-    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path!))
+    const addressStr = walletTools.getAddress(address.path!).address
+    const accountDetails = await blockBook.fetchAddress(addressStr)
     address.used = accountDetails.txs > 0 || accountDetails.unconfirmedTxs > 0
 
     const oldBalance = address.balance ?? '0'
@@ -181,7 +183,8 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   }
 
   async function processAddressTransactions(address: IAddress, page = 1): Promise<void> {
-    const accountDetails = await blockBook.fetchAddress(walletTools.getAddress(address.path!), {
+    const addressStr = walletTools.getAddress(address.path!).address
+    const accountDetails = await blockBook.fetchAddress(addressStr, {
       details: 'txs',
       from: address.networkQueryVal,
       page
@@ -209,7 +212,8 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       ...obj,
       [utxo.id]: utxo
     }), {})
-    const accountUtxos = await blockBook.fetchAddressUtxos(walletTools.getAddress(address.path!))
+    const addressStr = walletTools.getAddress(address.path!).address
+    const accountUtxos = await blockBook.fetchAddressUtxos(addressStr)
 
     for (const { txid, vout, value, height = 0 } of accountUtxos) {
       const id = `${txid}_${vout}`
@@ -344,7 +348,9 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     },
 
     getFreshAddress(branch = 0): EdgeFreshAddress {
-      const publicAddress = walletTools.getAddress({
+      const {
+        address: publicAddress
+      } = walletTools.getAddress({
         format: getWalletFormat(walletInfo),
         changeIndex: branch,
         addressIndex: freshChangeIndex
