@@ -281,29 +281,10 @@ const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
   const addressCount = await processor.fetchAddressCountFromPathPartition(path)
   if (path.addressIndex >= addressCount) return path.addressIndex
 
-  const addressData = await fetchAddressDataByPath(args)
-  // If this address is not used check the previous one
-  if (!addressData.used && path.addressIndex > 0) {
-    const prevPath = {
-      ...path,
-      addressIndex: path.addressIndex - 1
-    }
-    const prevAddressData = await fetchAddressDataByPath({
-      ...args,
-      path: prevPath
-    })
-    // If previous address is used we know this address is the last used
-    if (prevAddressData.used) {
-      return path.addressIndex
-    } else if (path.addressIndex > 1) {
-      // Since we know the previous address is also unused, start the search from 2nd previous address
-      path.addressIndex -= 2
-      return findFreshIndex(args)
-    }
-  } else if (addressData.used) {
-    // If this address is used, traverse forward to find an unused address
+  let addressData = await fetchAddressDataByPath(args)
+  while (addressData.used) {
     path.addressIndex++
-    return findFreshIndex(args)
+    addressData = await fetchAddressDataByPath(args)
   }
 
   return path.addressIndex
