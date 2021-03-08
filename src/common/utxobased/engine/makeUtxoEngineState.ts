@@ -61,16 +61,26 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   const addressesToWatch = new Set<string>()
   const mutex = new Mutex()
 
+  const commonArgs: CommonArgs = {
+    network,
+    currencyInfo,
+    walletInfo,
+    walletTools,
+    processor,
+    blockBook,
+    metadata,
+    emitter,
+    addressesToWatch,
+    mutexor,
+  }
+
   return {
     async start(): Promise<void> {
       const formatsToProcess = getWalletSupportedFormats(walletInfo)
       for (const format of formatsToProcess) {
-        const args = {
-          ...config,
+        const args: FormatArgs = {
+          ...commonArgs,
           format,
-          emitter: config.options.emitter,
-          addressesToWatch,
-          mutex
         }
 
         await setLookAhead(args)
@@ -105,8 +115,11 @@ interface CommonArgs {
   mutex: Mutex
 }
 
-interface SetLookAheadArgs extends CommonArgs {
+interface FormatArgs extends CommonArgs {
   format: CurrencyFormat
+}
+
+interface SetLookAheadArgs extends FormatArgs {
 }
 
 const setLookAhead = async (args: SetLookAheadArgs) => {
@@ -290,10 +303,8 @@ const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
   return path.addressIndex
 }
 
-interface FetchAddressDataByPath {
+interface FetchAddressDataByPath extends CommonArgs {
   path: AddressPath
-  processor: Processor
-  walletTools: UTXOPluginWalletTools
 }
 
 const fetchAddressDataByPath = async (args: FetchAddressDataByPath): Promise<IAddress> => {
@@ -312,8 +323,7 @@ const fetchAddressDataByPath = async (args: FetchAddressDataByPath): Promise<IAd
   return addressData
 }
 
-interface ProcessFormatAddressesArgs extends CommonArgs {
-  format: CurrencyFormat
+interface ProcessFormatAddressesArgs extends FormatArgs {
 }
 
 const processFormatAddresses = async (args: ProcessFormatAddressesArgs) => {
@@ -353,9 +363,8 @@ const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
   }
 }
 
-interface ProcessAddressArgs extends CommonArgs {
+interface ProcessAddressArgs extends FormatArgs {
   address: string
-  format: CurrencyFormat
 }
 
 const processAddress = async (args: ProcessAddressArgs) => {
@@ -468,10 +477,8 @@ const processAddressTransactions = async (args: ProcessAddressTxsArgs): Promise<
   }
 }
 
-interface ProcessRawTxArgs {
+interface ProcessRawTxArgs extends CommonArgs {
   tx: ITransaction
-  network: NetworkEnum
-  currencyInfo: EngineCurrencyInfo
 }
 
 const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
@@ -507,12 +514,8 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
   }
 }
 
-interface FetchTransactionArgs {
+interface FetchTransactionArgs extends CommonArgs {
   txid: string
-  network: NetworkEnum
-  currencyInfo: EngineCurrencyInfo
-  processor: Processor
-  blockBook: BlockBook
 }
 
 const fetchTransaction = async (args: FetchTransactionArgs): Promise<IProcessorTransaction> => {
