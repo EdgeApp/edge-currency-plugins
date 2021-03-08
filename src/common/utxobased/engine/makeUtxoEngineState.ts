@@ -216,23 +216,23 @@ const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
   }
 }
 
-interface GetFreshIndexArgs {
+interface FindLastUsedIndexArgs extends CommonArgs {
   format: CurrencyFormat
   changeIndex: number
-  currencyInfo: EngineCurrencyInfo
-  processor: Processor
-  walletTools: UTXOPluginWalletTools
-  find?: boolean
 }
 
-const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
+/**
+ * Assumes the last used index is:
+ *    addressCount - gapLimit - 1
+ * Verified by checking the ~used~ flag on the address and then checking newer ones.
+ * @param args - FindLastUsedIndexArgs
+ */
+const findLastUsedIndex = async (args: FindLastUsedIndexArgs): Promise<number> => {
   const {
     format,
     changeIndex,
     currencyInfo,
     processor,
-    walletTools,
-    find = true
   } = args
 
   const path: AddressPath = {
@@ -241,63 +241,18 @@ const getFreshIndex = async (args: GetFreshIndexArgs): Promise<number> => {
     addressIndex: 0 // tmp
   }
   const addressCount = await processor.fetchAddressCountFromPathPartition(path)
-  path.addressIndex = Math.max(addressCount - currencyInfo.gapLimit, 0)
+  // Get the assumed last used index
+  path.addressIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
 
-  return find
-    ? findFreshIndex({ path, processor, walletTools })
-    : path.addressIndex
-}
-
-const findLastUsedIndex = async (args: GetFreshIndexArgs): Promise<number> => {
-  const {
-    format,
-    changeIndex,
-    processor,
-    walletTools
-  } = args
-
-  const freshIndex = await getFreshIndex(args)
-  const addressCount = await processor.fetchAddressCountFromPathPartition({
-    format,
-    changeIndex
-  })
-  let lastUsedIndex = freshIndex - 1
-  if (lastUsedIndex >= 0) {
-    for (let i = lastUsedIndex; i < addressCount; i++) {
-      const addressData = await fetchAddressDataByPath({
-        processor,
-        walletTools,
-        path: {
-          format,
-          changeIndex,
-          addressIndex: i
-        }
-      })
-      if (addressData.used && i > lastUsedIndex) lastUsedIndex = i
+  for (let i = path.addressIndex; i < addressCount; i++) {
+    try {
+      const addressData = await fetchAddressDataByPath({ ...args, path })
+      if (addressData.used) {
+        path.addressIndex = i
+      }
+    } catch {
+      console.log(addressCount, i)
     }
-  }
-  return lastUsedIndex
-}
-
-interface FindFreshIndexArgs {
-  path: AddressPath
-  processor: Processor
-  walletTools: UTXOPluginWalletTools
-}
-
-const findFreshIndex = async (args: FindFreshIndexArgs): Promise<number> => {
-  const {
-    path,
-    processor
-  } = args
-
-  const addressCount = await processor.fetchAddressCountFromPathPartition(path)
-  if (path.addressIndex >= addressCount) return path.addressIndex
-
-  let addressData = await fetchAddressDataByPath(args)
-  while (addressData.used) {
-    path.addressIndex++
-    addressData = await fetchAddressDataByPath(args)
   }
 
   return path.addressIndex
