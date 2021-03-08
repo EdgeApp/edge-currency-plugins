@@ -1,6 +1,5 @@
-import { Mutex } from 'async-mutex'
 import * as bs from 'biggystring'
-import { EdgeTxidMap, EdgeFreshAddress, EdgeWalletInfo } from 'edge-core-js'
+import { EdgeFreshAddress, EdgeWalletInfo } from 'edge-core-js'
 
 import {
   AddressPath,
@@ -12,20 +11,18 @@ import {
   LocalWalletMetadata,
   NetworkEnum
 } from '../../plugin/types'
-import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
+import { BlockBook, ITransaction } from '../network/BlockBook'
 import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { Processor } from '../db/makeProcessor'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import {
-  getCurrencyFormatFromPurposeType,
-  validScriptPubkeyFromAddress,
-  getPurposeTypeFromKeys,
-  getWalletFormat,
-  getWalletSupportedFormats,
+  currencyFormatToPurposeType,
   getFormatSupportedBranches,
-  currencyFormatToPurposeType
+  getWalletSupportedFormats,
+  validScriptPubkeyFromAddress
 } from './utils'
+import { makeMutexor, Mutexor } from './mutexor'
 
 export interface UtxoEngineState {
   start(): Promise<void>
@@ -59,7 +56,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   } = config
 
   const addressesToWatch = new Set<string>()
-  const mutex = new Mutex()
+  const mutexor = makeMutexor()
 
   const commonArgs: CommonArgs = {
     network,
@@ -112,7 +109,7 @@ interface CommonArgs {
   emitter: Emitter
   addressesToWatch: Set<string>
   metadata: LocalWalletMetadata
-  mutex: Mutex
+  mutexor: Mutexor
 }
 
 interface FormatArgs extends CommonArgs {
@@ -128,12 +125,10 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
     currencyInfo,
     walletTools,
     processor,
-    mutex
+    mutexor,
   } = args
 
-  const release = await mutex.acquire()
-
-  try {
+  await mutexor(`setLookAhead-${format}`).runExclusive(async () => {
     const branches = getFormatSupportedBranches(format)
     for (const branch of branches) {
       const partialPath: Omit<AddressPath, 'addressIndex'> = {
@@ -144,33 +139,23 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
       const getLastUsed = () => findLastUsedIndex({ ...args, ...partialPath })
       const getAddressCount = () => processor.fetchAddressCountFromPathPartition(partialPath)
 
-      let lastUsed = await getLastUsed()
-      let addressCount = await getAddressCount()
-      while (lastUsed + currencyInfo.gapLimit > addressCount) {
+      while (await getLastUsed() + currencyInfo.gapLimit > getAddressCount()) {
         const path: AddressPath = {
           ...partialPath,
-          addressIndex: addressCount
+          addressIndex: getAddressCount()
         }
         const { address } = walletTools.getAddress(path)
         const scriptPubkey = walletTools.addressToScriptPubkey(address)
-
-        await saveAddress({
+        const saveArgs: SaveAddressArgs = {
           ...args,
           scriptPubkey,
           path
-        })
-        await processAddressBalance({
-          ...args,
-          address
-        })
-
-        lastUsed = await getLastUsed()
-        addressCount = await getAddressCount()
+        }
+        await saveAddress(saveArgs)
+          .then(() => processAddress({ ...args, address }))
       }
     }
-  } finally {
-    release()
-  }
+  })
 }
 
 interface SaveAddressArgs {
@@ -339,61 +324,15 @@ const processAddress = async (args: ProcessAddressArgs) => {
   }
 
   await Promise.all([
-    processAddressBalance(args),
     processAddressTransactions(args),
     processAddressUtxos(args)
   ])
 }
 
-interface ProcessAddressBalanceArgs {
-  address: string
-  processor: Processor
-  currencyInfo: EngineCurrencyInfo
-  walletTools: UTXOPluginWalletTools
-  blockBook: BlockBook
-  emitter: Emitter
-  metadata: LocalWalletMetadata
-}
-
-const processAddressBalance = async (args: ProcessAddressBalanceArgs): Promise<void> => {
-  const {
-    address,
-    processor,
-    currencyInfo,
-    walletTools,
-    blockBook,
-    emitter,
-    metadata
-  } = args
-
-  const scriptPubkey = walletTools.addressToScriptPubkey(address)
-  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-
-  const accountDetails = await blockBook.fetchAddress(address)
-  const oldBalance = addressData?.balance ?? '0'
-  const balance = bs.add(accountDetails.balance, accountDetails.unconfirmedBalance)
-  const diff = bs.sub(balance, oldBalance)
-  if (diff !== '0') {
-    const newWalletBalance = bs.add(metadata.balance, diff)
-    emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, newWalletBalance)
-  }
-  const used = accountDetails.txs > 0 || accountDetails.unconfirmedTxs > 0
-
-  await processor.updateAddressByScriptPubkey(scriptPubkey, {
-    balance,
-    used
-  })
-}
-
-interface ProcessAddressTxsArgs {
+interface ProcessAddressTxsArgs extends FormatArgs {
   address: string
   page?: number
   networkQueryVal?: number
-  network: NetworkEnum
-  currencyInfo: EngineCurrencyInfo
-  processor: Processor
-  walletTools: UTXOPluginWalletTools
-  blockBook: BlockBook
 }
 
 const processAddressTransactions = async (args: ProcessAddressTxsArgs): Promise<void> => {
@@ -410,6 +349,8 @@ const processAddressTransactions = async (args: ProcessAddressTxsArgs): Promise<
   let networkQueryVal = args.networkQueryVal ?? addressData?.networkQueryVal
   const {
     transactions = [],
+    txs,
+    unconfirmedTxs,
     totalPages
   } = await blockBook.fetchAddress(address, {
     details: 'txs',
@@ -417,6 +358,14 @@ const processAddressTransactions = async (args: ProcessAddressTxsArgs): Promise<
     perPage: 10,
     page
   })
+
+  // If address is used and previously not marked as used, mark as used.
+  const used = txs > 0 || unconfirmedTxs > 0
+  if (used && !addressData?.used && page === 1) {
+    await processor.updateAddressByScriptPubkey(scriptPubkey, {
+      used
+    })
+  }
 
   for (const rawTx of transactions) {
     const tx = processRawTx({ ...args, tx: rawTx })
@@ -483,25 +432,25 @@ const fetchTransaction = async (args: FetchTransactionArgs): Promise<IProcessorT
   return tx
 }
 
-interface ProcessAddressUtxosArgs {
+interface ProcessAddressUtxosArgs extends FormatArgs {
   address: string
-  network: NetworkEnum
-  currencyInfo: EngineCurrencyInfo
-  walletTools: UTXOPluginWalletTools
-  processor: Processor
-  blockBook: BlockBook
 }
 
 const processAddressUtxos = async (args: ProcessAddressUtxosArgs): Promise<void> => {
   const {
     address,
+    format,
+    currencyInfo,
     walletTools,
     processor,
-    blockBook
+    blockBook,
+    emitter,
+    metadata
   } = args
+
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  if (!addressData || !addressData.path) {
+  if (!addressData?.path) {
     return
   }
 
@@ -511,6 +460,8 @@ const processAddressUtxos = async (args: ProcessAddressUtxosArgs): Promise<void>
     [utxo.id]: utxo
   }), {})
   const accountUtxos = await blockBook.fetchAddressUtxos(address)
+
+  let balance = '0'
 
   for (const utxo of accountUtxos) {
     const id = `${utxo.txid}_${utxo.vout}`
@@ -525,7 +476,7 @@ const processAddressUtxos = async (args: ProcessAddressUtxosArgs): Promise<void>
     let scriptType: ScriptTypeEnum
     let script: string
     let redeemScript: string | undefined
-    switch (currencyFormatToPurposeType(addressData.path.format)) {
+    switch (currencyFormatToPurposeType(format)) {
       case BIP43PurposeTypeEnum.Airbitz:
       case BIP43PurposeTypeEnum.Legacy:
         script = (await fetchTransaction({ ...args, txid: utxo.txid })).hex
@@ -542,6 +493,8 @@ const processAddressUtxos = async (args: ProcessAddressUtxosArgs): Promise<void>
         break
     }
 
+    balance = bs.add(balance, utxo.value)
+
     processor.saveUtxo({
       id,
       txid: utxo.txid,
@@ -557,5 +510,14 @@ const processAddressUtxos = async (args: ProcessAddressUtxosArgs): Promise<void>
 
   for (const id in oldUtxoMap) {
     processor.removeUtxo(oldUtxoMap[id])
+  }
+
+  const oldBalance = addressData?.balance ?? '0'
+  const diff = bs.sub(balance, oldBalance)
+  if (diff !== '0') {
+    const newWalletBalance = bs.add(metadata.balance, diff)
+    emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, newWalletBalance)
+
+    await processor.updateAddressByScriptPubkey(scriptPubkey, { balance })
   }
 }
