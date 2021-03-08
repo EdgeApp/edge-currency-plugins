@@ -23,6 +23,7 @@ import {
   validScriptPubkeyFromAddress
 } from './utils'
 import { makeMutexor, Mutexor } from './mutexor'
+import { BLOCKBOOK_TXS_PER_PAGE } from './constants'
 
 export interface UtxoEngineState {
   start(): Promise<void>
@@ -355,7 +356,7 @@ const processAddressTransactions = async (args: ProcessAddressTxsArgs): Promise<
   } = await blockBook.fetchAddress(address, {
     details: 'txs',
     from: networkQueryVal,
-    perPage: 10,
+    perPage: BLOCKBOOK_TXS_PER_PAGE,
     page
   })
 
