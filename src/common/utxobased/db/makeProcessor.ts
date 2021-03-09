@@ -43,6 +43,8 @@ interface ProcessorConfig {
 }
 
 export interface Processor {
+  dumpData(): Promise<any>
+
   fetchScriptPubkeyByPath(path: AddressPath): Promise<ScriptPubkeyByPath>
 
   fetchAddressByScriptPubkey(scriptPubkey: string): Promise<AddressByScriptPubkey>
@@ -119,42 +121,42 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     emitter
   } = config
 
-  const countBases = Promise.all([
+  const countBases = await Promise.all([
     createOrOpen(disklet, scriptPubkeyByPathConfig),
     createOrOpen(disklet, addressPathByMRUConfig),
   ])
-  const rangeBases = Promise.all([
+  const rangeBases = await Promise.all([
     createOrOpen(disklet, scriptPubkeysByBalanceConfig),
     createOrOpen(disklet, txIdsByBlockHeightConfig),
     createOrOpen(disklet, txsByDateConfig),
     createOrOpen(disklet, utxoIdsBySizeConfig)
   ])
-  const hashBases = Promise.all([
+  const hashBases = await Promise.all([
     createOrOpen(disklet, addressByScriptPubkeyConfig),
     createOrOpen(disklet, txByIdConfig),
     createOrOpen(disklet, txsByScriptPubkeyConfig),
     createOrOpen(disklet, utxoByIdConfig),
     createOrOpen(disklet, utxoIdsByScriptPubkeyConfig)
   ])
-  await Promise.all([countBases, rangeBases, hashBases])
+  const allBases = [ ...countBases, ...rangeBases, ...hashBases ]
 
   const [
     scriptPubkeyByPath,
     addressPathByMRU
-  ] = await countBases
+  ] = countBases
   const [
     scriptPubkeysByBalance,
     txIdsByBlockHeight,
     txsByDate,
     utxoIdsBySize
-  ] = await rangeBases
+  ] = rangeBases
   const [
     addressByScriptPubkey,
     txById,
     txsByScriptPubkey,
     utxoById,
     utxoIdsByScriptPubkey
-  ] = await hashBases
+  ] = hashBases
 
   async function processAndSaveAddress(data: IAddress) {
     const [ addressData ] = await addressByScriptPubkey.query('', [ data.scriptPubkey ])
@@ -453,6 +455,13 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
   }
 
   const fns: Processor = {
+    dumpData(): Promise<any> {
+      return Promise.all(allBases.map(async (base) => ({
+        databaseName: base.databaseName,
+        data: await base.dumpData('')
+      })))
+    },
+
     async fetchScriptPubkeyByPath(path: AddressPath): Promise<ScriptPubkeyByPath> {
       const [ scriptPubkey ] = await scriptPubkeyByPath.query(
         addressPathToPrefix(path),
@@ -507,7 +516,8 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     },
 
     async fetchAddressesByPath(path: Omit<AddressPath, 'addressIndex'>): Promise<AddressByScriptPubkey[]> {
-      const scriptPubkeys = await scriptPubkeyByPath.query(addressPathToPrefix(path), 0)
+      const partition = addressPathToPrefix(path)
+      const scriptPubkeys = await scriptPubkeyByPath.query(partition, 0, scriptPubkeyByPath.length(partition) - 1)
       return innerFetchAddressesByScriptPubkeys(scriptPubkeys)
     },
 

@@ -31,8 +31,6 @@ export interface UtxoEngineState {
   stop(): Promise<void>
 
   getFreshAddress(branch?: number): EdgeFreshAddress
-
-  markAddressUsed(address: string): Promise<void>
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
@@ -93,9 +91,6 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       return {
         publicAddress: ''
       }
-    },
-
-    async markAddressUsed(addressStr: string) {
     }
   }
 }
