@@ -27,7 +27,6 @@ import {
 import { IProcessorTransaction } from '../db/types'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { makeBlockBook } from '../network/BlockBook'
-import { calculateFeeRate } from './makeSpendHelper'
 import { makeUtxoEngineState } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
@@ -287,11 +286,9 @@ export async function makeUtxoEngine(
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
-      let subtractFee = false
-      if (options != null) {
-        subtractFee = options.subtractFee ?? false
-      }
-      const feeRate = parseInt(calculateFeeRate(currencyInfo, edgeSpendInfo))
+      const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+      const subtractFee =
+        options?.subtractFee != null ? options.subtractFee : false
       const tx = await makeTx({
         utxos,
         targets,

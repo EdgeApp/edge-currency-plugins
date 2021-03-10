@@ -1,10 +1,11 @@
 import * as bs from 'biggystring'
 import { asArray, asNumber, asObject, asString } from 'cleaners'
 import { Disklet } from 'disklet'
-import { EdgeIo, EdgeLog, EdgeSpendInfo } from 'edge-core-js'
+import { EdgeIo, EdgeLog, EdgeSpendInfo, EdgeSpendTarget } from 'edge-core-js'
 import { makeMemlet, Memlet } from 'memlet'
 
 import {
+  BYTES_TO_KB,
   INFO_SERVER_URI,
   LOW_FEE,
   MAX_FEE,
@@ -32,6 +33,7 @@ interface Common {
 export interface Fees {
   start: () => Promise<void>
   stop: () => void
+  getRate: (edgeSpendInfo: EdgeSpendInfo) => Promise<string>
 }
 
 export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
@@ -80,6 +82,33 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
 
     stop(): void {
       clearInterval(vendorIntervalId)
+    },
+
+    async getRate(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
+      const {
+        spendTargets,
+        networkFeeOption,
+        customNetworkFee = {},
+        otherParams = {}
+      } = edgeSpendInfo
+
+      const requiredFeeRate =
+        otherParams.paymentProtocolInfo?.merchant?.requiredFeeRate
+      if (requiredFeeRate != null) {
+        const rate = bs.add(
+          bs.mul(bs.mul(requiredFeeRate, BYTES_TO_KB), '1.5'),
+          '1'
+        )
+        return bs.toFixed(rate, 0, 0)
+      }
+
+      const rate = calcMinerFeePerByte(
+        sumSpendTargets(spendTargets),
+        fees,
+        networkFeeOption,
+        customNetworkFee[currencyInfo.customFeeSettings[0]]
+      )
+      return bs.mul(rate, BYTES_TO_KB)
     }
   }
 }
@@ -91,6 +120,13 @@ const cacheFees = async (
   memlet: Memlet,
   fees: SimpleFeeSettings
 ): Promise<void> => await memlet.setJson(FEES_PATH, fees)
+
+const sumSpendTargets = (spendTargets: EdgeSpendTarget[]): string =>
+  spendTargets.reduce((amount, { nativeAmount }) => {
+    if (nativeAmount == null)
+      throw new Error(`Invalid spend target amount: ${nativeAmount}`)
+    return bs.add(amount, nativeAmount)
+  }, '0')
 
 export const asInfoServerFees = asObject<SimpleFeeSettings>({
   lowFee: asString,
