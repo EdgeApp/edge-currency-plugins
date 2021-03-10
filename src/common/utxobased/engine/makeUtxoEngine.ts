@@ -1,4 +1,5 @@
 import * as bs from 'biggystring'
+import { navigateDisklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
@@ -12,6 +13,8 @@ import {
   JsonObject
 } from 'edge-core-js'
 
+import { FEES_DISKLET_PATH } from '../../constants'
+import { makeFees } from '../../fees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
@@ -74,6 +77,11 @@ export async function makeUtxoEngine(
     network
   })
 
+  const fees = await makeFees({
+    disklet: navigateDisklet(walletLocalDisklet, FEES_DISKLET_PATH),
+    currencyInfo
+  })
+
   const blockBook = makeBlockBook({ emitter, log: io.console })
   const metadata = await makeMetadata({ disklet: walletLocalDisklet, emitter })
   const processor = await makeProcessor({
@@ -104,15 +112,16 @@ export async function makeUtxoEngine(
   const fns: EdgeCurrencyEngine = {
     async startEngine(): Promise<void> {
       await blockBook.connect()
-
       const { bestHeight } = await blockBook.fetchInfo()
       emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, bestHeight)
 
+      await fees.start()
       await state.start()
     },
 
     async killEngine(): Promise<void> {
       await state.stop()
+      fees.stop()
       await blockBook.disconnect()
     },
 
