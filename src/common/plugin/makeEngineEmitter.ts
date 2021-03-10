@@ -22,7 +22,10 @@ export declare interface EngineEmitter {
       blockHeight: number
     ) => boolean) &
     ((event: EngineEvent.ADDRESSES_CHECKED, progressRatio: number) => boolean) &
-    ((event: EngineEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => boolean)
+    ((event: EngineEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => boolean) &
+    ((event: EngineEvent.CONNECTION_OPEN) => void) &
+    ((event: EngineEvent.CONNECTION_CLOSE, error?: Error) => this) &
+    ((event: EngineEvent.CONNECTION_TIMER, queryTime: number) => this)
 
   on: ((
     event: EngineEvent.TRANSACTIONS_CHANGED,
@@ -50,6 +53,15 @@ export declare interface EngineEmitter {
     ((
       event: EngineEvent.TXIDS_CHANGED,
       listener: (txids: EdgeTxidMap) => Promise<void> | void
+    ) => this) &
+    ((event: EngineEvent.CONNECTION_OPEN, listener: () => void) => this) &
+    ((
+      event: EngineEvent.CONNECTION_CLOSE,
+      listener: (error?: Error) => void
+    ) => this) &
+    ((
+      event: EngineEvent.CONNECTION_TIMER,
+      listener: (queryTime: number) => void
     ) => this)
 }
 export class EngineEmitter extends EventEmitter {}
@@ -60,5 +72,8 @@ export enum EngineEvent {
   BALANCE_CHANGED = 'balance:changed',
   BLOCK_HEIGHT_CHANGED = 'block:height:changed',
   ADDRESSES_CHECKED = 'addresses:checked',
-  TXIDS_CHANGED = 'txids:changed'
+  TXIDS_CHANGED = 'txids:changed',
+  CONNECTION_OPEN = 'connection:open',
+  CONNECTION_CLOSE = 'connection:close',
+  CONNECTION_TIMER = 'connection:timer'
 }
