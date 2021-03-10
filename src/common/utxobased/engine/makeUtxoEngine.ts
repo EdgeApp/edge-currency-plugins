@@ -79,7 +79,9 @@ export async function makeUtxoEngine(
 
   const fees = await makeFees({
     disklet: navigateDisklet(walletLocalDisklet, FEES_DISKLET_PATH),
-    currencyInfo
+    currencyInfo,
+    io,
+    log: config.options.log
   })
 
   const blockBook = makeBlockBook({ emitter, log: io.console })
