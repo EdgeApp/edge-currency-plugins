@@ -86,7 +86,10 @@ export interface Emitter {
     ) => this) &
     ((event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number) => this) &
     ((event: EmitterEvent.ADDRESSES_CHECKED, progressRatio: number) => this) &
-    ((event: EmitterEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => this)
+    ((event: EmitterEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => this) &
+    ((event: EmitterEvent.CONNECTION_OPEN) => void) &
+    ((event: EmitterEvent.CONNECTION_CLOSE, error?: Error) => this) &
+    ((event: EmitterEvent.CONNECTION_TIMER, queryTime: number) => this)
 
   on: ((
     event: EmitterEvent.TRANSACTIONS_CHANGED,
@@ -114,6 +117,15 @@ export interface Emitter {
     ((
       event: EmitterEvent.TXIDS_CHANGED,
       listener: (txids: EdgeTxidMap) => void | Promise<void>
+    ) => this) &
+    ((event: EmitterEvent.CONNECTION_OPEN, listener: () => void) => this) &
+    ((
+      event: EmitterEvent.CONNECTION_CLOSE,
+      listener: (error?: Error) => void
+    ) => this) &
+    ((
+      event: EmitterEvent.CONNECTION_TIMER,
+      listener: (queryTime: number) => void
     ) => this)
 }
 
@@ -122,6 +134,9 @@ export enum EmitterEvent {
   PROCESSOR_TRANSACTION_CHANGED = 'processor:transactions:changed',
   BALANCE_CHANGED = 'balance:changed',
   BLOCK_HEIGHT_CHANGED = 'block:height:changed',
+  CONNECTION_OPEN = 'connection:open',
+  CONNECTION_CLOSE = 'connection:close',
+  CONNECTION_TIMER = 'connection:timer',
   ADDRESSES_CHECKED = 'addresses:checked',
   TXIDS_CHANGED = 'txids:changed'
 }
