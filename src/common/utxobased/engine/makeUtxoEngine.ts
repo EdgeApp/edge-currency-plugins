@@ -26,6 +26,7 @@ import { fetchOrDeriveXprivFromKeys, getXprivKey } from './utils'
 import { IProcessorTransaction } from '../db/types'
 import { fromEdgeTransaction, toEdgeTransaction } from '../db/Models/ProcessorTransaction'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
+import { makeMutexor } from './mutexor'
 
 export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrencyEngine> {
   const {
@@ -39,6 +40,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
     io
   } = config
+
+  const mutexor = makeMutexor()
 
   // Merge in the xpriv into the local copy of wallet keys
   walletInfo.keys[getXprivKey({ coin: currencyInfo.network })] = await fetchOrDeriveXprivFromKeys({
@@ -72,8 +75,10 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
   })
 
   emitter.on(EmitterEvent.BALANCE_CHANGED, async (currencyCode: string, nativeBalance: string) => {
-    metadata.balance = nativeBalance
-    await setMetadata(walletLocalDisklet, metadata)
+    await mutexor('balanceChanged').runExclusive(async () => {
+      metadata.balance = nativeBalance
+      await setMetadata(walletLocalDisklet, metadata)
+    })
   })
 
   emitter.on(EmitterEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
