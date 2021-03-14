@@ -23,7 +23,7 @@ import {
   validScriptPubkeyFromAddress
 } from './utils'
 import { makeMutexor, Mutexor } from './mutexor'
-import { BLOCKBOOK_TXS_PER_PAGE } from './constants'
+import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
 
 export interface UtxoEngineState {
   start(): Promise<void>
@@ -57,11 +57,15 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   const addressesToWatch = new Set<string>()
 
   let processedCount = 0
+  let processedPercent = 0
   const onAddressChecked = async () => {
     processedCount = processedCount + 1
     const totalCount = await getTotalAddressCount({ walletInfo, currencyInfo, processor })
-    const ratio = processedCount / totalCount
-    emitter.emit(EmitterEvent.ADDRESSES_CHECKED, ratio)
+    const percent = processedCount / totalCount
+    if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
+      processedPercent = percent
+      emitter.emit(EmitterEvent.ADDRESSES_CHECKED, percent)
+    }
   }
 
   const mutexor = makeMutexor()
@@ -83,6 +87,7 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   return {
     async start(): Promise<void> {
       processedCount = 0
+      processedPercent = 0
 
       const formatsToProcess = getWalletSupportedFormats(walletInfo)
       for (const format of formatsToProcess) {
