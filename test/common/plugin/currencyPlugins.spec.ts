@@ -28,7 +28,6 @@ describe('currencyPlugins', function() {
               return promise.should.be.rejected
             } else {
               const encodedUri = await promise
-              console.log(encodedUri)
               encodedUri.should.eql(expectedParseUri)
             }
           })
