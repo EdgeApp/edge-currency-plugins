@@ -391,7 +391,8 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
   return {
     txid: tx.txid,
     hex: tx.hex,
-    blockHeight: tx.blockHeight,
+    // Blockbook can return a blockHeight of -1 when the tx is pending in the mempool
+    blockHeight: tx.blockHeight > 0 ? tx.blockHeight : 0,
     date: tx.blockTime,
     fees: tx.fees,
     inputs: tx.vin.map((input) => ({
