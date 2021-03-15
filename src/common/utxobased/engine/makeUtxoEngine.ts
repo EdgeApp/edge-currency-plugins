@@ -22,7 +22,7 @@ import { calculateFeeRate } from './makeSpendHelper'
 import { makeBlockBook } from '../network/BlockBook'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { fetchMetadata, setMetadata } from '../../plugin/utils'
-import { fetchOrDeriveXprivFromKeys, getXprivKey } from './utils'
+import { fetchOrDeriveXprivFromKeys, getWalletFormat, getWalletSupportedFormats, getXprivKey } from './utils'
 import { IProcessorTransaction } from '../db/types'
 import { fromEdgeTransaction, toEdgeTransaction } from '../db/Models/ProcessorTransaction'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
@@ -146,13 +146,18 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return Promise.resolve(undefined)
     },
 
-    dumpData(): EdgeDataDump {
+    async dumpData(): Promise<EdgeDataDump> {
       return {
         walletId: walletInfo.id.split(' - ')[0],
         walletType: walletInfo.type,
-        // walletFormat: walletInfo.keys && walletInfo.keys.format,
-        // pluginType: pluginState.pluginId,
-        data: {}
+        data: {
+          walletInfo: {
+            walletFormat: getWalletFormat(walletInfo),
+            walletFormatsSupported: getWalletSupportedFormats(walletInfo),
+            pluginType: currencyInfo.pluginId,
+          },
+          state: await processor.dumpData()
+        }
       }
     },
 
