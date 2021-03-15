@@ -197,21 +197,21 @@
         "currencyCode": "LTC"
       }],
       "legacy address only": ["3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN", {
-        "publicAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
+        "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
         "metadata": {}
       }],
       "legacy uri address": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN", {
-        "publicAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
+        "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
         "metadata": {}
       }],
       "legacy uri address with amount": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN?amount=12345.6789", {
-        "publicAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
+        "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
         "metadata": {},
         "nativeAmount": "1234567890000",
         "currencyCode": "LTC"
       }],
       "legacy uri address with amount & label": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN?amount=1234.56789&label=Johnny%20Litecoin", {
-        "publicAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
+        "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
         "metadata": {
           "name": "Johnny Litecoin"
         },
@@ -219,7 +219,7 @@
         "currencyCode": "LTC"
       }],
       "legacy uri address with amount, label & message": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN?amount=1234.56789&label=Johnny%20Litecoin&message=Hello%20World,%20I%20miss%20you%20!", {
-        "publicAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
+        "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
         "metadata": {
           "name": "Johnny Litecoin",
           "notes": "Hello World, I miss you !"
@@ -228,7 +228,7 @@
         "currencyCode": "LTC"
       }],
       "legacy uri address with unsupported param": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN?unsupported=helloworld&amount=12345.6789", {
-        "publicAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
+        "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
         "metadata": {},
         "nativeAmount": "1234567890000",
         "currencyCode": "LTC"
