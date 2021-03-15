@@ -87,9 +87,41 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     async stop(): Promise<void> {
     },
 
-    getFreshAddress(branch = 0): EdgeFreshAddress {
-      return {
-        publicAddress: ''
+    async getFreshAddress(branch = 0): Promise<EdgeFreshAddress> {
+      const walletPurpose = getPurposeTypeFromKeys(walletInfo)
+      if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
+        const { address: publicAddress } = await internalGetFreshAddress({
+          ...commonArgs,
+          format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit),
+          changeIndex: branch,
+        })
+
+        const { address: segwitAddress } = await internalGetFreshAddress({
+          ...commonArgs,
+          format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit),
+          changeIndex: branch,
+        })
+
+        return {
+          publicAddress,
+          segwitAddress
+        }
+      } else {
+        // Airbitz wallets only use branch 0
+        if (walletPurpose !== BIP43PurposeTypeEnum.Airbitz) {
+          branch = 0
+        }
+
+        const { address: publicAddress, legacyAddress } = await internalGetFreshAddress({
+          ...commonArgs,
+          format: getCurrencyFormatFromPurposeType(walletPurpose),
+          changeIndex: branch,
+        })
+
+        return {
+          publicAddress,
+          legacyAddress: legacyAddress !== publicAddress ? legacyAddress : undefined
+        }
       }
     }
   }
@@ -257,6 +289,39 @@ const fetchAddressDataByPath = async (args: FetchAddressDataByPath): Promise<IAd
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
   if (!addressData) throw new Error('Address data unknown')
   return addressData
+}
+
+interface GetFreshAddressArgs extends FormatArgs {
+  changeIndex: number
+}
+
+interface GetFreshAddressReturn {
+  address: string
+  legacyAddress: string
+}
+
+const internalGetFreshAddress = async (args: GetFreshAddressArgs): Promise<GetFreshAddressReturn> => {
+  const {
+    format,
+    changeIndex,
+    walletTools,
+    processor
+  } = args
+
+  const path = {
+    format,
+    changeIndex,
+    addressIndex: await findLastUsedIndex(args) + 1
+  }
+  let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
+  scriptPubkey = scriptPubkey ?? (await walletTools.getScriptPubkey(path)).scriptPubkey
+  if (!scriptPubkey) {
+    throw new Error('Unknown address path')
+  }
+  return walletTools.scriptPubkeyToAddress({
+    scriptPubkey,
+    format
+  })
 }
 
 interface ProcessFormatAddressesArgs extends FormatArgs {
