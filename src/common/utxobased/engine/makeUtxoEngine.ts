@@ -113,7 +113,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return Promise.resolve(undefined)
     },
 
-    async addGapLimitAddresses(_addresses: string[]): Promise<void> {
+    async addGapLimitAddresses(addresses: string[]): Promise<void> {
+      await state.addGapLimitAddresses(addresses)
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {

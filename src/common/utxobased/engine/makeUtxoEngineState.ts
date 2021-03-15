@@ -31,6 +31,8 @@ export interface UtxoEngineState {
   stop(): Promise<void>
 
   getFreshAddress(branch?: number): EdgeFreshAddress
+
+  addGapLimitAddresses(addresses: string[]): Promise<void>
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
@@ -84,21 +86,24 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     mutexor,
   }
 
+  const run = async () => {
+    const formatsToProcess = getWalletSupportedFormats(walletInfo)
+    for (const format of formatsToProcess) {
+      const args: FormatArgs = {
+        ...commonArgs,
+        format,
+      }
+
+      await setLookAhead(args)
+    }
+  }
+
   return {
     async start(): Promise<void> {
       processedCount = 0
       processedPercent = 0
 
-      const formatsToProcess = getWalletSupportedFormats(walletInfo)
-      for (const format of formatsToProcess) {
-        const args: FormatArgs = {
-          ...commonArgs,
-          format,
-        }
-
-        await setLookAhead(args)
-        await processFormatAddresses(args)
-      }
+      await run()
     },
 
     async stop(): Promise<void> {
@@ -140,6 +145,17 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
           legacyAddress: legacyAddress !== publicAddress ? legacyAddress : undefined
         }
       }
+    },
+
+    async addGapLimitAddresses(addresses: string[]): Promise<void> {
+      await Promise.all(addresses.map(async (addr) => {
+        return saveAddress({
+          scriptPubkey: walletTools.addressToScriptPubkey(addr),
+          used: true,
+          processor
+        })
+      }))
+      await run()
     }
   }
 }
@@ -207,6 +223,7 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
 interface SaveAddressArgs {
   scriptPubkey: string
   path?: AddressPath
+  used?: boolean
   processor: Processor
 }
 
@@ -214,6 +231,7 @@ const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
   const {
     scriptPubkey,
     path,
+    used = false,
     processor
   } = args
 
@@ -221,7 +239,7 @@ const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
     processor.saveAddress({
       scriptPubkey,
       path,
-      used: false,
+      used,
       networkQueryVal: 0,
       lastQuery: 0,
       lastTouched: 0,
@@ -231,6 +249,10 @@ const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
   if (!addressData) {
     await saveNewAddress()
+  } else if (!addressData.used && used) {
+    await processor.updateAddressByScriptPubkey(scriptPubkey, {
+      used,
+    })
   } else if (!addressData.path && path) {
     try {
       await processor.updateAddressByScriptPubkey(scriptPubkey, {
