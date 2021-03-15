@@ -1,19 +1,29 @@
 import * as bs from 'biggystring'
-import { EdgeTxidMap, EdgeFreshAddress } from 'edge-core-js'
+import { EdgeFreshAddress, EdgeWalletInfo } from 'edge-core-js'
 
-import { AddressPath, EmitterEvent, EngineConfig, LocalWalletMetadata } from '../../plugin/types'
-import { BlockBook, INewTransactionResponse, ITransaction } from '../network/BlockBook'
+import {
+  AddressPath,
+  CurrencyFormat,
+  Emitter,
+  EmitterEvent,
+  EngineConfig,
+  EngineCurrencyInfo,
+  LocalWalletMetadata,
+  NetworkEnum
+} from '../../plugin/types'
+import { BlockBook, ITransaction } from '../network/BlockBook'
 import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { Processor } from '../db/makeProcessor'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
-import { getCurrencyFormatFromPurposeType, validScriptPubkeyFromAddress, getPurposeTypeFromKeys, getWalletFormat  } from './utils'
-
-interface SyncProgress {
-  totalCount: number
-  processedCount: number
-  ratio: number
-}
+import {
+  currencyFormatToPurposeType,
+  getFormatSupportedBranches,
+  getWalletSupportedFormats,
+  validScriptPubkeyFromAddress
+} from './utils'
+import { makeMutexor, Mutexor } from './mutexor'
+import { BLOCKBOOK_TXS_PER_PAGE } from './constants'
 
 export interface UtxoEngineState {
   start(): Promise<void>
@@ -46,332 +56,469 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     metadata
   } = config
 
-  const addressesToWatch: Set<string> = new Set()
-  let progress: SyncProgress
-  let freshReceiveIndex: number = 0
-  let freshChangeIndex: number = 0
-  blockBook.watchBlocks(onNewBlock)
+  const addressesToWatch = new Set<string>()
+  const mutexor = makeMutexor()
 
-  async function processAccount(): Promise<void> {
-    // Reset the progress count
-    progress = {
-      totalCount: 0,
-      processedCount: 0,
-      ratio: 0
-    }
-
-    const receivePath: AddressPath = {
-      format: getWalletFormat(walletInfo),
-      changeIndex: 0,
-      addressIndex: 0
-    }
-    const changePath: AddressPath = {
-      format: getWalletFormat(walletInfo),
-      changeIndex: 1,
-      addressIndex: 0
-    }
-
-    const [ receiveAddresses, changeAddresses ] = await Promise.all([
-      processor.fetchAddressesByPath(receivePath),
-      processor.fetchAddressesByPath(changePath)
-    ])
-    const addresses = receiveAddresses.concat(changeAddresses)
-    progress.totalCount += addresses.length
-
-    for (const address of addresses) {
-      if (!address) {
-        throw new Error('Expected address missing from the database')
-      }
-      await processAddress(address)
-    }
-
-    const receiveGapIndexStart = receiveAddresses.length - freshReceiveIndex
-    const changeGapIndexStart = changeAddresses.length - freshChangeIndex
-    if (receiveGapIndexStart < currencyInfo.gapLimit) {
-      receivePath.addressIndex = receiveGapIndexStart
-      await processAccountGapFromPath(receivePath)
-    }
-    // TODO: Process gap limit for change path?
-    if (changeGapIndexStart < currencyInfo.gapLimit) {
-      changePath.addressIndex = changeGapIndexStart
-      await processAccountGapFromPath(changePath)
-    }
-  }
-
-  async function processAccountGapFromPath(path: AddressPath): Promise<void> {
-    let gap = path.addressIndex
-    while (gap < currencyInfo.gapLimit) {
-      progress.totalCount++
-
-
-      const scriptPubkey =
-        await processor.fetchScriptPubkeyByPath(path) ??
-        walletTools.getScriptPubkey(path).scriptPubkey
-      const address: IAddress =
-        await processor.fetchAddressByScriptPubkey(scriptPubkey) ??
-        {
-          path,
-          scriptPubkey,
-          networkQueryVal: 0,
-          lastQuery: 0,
-          lastTouched: 0,
-          used: false,
-          balance: '0'
-        }
-      await calculateAddressBalance(address)
-      await processor.saveAddress(address)
-      await processAddress(address)
-
-      gap = address.used ? 0 : gap + 1
-      path = {
-        ...path,
-        addressIndex: path.addressIndex + 1
-      }
-    }
-  }
-
-  async function processAddress(address: IAddress, andTransactions = true): Promise<void> {
-    const addressStr = walletTools.getAddress(address.path!).address
-    addressesToWatch.add(addressStr)
-    blockBook.watchAddresses(Array.from(addressesToWatch), onNewTransaction)
-
-    new Promise<void>(async (resolve) => {
-      andTransactions && await processAddressTransactions(address)
-      await processAddressUTXOs(address)
-      await afterProcessAddress(address)
-      resolve()
-    })
-  }
-
-  async function afterProcessAddress(address: IAddress): Promise<void> {
-    if (!address.used) {
-      updateFreshIndex(address.path!)
-    }
-
-    progress.processedCount++
-    progress.ratio = progress.processedCount / progress.totalCount
-    emitter.emit(EmitterEvent.ADDRESSES_CHECKED, progress.ratio)
-
-    address.networkQueryVal = metadata.lastSeenBlockHeight + 1
-
-    await processor.updateAddressByScriptPubkey(address.scriptPubkey, address)
-  }
-
-  function updateFreshIndex(path: AddressPath): void {
-    if (path.changeIndex === 0 && path.addressIndex === freshReceiveIndex) {
-      freshReceiveIndex++
-    } else if (path.changeIndex === 1 && path.addressIndex === freshChangeIndex) {
-      freshChangeIndex++
-    }
-  }
-
-  async function calculateAddressBalance(address: IAddress): Promise<void> {
-    const addressStr = walletTools.getAddress(address.path!).address
-    const accountDetails = await blockBook.fetchAddress(addressStr)
-    address.used = accountDetails.txs > 0 || accountDetails.unconfirmedTxs > 0
-
-    const oldBalance = address.balance ?? '0'
-    address.balance = bs.add(
-      accountDetails.balance,
-      accountDetails.unconfirmedBalance
-    )
-    const diff = bs.sub(address.balance, oldBalance)
-    if (diff !== '0') {
-      metadata.balance = bs.add(metadata.balance, diff)
-      emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, metadata.balance)
-    }
-  }
-
-  async function processAddressTransactions(address: IAddress, page = 1): Promise<void> {
-    const addressStr = walletTools.getAddress(address.path!).address
-    const accountDetails = await blockBook.fetchAddress(addressStr, {
-      details: 'txs',
-      from: address.networkQueryVal,
-      page
-    })
-
-    const changeTxidMap: EdgeTxidMap = {}
-    for (const rawTx of accountDetails.transactions ?? []) {
-      const tx = processRawTransaction(rawTx)
-      processor.saveTransaction(tx)
-
-      changeTxidMap[tx.txid] = tx.date
-    }
-    if (accountDetails.transactions?.length ?? 0 > 0) {
-      emitter.emit(EmitterEvent.TXIDS_CHANGED, changeTxidMap)
-    }
-
-    if (accountDetails.page < accountDetails.totalPages) {
-      await processAddressTransactions(address, ++page)
-    }
-  }
-
-  async function processAddressUTXOs(address: IAddress): Promise<void> {
-    const oldUtxos = await processor.fetchUtxosByScriptPubkey(address.scriptPubkey)
-    const oldUtxoMap = oldUtxos.reduce<{ [id: string]: IUTXO }>((obj, utxo) => ({
-      ...obj,
-      [utxo.id]: utxo
-    }), {})
-    const addressStr = walletTools.getAddress(address.path!).address
-    const accountUtxos = await blockBook.fetchAddressUtxos(addressStr)
-
-    for (const { txid, vout, value, height = 0 } of accountUtxos) {
-      const id = `${txid}_${vout}`
-
-      // Any UTXOs listed in the oldUtxoMap after the for loop will be deleted from the database.
-      // If we do not already know about this UTXO, lets process it and add it to the database.
-      if (oldUtxoMap[id]) {
-        delete oldUtxoMap[id]
-        continue
-      }
-
-      let scriptType: ScriptTypeEnum
-      let script: string
-      let redeemScript: string | undefined
-      switch (getPurposeTypeFromKeys({ keys: walletInfo.keys })) {
-        case BIP43PurposeTypeEnum.Legacy:
-          script = (await fetchTransaction(txid)).hex
-          scriptType = ScriptTypeEnum.p2pkh
-          break
-        case BIP43PurposeTypeEnum.WrappedSegwit:
-          script = address.scriptPubkey
-          scriptType = ScriptTypeEnum.p2wpkhp2sh
-          redeemScript = walletTools.getScriptPubkey(address.path!).scriptPubkey
-          break
-        case BIP43PurposeTypeEnum.Segwit:
-          script = address.scriptPubkey
-          scriptType = ScriptTypeEnum.p2wpkh
-          break
-      }
-
-      processor.saveUtxo({
-        id,
-        txid,
-        vout,
-        value,
-        scriptPubkey: address.scriptPubkey,
-        script,
-        redeemScript,
-        scriptType,
-        blockHeight: height
-      })
-    }
-
-    for (const id in oldUtxoMap) {
-      processor.removeUtxo(oldUtxoMap[id])
-    }
-  }
-
-  async function fetchTransaction(txid: string): Promise<IProcessorTransaction> {
-    let tx = await processor.fetchTransaction(txid)
-    if (!tx) {
-      const rawTx = await blockBook.fetchTransaction(txid)
-      tx = processRawTransaction(rawTx)
-    }
-    return tx
-  }
-
-  async function onNewBlock(): Promise<void> {
-    const txIds = await processor.fetchTxIdsByBlockHeight(0)
-    if (txIds === []) {
-      return
-    }
-    for (const txId of txIds) {
-      const rawTx = await blockBook.fetchTransaction(txId)
-      const tx = processRawTransaction(rawTx)
-      // check if tx is still not confirmed, if so, don't change anything
-      if (tx.blockHeight < 1) {
-        return
-      }
-      await processor.removeTxIdByBlockHeight(0, txId)
-      await processor.insertTxIdByBlockHeight(tx.blockHeight, txId)
-      await processor.updateTransaction(txId, tx)
-    }
-  }
-
-  // TODO: watch transaction status in case it is dropped
-  // TODO: fetch and watch a fresh address if one of our addresses in the tx was fresh (this was its only tx)
-  async function onNewTransaction(response: INewTransactionResponse): Promise<void> {
-    const tx = await processRawTransaction(response.tx)
-
-    // Process any of addresses' balances from the transaction
-    const ourInOuts: Array<{ scriptPubkey: string }> = []
-    ourInOuts.push(...tx.ourIns.map((index: string) => tx.inputs[parseInt(index)]))
-    ourInOuts.push(...tx.ourOuts.map((index: string) => tx.outputs[parseInt(index)]))
-    for (const { scriptPubkey } of ourInOuts) {
-      const address = await processor.fetchAddressByScriptPubkey(
-        scriptPubkey
-      )
-      address && await processAddress(address, false)
-    }
-  }
-
-  function processRawTransaction(rawTx: ITransaction): IProcessorTransaction {
-    return {
-      txid: rawTx.txid,
-      hex: rawTx.hex,
-      blockHeight: rawTx.blockHeight,
-      date: rawTx.blockTime,
-      fees: rawTx.fees,
-      inputs: rawTx.vin.map((input) => ({
-        txId: input.txid,
-        outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
-        scriptPubkey: validScriptPubkeyFromAddress({
-          address: input.addresses[0],
-          coin: currencyInfo.network,
-          network
-        }),
-        amount: input.value
-      })),
-      outputs: rawTx.vout.map((output) => ({
-        index: output.n,
-        scriptPubkey: output.hex ?? validScriptPubkeyFromAddress({
-          address: output.addresses[0],
-          coin: currencyInfo.network,
-          network
-        }),
-        amount: output.value
-      })),
-      ourIns: [],
-      ourOuts: [],
-      ourAmount: '0'
-    }
+  const commonArgs: CommonArgs = {
+    network,
+    currencyInfo,
+    walletInfo,
+    walletTools,
+    processor,
+    blockBook,
+    metadata,
+    emitter,
+    addressesToWatch,
+    mutexor,
   }
 
   return {
     async start(): Promise<void> {
-      await processAccount()
-        .catch(console.error)
+      const formatsToProcess = getWalletSupportedFormats(walletInfo)
+      for (const format of formatsToProcess) {
+        const args: FormatArgs = {
+          ...commonArgs,
+          format,
+        }
+
+        await setLookAhead(args)
+        await processFormatAddresses(args)
+      }
     },
 
     async stop(): Promise<void> {
     },
 
     getFreshAddress(branch = 0): EdgeFreshAddress {
-      const {
-        address: publicAddress
-      } = walletTools.getAddress({
-        format: getWalletFormat(walletInfo),
-        changeIndex: branch,
-        addressIndex: freshChangeIndex
-      })
-
       return {
-        publicAddress
+        publicAddress: ''
       }
     },
 
     async markAddressUsed(addressStr: string) {
-      const scriptPubkey = walletTools.addressToScriptPubkey(addressStr)
-      const address = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-      if (!address?.path) {
-        throw new Error('Invalid address: not stored in database')
+    }
+  }
+}
+
+interface CommonArgs {
+  network: NetworkEnum
+  currencyInfo: EngineCurrencyInfo
+  walletInfo: EdgeWalletInfo
+  walletTools: UTXOPluginWalletTools
+  processor: Processor
+  blockBook: BlockBook
+  emitter: Emitter
+  addressesToWatch: Set<string>
+  metadata: LocalWalletMetadata
+  mutexor: Mutexor
+}
+
+interface FormatArgs extends CommonArgs {
+  format: CurrencyFormat
+}
+
+interface SetLookAheadArgs extends FormatArgs {
+}
+
+const setLookAhead = async (args: SetLookAheadArgs) => {
+  const {
+    format,
+    currencyInfo,
+    walletTools,
+    processor,
+    mutexor,
+  } = args
+
+  await mutexor(`setLookAhead-${format}`).runExclusive(async () => {
+    const branches = getFormatSupportedBranches(format)
+    for (const branch of branches) {
+      const partialPath: Omit<AddressPath, 'addressIndex'> = {
+        format,
+        changeIndex: branch
       }
 
-      updateFreshIndex(address.path)
-      await processor.updateAddressByScriptPubkey(scriptPubkey, {
-        used: true
-      })
+      const getLastUsed = () => findLastUsedIndex({ ...args, ...partialPath })
+      const getAddressCount = () => processor.fetchAddressCountFromPathPartition(partialPath)
+
+      while (await getLastUsed() + currencyInfo.gapLimit > getAddressCount()) {
+        const path: AddressPath = {
+          ...partialPath,
+          addressIndex: getAddressCount()
+        }
+        const { address } = walletTools.getAddress(path)
+        const scriptPubkey = walletTools.addressToScriptPubkey(address)
+        const saveArgs: SaveAddressArgs = {
+          ...args,
+          scriptPubkey,
+          path
+        }
+        await saveAddress(saveArgs)
+          .then(() => processAddress({ ...args, address }))
+      }
     }
+  })
+}
+
+interface SaveAddressArgs {
+  scriptPubkey: string
+  path?: AddressPath
+  processor: Processor
+}
+
+const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
+  const {
+    scriptPubkey,
+    path,
+    processor
+  } = args
+
+  const saveNewAddress = () =>
+    processor.saveAddress({
+      scriptPubkey,
+      path,
+      used: false,
+      networkQueryVal: 0,
+      lastQuery: 0,
+      lastTouched: 0,
+      balance: '0'
+    })
+
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (!addressData) {
+    await saveNewAddress()
+  } else if (!addressData.path && path) {
+    try {
+      await processor.updateAddressByScriptPubkey(scriptPubkey, {
+        ...addressData,
+        path
+      })
+    } catch (err) {
+      if (err.message === 'Cannot update address that does not exist') {
+        await saveNewAddress()
+      } else {
+        throw err
+      }
+    }
+  }
+}
+
+interface FindLastUsedIndexArgs extends CommonArgs {
+  format: CurrencyFormat
+  changeIndex: number
+}
+
+/**
+ * Assumes the last used index is:
+ *    addressCount - gapLimit - 1
+ * Verified by checking the ~used~ flag on the address and then checking newer ones.
+ * @param args - FindLastUsedIndexArgs
+ */
+const findLastUsedIndex = async (args: FindLastUsedIndexArgs): Promise<number> => {
+  const {
+    format,
+    changeIndex,
+    currencyInfo,
+    processor,
+  } = args
+
+  const path: AddressPath = {
+    format,
+    changeIndex,
+    addressIndex: 0 // tmp
+  }
+  const addressCount = await processor.fetchAddressCountFromPathPartition(path)
+  // Get the assumed last used index
+  path.addressIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
+
+  for (let i = path.addressIndex; i < addressCount; i++) {
+    try {
+      const addressData = await fetchAddressDataByPath({ ...args, path })
+      if (addressData.used) {
+        path.addressIndex = i
+      }
+    } catch {
+      console.log(addressCount, i)
+    }
+  }
+
+  return path.addressIndex
+}
+
+interface FetchAddressDataByPath extends CommonArgs {
+  path: AddressPath
+}
+
+const fetchAddressDataByPath = async (args: FetchAddressDataByPath): Promise<IAddress> => {
+  const {
+    path,
+    processor,
+    walletTools
+  } = args
+
+  const scriptPubkey =
+    await processor.fetchScriptPubkeyByPath(path) ??
+    walletTools.getScriptPubkey(path).scriptPubkey
+
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (!addressData) throw new Error('Address data unknown')
+  return addressData
+}
+
+interface ProcessFormatAddressesArgs extends FormatArgs {
+}
+
+const processFormatAddresses = async (args: ProcessFormatAddressesArgs) => {
+  const branches = getFormatSupportedBranches(args.format)
+  for (const branch of branches) {
+    await processPathAddresses({ ...args, changeIndex: branch })
+  }
+}
+
+interface ProcessPathAddressesArgs extends ProcessFormatAddressesArgs {
+  changeIndex: number
+}
+
+const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
+  const {
+    walletTools,
+    processor,
+    format,
+    changeIndex
+  } = args
+
+  const addressCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex })
+  for (let i = 0; i < addressCount; i++) {
+    const path: AddressPath = {
+      format,
+      changeIndex,
+      addressIndex: i
+    }
+    let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
+    scriptPubkey = scriptPubkey ?? walletTools.getScriptPubkey(path).scriptPubkey
+    const { address } = walletTools.scriptPubkeyToAddress({
+      scriptPubkey,
+      format
+    })
+
+    await processAddress({ ...args, address })
+  }
+}
+
+interface ProcessAddressArgs extends FormatArgs {
+  address: string
+}
+
+const processAddress = async (args: ProcessAddressArgs) => {
+  const {
+    address,
+    blockBook,
+    addressesToWatch
+  } = args
+
+  const firstProcess = !addressesToWatch.has(address)
+  if (firstProcess) {
+    addressesToWatch.add(address)
+    blockBook.watchAddresses(Array.from(addressesToWatch), async (response) => {
+      await setLookAhead(args)
+      await processAddress({ ...args, address: response.address })
+    })
+  }
+
+  await Promise.all([
+    processAddressTransactions(args),
+    processAddressUtxos(args)
+  ])
+}
+
+interface ProcessAddressTxsArgs extends FormatArgs {
+  address: string
+  page?: number
+  networkQueryVal?: number
+}
+
+const processAddressTransactions = async (args: ProcessAddressTxsArgs): Promise<void> => {
+  const {
+    address,
+    page = 1,
+    processor,
+    walletTools,
+    blockBook
+  } = args
+
+  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  let networkQueryVal = args.networkQueryVal ?? addressData?.networkQueryVal
+  const {
+    transactions = [],
+    txs,
+    unconfirmedTxs,
+    totalPages
+  } = await blockBook.fetchAddress(address, {
+    details: 'txs',
+    from: networkQueryVal,
+    perPage: BLOCKBOOK_TXS_PER_PAGE,
+    page
+  })
+
+  // If address is used and previously not marked as used, mark as used.
+  const used = txs > 0 || unconfirmedTxs > 0
+  if (used && !addressData?.used && page === 1) {
+    await processor.updateAddressByScriptPubkey(scriptPubkey, {
+      used
+    })
+  }
+
+  for (const rawTx of transactions) {
+    const tx = processRawTx({ ...args, tx: rawTx })
+    processor.saveTransaction(tx)
+  }
+
+  if (page < totalPages) {
+    await processAddressTransactions({
+      ...args,
+      page: page + 1,
+      networkQueryVal
+    })
+  }
+}
+
+interface ProcessRawTxArgs extends CommonArgs {
+  tx: ITransaction
+}
+
+const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
+  const { tx, currencyInfo } = args
+  return {
+    txid: tx.txid,
+    hex: tx.hex,
+    blockHeight: tx.blockHeight,
+    date: tx.blockTime,
+    fees: tx.fees,
+    inputs: tx.vin.map((input) => ({
+      txId: input.txid,
+      outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
+      scriptPubkey: validScriptPubkeyFromAddress({
+        address: input.addresses[0],
+        coin: currencyInfo.network,
+        network: args.network
+      }),
+      amount: input.value
+    })),
+    outputs: tx.vout.map((output) => ({
+      index: output.n,
+      scriptPubkey: output.hex ?? validScriptPubkeyFromAddress({
+        address: output.addresses[0],
+        coin: currencyInfo.network,
+        network: args.network
+      }),
+      amount: output.value
+    })),
+    ourIns: [],
+    ourOuts: [],
+    ourAmount: '0'
+  }
+}
+
+interface FetchTransactionArgs extends CommonArgs {
+  txid: string
+}
+
+const fetchTransaction = async (args: FetchTransactionArgs): Promise<IProcessorTransaction> => {
+  const { txid, processor, blockBook } = args
+  let tx = await processor.fetchTransaction(txid)
+  if (!tx) {
+    const rawTx = await blockBook.fetchTransaction(txid)
+    tx = processRawTx({ ...args, tx: rawTx })
+  }
+  return tx
+}
+
+interface ProcessAddressUtxosArgs extends FormatArgs {
+  address: string
+}
+
+const processAddressUtxos = async (args: ProcessAddressUtxosArgs): Promise<void> => {
+  const {
+    address,
+    format,
+    currencyInfo,
+    walletTools,
+    processor,
+    blockBook,
+    emitter,
+    metadata
+  } = args
+
+  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (!addressData?.path) {
+    return
+  }
+
+  const oldUtxos = await processor.fetchUtxosByScriptPubkey(scriptPubkey)
+  const oldUtxoMap = oldUtxos.reduce<{ [id: string]: IUTXO }>((obj, utxo) => ({
+    ...obj,
+    [utxo.id]: utxo
+  }), {})
+  const accountUtxos = await blockBook.fetchAddressUtxos(address)
+
+  let balance = '0'
+
+  for (const utxo of accountUtxos) {
+    const id = `${utxo.txid}_${utxo.vout}`
+
+    // Any UTXOs listed in the oldUtxoMap after the for loop will be deleted from the database.
+    // If we do not already know about this UTXO, lets process it and add it to the database.
+    if (oldUtxoMap[id]) {
+      delete oldUtxoMap[id]
+      continue
+    }
+
+    let scriptType: ScriptTypeEnum
+    let script: string
+    let redeemScript: string | undefined
+    switch (currencyFormatToPurposeType(format)) {
+      case BIP43PurposeTypeEnum.Airbitz:
+      case BIP43PurposeTypeEnum.Legacy:
+        script = (await fetchTransaction({ ...args, txid: utxo.txid })).hex
+        scriptType = ScriptTypeEnum.p2pkh
+        break
+      case BIP43PurposeTypeEnum.WrappedSegwit:
+        script = scriptPubkey
+        scriptType = ScriptTypeEnum.p2wpkhp2sh
+        redeemScript = walletTools.getScriptPubkey(addressData.path).redeemScript
+        break
+      case BIP43PurposeTypeEnum.Segwit:
+        script = scriptPubkey
+        scriptType = ScriptTypeEnum.p2wpkh
+        break
+    }
+
+    balance = bs.add(balance, utxo.value)
+
+    processor.saveUtxo({
+      id,
+      txid: utxo.txid,
+      vout: utxo.vout,
+      value: utxo.value,
+      scriptPubkey,
+      script,
+      redeemScript,
+      scriptType,
+      blockHeight: utxo.height ?? 0
+    })
+  }
+
+  for (const id in oldUtxoMap) {
+    processor.removeUtxo(oldUtxoMap[id])
+  }
+
+  const oldBalance = addressData?.balance ?? '0'
+  const diff = bs.sub(balance, oldBalance)
+  if (diff !== '0') {
+    const newWalletBalance = bs.add(metadata.balance, diff)
+    emitter.emit(EmitterEvent.BALANCE_CHANGED, currencyInfo.currencyCode, newWalletBalance)
+
+    await processor.updateAddressByScriptPubkey(scriptPubkey, { balance })
   }
 }

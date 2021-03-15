@@ -1,0 +1,1 @@
+export const BLOCKBOOK_TXS_PER_PAGE = 10
