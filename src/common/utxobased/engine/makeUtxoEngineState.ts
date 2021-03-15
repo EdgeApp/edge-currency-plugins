@@ -55,6 +55,15 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
   } = config
 
   const addressesToWatch = new Set<string>()
+
+  let processedCount = 0
+  const onAddressChecked = async () => {
+    processedCount = processedCount + 1
+    const totalCount = await getTotalAddressCount({ walletInfo, currencyInfo, processor })
+    const ratio = processedCount / totalCount
+    emitter.emit(EmitterEvent.ADDRESSES_CHECKED, ratio)
+  }
+
   const mutexor = makeMutexor()
 
   const commonArgs: CommonArgs = {
@@ -67,11 +76,14 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
     metadata,
     emitter,
     addressesToWatch,
+    onAddressChecked,
     mutexor,
   }
 
   return {
     async start(): Promise<void> {
+      processedCount = 0
+
       const formatsToProcess = getWalletSupportedFormats(walletInfo)
       for (const format of formatsToProcess) {
         const args: FormatArgs = {
@@ -104,6 +116,7 @@ interface CommonArgs {
   blockBook: BlockBook
   emitter: Emitter
   addressesToWatch: Set<string>
+  onAddressChecked: () => void
   metadata: LocalWalletMetadata
   mutexor: Mutexor
 }
@@ -197,8 +210,50 @@ const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
   }
 }
 
-interface FindLastUsedIndexArgs extends CommonArgs {
+interface GetTotalAddressCountArgs {
+  currencyInfo: EngineCurrencyInfo
+  walletInfo: EdgeWalletInfo
+  processor: Processor
+}
+
+const getTotalAddressCount = async (args: GetTotalAddressCountArgs): Promise<number> => {
+  const {
+    walletInfo,
+  } = args
+
+  const walletFormats = getWalletSupportedFormats(walletInfo)
+
+  let count = 0
+  for (const format of walletFormats) {
+    count += await getFormatAddressCount({ ...args, format })
+  }
+  return count
+}
+
+interface GetFormatAddressCountArgs extends GetTotalAddressCountArgs {
   format: CurrencyFormat
+}
+
+const getFormatAddressCount = async (args: GetFormatAddressCountArgs): Promise<number> => {
+  const {
+    format,
+    currencyInfo,
+    processor
+  } = args
+
+  let count = 0
+
+  const branches = getFormatSupportedBranches(format)
+  for (const branch of branches) {
+    let branchCount = await processor.getNumAddressesFromPathPartition({ format, changeIndex: branch })
+    if (branchCount < currencyInfo.gapLimit) branchCount = currencyInfo.gapLimit
+    count += branchCount
+  }
+
+  return count
+}
+
+interface FindLastUsedIndexArgs extends FormatArgs {
   changeIndex: number
 }
 
@@ -307,7 +362,8 @@ const processAddress = async (args: ProcessAddressArgs) => {
   const {
     address,
     blockBook,
-    addressesToWatch
+    addressesToWatch,
+    onAddressChecked
   } = args
 
   const firstProcess = !addressesToWatch.has(address)
@@ -323,6 +379,8 @@ const processAddress = async (args: ProcessAddressArgs) => {
     processAddressTransactions(args),
     processAddressUtxos(args)
   ])
+
+  firstProcess && onAddressChecked()
 }
 
 interface ProcessAddressTxsArgs extends FormatArgs {
