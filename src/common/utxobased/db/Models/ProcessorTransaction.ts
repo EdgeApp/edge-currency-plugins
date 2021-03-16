@@ -1,6 +1,8 @@
 import { EdgeTransaction } from 'edge-core-js'
 
 import { IProcessorTransaction } from '../types'
+import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
+import { Processor } from '../makeProcessor'
 
 export const fromEdgeTransaction = (tx: EdgeTransaction): IProcessorTransaction => ({
   txid: tx.txid,
@@ -15,19 +17,31 @@ export const fromEdgeTransaction = (tx: EdgeTransaction): IProcessorTransaction 
   ourAmount: tx.nativeAmount ?? '0'
 })
 
-export const toEdgeTransaction = (tx: IProcessorTransaction, currencyCode: string): EdgeTransaction => ({
-  currencyCode,
-  txid: tx.txid,
-  blockHeight: tx.blockHeight,
-  date: tx.date,
-  nativeAmount: tx.ourAmount,
-  networkFee: tx.fees,
-  signedTx: tx.hex,
-  ourReceiveAddresses: [],
+interface ToEdgeTransactionArgs {
+  tx: IProcessorTransaction
+  currencyCode: string
+  walletTools: UTXOPluginWalletTools
+  processor: Processor
+}
+
+export const toEdgeTransaction = async (args: ToEdgeTransactionArgs): Promise<EdgeTransaction> => ({
+  currencyCode: args.currencyCode,
+  txid: args.tx.txid,
+  blockHeight: args.tx.blockHeight,
+  date: args.tx.date,
+  nativeAmount: args.tx.ourAmount,
+  networkFee: args.tx.fees,
+  signedTx: args.tx.hex,
+  ourReceiveAddresses: await Promise.all(args.tx.ourOuts.map(async (i: string) =>
+    args.walletTools.scriptPubkeyToAddress({
+      scriptPubkey: args.tx.outputs[parseInt(i)].scriptPubkey,
+      format: (await args.processor.fetchAddressByScriptPubkey(args.tx.outputs[parseInt(i)].scriptPubkey))!.path!.format
+    }).address
+  )),
   otherParams: {
-    inputs: tx.inputs,
-    outputs: tx.outputs,
-    ourIns: tx.ourIns,
-    ourOuts: tx.ourOuts
+    inputs: args.tx.inputs,
+    outputs: args.tx.outputs,
+    ourIns: args.tx.ourIns,
+    ourOuts: args.tx.ourOuts
   }
 })

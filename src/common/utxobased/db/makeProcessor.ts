@@ -19,10 +19,10 @@ import {
   scriptPubkeyByPathConfig,
   ScriptPubkeysByBalance,
   scriptPubkeysByBalanceConfig,
-  TxIdsByBlockHeight,
-  txIdsByBlockHeightConfig,
   TxById,
   txByIdConfig,
+  txIdsByBlockHeightConfig,
+  TxsByDate,
   txsByDateConfig,
   TxsByScriptPubkey,
   txsByScriptPubkeyConfig,
@@ -53,13 +53,15 @@ export interface Processor {
 
   fetchAddressesByPath(path: Omit<AddressPath, 'addressIndex'>): Promise<AddressByScriptPubkey[]>
 
-  fetchAddressCountFromPathPartition(path: Omit<AddressPath, 'addressIndex'>): number
+  getNumAddressesFromPathPartition(path: Omit<AddressPath, 'addressIndex'>): number
 
   fetchScriptPubkeysByBalance(): Promise<ScriptPubkeysByBalance[]>
 
   saveAddress(data: IAddress): Promise<void>
 
   updateAddressByScriptPubkey(scriptPubkey: string, data: Partial<IAddress>): Promise<void>
+
+  getNumTransactions(): number
 
   fetchTxIdsByBlockHeight(blockHeightMin: number, blockHeightMax?: number): Promise<string[]>
 
@@ -181,7 +183,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
         scriptPubkeysByBalance.insert('', {
           [RANGE_ID_KEY]: data.scriptPubkey,
           [RANGE_KEY]: parseInt(data.balance)
-        }),
+        })
 
         // TODO: change to rangebase
         // addressByMRU.insert('', index, data)
@@ -193,7 +195,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       await Promise.all([
         scriptPubkeysByBalance.delete('', parseInt(data.balance), data.scriptPubkey),
 
-        addressByScriptPubkey.delete('', [ data.scriptPubkey ]),
+        addressByScriptPubkey.delete('', [ data.scriptPubkey ])
 
         // TODO:
         // addressByMRU.delete()
@@ -521,7 +523,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       return innerFetchAddressesByScriptPubkeys(scriptPubkeys)
     },
 
-    fetchAddressCountFromPathPartition(path: Omit<AddressPath, 'addressIndex'>): number {
+    getNumAddressesFromPathPartition(path: Omit<AddressPath, 'addressIndex'>): number {
       return scriptPubkeyByPath.length(addressPathToPrefix(path))
     },
 
@@ -542,6 +544,10 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       await innerUpdateAddressByScriptPubkey(scriptPubkey, data)
     },
 
+    getNumTransactions(): number {
+      return txsByDate.size('')
+    },
+
     async fetchTransaction(txId: string): Promise<TxById> {
       const [ data ] = await txById.query('', [ txId ])
       return data
@@ -556,14 +562,22 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
     async fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<IProcessorTransaction[]> {
       const {
-        startEntries = 10,
-        startIndex = 0
+        startEntries,
+        startIndex,
+        startDate = new Date(0),
+        endDate = new Date()
       } = opts
-      const txData = await txsByDate.queryByCount('', startEntries, startIndex)
-      const txPromises = txData.map(async ({ [RANGE_ID_KEY]: txId }) => {
-        const [ tx ] = await txById.query('', [ txId ])
-        return tx
-      })
+
+      let txData: TxsByDate = []
+      if (startEntries != null && startIndex != null) {
+        txData = await txsByDate.queryByCount('', startEntries, startIndex)
+      } else {
+        txData = await txsByDate.query('', startDate.getTime(), endDate.getTime())
+      }
+
+      const txPromises = txData.map(({ [RANGE_ID_KEY]: txId }) =>
+        txById.query('', [ txId ]).then(([ tx ]) => tx)
+      )
       return Promise.all(txPromises)
     },
 
