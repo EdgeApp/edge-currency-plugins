@@ -17,10 +17,13 @@ import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import { Processor } from '../db/makeProcessor'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import {
-  currencyFormatToPurposeType,
-  getFormatSupportedBranches,
+  getCurrencyFormatFromPurposeType,
+  validScriptPubkeyFromAddress,
+  getPurposeTypeFromKeys,
+  getWalletFormat,
   getWalletSupportedFormats,
-  validScriptPubkeyFromAddress
+  getFormatSupportedBranches,
+  currencyFormatToPurposeType
 } from './utils'
 import { makeMutexor, Mutexor } from './mutexor'
 import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
@@ -30,7 +33,7 @@ export interface UtxoEngineState {
 
   stop(): Promise<void>
 
-  getFreshAddress(branch?: number): EdgeFreshAddress
+  getFreshAddress(branch?: number): Promise<EdgeFreshAddress>
 
   addGapLimitAddresses(addresses: string[]): Promise<void>
 }
@@ -304,7 +307,7 @@ const getFormatAddressCount = async (args: GetFormatAddressCountArgs): Promise<n
 
   const branches = getFormatSupportedBranches(format)
   for (const branch of branches) {
-    let branchCount = await processor.getNumAddressesFromPathPartition({ format, changeIndex: branch })
+    let branchCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex: branch })
     if (branchCount < currencyInfo.gapLimit) branchCount = currencyInfo.gapLimit
     count += branchCount
   }
@@ -340,13 +343,9 @@ const findLastUsedIndex = async (args: FindLastUsedIndexArgs): Promise<number> =
   path.addressIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
 
   for (let i = path.addressIndex; i < addressCount; i++) {
-    try {
-      const addressData = await fetchAddressDataByPath({ ...args, path })
-      if (addressData.used) {
-        path.addressIndex = i
-      }
-    } catch {
-      console.log(addressCount, i)
+    const addressData = await fetchAddressDataByPath({ ...args, path })
+    if (addressData.used) {
+      path.addressIndex = i
     }
   }
 

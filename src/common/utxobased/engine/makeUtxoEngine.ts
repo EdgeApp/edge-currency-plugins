@@ -305,8 +305,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
         coin: currencyInfo.network,
         privateKeys
       })
-      const { edgeSpendInfo } = transaction.otherParams
-      const { paymentProtocolInfo } = edgeSpendInfo.otherParams
+      const { paymentProtocolInfo } = transaction.otherParams?.edgeSpendInfo?.otherParams ?? {}
       if (paymentProtocolInfo != null) {
         const payment = createPayment(
           transaction.signedTx,
