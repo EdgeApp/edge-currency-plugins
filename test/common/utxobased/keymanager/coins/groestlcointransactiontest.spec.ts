@@ -1,5 +1,6 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
+import * as bitcoin from 'altcoin-js'
 
 import { NetworkEnum } from '../../../../../src/common/plugin/types'
 import {
@@ -61,8 +62,8 @@ describe('groestlcoin transaction creation and signing test', () => {
         }
       ]
     }).psbt
-    const hexTxSigned: string = await signTx({
-      psbt: base64Tx,
+    const { hex: hexTxSigned } = await signTx({
+      psbtBase64: base64Tx,
       privateKeys: [privateKey],
       coin: 'groestlcoin'
     })

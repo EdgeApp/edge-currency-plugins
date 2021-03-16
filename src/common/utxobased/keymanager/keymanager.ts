@@ -14,6 +14,7 @@ import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
 import * as utxopicker from './utxopicker'
 import { NetworkEnum } from '../../plugin/types'
+import { Result as UTXOPickerResult } from './utxopicker'
 
 // in bitcoin these are bip44, bip49, bip84 xpub prefixes
 // other coins contain different formats which still need to be gathered.
@@ -210,16 +211,19 @@ export interface MakeTxTarget {
   value: number
 }
 
-interface MakeTxReturn {
-  psbt: bitcoin.Psbt
-  changeUsed: boolean
-  fee: number
+interface MakeTxReturn extends Required<UTXOPickerResult> {
+  psbtBase64: string
 }
 
 export interface SignTxArgs {
   privateKeys: string[]
-  psbt: string
+  psbtBase64: string
   coin: string
+}
+
+interface SignTxReturn {
+  id: string
+  hex: string
 }
 
 // BitcoinJSNetwork and Bip32 are the same interfaces as declared in  bitcoin-js ts_src/network.ts
@@ -921,21 +925,27 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     coin: coin.name,
     network: args.network,
   })
-  const { inputs, outputs, changeUsed = false, fee } = utxopicker.accumulative(
+  const result = utxopicker.accumulative(
     mappedUtxos,
     targets,
     args.feeRate,
     changeScript
   )
-  if (!inputs || !outputs) {
+  if (!result.inputs || !result.outputs) {
     throw new Error('Make spend failed.')
   }
 
   const psbt = new bitcoin.Psbt()
-  psbt.addInputs(inputs)
-  psbt.addOutputs(outputs)
+  psbt.addInputs(result.inputs)
+  psbt.addOutputs(result.outputs)
 
-  return { psbt: psbt, changeUsed, fee }
+  return {
+    inputs: result.inputs,
+    outputs: result.outputs,
+    changeUsed: result.changeUsed,
+    fee: result.fee,
+    psbtBase64: psbt.toBase64(),
+  }
 }
 
 export function createTx(args: CreateTxArgs): CreateTxReturn {
@@ -1057,8 +1067,8 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
 }
 
 // eslint-disable-next-line @typescript-eslint/require-await
-export async function signTx(args: SignTxArgs): Promise<string> {
-  const psbt = bitcoin.Psbt.fromBase64(args.psbt)
+export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
+  const psbt = bitcoin.Psbt.fromBase64(args.psbtBase64)
   const coin = getCoinFromString(args.coin)
 
   for (let i = 0; i < psbt.inputCount; i++) {
@@ -1081,5 +1091,8 @@ export async function signTx(args: SignTxArgs): Promise<string> {
   console.log('fee:', psbt.getFee())
   console.log('feeRate:', psbt.getFeeRate())
   console.log('-----------------------------------------')
-  return psbt.extractTransaction().toHex()
+  return {
+    id: tx.getId(),
+    hex: tx.toHex(),
+  }
 }

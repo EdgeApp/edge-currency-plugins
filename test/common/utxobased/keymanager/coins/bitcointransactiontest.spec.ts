@@ -1,5 +1,6 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
+import * as bitcoin from 'altcoin-js'
 
 import { NetworkEnum } from '../../../../../src/common/plugin/types'
 import {
@@ -219,12 +220,12 @@ describe('bitcoin transaction creation and signing test', () => {
         }
       ]
     }).psbt
-    const hexTxSigned: string = await signTx({
-      psbt: base64Tx,
+    const signedTx = await signTx({
+      psbtBase64: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin'
     })
-    expect(hexTxSigned).to.equal(
+    expect(signedTx.hex).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7' +
         'b067d000000006b483045022100931b6db94aed25d5486884d83fc37160f37f3368c0' +
         'd7f48c757112abefec983802205fda64cff98c849577026eb2ce916a50ea70626a766' +
@@ -263,8 +264,8 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false
     }).psbt
 
-    const rawtransaction: string = await signTx({
-      psbt: base64Tx,
+    const { hex: rawtransaction } = await signTx({
+      psbtBase64: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin'
     })
@@ -291,8 +292,8 @@ describe('bitcoin transaction creation and signing test', () => {
       network: NetworkEnum.Mainnet,
       rbf: false
     }).psbt
-    const segwitRawTransaction: string = await signTx({
-      psbt: segwitTx,
+    const { hex: segwitRawTransaction } = await signTx({
+      psbtBase64: segwitTx,
       privateKeys: Array(nOutputs).fill(privateKey),
       coin: 'bitcoin'
     })
@@ -374,8 +375,8 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false
     }).psbt
 
-    const rawtransaction: string = await signTx({
-      psbt: base64Tx,
+    const { hex: rawtransaction } = await signTx({
+      psbtBase64: base64Tx,
       privateKeys: [privateKey, privateKey, privateKey],
       coin: 'bitcoin'
     })
@@ -420,8 +421,8 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false
     }).psbt
 
-    const hexTxSigned: string = await signTx({
-      psbt: base64Tx,
+    const signedTx = await signTx({
+      psbtBase64: base64Tx,
       privateKeys: [privateKey],
       coin: 'bitcoin'
     })
@@ -432,7 +433,7 @@ describe('bitcoin transaction creation and signing test', () => {
         type: TransactionInputTypeEnum.Legacy,
         prevTxid:
           '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
-        prevTx: hexTxSigned,
+        prevTx: signedTx.hex,
         index: i
       }
     }
@@ -443,8 +444,8 @@ describe('bitcoin transaction creation and signing test', () => {
       rbf: false
     }).psbt
 
-    const hexTxMultiSigned: string = await signTx({
-      psbt: base64TxMulti,
+    const { hex: hexTxMultiSigned } = await signTx({
+      psbtBase64: base64TxMulti,
       privateKeys: Array(nOutputs).fill(privateKey),
       coin: 'bitcoin'
     })
