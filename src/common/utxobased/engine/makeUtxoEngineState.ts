@@ -106,6 +106,8 @@ export function makeUtxoEngineState(config: UtxoEngineStateConfig): UtxoEngineSt
       processedCount = 0
       processedPercent = 0
 
+      blockBook.watchBlocks(() => onNewBlock(commonArgs))
+
       await run()
     },
 
@@ -175,6 +177,32 @@ interface CommonArgs {
   onAddressChecked: () => void
   metadata: LocalWalletMetadata
   mutexor: Mutexor
+}
+
+interface OnNewBlockArgs extends CommonArgs {
+}
+
+const onNewBlock = async (args: OnNewBlockArgs): Promise<void> => {
+  const {
+    processor,
+    blockBook
+  } = args
+
+  const txIds = await processor.fetchTxIdsByBlockHeight(0)
+  if (txIds === []) {
+    return
+  }
+  for (const txId of txIds) {
+    const rawTx = await blockBook.fetchTransaction(txId)
+    const tx = processRawTx({ ...args, tx: rawTx })
+    // check if tx is still not confirmed, if so, don't change anything
+    if (tx.blockHeight < 1) {
+      return
+    }
+    await processor.removeTxIdByBlockHeight(0, txId)
+    await processor.insertTxIdByBlockHeight(tx.blockHeight, txId)
+    await processor.updateTransaction(txId, tx)
+  }
 }
 
 interface FormatArgs extends CommonArgs {
