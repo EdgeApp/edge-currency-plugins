@@ -45,5 +45,5 @@ export function accumulative(utxos: UTXO[], targets: Target[], feeRate: number, 
     return utils.finalize(inputs, outputs, feeRate, changeScript)
   }
 
-  return { fee: feeRate * utils.transactionBytes(inputs, outputs) }
+  return { changeUsed: false, fee: feeRate * utils.transactionBytes(inputs, outputs) }
 }

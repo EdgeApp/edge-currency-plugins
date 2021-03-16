@@ -23,8 +23,8 @@ export interface Target {
 }
 
 export interface Result {
-  inputs?: UTXO[]
+  inputs?: Input[]
   outputs?: Output[]
-  changeUsed?: boolean
+  changeUsed: boolean
   fee: number
 }

@@ -27,6 +27,7 @@ import { IProcessorTransaction } from '../db/types'
 import { fromEdgeTransaction, toEdgeTransaction } from '../db/Models/ProcessorTransaction'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import { makeMutexor } from './mutexor'
+import { UTXOTxOtherParams } from './types'
 
 export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrencyEngine> {
   const {
@@ -248,7 +249,7 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       }
 
       let nativeAmount = '0'
-      for (const output of tx.psbt.txOutputs) {
+      for (const output of tx.outputs) {
         const scriptPubkey = output.script.toString('hex')
         const own = await processor.hasSPubKey(scriptPubkey)
         if (!own) {
@@ -262,7 +263,10 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return {
         ourReceiveAddresses,
         otherParams: {
-          psbt: tx.psbt.toBase64(),
+          psbt: {
+            base64: tx.psbtBase64,
+            inputs: tx.inputs
+          },
           edgeSpendInfo
         },
         currencyCode: currencyInfo.currencyCode,
@@ -287,24 +291,30 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
-      const { psbt } = transaction!.otherParams!
-      const inputs = bitcoin.Psbt.fromBase64(psbt).txInputs
-      const privateKeys = await Promise.all(inputs.map(async ({ hash, index }) => {
-        const txid = Buffer.isBuffer(hash) ? hash.reverse().toString('hex') : hash
+      const { psbt, edgeSpendInfo }: Partial<UTXOTxOtherParams> = transaction.otherParams ?? {}
+      if (!psbt || !edgeSpendInfo) throw new Error('Invalid transaction data')
 
-        const utxo = await processor.fetchUtxo(`${txid}_${index}`)
-        if (!utxo) throw new Error('Invalid UTXO')
+      const privateKeys = await Promise.all(
+        psbt.inputs.map(async ({ hash, index }) => {
+          const txid = Buffer.isBuffer(hash) ? hash.reverse().toString('hex') : hash
 
-        const address = await processor.fetchAddressByScriptPubkey(utxo.scriptPubkey)
-        if (!address?.path) throw new Error('Invalid script pubkey')
+          const utxo = await processor.fetchUtxo(`${txid}_${index}`)
+          if (!utxo) throw new Error('Invalid UTXO')
 
-        return walletTools.getPrivateKey(address.path)
-      }))
-      transaction.signedTx = await signTx({
-        psbt,
+          const address = await processor.fetchAddressByScriptPubkey(utxo.scriptPubkey)
+          if (!address?.path) throw new Error('Invalid script pubkey')
+
+          return walletTools.getPrivateKey(address.path)
+        })
+      )
+      const signedTx = await signTx({
+        psbtBase64: psbt.base64,
         coin: currencyInfo.network,
         privateKeys
       })
+      transaction.txid = signedTx.id
+      transaction.signedTx = signedTx.hex
+
       const { paymentProtocolInfo } = transaction.otherParams?.edgeSpendInfo?.otherParams ?? {}
       if (paymentProtocolInfo != null) {
         const payment = createPayment(
@@ -312,7 +322,10 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
           transaction.currencyCode
         )
         Object.assign(transaction.otherParams, {
-          paymentProtocolInfo: { ...paymentProtocolInfo, payment }
+          paymentProtocolInfo: {
+            ...edgeSpendInfo.otherParams.paymentProtocolInfo,
+            payment
+          }
         })
       }
 
