@@ -202,7 +202,7 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
       }
 
       const getLastUsed = () => findLastUsedIndex({ ...args, ...partialPath })
-      const getAddressCount = () => processor.fetchAddressCountFromPathPartition(partialPath)
+      const getAddressCount = () => processor.getNumAddressesFromPathPartition(partialPath)
 
       while (await getLastUsed() + currencyInfo.gapLimit > getAddressCount()) {
         const path: AddressPath = {
@@ -307,7 +307,7 @@ const getFormatAddressCount = async (args: GetFormatAddressCountArgs): Promise<n
 
   const branches = getFormatSupportedBranches(format)
   for (const branch of branches) {
-    let branchCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex: branch })
+    let branchCount = await processor.getNumAddressesFromPathPartition({ format, changeIndex: branch })
     if (branchCount < currencyInfo.gapLimit) branchCount = currencyInfo.gapLimit
     count += branchCount
   }
@@ -338,7 +338,7 @@ const findLastUsedIndex = async (args: FindLastUsedIndexArgs): Promise<number> =
     changeIndex,
     addressIndex: 0 // tmp
   }
-  const addressCount = await processor.fetchAddressCountFromPathPartition(path)
+  const addressCount = await processor.getNumAddressesFromPathPartition(path)
   // Get the assumed last used index
   path.addressIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
 
@@ -427,7 +427,7 @@ const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
     changeIndex
   } = args
 
-  const addressCount = await processor.fetchAddressCountFromPathPartition({ format, changeIndex })
+  const addressCount = await processor.getNumAddressesFromPathPartition({ format, changeIndex })
   for (let i = 0; i < addressCount; i++) {
     const path: AddressPath = {
       format,
