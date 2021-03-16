@@ -1,9 +1,10 @@
-import { EdgeTransaction } from 'edge-core-js/lib/types'
+import { EdgeTransaction } from 'edge-core-js'
+
 import { IProcessorTransaction } from '../types'
 
 export const fromEdgeTransaction = (tx: EdgeTransaction): IProcessorTransaction => ({
   txid: tx.txid,
-  hex: tx.otherParams?.hex,
+  hex: tx.signedTx,
   blockHeight: tx.blockHeight,
   date: tx.date,
   fees: tx.networkFee,
@@ -21,10 +22,9 @@ export const toEdgeTransaction = (tx: IProcessorTransaction, currencyCode: strin
   date: tx.date,
   nativeAmount: tx.ourAmount,
   networkFee: tx.fees,
-  signedTx: '',
+  signedTx: tx.hex,
   ourReceiveAddresses: [],
   otherParams: {
-    hex: tx.hex,
     inputs: tx.inputs,
     outputs: tx.outputs,
     ourIns: tx.ourIns,
