@@ -564,17 +564,15 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       const {
         startEntries,
         startIndex,
-        startDate,
-        endDate
+        startDate = new Date(0),
+        endDate = new Date()
       } = opts
 
       let txData: TxsByDate = []
-      if (startEntries && startIndex) {
+      if (startEntries != null && startIndex != null) {
         txData = await txsByDate.queryByCount('', startEntries, startIndex)
-      } else if (startDate) {
-        txData = await txsByDate.query('', startDate.getTime(), endDate?.getTime())
       } else {
-        txData = await txsByDate.query('', 0, Date.now())
+        txData = await txsByDate.query('', startDate.getTime(), endDate.getTime())
       }
 
       const txPromises = txData.map(({ [RANGE_ID_KEY]: txId }) =>
