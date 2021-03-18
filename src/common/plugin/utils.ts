@@ -18,6 +18,13 @@ export const fetchMetadata = async (disklet: Disklet): Promise<LocalWalletMetada
   }
 }
 
+export const clearMetadata = async (
+  disklet: Disklet
+): Promise<LocalWalletMetadata> => {
+  await disklet.delete(metadataPath)
+  return await fetchMetadata(disklet)
+}
+
 export const setMetadata = (disklet: Disklet, data: LocalWalletMetadata): Promise<void> =>
   disklet.setText(metadataPath, JSON.stringify(data)).then()
 

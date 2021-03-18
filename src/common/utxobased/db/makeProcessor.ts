@@ -1,13 +1,20 @@
-import { BaseType, createCountBase, createHashBase, createRangeBase, openBase } from 'baselet'
+import {
+  BaseType,
+  clearMemletCache,
+  createCountBase,
+  createHashBase,
+  createRangeBase,
+  openBase
+} from 'baselet'
 import { CountBase } from 'baselet/src/CountBase'
 import { HashBase } from 'baselet/src/HashBase'
 import { RangeBase } from 'baselet/src/RangeBase'
 import * as bs from 'biggystring'
-import { Disklet } from 'disklet'
+import { Disklet, navigateDisklet } from 'disklet'
+import { EdgeGetTransactionsOptions } from 'edge-core-js/lib/types'
 
-import { Baselet, BaseletConfig, IAddress, IProcessorTransaction, IUTXO } from './types'
-import { makeQueue } from './makeQueue'
 import { AddressPath, EmitterEvent } from '../../plugin/types'
+import { makeQueue } from './makeQueue'
 import {
   AddressByScriptPubkey,
   addressByScriptPubkeyConfig,
@@ -31,70 +38,114 @@ import {
   utxoIdsByScriptPubkeyConfig,
   utxoIdsBySizeConfig
 } from './Models/baselet'
-import { EdgeGetTransactionsOptions } from 'edge-core-js/lib/types'
+import {
+  Baselet,
+  BaseletConfig,
+  IAddress,
+  IProcessorTransaction,
+  IUTXO
+} from './types'
+
+const BASELET_DIR = 'tables'
 
 interface ProcessorEmitter {
-  emit(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, transaction: IProcessorTransaction): this
+  emit: (
+    event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED,
+    transaction: IProcessorTransaction
+  ) => this
 }
 
 interface ProcessorConfig {
   disklet: Disklet
-  emitter: ProcessorEmitter,
+  emitter: ProcessorEmitter
 }
 
 export interface Processor {
-  dumpData(): Promise<any>
+  dumpData: () => Promise<any>
 
-  fetchScriptPubkeyByPath(path: AddressPath): Promise<ScriptPubkeyByPath>
+  clearAll: () => Promise<void>
 
-  fetchAddressByScriptPubkey(scriptPubkey: string): Promise<AddressByScriptPubkey>
+  fetchScriptPubkeyByPath: (path: AddressPath) => Promise<ScriptPubkeyByPath>
 
-  hasSPubKey(scriptPubkey: string): Promise<boolean>
+  fetchAddressByScriptPubkey: (
+    scriptPubkey: string
+  ) => Promise<AddressByScriptPubkey>
 
-  fetchAddressesByPath(path: Omit<AddressPath, 'addressIndex'>): Promise<AddressByScriptPubkey[]>
+  hasSPubKey: (scriptPubkey: string) => Promise<boolean>
 
-  getNumAddressesFromPathPartition(path: Omit<AddressPath, 'addressIndex'>): number
+  fetchAddressesByPath: (
+    path: Omit<AddressPath, 'addressIndex'>
+  ) => Promise<AddressByScriptPubkey[]>
 
-  fetchScriptPubkeysByBalance(): Promise<ScriptPubkeysByBalance[]>
+  getNumAddressesFromPathPartition: (
+    path: Omit<AddressPath, 'addressIndex'>
+  ) => number
 
-  saveAddress(data: IAddress): Promise<void>
+  fetchScriptPubkeysByBalance: () => Promise<ScriptPubkeysByBalance[]>
 
-  updateAddressByScriptPubkey(scriptPubkey: string, data: Partial<IAddress>): Promise<void>
+  saveAddress: (data: IAddress) => Promise<void>
 
-  getNumTransactions(): number
+  updateAddressByScriptPubkey: (
+    scriptPubkey: string,
+    data: Partial<IAddress>
+  ) => Promise<void>
 
-  fetchTxIdsByBlockHeight(blockHeightMin: number, blockHeightMax?: number): Promise<string[]>
+  getNumTransactions: () => number
 
-  insertTxIdByBlockHeight(blockHeight: number, data: string): Promise<void>
+  fetchTxIdsByBlockHeight: (
+    blockHeightMin: number,
+    blockHeightMax?: number
+  ) => Promise<string[]>
 
-  removeTxIdByBlockHeight(blockHeight: number, txId: string): Promise<void>
+  insertTxIdByBlockHeight: (blockHeight: number, data: string) => Promise<void>
 
-  fetchTransaction(txId: string): Promise<TxById>
+  removeTxIdByBlockHeight: (blockHeight: number, txId: string) => Promise<void>
 
-  fetchTransactionsByScriptPubkey(scriptHash: string): Promise<TxsByScriptPubkey>
+  fetchTransaction: (txId: string) => Promise<TxById>
 
-  fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<IProcessorTransaction[]>
+  fetchTransactionsByScriptPubkey: (
+    scriptHash: string
+  ) => Promise<TxsByScriptPubkey>
 
-  saveTransaction(tx: IProcessorTransaction, withQueue?: boolean): Promise<void>
+  fetchTransactions: (
+    opts: EdgeGetTransactionsOptions
+  ) => Promise<IProcessorTransaction[]>
 
-  updateTransaction(txId: string, data: Pick<IProcessorTransaction, 'blockHeight'>): void
+  saveTransaction: (
+    tx: IProcessorTransaction,
+    withQueue?: boolean
+  ) => Promise<void>
 
-  dropTransaction(txId: string): void
+  updateTransaction: (
+    txId: string,
+    data: Pick<IProcessorTransaction, 'blockHeight'>
+  ) => void
 
-  fetchUtxo(id: string): Promise<UtxoById>
+  dropTransaction: (txId: string) => void
 
-  fetchUtxosByScriptPubkey(scriptPubkey: string): Promise<IUTXO[]>
+  fetchUtxo: (id: string) => Promise<UtxoById>
 
-  fetchAllUtxos(): Promise<IUTXO[]>
+  fetchUtxosByScriptPubkey: (scriptPubkey: string) => Promise<IUTXO[]>
 
-  saveUtxo(utxo: IUTXO): void
+  fetchAllUtxos: () => Promise<IUTXO[]>
 
-  removeUtxo(utxo: IUTXO): void
+  saveUtxo: (utxo: IUTXO) => void
+
+  removeUtxo: (utxo: IUTXO) => void
 }
 
-async function createOrOpen(disklet: Disklet, config: BaseletConfig<BaseType.HashBase>): Promise<HashBase>
-async function createOrOpen(disklet: Disklet, config: BaseletConfig<BaseType.CountBase>): Promise<CountBase>
-async function createOrOpen(disklet: Disklet, config: BaseletConfig<BaseType.RangeBase>): Promise<RangeBase>
+async function createOrOpen(
+  disklet: Disklet,
+  config: BaseletConfig<BaseType.HashBase>
+): Promise<HashBase>
+async function createOrOpen(
+  disklet: Disklet,
+  config: BaseletConfig<BaseType.CountBase>
+): Promise<CountBase>
+async function createOrOpen(
+  disklet: Disklet,
+  config: BaseletConfig<BaseType.RangeBase>
+): Promise<RangeBase>
 async function createOrOpen<T extends BaseType>(
   disklet: Disklet,
   config: BaseletConfig<T>
@@ -106,26 +157,28 @@ async function createOrOpen<T extends BaseType>(
       case BaseType.CountBase:
         return await createCountBase(disklet, config.dbName, config.bucketSize)
       case BaseType.RangeBase:
-        return await createRangeBase(disklet, config.dbName, config.bucketSize, RANGE_KEY, RANGE_ID_KEY)
+        return await createRangeBase(
+          disklet,
+          config.dbName,
+          config.bucketSize,
+          RANGE_KEY,
+          RANGE_ID_KEY
+        )
     }
   } catch (err) {
+    console.log('already exists', config)
     if (!err.message.includes('already exists')) {
       throw err
     }
   }
-  return openBase(disklet, config.dbName)
+  return await openBase(disklet, config.dbName)
 }
 
-export async function makeProcessor(config: ProcessorConfig): Promise<Processor> {
-  const queue = makeQueue()
-  const {
-    disklet,
-    emitter
-  } = config
-
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+async function makeBaselets(disklet: Disklet) {
   const countBases = await Promise.all([
     createOrOpen(disklet, scriptPubkeyByPathConfig),
-    createOrOpen(disklet, addressPathByMRUConfig),
+    createOrOpen(disklet, addressPathByMRUConfig)
   ])
   const rangeBases = await Promise.all([
     createOrOpen(disklet, scriptPubkeysByBalanceConfig),
@@ -140,12 +193,8 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     createOrOpen(disklet, utxoByIdConfig),
     createOrOpen(disklet, utxoIdsByScriptPubkeyConfig)
   ])
-  const allBases = [ ...countBases, ...rangeBases, ...hashBases ]
 
-  const [
-    scriptPubkeyByPath,
-    addressPathByMRU
-  ] = countBases
+  const [scriptPubkeyByPath, addressPathByMRU] = countBases
   const [
     scriptPubkeysByBalance,
     txIdsByBlockHeight,
@@ -160,27 +209,53 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     utxoIdsByScriptPubkey
   ] = hashBases
 
+  const allBases = [...countBases, ...rangeBases, ...hashBases]
+
+  return {
+    scriptPubkeyByPath,
+    addressPathByMRU,
+    scriptPubkeysByBalance,
+    txIdsByBlockHeight,
+    txsByDate,
+    utxoIdsBySize,
+    addressByScriptPubkey,
+    txById,
+    txsByScriptPubkey,
+    utxoById,
+    utxoIdsByScriptPubkey,
+    allBases
+  }
+}
+
+export async function makeProcessor(
+  config: ProcessorConfig
+): Promise<Processor> {
+  const queue = makeQueue()
+  const { emitter } = config
+  const disklet = navigateDisklet(config.disklet, BASELET_DIR)
+  let baselets = await makeBaselets(disklet)
+
   async function processAndSaveAddress(data: IAddress) {
-    const [ addressData ] = await addressByScriptPubkey.query('', [ data.scriptPubkey ])
+    const [addressData] = await baselets.addressByScriptPubkey.query('', [
+      data.scriptPubkey
+    ])
     if (addressData != null) {
-      throw new Error('Address already exists. To update its data call `updateAddressByScriptPubkey`')
+      throw new Error(
+        'Address already exists. To update its data call `updateAddressByScriptPubkey`'
+      )
     }
 
     // If there is path info on the address to save but not stored in
     // the previously existing data, save to the by path database.
-    if (data.path && !addressData?.path) {
+    if (data.path != null && !addressData?.path) {
       await innerSaveScriptPubkeyByPath(data.scriptPubkey, data.path)
     }
 
     try {
       await Promise.all([
-        addressByScriptPubkey.insert(
-          '',
-          data.scriptPubkey,
-          data
-        ),
+        baselets.addressByScriptPubkey.insert('', data.scriptPubkey, data),
 
-        scriptPubkeysByBalance.insert('', {
+        baselets.scriptPubkeysByBalance.insert('', {
           [RANGE_ID_KEY]: data.scriptPubkey,
           [RANGE_KEY]: parseInt(data.balance)
         })
@@ -193,25 +268,30 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     } catch (err) {
       // Undo any changes we made on a fail
       await Promise.all([
-        scriptPubkeysByBalance.delete('', parseInt(data.balance), data.scriptPubkey),
+        baselets.scriptPubkeysByBalance.delete(
+          '',
+          parseInt(data.balance),
+          data.scriptPubkey
+        ),
 
-        addressByScriptPubkey.delete('', [ data.scriptPubkey ])
-
-        // TODO:
-        // addressByMRU.delete()
+        baselets.addressByScriptPubkey.delete('', [data.scriptPubkey])
       ])
     }
   }
 
   // Find transactions associated with this scriptPubkey, process the balances and save it
-  async function processScriptPubkeyTransactions(scriptPubkey: string): Promise<void> {
-    const byScriptPubkey = await fns.fetchTransactionsByScriptPubkey(scriptPubkey)
+  async function processScriptPubkeyTransactions(
+    scriptPubkey: string
+  ): Promise<void> {
+    const byScriptPubkey = await fns.fetchTransactionsByScriptPubkey(
+      scriptPubkey
+    )
     for (const txId in byScriptPubkey) {
       const tx = byScriptPubkey[txId]
       const txData = await fns.fetchTransaction(txId)
-      if (txData) {
-        const ourIns = [ ...txData.ourIns, ...Object.keys(tx.ins) ]
-        const ourOuts = [ ...txData.ourOuts, ...Object.keys(tx.outs) ]
+      if (txData != null) {
+        const ourIns = [...txData.ourIns, ...Object.keys(tx.ins)]
+        const ourOuts = [...txData.ourOuts, ...Object.keys(tx.outs)]
 
         await fns.updateAddressByScriptPubkey(scriptPubkey, {
           lastTouched: txData.date,
@@ -224,15 +304,20 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     }
   }
 
-  async function innerFetchAddressesByScriptPubkeys(scriptPubkeys: string[]): Promise<AddressByScriptPubkey[]> {
+  async function innerFetchAddressesByScriptPubkeys(
+    scriptPubkeys: string[]
+  ): Promise<AddressByScriptPubkey[]> {
     if (scriptPubkeys.length === 0) return []
-    const addresses: AddressByScriptPubkey[] = await addressByScriptPubkey.query('', scriptPubkeys)
+    const addresses: AddressByScriptPubkey[] = await baselets.addressByScriptPubkey.query(
+      '',
+      scriptPubkeys
+    )
 
     // Update the last query values
     const now = Date.now()
-    addresses.map(async (address) => {
-      if (address) {
-        return innerUpdateAddressByScriptPubkey(address.scriptPubkey, {
+    addresses.map(async address => {
+      if (address != null) {
+        return await innerUpdateAddressByScriptPubkey(address.scriptPubkey, {
           lastQuery: now
         })
       }
@@ -269,10 +354,12 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       }
     }
 
-    await txsByScriptPubkey.insert('', scriptPubkey, txs)
+    await baselets.txsByScriptPubkey.insert('', scriptPubkey, txs)
   }
 
-  async function calculateTransactionAmount(tx: IProcessorTransaction): Promise<string> {
+  async function calculateTransactionAmount(
+    tx: IProcessorTransaction
+  ): Promise<string> {
     let ourAmount = '0'
     for (const i of tx.ourIns) {
       const { amount } = tx.inputs[parseInt(i)]
@@ -286,21 +373,29 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     return ourAmount
   }
 
-  async function innerSaveScriptPubkeyByPath(scriptPubkey: string, path: AddressPath): Promise<void> {
-    await scriptPubkeyByPath.insert(
+  async function innerSaveScriptPubkeyByPath(
+    scriptPubkey: string,
+    path: AddressPath
+  ): Promise<void> {
+    await baselets.scriptPubkeyByPath.insert(
       addressPathToPrefix(path),
       path.addressIndex,
       scriptPubkey
     )
   }
 
-  async function innerUpdateAddressByScriptPubkey(scriptPubkey: string, data: Partial<IAddress>): Promise<IAddress> {
-    const [ address ] = await addressByScriptPubkey.query('', [ scriptPubkey ])
+  async function innerUpdateAddressByScriptPubkey(
+    scriptPubkey: string,
+    data: Partial<IAddress>
+  ): Promise<IAddress> {
+    const [address] = await baselets.addressByScriptPubkey.query('', [
+      scriptPubkey
+    ])
     if (!address) {
       throw new Error('Cannot update address that does not exist')
     }
 
-    const promises: Promise<any>[] = []
+    const promises: Array<Promise<any>> = []
 
     if (
       data.networkQueryVal != null &&
@@ -325,7 +420,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       const oldRange = parseInt(address.balance)
       address.balance = data.balance
       promises.push(
-        scriptPubkeysByBalance.update('', oldRange, {
+        baselets.scriptPubkeysByBalance.update('', oldRange, {
           [RANGE_ID_KEY]: address.scriptPubkey,
           [RANGE_KEY]: parseInt(data.balance)
         })
@@ -333,29 +428,29 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     }
 
     if (data.path != null && address.path == null) {
-      promises.push(
-        innerSaveScriptPubkeyByPath(scriptPubkey, data.path)
-      )
+      promises.push(innerSaveScriptPubkeyByPath(scriptPubkey, data.path))
     }
 
     await Promise.all([
       ...promises,
-      addressByScriptPubkey.insert('', address.scriptPubkey, address)
+      baselets.addressByScriptPubkey.insert('', address.scriptPubkey, address)
     ])
 
     return address
   }
 
-  async function innerSaveTransaction(tx: IProcessorTransaction): Promise<void> {
+  async function innerSaveTransaction(
+    tx: IProcessorTransaction
+  ): Promise<void> {
     const existingTx = await fns.fetchTransaction(tx.txid)
-    if (!existingTx) {
-      await txsByDate.insert('', {
+    if (existingTx == null) {
+      await baselets.txsByDate.insert('', {
         [RANGE_ID_KEY]: tx.txid,
         [RANGE_KEY]: tx.date
       })
     }
 
-    for (const inOout of [ true, false ]) {
+    for (const inOout of [true, false]) {
       const arr = inOout ? tx.inputs : tx.outputs
       for (let i = 0; i < arr.length; i++) {
         const { scriptPubkey } = arr[i]
@@ -379,18 +474,18 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     await fns.insertTxIdByBlockHeight(tx.blockHeight, tx.txid)
 
     tx.ourAmount = await calculateTransactionAmount(tx)
-    await txById.insert('', tx.txid, tx)
+    await baselets.txById.insert('', tx.txid, tx)
   }
 
   async function innerUpdateTransaction(
     txId: string,
     data: Partial<IProcessorTransaction>
   ) {
-    let tx = await fns.fetchTransaction(txId)
-    if (!tx) {
+    const tx = await fns.fetchTransaction(txId)
+    if (tx == null) {
       throw new Error('Cannot update transaction that does not exists')
     }
-    
+
     if (data.blockHeight) {
       if (tx.blockHeight < data.blockHeight) {
         await fns.removeTxIdByBlockHeight(tx.blockHeight, txId)
@@ -398,10 +493,10 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       }
       tx.blockHeight = data.blockHeight
     }
-    if (data.ourIns) {
+    if (data.ourIns != null) {
       tx.ourIns = data.ourIns
     }
-    if (data.ourOuts) {
+    if (data.ourOuts != null) {
       tx.ourOuts = data.ourOuts
     }
     if (data.ourAmount) {
@@ -410,70 +505,103 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
     emitter.emit(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
 
-    await txById.insert('', txId, tx)
+    await baselets.txById.insert('', txId, tx)
   }
 
   async function innerDropTransaction(txId: string) {
     const tx = await fns.fetchTransaction(txId)
-    if (!tx) return
+    if (tx == null) return
 
     for (let i = 0; i < tx.inputs.length; i++) {
       const input = tx.inputs[i]
 
-      await saveTransactionByScriptPubkey(input.scriptPubkey, tx, true, i, false)
+      await saveTransactionByScriptPubkey(
+        input.scriptPubkey,
+        tx,
+        true,
+        i,
+        false
+      )
     }
 
     for (let i = 0; i < tx.outputs.length; i++) {
       const output = tx.outputs[i]
 
-      await saveTransactionByScriptPubkey(output.scriptPubkey, tx, false, i, false)
+      await saveTransactionByScriptPubkey(
+        output.scriptPubkey,
+        tx,
+        false,
+        i,
+        false
+      )
     }
 
     await fns.removeTxIdByBlockHeight(tx.blockHeight, tx.txid)
 
     tx.blockHeight = -1
-    await txById.insert('', tx.txid, tx)
+    await baselets.txById.insert('', tx.txid, tx)
 
     // TODO: recalculate balances
   }
 
   async function innerSaveUtxo(utxo: IUTXO) {
-    await utxoById.insert('', utxo.id, utxo)
-    await utxoIdsBySize.insert('', {
+    await baselets.utxoById.insert('', utxo.id, utxo)
+    await baselets.utxoIdsBySize.insert('', {
       [RANGE_ID_KEY]: utxo.id,
       [RANGE_KEY]: parseInt(utxo.value)
     })
 
-    const [ utxoIds ] = await utxoIdsByScriptPubkey.query('', [ utxo.scriptPubkey ])
+    const [utxoIds] = await baselets.utxoIdsByScriptPubkey.query('', [
+      utxo.scriptPubkey
+    ])
     const set = new Set(utxoIds)
     set.add(utxo.id)
-    await utxoIdsByScriptPubkey.insert('', utxo.scriptPubkey, Array.from(set))
+    await baselets.utxoIdsByScriptPubkey.insert(
+      '',
+      utxo.scriptPubkey,
+      Array.from(set)
+    )
   }
 
   async function innerRemoveUtxo(utxo: IUTXO) {
-    await utxoById.delete('', [ utxo.id ])
-    await utxoIdsBySize.delete('', parseInt(utxo.value), utxo.id)
-    await utxoIdsByScriptPubkey.delete('', [ utxo.scriptPubkey ])
+    await baselets.utxoById.delete('', [utxo.id])
+    await baselets.utxoIdsBySize.delete('', parseInt(utxo.value), utxo.id)
+    await baselets.utxoIdsByScriptPubkey.delete('', [utxo.scriptPubkey])
   }
 
   const fns: Processor = {
-    dumpData(): Promise<any> {
-      return Promise.all(allBases.map(async (base) => ({
-        databaseName: base.databaseName,
-        data: await base.dumpData('')
-      })))
+    async dumpData(): Promise<any> {
+      return await Promise.all(
+        baselets.allBases.map(async base => ({
+          databaseName: base.databaseName,
+          data: await base.dumpData('')
+        }))
+      )
     },
 
-    async fetchScriptPubkeyByPath(path: AddressPath): Promise<ScriptPubkeyByPath> {
-      const [ scriptPubkey ] = await scriptPubkeyByPath.query(
+    async clearAll(): Promise<void> {
+      await clearMemletCache()
+      // why is this delay needed?
+      await new Promise(resolve => setTimeout(resolve, 0))
+      await await disklet.delete('.')
+      baselets = await makeBaselets(disklet)
+    },
+
+    async fetchScriptPubkeyByPath(
+      path: AddressPath
+    ): Promise<ScriptPubkeyByPath> {
+      const [scriptPubkey] = await baselets.scriptPubkeyByPath.query(
         addressPathToPrefix(path),
         path.addressIndex
       )
       return scriptPubkey
     },
 
-    async fetchTxIdsByBlockHeight(blockHeightMin: number, blockHeightMax?: number): Promise<string[]> {
-      const result = await txIdsByBlockHeight.query(
+    async fetchTxIdsByBlockHeight(
+      blockHeightMin: number,
+      blockHeightMax?: number
+    ): Promise<string[]> {
+      const result = await baselets.txIdsByBlockHeight.query(
         '',
         blockHeightMin,
         blockHeightMax
@@ -489,7 +617,7 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       if (data.includes(txId)) {
         return
       }
-      await txIdsByBlockHeight.insert('', {
+      await baselets.txIdsByBlockHeight.insert('', {
         [RANGE_ID_KEY]: txId,
         [RANGE_KEY]: blockHeight
       })
@@ -503,34 +631,44 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
       if (data === []) {
         return
       }
-      await txIdsByBlockHeight.delete('', blockHeight, txId)
+      await baselets.txIdsByBlockHeight.delete('', blockHeight, txId)
     },
 
-    async fetchAddressByScriptPubkey(scriptPubkey: string): Promise<AddressByScriptPubkey> {
-      const [ address ] = await innerFetchAddressesByScriptPubkeys([ scriptPubkey ])
+    async fetchAddressByScriptPubkey(
+      scriptPubkey: string
+    ): Promise<AddressByScriptPubkey> {
+      const [address] = await innerFetchAddressesByScriptPubkeys([scriptPubkey])
       return address
     },
 
     async hasSPubKey(scriptPubkey: string): Promise<boolean> {
-      return fns.fetchAddressByScriptPubkey(scriptPubkey).then(
-        (address) => !!address
-      )
+      return await fns
+        .fetchAddressByScriptPubkey(scriptPubkey)
+        .then(address => !(address == null))
     },
 
-    async fetchAddressesByPath(path: Omit<AddressPath, 'addressIndex'>): Promise<AddressByScriptPubkey[]> {
+    async fetchAddressesByPath(
+      path: Omit<AddressPath, 'addressIndex'>
+    ): Promise<AddressByScriptPubkey[]> {
       const partition = addressPathToPrefix(path)
-      const scriptPubkeys = await scriptPubkeyByPath.query(partition, 0, scriptPubkeyByPath.length(partition) - 1)
-      return innerFetchAddressesByScriptPubkeys(scriptPubkeys)
+      const scriptPubkeys = await baselets.scriptPubkeyByPath.query(
+        partition,
+        0,
+        baselets.scriptPubkeyByPath.length(partition) - 1
+      )
+      return await innerFetchAddressesByScriptPubkeys(scriptPubkeys)
     },
 
-    getNumAddressesFromPathPartition(path: Omit<AddressPath, 'addressIndex'>): number {
-      return scriptPubkeyByPath.length(addressPathToPrefix(path))
+    getNumAddressesFromPathPartition(
+      path: Omit<AddressPath, 'addressIndex'>
+    ): number {
+      return baselets.scriptPubkeyByPath.length(addressPathToPrefix(path))
     },
 
     // Returned in lowest first due to RangeBase
     async fetchScriptPubkeysByBalance(): Promise<ScriptPubkeysByBalance[]> {
-      const max = scriptPubkeysByBalance.max('') ?? 0
-      return scriptPubkeysByBalance.query('', 0, max)
+      const max = baselets.scriptPubkeysByBalance.max('') ?? 0
+      return await baselets.scriptPubkeysByBalance.query('', 0, max)
     },
 
     async saveAddress(data: IAddress): Promise<void> {
@@ -545,22 +683,24 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
     },
 
     getNumTransactions(): number {
-      return txsByDate.size('')
+      return baselets.txsByDate.size('')
     },
 
     async fetchTransaction(txId: string): Promise<TxById> {
-      const [ data ] = await txById.query('', [ txId ])
+      const [data] = await baselets.txById.query('', [txId])
       return data
     },
 
     async fetchTransactionsByScriptPubkey(
       scriptHash: string
     ): Promise<TxsByScriptPubkey> {
-      const [ txs ] = await txsByScriptPubkey.query('', [ scriptHash ])
+      const [txs] = await baselets.txsByScriptPubkey.query('', [scriptHash])
       return txs ?? {}
     },
 
-    async fetchTransactions(opts: EdgeGetTransactionsOptions): Promise<IProcessorTransaction[]> {
+    async fetchTransactions(
+      opts: EdgeGetTransactionsOptions
+    ): Promise<IProcessorTransaction[]> {
       const {
         startEntries,
         startIndex,
@@ -570,58 +710,74 @@ export async function makeProcessor(config: ProcessorConfig): Promise<Processor>
 
       let txData: TxsByDate = []
       if (startEntries != null && startIndex != null) {
-        txData = await txsByDate.queryByCount('', startEntries, startIndex)
+        txData = await baselets.txsByDate.queryByCount(
+          '',
+          startEntries,
+          startIndex
+        )
       } else {
-        txData = await txsByDate.query('', startDate.getTime(), endDate.getTime())
+        txData = await baselets.txsByDate.query(
+          '',
+          startDate.getTime(),
+          endDate.getTime()
+        )
       }
 
-      const txPromises = txData.map(({ [RANGE_ID_KEY]: txId }) =>
-        txById.query('', [ txId ]).then(([ tx ]) => tx)
+      const txPromises = txData.map(
+        async ({ [RANGE_ID_KEY]: txId }) =>
+          await baselets.txById.query('', [txId]).then(([tx]) => tx)
       )
       return Promise.all(txPromises)
     },
 
-    async saveTransaction(tx: IProcessorTransaction, withQueue = true): Promise<void> {
-      const saveTx = () => innerSaveTransaction(tx)
-      return withQueue
-        ? queue.add(saveTx)
-        : saveTx()
+    async saveTransaction(
+      tx: IProcessorTransaction,
+      withQueue = true
+    ): Promise<void> {
+      const saveTx = async () => await innerSaveTransaction(tx)
+      return withQueue ? queue.add(saveTx) : await saveTx()
     },
 
     updateTransaction(
       txId: string,
       data: Pick<IProcessorTransaction, 'blockHeight'>
     ): void {
-      queue.add(() => innerUpdateTransaction(txId, data))
+      queue.add(async () => await innerUpdateTransaction(txId, data))
     },
 
     // TODO: delete everything from db?
     dropTransaction(txId: string): void {
-      queue.add(() => innerDropTransaction(txId))
+      queue.add(async () => await innerDropTransaction(txId))
     },
 
     async fetchUtxo(id: string): Promise<IUTXO> {
-      const [ utxo ] = await utxoById.query('', [ id ])
+      const [utxo] = await baselets.utxoById.query('', [id])
       return utxo
     },
 
     async fetchUtxosByScriptPubkey(scriptPubkey: string): Promise<IUTXO[]> {
-      const [ ids = [] ] = await utxoIdsByScriptPubkey.query('', [ scriptPubkey ])
-      return ids.length === 0 ? [] : utxoById.query('', ids)
+      const [ids = []] = await baselets.utxoIdsByScriptPubkey.query('', [
+        scriptPubkey
+      ])
+      return ids.length === 0 ? [] : await baselets.utxoById.query('', ids)
     },
 
     async fetchAllUtxos(): Promise<IUTXO[]> {
-      const result = await utxoIdsBySize.query('', 0, utxoIdsBySize.max(''))
+      const result = await baselets.utxoIdsBySize.query(
+        '',
+        0,
+        baselets.utxoIdsBySize.max('')
+      )
       const ids = result.map(({ [RANGE_ID_KEY]: id }) => id)
-      return ids.length === 0 ? [] : utxoById.query('', ids)
+      return ids.length === 0 ? [] : baselets.utxoById.query('', ids)
     },
 
     saveUtxo(utxo: IUTXO) {
-      queue.add(() => innerSaveUtxo(utxo))
+      queue.add(async () => await innerSaveUtxo(utxo))
     },
 
     removeUtxo(utxo: IUTXO) {
-      queue.add(() => innerRemoveUtxo(utxo))
+      queue.add(async () => await innerRemoveUtxo(utxo))
     }
   }
 
