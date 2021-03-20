@@ -166,7 +166,6 @@ async function createOrOpen<T extends BaseType>(
         )
     }
   } catch (err) {
-    console.log('already exists', config)
     if (!err.message.includes('already exists')) {
       throw err
     }
