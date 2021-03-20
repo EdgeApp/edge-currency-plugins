@@ -15,12 +15,12 @@ export class Litecoin implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x30,
     scriptHash: 0x32,
-    bech32: 'ltc',
+    bech32: 'ltc'
   }
 
   legacyConstants = {
     ...this.mainnetConstants,
-    scriptHash: 0x05,
+    scriptHash: 0x05
   }
 
   testnetConstants = {
@@ -34,6 +34,6 @@ export class Litecoin implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0x3a,
-    bech32: 'tltc',
+    bech32: 'tltc'
   }
 }

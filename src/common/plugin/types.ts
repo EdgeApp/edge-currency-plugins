@@ -1,13 +1,20 @@
-import { EdgeCurrencyInfo, EdgeCurrencyTools, EdgeIo } from 'edge-core-js/lib/types'
-import { EdgeCurrencyEngineOptions, EdgeWalletInfo } from 'edge-core-js/lib/types/types'
 import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
-import { IProcessorTransaction } from '../utxobased/db/types'
+import {
+  EdgeCurrencyInfo,
+  EdgeCurrencyTools,
+  EdgeIo
+} from 'edge-core-js/lib/types'
+import {
+  EdgeCurrencyEngineOptions,
+  EdgeWalletInfo
+} from 'edge-core-js/lib/types/types'
 
+import { IProcessorTransaction } from '../utxobased/db/types'
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
   Mainnet = 'mainnet',
-  Testnet = 'testnet',
+  Testnet = 'testnet'
 }
 
 export type CurrencyFormat = 'bip32' | 'bip44' | 'bip49' | 'bip84'
@@ -59,29 +66,47 @@ interface EngineOptions extends EdgeCurrencyEngineOptions {
 }
 
 export interface Emitter {
-  emit(event: EmitterEvent.TRANSACTIONS_CHANGED, transactions: EdgeTransaction[]): this
+  emit: ((
+    event: EmitterEvent.TRANSACTIONS_CHANGED,
+    transactions: EdgeTransaction[]
+  ) => this) &
+    ((
+      event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED,
+      transaction: IProcessorTransaction
+    ) => this) &
+    ((
+      event: EmitterEvent.BALANCE_CHANGED,
+      currencyCode: string,
+      nativeBalance: string
+    ) => this) &
+    ((event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number) => this) &
+    ((event: EmitterEvent.ADDRESSES_CHECKED, progressRatio: number) => this) &
+    ((event: EmitterEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => this)
 
-  emit(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, transaction: IProcessorTransaction): this
-
-  emit(event: EmitterEvent.BALANCE_CHANGED, currencyCode: string, nativeBalance: string): this
-
-  emit(event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number): this
-
-  emit(event: EmitterEvent.ADDRESSES_CHECKED, progressRatio: number): this
-
-  emit(event: EmitterEvent.TXIDS_CHANGED, txids: EdgeTxidMap): this
-
-  on(event: EmitterEvent.TRANSACTIONS_CHANGED, listener: (transactions: EdgeTransaction[]) => void): this
-
-  on(event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, listener: (transaction: IProcessorTransaction) => void): this
-
-  on(event: EmitterEvent.BALANCE_CHANGED, listener: (currencyCode: string, nativeBalance: string) => void): this
-
-  on(event: EmitterEvent.BLOCK_HEIGHT_CHANGED, listener: (blockHeight: number) => void): this
-
-  on(event: EmitterEvent.ADDRESSES_CHECKED, listener: (progressRatio: number) => void): this
-
-  on(event: EmitterEvent.TXIDS_CHANGED, listener: (txids: EdgeTxidMap) => void): this
+  on: ((
+    event: EmitterEvent.TRANSACTIONS_CHANGED,
+    listener: (transactions: EdgeTransaction[]) => void
+  ) => this) &
+    ((
+      event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED,
+      listener: (transaction: IProcessorTransaction) => void
+    ) => this) &
+    ((
+      event: EmitterEvent.BALANCE_CHANGED,
+      listener: (currencyCode: string, nativeBalance: string) => void
+    ) => this) &
+    ((
+      event: EmitterEvent.BLOCK_HEIGHT_CHANGED,
+      listener: (blockHeight: number) => void
+    ) => this) &
+    ((
+      event: EmitterEvent.ADDRESSES_CHECKED,
+      listener: (progressRatio: number) => void
+    ) => this) &
+    ((
+      event: EmitterEvent.TXIDS_CHANGED,
+      listener: (txids: EdgeTxidMap) => void
+    ) => this)
 }
 
 export enum EmitterEvent {

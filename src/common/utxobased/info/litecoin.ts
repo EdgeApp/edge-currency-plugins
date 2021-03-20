@@ -73,5 +73,5 @@ export const info: EngineCurrencyInfo = {
 
   // Images:
   symbolImage: `${imageServerUrl}/litecoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/litecoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${imageServerUrl}/litecoin-logo-solo-64.png`
 }

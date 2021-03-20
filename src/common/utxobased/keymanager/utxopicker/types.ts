@@ -1,4 +1,5 @@
 import { PsbtInput } from 'bip174/src/lib/interfaces'
+
 import { ScriptTypeEnum } from '../keymanager'
 
 export type Input = UTXO

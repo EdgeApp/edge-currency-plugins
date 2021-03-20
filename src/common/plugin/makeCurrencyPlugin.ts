@@ -1,4 +1,3 @@
-import { EventEmitter } from 'events'
 import { EdgeCorePluginOptions, EdgeCurrencyPlugin } from 'edge-core-js'
 import {
   EdgeCurrencyEngine,
@@ -6,10 +5,18 @@ import {
   EdgeCurrencyTools,
   EdgeWalletInfo
 } from 'edge-core-js/lib/types/types'
+import { EventEmitter } from 'events'
 
-import { makeCurrencyTools } from './makeCurrencyTools'
 import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
-import { Emitter, EmitterEvent, EngineConfig, EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
+import { makeCurrencyTools } from './makeCurrencyTools'
+import {
+  Emitter,
+  EmitterEvent,
+  EngineConfig,
+  EngineCurrencyInfo,
+  EngineCurrencyType,
+  NetworkEnum
+} from './types'
 
 export function makeCurrencyPlugin(
   pluginOptions: EdgeCorePluginOptions,
@@ -26,11 +33,26 @@ export function makeCurrencyPlugin(
       engineOptions: EdgeCurrencyEngineOptions
     ): Promise<EdgeCurrencyEngine> {
       const emitter: Emitter = new EventEmitter() as any
-      emitter.on(EmitterEvent.TRANSACTIONS_CHANGED, engineOptions.callbacks.onTransactionsChanged)
-      emitter.on(EmitterEvent.BALANCE_CHANGED, engineOptions.callbacks.onBalanceChanged)
-      emitter.on(EmitterEvent.BLOCK_HEIGHT_CHANGED, engineOptions.callbacks.onBlockHeightChanged)
-      emitter.on(EmitterEvent.ADDRESSES_CHECKED, engineOptions.callbacks.onAddressesChecked)
-      emitter.on(EmitterEvent.TXIDS_CHANGED, engineOptions.callbacks.onTxidsChanged)
+      emitter.on(
+        EmitterEvent.TRANSACTIONS_CHANGED,
+        engineOptions.callbacks.onTransactionsChanged
+      )
+      emitter.on(
+        EmitterEvent.BALANCE_CHANGED,
+        engineOptions.callbacks.onBalanceChanged
+      )
+      emitter.on(
+        EmitterEvent.BLOCK_HEIGHT_CHANGED,
+        engineOptions.callbacks.onBlockHeightChanged
+      )
+      emitter.on(
+        EmitterEvent.ADDRESSES_CHECKED,
+        engineOptions.callbacks.onAddressesChecked
+      )
+      emitter.on(
+        EmitterEvent.TXIDS_CHANGED,
+        engineOptions.callbacks.onTxidsChanged
+      )
 
       const network = NetworkEnum.Mainnet
 
@@ -57,8 +79,8 @@ export function makeCurrencyPlugin(
       return engine
     },
 
-    makeCurrencyTools(): Promise<EdgeCurrencyTools> {
-      return Promise.resolve(currencyTools)
+    async makeCurrencyTools(): Promise<EdgeCurrencyTools> {
+      return await Promise.resolve(currencyTools)
     }
   }
 }

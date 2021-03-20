@@ -1,6 +1,6 @@
 type QueueFunction = () => Promise<any>
 interface IQueue {
-  add(fn: QueueFunction): void
+  add: (fn: QueueFunction) => void
 }
 
 export function makeQueue(): IQueue {

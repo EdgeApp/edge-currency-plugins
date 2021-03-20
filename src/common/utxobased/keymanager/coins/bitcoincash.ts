@@ -15,7 +15,7 @@ export class BitcoinCash implements Coin {
     legacyXPub: 0x0488b21e,
     pubkeyHash: 0x00,
     scriptHash: 0x05,
-    cashaddr: 'bitcoincash',
+    cashaddr: 'bitcoincash'
   }
 
   legacyConstants = {
@@ -24,7 +24,7 @@ export class BitcoinCash implements Coin {
     legacyXPriv: 0x0488ade4,
     legacyXPub: 0x0488b21e,
     pubkeyHash: 0x00,
-    scriptHash: 0x05,
+    scriptHash: 0x05
   }
 
   testnetConstants = {
@@ -34,6 +34,6 @@ export class BitcoinCash implements Coin {
     legacyXPub: 0x043587cf,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    cashaddr: 'bchtest',
+    cashaddr: 'bchtest'
   }
 }

@@ -1,11 +1,12 @@
 import { BaseType } from 'baselet'
-import { HashBase } from 'baselet/src/HashBase'
 import { CountBase } from 'baselet/src/CountBase'
+import { HashBase } from 'baselet/src/HashBase'
 import { RangeBase } from 'baselet/src/RangeBase'
-import { ScriptTypeEnum } from '../keymanager/keymanager'
-import { AddressPath } from '../../plugin/types'
 
-export type IAddress = {
+import { AddressPath } from '../../plugin/types'
+import { ScriptTypeEnum } from '../keymanager/keymanager'
+
+export interface IAddress {
   scriptPubkey: string
   networkQueryVal: number
   path?: AddressPath

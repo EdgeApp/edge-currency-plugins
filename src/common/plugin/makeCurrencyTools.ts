@@ -1,3 +1,4 @@
+import * as bn from 'biggystring'
 import * as bip39 from 'bip39'
 import {
   EdgeCurrencyTools,
@@ -9,23 +10,30 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js'
-import * as bn from 'biggystring'
 import * as uri from 'uri-js'
 import urlParse from 'url-parse'
 
+import * as utxoUtils from '../utxobased/engine/utils'
 import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
 import * as pluginUtils from './utils'
-import * as utxoUtils from '../utxobased/engine/utils'
 
 /**
  * The core currency plugin.
  * Provides information about the currency,
  * as well as generic (non-wallet) functionality.
  */
-export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo): EdgeCurrencyTools {
+export function makeCurrencyTools(
+  io: EdgeIo,
+  currencyInfo: EngineCurrencyInfo
+): EdgeCurrencyTools {
   const fns: EdgeCurrencyTools = {
-    async createPrivateKey(walletType: string, opts?: JsonObject): Promise<JsonObject> {
-      const mnemonicKey = pluginUtils.getMnemonicKey({ coin: currencyInfo.network })
+    async createPrivateKey(
+      walletType: string,
+      opts?: JsonObject
+    ): Promise<JsonObject> {
+      const mnemonicKey = pluginUtils.getMnemonicKey({
+        coin: currencyInfo.network
+      })
       const mnemonic = bip39.entropyToMnemonic(Buffer.from(io.random(32)))
       const keys: JsonObject = {
         [mnemonicKey]: mnemonic
@@ -63,7 +71,12 @@ export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo):
       const protocol = uriObj.protocol.replace(':', '').toLowerCase()
 
       // If the currency URI belongs to the wrong network then error
-      if (protocol && (protocol !== currencyInfo.pluginId && protocol !== currencyInfo.uriPrefix && protocol !== 'pay')) {
+      if (
+        protocol &&
+        protocol !== currencyInfo.pluginId &&
+        protocol !== currencyInfo.uriPrefix &&
+        protocol !== 'pay'
+      ) {
         throw new Error('InvalidUriError')
       }
 
@@ -97,8 +110,8 @@ export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo):
       Object.assign(parsedUri, { metadata })
 
       // Get amount in native denomination if exists
-      const denomination = currencyInfo.denominations.find(({ name }) =>
-        name === currencyInfo.currencyCode
+      const denomination = currencyInfo.denominations.find(
+        ({ name }) => name === currencyInfo.currencyCode
       )
       if (denomination && query.amount) {
         const { multiplier = '1' } = denomination
@@ -109,7 +122,10 @@ export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo):
       return parsedUri
     },
 
-    async encodeUri(obj: EdgeEncodeUri, customTokens?: EdgeMetaToken[]): Promise<string> {
+    async encodeUri(
+      obj: EdgeEncodeUri,
+      customTokens?: EdgeMetaToken[]
+    ): Promise<string> {
       const { publicAddress } = obj
       if (!publicAddress) {
         throw new Error('InvalidPublicAddressError')
@@ -121,7 +137,9 @@ export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo):
 
       if (obj.nativeAmount) {
         const currencyCode = obj.currencyCode ?? currencyInfo.currencyCode
-        const denomination = currencyInfo.denominations.find(({ name }) => name === currencyCode)
+        const denomination = currencyInfo.denominations.find(
+          ({ name }) => name === currencyCode
+        )
         if (!denomination) {
           throw new Error('InvalidDenominationError')
         }
@@ -140,10 +158,10 @@ export function makeCurrencyTools(io: EdgeIo, currencyInfo: EngineCurrencyInfo):
 
       return query.length > 0
         ? uri.serialize({
-          scheme: currencyInfo.uriPrefix ?? currencyInfo.pluginId,
-          path: publicAddress,
-          query: query.join('&')
-        })
+            scheme: currencyInfo.uriPrefix ?? currencyInfo.pluginId,
+            path: publicAddress,
+            query: query.join('&')
+          })
         : publicAddress
     },
 

@@ -14,8 +14,8 @@ export interface Socket extends InnerSocket {
 
 interface InnerSocket {
   readyState: ReadyState
-  disconnect(): void
-  send(data: string): void
+  disconnect: () => void
+  send: (data: string) => void
 }
 
 interface SocketConfig {
@@ -23,12 +23,12 @@ interface SocketConfig {
 }
 
 export interface SocketCallbacks {
-  onError?(error?: Error): void
-  onMessage?(message: string): void
+  onError?: (error?: Error) => void
+  onMessage?: (message: string) => void
 }
 
 export interface InnerSocketCallbacks extends SocketCallbacks {
-  onOpen(): void
+  onOpen: () => void
 }
 
 export function makeSocket(uri: string, config?: SocketConfig): Socket {
@@ -43,7 +43,7 @@ export function makeSocket(uri: string, config?: SocketConfig): Socket {
     async connect() {
       socket?.disconnect()
 
-      return new Promise<void>((resolve) => {
+      return await new Promise<void>(resolve => {
         const callbacks: InnerSocketCallbacks = {
           ...config?.callbacks,
           onOpen() {
@@ -70,8 +70,12 @@ export function makeSocket(uri: string, config?: SocketConfig): Socket {
   }
 }
 
-function setupBrowser(uri: string, callbacks?: InnerSocketCallbacks): InnerSocket {
-  if (!window?.WebSocket) throw Error('Native browser WebSocket does not exists')
+function setupBrowser(
+  uri: string,
+  callbacks?: InnerSocketCallbacks
+): InnerSocket {
+  if (!window?.WebSocket)
+    throw Error('Native browser WebSocket does not exists')
 
   const socket = new window.WebSocket(uri)
   socket.onopen = () => {
@@ -100,7 +104,11 @@ function setupBrowser(uri: string, callbacks?: InnerSocketCallbacks): InnerSocke
     },
 
     disconnect() {
-      if (!socket || socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED)
+      if (
+        !socket ||
+        socket.readyState === WebSocket.CLOSING ||
+        socket.readyState === WebSocket.CLOSED
+      )
         return
 
       socket.close()
@@ -123,7 +131,7 @@ function setupWS(uri: string, callbacks?: InnerSocketCallbacks): InnerSocket {
     callbacks?.onMessage?.(data.toString())
   })
 
-  ws.on('error', (error) => {
+  ws.on('error', error => {
     callbacks?.onError?.(error)
   })
 

@@ -20,11 +20,11 @@ describe('bitcoin cash address tests', () => {
       address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin',
+      coin: 'bitcoin'
     }),
     network: NetworkEnum.Mainnet,
     scriptType: ScriptTypeEnum.p2pkh,
-    coin: 'bitcoin',
+    coin: 'bitcoin'
   })
   it('pubkey hash to cashaddr', () => {
     const address = hashToCashAddress(
@@ -51,11 +51,11 @@ describe('bitcoin cash address tests', () => {
       address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'bitcoin',
+      coin: 'bitcoin'
     }),
     network: NetworkEnum.Mainnet,
     scriptType: ScriptTypeEnum.p2sh,
-    coin: 'bitcoin',
+    coin: 'bitcoin'
   })
 
   it('script hash to cashaddr', () => {

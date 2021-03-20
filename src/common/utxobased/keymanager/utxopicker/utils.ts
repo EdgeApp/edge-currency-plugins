@@ -10,12 +10,9 @@ const SCRIPT_HASH_SIZE = 23
 const PREVOUT_SIZE = 40
 
 export const sizeVarint = (num: number): number =>
-  num < 0xfd ? 1
-    : num <= 0xffff ? 3
-      : num <= 0xffffffff ? 5
-        : 9
+  num < 0xfd ? 1 : num <= 0xffff ? 3 : num <= 0xffffffff ? 5 : 9
 
-export function inputBytes (input: UTXO): number {
+export function inputBytes(input: UTXO): number {
   const base = PREVOUT_SIZE
 
   let scriptSize = sizeVarint(input.script.length)
@@ -43,7 +40,7 @@ export function inputBytes (input: UTXO): number {
   return base + scriptSize
 }
 
-export function outputBytes (output: Output) {
+export function outputBytes(output: Output) {
   const base = 8 + sizeVarint(output.script.length)
 
   let scriptSize = 0
@@ -84,13 +81,13 @@ function witnessCount(inputs: UTXO[]): number {
 }
 
 export function transactionBytes(inputs: UTXO[], outputs: Output[]): number {
-  let total = 0;
+  let total = 0
 
   // Calculate the size, minus the input scripts.
-  total += 4;
-  total += sizeVarint(inputs.length);
-  total += sizeVarint(outputs.length);
-  total += 4;
+  total += 4
+  total += sizeVarint(inputs.length)
+  total += sizeVarint(outputs.length)
+  total += 4
 
   const numWitnesses = witnessCount(inputs)
   if (numWitnesses > 0) {
@@ -104,22 +101,27 @@ export function transactionBytes(inputs: UTXO[], outputs: Output[]): number {
   return total
 }
 
-export function uintOrNaN (v: number): number {
+export function uintOrNaN(v: number): number {
   if (!isFinite(v)) return NaN
   if (Math.floor(v) !== v) return NaN
   if (v < 0) return NaN
   return v
 }
 
-export function sumForgiving (range: { value: number }[]): number {
+export function sumForgiving(range: Array<{ value: number }>): number {
   return range.reduce((a, x) => a + (isFinite(x.value) ? x.value : 0), 0)
 }
 
-export function sumOrNaN (range: { value: number }[]): number {
+export function sumOrNaN(range: Array<{ value: number }>): number {
   return range.reduce((a, x) => a + uintOrNaN(x.value), 0)
 }
 
-export function finalize (inputs: Input[], outputs: Output[], feeRate: number, changeScript: string): Result {
+export function finalize(
+  inputs: Input[],
+  outputs: Output[],
+  feeRate: number,
+  changeScript: string
+): Result {
   const inValue = sumOrNaN(inputs)
   const outValue = sumOrNaN(outputs)
   let fee = feeRate * transactionBytes(inputs, outputs)

@@ -10,7 +10,7 @@ export class Dash implements Coin {
     legacyXPriv: 0x02fe52f8,
     legacyXPub: 0x02fe52cc,
     pubkeyHash: 0x4c,
-    scriptHash: 0x10,
+    scriptHash: 0x10
   }
 
   testnetConstants = {
@@ -19,6 +19,6 @@ export class Dash implements Coin {
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,
     pubkeyHash: 0x6f,
-    scriptHash: 0xc4,
+    scriptHash: 0xc4
   }
 }

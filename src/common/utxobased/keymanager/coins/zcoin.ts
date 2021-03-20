@@ -10,7 +10,7 @@ export class Zcoin implements Coin {
     legacyXPriv: 0x0488ade4,
     legacyXPub: 0x0488b21e,
     pubkeyHash: 0x52,
-    scriptHash: 0x7,
+    scriptHash: 0x7
   }
 
   testnetConstants = {
@@ -19,6 +19,6 @@ export class Zcoin implements Coin {
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,
     pubkeyHash: 0x6f,
-    scriptHash: 0xc4,
+    scriptHash: 0xc4
   }
 }

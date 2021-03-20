@@ -1,7 +1,6 @@
 import { EngineCurrencyInfo, EngineCurrencyType } from '../../plugin/types'
 import { imageServerUrl } from './constants'
 
-
 export const info: EngineCurrencyInfo = {
   currencyType: EngineCurrencyType.UTXO,
   coinType: 236,

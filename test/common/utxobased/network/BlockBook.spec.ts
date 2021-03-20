@@ -2,12 +2,15 @@ import * as chai from 'chai'
 import { EventEmitter } from 'events'
 import WS from 'ws'
 
-
-import { BlockBook, BlockHeightEmitter, makeBlockBook } from '../../../../src/common/utxobased/network/BlockBook'
+import {
+  BlockBook,
+  BlockHeightEmitter,
+  makeBlockBook
+} from '../../../../src/common/utxobased/network/BlockBook'
 
 chai.should()
 
-describe('BlockBook notifications tests with dummy server', function() {
+describe('BlockBook notifications tests with dummy server', function () {
   let websocketServer: WS.Server
   let blockBook: BlockBook
   let websocketClient: WebSocket
@@ -43,7 +46,7 @@ describe('BlockBook notifications tests with dummy server', function() {
       console.log(error)
     })
     const emitter: BlockHeightEmitter = new EventEmitter() as any
-    blockBook = makeBlockBook({ emitter, wsAddress: "ws://localhost:8080" })
+    blockBook = makeBlockBook({ emitter, wsAddress: 'ws://localhost:8080' })
     await blockBook.connect()
     blockBook.isConnected.should.be.true
   })
@@ -78,7 +81,7 @@ describe('BlockBook notifications tests with dummy server', function() {
   })
 })
 
-describe('BlockBook', function() {
+describe('BlockBook', function () {
   this.timeout(10000)
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
@@ -94,22 +97,22 @@ describe('BlockBook', function() {
     blockBook.disconnect()
   })
 
-  describe('connect', function() {
-    it('should connect to the BlockBook websocket API', async function() {
+  describe('connect', function () {
+    it('should connect to the BlockBook websocket API', async function () {
       blockBook.isConnected.should.be.true
     })
   })
 
-  describe('disconnect', function() {
-    it('should disconnect from the BlockBook API', async function() {
+  describe('disconnect', function () {
+    it('should disconnect from the BlockBook API', async function () {
       blockBook.isConnected.should.be.true
       await blockBook.disconnect()
       blockBook.isConnected.should.be.false
     })
   })
 
-  describe('fetchInfo', function() {
-    it('should fetch the BlockBook server info', async function() {
+  describe('fetchInfo', function () {
+    it('should fetch the BlockBook server info', async function () {
       const info = await blockBook.fetchInfo()
       info.should.have.keys(
         'name',
@@ -124,8 +127,8 @@ describe('BlockBook', function() {
     })
   })
 
-  describe('fetchAddress', function() {
-    it('should fetch basic address information', async function() {
+  describe('fetchAddress', function () {
+    it('should fetch basic address information', async function () {
       const info = await blockBook.fetchAddress(satoshiAddress)
 
       info.should.have.property('address', satoshiAddress)
@@ -136,8 +139,10 @@ describe('BlockBook', function() {
       info.should.have.property('unconfirmedBalance')
       info.should.have.property('unconfirmedTxs')
     })
-    it('should fetch address information with tx ids', async function() {
-      const info = await blockBook.fetchAddress(satoshiAddress, { details: 'txids' })
+    it('should fetch address information with tx ids', async function () {
+      const info = await blockBook.fetchAddress(satoshiAddress, {
+        details: 'txids'
+      })
 
       info.should.have.property('address', satoshiAddress)
       info.should.have.property('balance')
@@ -151,8 +156,10 @@ describe('BlockBook', function() {
       info.should.have.property('itemsOnPage')
       info.should.have.property('txids')
     })
-    it('should fetch address information with txs', async function() {
-      const info = await blockBook.fetchAddress(satoshiAddress, { details: 'txs' })
+    it('should fetch address information with txs', async function () {
+      const info = await blockBook.fetchAddress(satoshiAddress, {
+        details: 'txs'
+      })
 
       info.should.have.property('address', satoshiAddress)
       info.should.have.property('balance')
@@ -168,8 +175,8 @@ describe('BlockBook', function() {
     })
   })
 
-  describe('fetchAddressUtxos', function() {
-    it('should fetch an address UTXOS', async function() {
+  describe('fetchAddressUtxos', function () {
+    it('should fetch an address UTXOS', async function () {
       const utxos = await blockBook.fetchAddressUtxos(satoshiAddress)
 
       utxos.length.should.be.greaterThan(0)
@@ -179,9 +186,10 @@ describe('BlockBook', function() {
     })
   })
 
-  describe('fetchTransaction', function() {
-    const satoshiHash = '3ed86f1b0a0a6fe180195bc1f93fd9d0801aea8c8ad5018de82c026dc21e2b15'
-    it('should fetch details from a transaction hash', async function() {
+  describe('fetchTransaction', function () {
+    const satoshiHash =
+      '3ed86f1b0a0a6fe180195bc1f93fd9d0801aea8c8ad5018de82c026dc21e2b15'
+    it('should fetch details from a transaction hash', async function () {
       const tx = await blockBook.fetchTransaction(satoshiHash)
 
       tx.txid.should.equal(satoshiHash)

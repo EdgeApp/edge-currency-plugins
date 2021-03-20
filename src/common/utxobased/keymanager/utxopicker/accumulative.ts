@@ -1,16 +1,21 @@
 import * as bitcoin from 'altcoin-js'
 
+import { Output, Result, Target, UTXO } from './types'
 import * as utils from './utils'
-import { UTXO, Target, Result, Output } from './types'
 // add inputs until we reach or surpass the target value (or deplete)
 // worst-case: O(n)
 
-export function accumulative(utxos: UTXO[], targets: Target[], feeRate: number, changeScript: string): Result {
+export function accumulative(
+  utxos: UTXO[],
+  targets: Target[],
+  feeRate: number,
+  changeScript: string
+): Result {
   if (!isFinite(utils.uintOrNaN(feeRate))) {
     throw new Error('No rate provided')
   }
 
-  const outputs: Output[] = targets.map((target) => ({
+  const outputs: Output[] = targets.map(target => ({
     ...target,
     script: Buffer.from(target.script, 'hex')
   }))
@@ -45,5 +50,8 @@ export function accumulative(utxos: UTXO[], targets: Target[], feeRate: number, 
     return utils.finalize(inputs, outputs, feeRate, changeScript)
   }
 
-  return { changeUsed: false, fee: feeRate * utils.transactionBytes(inputs, outputs) }
+  return {
+    changeUsed: false,
+    fee: feeRate * utils.transactionBytes(inputs, outputs)
+  }
 }

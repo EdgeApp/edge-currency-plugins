@@ -1,3 +1,4 @@
+import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 import {
   addressToScriptPubkey,
   pubkeyToScriptPubkey,
@@ -12,7 +13,6 @@ import {
   getScriptTypeFromPurposeType,
   getXpriv
 } from './utils'
-import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 
 export interface UtxoKeyFormat {
   [mnemonicKey: string]: any // ${coinName}Key = mnemonic or seed string
@@ -32,17 +32,17 @@ export interface BitcoinWalletToolsConfig extends WalletToolsConfig {
 }
 
 export interface UTXOPluginWalletTools {
-  getPubkey(args: AddressPath): string
+  getPubkey: (args: AddressPath) => string
 
-  getScriptPubkey(args: AddressPath): ScriptPubkeyReturn
+  getScriptPubkey: (args: AddressPath) => ScriptPubkeyReturn
 
-  getAddress(args: AddressPath): AddressReturn
+  getAddress: (args: AddressPath) => AddressReturn
 
-  addressToScriptPubkey(address: string): string
+  addressToScriptPubkey: (address: string) => string
 
-  scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): AddressReturn
+  scriptPubkeyToAddress: (args: ScriptPubkeyToAddressArgs) => AddressReturn
 
-  getPrivateKey(args: AddressPath): string
+  getPrivateKey: (args: AddressPath) => string
 }
 
 interface ScriptPubkeyReturn {
@@ -60,7 +60,9 @@ interface AddressReturn {
   legacyAddress: string
 }
 
-export function makeUtxoWalletTools(config: WalletToolsConfig): UTXOPluginWalletTools {
+export function makeUtxoWalletTools(
+  config: WalletToolsConfig
+): UTXOPluginWalletTools {
   const { coin, network } = config
 
   const xprivKeys = getXpriv(config)

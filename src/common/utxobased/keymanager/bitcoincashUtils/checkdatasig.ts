@@ -41,5 +41,5 @@ export const cdsScriptTemplates = {
     cdsSig: string = '',
     cdsMsg: string = '',
     cdsPubKey: string = ''
-  ) => cds(cdsSig, cdsMsg, cdsPubKey, pubKey).join(OP_CHECKDATASIGVERIFY),
+  ) => cds(cdsSig, cdsMsg, cdsPubKey, pubKey).join(OP_CHECKDATASIGVERIFY)
 }

@@ -16,7 +16,7 @@ export class Decred implements Coin {
     legacyXPriv: 0x02fda4e8,
     legacyXPub: 0x02fda926,
     pubkeyHash: 0x073f,
-    scriptHash: 0x071a,
+    scriptHash: 0x071a
   }
 
   testnetConstants = {
@@ -25,7 +25,7 @@ export class Decred implements Coin {
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,
     pubkeyHash: 0x0f21,
-    scriptHash: 0x0efc,
+    scriptHash: 0x0efc
   }
 }
 

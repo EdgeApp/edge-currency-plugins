@@ -19,7 +19,7 @@ export class Bitcoingold implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x26,
     scriptHash: 0x17,
-    bech32: 'btg',
+    bech32: 'btg'
   }
 
   legacyConstants = {
@@ -33,7 +33,7 @@ export class Bitcoingold implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x00,
     scriptHash: 0x05,
-    bech32: 'bc',
+    bech32: 'bc'
   }
 
   testnetConstants = {
@@ -47,6 +47,6 @@ export class Bitcoingold implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'btg',
+    bech32: 'btg'
   }
 }

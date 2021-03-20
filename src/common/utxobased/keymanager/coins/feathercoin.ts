@@ -15,7 +15,7 @@ export class Feathercoin implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x0e,
     scriptHash: 0x05,
-    bech32: 'fc',
+    bech32: 'fc'
   }
 
   testnetConstants = {
@@ -29,6 +29,6 @@ export class Feathercoin implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'tb',
+    bech32: 'tb'
   }
 }

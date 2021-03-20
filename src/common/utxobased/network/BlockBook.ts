@@ -123,54 +123,50 @@ type Callback = () => void | Promise<void>
 export interface BlockBook {
   isConnected: boolean
 
-  connect(): Promise<void>
+  connect: () => Promise<void>
 
-  disconnect(): Promise<void>
+  disconnect: () => Promise<void>
 
-  fetchInfo(): Promise<IServerInfo>
+  fetchInfo: () => Promise<IServerInfo>
 
-  fetchAddress(
+  fetchAddress: ((
     address: string,
     opts?: IAccountOpts & {
       details?: 'basic'
     }
-  ): Promise<IAccountDetailsBasic>
+  ) => Promise<IAccountDetailsBasic>) &
+    ((
+      address: string,
+      opts: IAccountOpts & {
+        details: 'txids'
+      }
+    ) => Promise<IAccountDetailsBasic & ITransactionIdPaginationResponse>) &
+    ((
+      address: string,
+      opts: IAccountOpts & {
+        details: 'txs'
+      }
+    ) => Promise<
+      IAccountDetailsBasic & ITransactionDetailsPaginationResponse
+    >) &
+    ((address: string, opts?: IAccountOpts) => Promise<IAccountDetailsBasic>)
 
-  fetchAddress(
-    address: string,
-    opts: IAccountOpts & {
-      details: 'txids'
-    }
-  ): Promise<IAccountDetailsBasic & ITransactionIdPaginationResponse>
-
-  fetchAddress(
-    address: string,
-    opts: IAccountOpts & {
-      details: 'txs'
-    }
-  ): Promise<IAccountDetailsBasic & ITransactionDetailsPaginationResponse>
-
-  fetchAddress(
-    address: string,
-    opts?: IAccountOpts
-  ): Promise<IAccountDetailsBasic>
-
-  watchAddresses(
+  watchAddresses: (
     addresses: string[],
     cb?: (response: INewTransactionResponse) => void
-  ): void
+  ) => void
 
-  watchBlocks(cb: () => void | Promise<void>): void
+  watchBlocks: (cb: () => void | Promise<void>) => void
 
-  fetchAddressUtxos(account: string): Promise<IAccountUTXO[]>
+  fetchAddressUtxos: (account: string) => Promise<IAccountUTXO[]>
 
-  fetchTransaction(hash: string): Promise<ITransaction>
+  fetchTransaction: (hash: string) => Promise<ITransaction>
 
-  broadcastTx(transaction: EdgeTransaction): Promise<void>
+  broadcastTx: (transaction: EdgeTransaction) => Promise<void>
 }
 
 export interface BlockHeightEmitter {
-  emit(event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number): this
+  emit: (event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number) => this
 }
 
 interface BlockBookConfig {
@@ -195,7 +191,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     watchBlocks,
     fetchAddressUtxos,
     fetchTransaction,
-    broadcastTx,
+    broadcastTx
   }
   let wsIdCounter = 0
   const wsPendingMessages: IWsPendingMessages = {}
@@ -226,7 +222,10 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
               return
             }
             blockWatcherCallback()
-            emitter.emit(EmitterEvent.BLOCK_HEIGHT_CHANGED, response.data.height)
+            emitter.emit(
+              EmitterEvent.BLOCK_HEIGHT_CHANGED,
+              response.data.height
+            )
             break
           case WATCH_ADDRESS_TX_EVENT_ID:
             // Don't notify on successful subscribe
@@ -274,7 +273,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     method: string,
     params?: object
   ): Promise<T> {
-    return new Promise((resolve) => {
+    return await new Promise(resolve => {
       const id = wsIdCounter++
       sendWsMessage({ id: id.toString(), method, params }, resolve)
     })
@@ -292,15 +291,18 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   function ping() {
     sendWsMessage({
       id: PING_ID,
-      method: PING_ID,
+      method: PING_ID
     })
   }
 
   async function fetchInfo(): Promise<IServerInfo> {
-    return promisifyWsMessage('getInfo')
+    return await promisifyWsMessage('getInfo')
   }
 
-  function fetchAddress(address: string, opts: IAccountOpts = {}): Promise<any> {
+  async function fetchAddress(
+    address: string,
+    opts: IAccountOpts = {}
+  ): Promise<any> {
     opts = Object.assign(
       {},
       {
@@ -311,7 +313,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
       opts
     )
 
-    return promisifyWsMessage('getAccountInfo', {
+    return await promisifyWsMessage('getAccountInfo', {
       ...opts,
       descriptor: address
     })
@@ -342,16 +344,14 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   }
 
   async function fetchAddressUtxos(account: string): Promise<IAccountUTXO[]> {
-    return promisifyWsMessage('getAccountUtxo', { descriptor: account })
+    return await promisifyWsMessage('getAccountUtxo', { descriptor: account })
   }
 
   async function fetchTransaction(hash: string): Promise<ITransaction> {
-    return promisifyWsMessage('getTransaction', { txid: hash })
+    return await promisifyWsMessage('getTransaction', { txid: hash })
   }
 
-  async function broadcastTx(
-    transaction: EdgeTransaction
-  ): Promise<void> {
+  async function broadcastTx(transaction: EdgeTransaction): Promise<void> {
     await promisifyWsMessage('sendTransaction', { hex: transaction.signedTx })
   }
 

@@ -1,6 +1,7 @@
 import { BaseType } from 'baselet'
-import { BaseletConfig, IAddress, IProcessorTransaction, IUTXO } from '../types'
+
 import { AddressPath } from '../../../plugin/types'
+import { BaseletConfig, IAddress, IProcessorTransaction, IUTXO } from '../types'
 
 export const RANGE_ID_KEY = 'idKey'
 export const RANGE_KEY = 'rangeKey'
@@ -39,7 +40,7 @@ export const txIdsByBlockHeightConfig: BaseletConfig<BaseType.RangeBase> = {
   bucketSize: 100000
 }
 
-export type ScriptPubkeysByBalance = {
+export interface ScriptPubkeysByBalance {
   [RANGE_ID_KEY]: string
   [RANGE_KEY]: string
 }
@@ -56,7 +57,7 @@ export const txByIdConfig: BaseletConfig<BaseType.HashBase> = {
   bucketSize: 6
 }
 
-export type TxsByScriptPubkey = {
+export interface TxsByScriptPubkey {
   [hash: string]: {
     ins: { [index: number]: true }
     outs: { [index: number]: true }
@@ -69,7 +70,7 @@ export const txsByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
 }
 
 export type TxsByDate = TxByDate[]
-type TxByDate = {
+interface TxByDate {
   [RANGE_ID_KEY]: string
   [RANGE_KEY]: string
 }
@@ -96,7 +97,7 @@ export const utxoIdsByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
   bucketSize: 8
 }
 
-export type UtxosBySize = {
+export interface UtxosBySize {
   [RANGE_ID_KEY]: string
   [RANGE_KEY]: string
 }

@@ -10,7 +10,7 @@ export class Dogecoin implements Coin {
     legacyXPriv: 0x02fac398,
     legacyXPub: 0x02facafd,
     pubkeyHash: 0x1e,
-    scriptHash: 0x16,
+    scriptHash: 0x16
   }
 
   testnetConstants = {
@@ -19,6 +19,6 @@ export class Dogecoin implements Coin {
     legacyXPriv: 0x04358394,
     legacyXPub: 0x043587cf,
     pubkeyHash: 0x6f,
-    scriptHash: 0xc4,
+    scriptHash: 0xc4
   }
 }

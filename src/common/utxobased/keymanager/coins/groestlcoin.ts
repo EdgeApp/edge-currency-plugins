@@ -26,7 +26,7 @@ export class Groestlcoin implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x24,
     scriptHash: 0x05,
-    bech32: 'grs',
+    bech32: 'grs'
   }
 
   testnetConstants = {
@@ -40,6 +40,6 @@ export class Groestlcoin implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'tb',
+    bech32: 'tb'
   }
 }

@@ -1,6 +1,6 @@
+import * as bitcoin from 'altcoin-js'
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
-import * as bitcoin from 'altcoin-js'
 
 import { NetworkEnum } from '../../../../../src/common/plugin/types'
 import { cdsScriptTemplates } from '../../../../../src/common/utxobased/keymanager/bitcoincashUtils/checkdatasig'

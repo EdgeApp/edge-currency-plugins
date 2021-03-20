@@ -1,14 +1,23 @@
-import { EdgeSpendInfo } from 'edge-core-js/lib/types'
 import * as bs from 'biggystring'
+import { EdgeSpendInfo } from 'edge-core-js/lib/types'
 
 import { EngineCurrencyInfo } from '../../plugin/types'
 
-export function calculateFeeRate(currencyInfo: EngineCurrencyInfo, spendInfo: EdgeSpendInfo): string {
+export function calculateFeeRate(
+  currencyInfo: EngineCurrencyInfo,
+  spendInfo: EdgeSpendInfo
+): string {
   const { customFeeSettings, simpleFeeSettings } = currencyInfo
-  const { otherParams, customNetworkFee, networkFeeOption= 'standard', spendTargets } = spendInfo
+  const {
+    otherParams,
+    customNetworkFee,
+    networkFeeOption = 'standard',
+    spendTargets
+  } = spendInfo
 
   if (otherParams?.paymentProtocolInfo?.merchant?.requiredFeeRate) {
-    const requiredFeeRate = otherParams.paymentProtocolInfo.merchant.requiredFeeRate
+    const requiredFeeRate =
+      otherParams.paymentProtocolInfo.merchant.requiredFeeRate
     const rate = bs.mul(requiredFeeRate, '1.5')
     return bs.toFixed(rate, 0, 0)
   }

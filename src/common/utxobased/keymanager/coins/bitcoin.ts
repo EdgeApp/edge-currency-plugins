@@ -16,7 +16,7 @@ export class Bitcoin implements Coin {
     segwitXPub: 0x04b24746,
     pubkeyHash: 0x00,
     scriptHash: 0x05,
-    bech32: 'bc',
+    bech32: 'bc'
   }
 
   testnetConstants = {
@@ -30,6 +30,6 @@ export class Bitcoin implements Coin {
     segwitXPub: 0x045f1cf6,
     pubkeyHash: 0x6f,
     scriptHash: 0xc4,
-    bech32: 'tb',
+    bech32: 'tb'
   }
 }

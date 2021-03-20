@@ -56,6 +56,6 @@ export function base58Base(
   return {
     encode,
     decode,
-    decodeUnsafe,
+    decodeUnsafe
   }
 }

@@ -1,3 +1,5 @@
+import * as bitcoin from 'altcoin-js'
+import * as bs from 'biggystring'
 import {
   EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
@@ -11,41 +13,47 @@ import {
   EdgeTxidMap,
   JsonObject
 } from 'edge-core-js'
-import * as bs from 'biggystring'
-import * as bitcoin from 'altcoin-js'
 
 import { EmitterEvent, EngineConfig } from '../../plugin/types'
-import { makeUtxoEngineState } from './makeUtxoEngineState'
-import { makeProcessor } from '../db/makeProcessor'
-import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
-import { calculateFeeRate } from './makeSpendHelper'
-import { makeBlockBook } from '../network/BlockBook'
-import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { clearMetadata, fetchMetadata, setMetadata } from '../../plugin/utils'
-import { fetchOrDeriveXprivFromKeys, getWalletFormat, getWalletSupportedFormats, getXprivKey } from './utils'
+import { makeProcessor } from '../db/makeProcessor'
+import {
+  fromEdgeTransaction,
+  toEdgeTransaction
+} from '../db/Models/ProcessorTransaction'
 import { IProcessorTransaction } from '../db/types'
-import { fromEdgeTransaction, toEdgeTransaction } from '../db/Models/ProcessorTransaction'
-import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
+import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
+import { makeBlockBook } from '../network/BlockBook'
+import { calculateFeeRate } from './makeSpendHelper'
+import { makeUtxoEngineState } from './makeUtxoEngineState'
+import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { makeMutexor } from './mutexor'
+import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import { UTXOTxOtherParams } from './types'
+import {
+  fetchOrDeriveXprivFromKeys,
+  getWalletFormat,
+  getWalletSupportedFormats,
+  getXprivKey
+} from './utils'
 
-export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrencyEngine> {
+export async function makeUtxoEngine(
+  config: EngineConfig
+): Promise<EdgeCurrencyEngine> {
   const {
     network,
     currencyInfo,
     walletInfo,
-    options: {
-      walletLocalDisklet,
-      walletLocalEncryptedDisklet,
-      emitter
-    },
+    options: { walletLocalDisklet, walletLocalEncryptedDisklet, emitter },
     io
   } = config
 
   const mutexor = makeMutexor()
 
   // Merge in the xpriv into the local copy of wallet keys
-  walletInfo.keys[getXprivKey({ coin: currencyInfo.network })] = await fetchOrDeriveXprivFromKeys({
+  walletInfo.keys[
+    getXprivKey({ coin: currencyInfo.network })
+  ] = await fetchOrDeriveXprivFromKeys({
     keys: walletInfo.keys,
     walletLocalEncryptedDisklet,
     coin: currencyInfo.network,
@@ -60,7 +68,10 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
 
   const blockBook = makeBlockBook({ emitter })
   let metadata = await fetchMetadata(walletLocalDisklet)
-  const processor = await makeProcessor({ disklet: walletLocalDisklet, emitter })
+  const processor = await makeProcessor({
+    disklet: walletLocalDisklet,
+    emitter
+  })
   const state = makeUtxoEngineState({
     ...config,
     walletTools,
@@ -69,23 +80,29 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
     metadata
   })
 
-  emitter.on(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, async (tx: IProcessorTransaction) => {
-    emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, [
-      await toEdgeTransaction({
-        tx,
-        currencyCode: currencyInfo.currencyCode,
-        walletTools,
-        processor
-      })
-    ])
-  })
+  emitter.on(
+    EmitterEvent.PROCESSOR_TRANSACTION_CHANGED,
+    async (tx: IProcessorTransaction) => {
+      emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, [
+        await toEdgeTransaction({
+          tx,
+          currencyCode: currencyInfo.currencyCode,
+          walletTools,
+          processor
+        })
+      ])
+    }
+  )
 
-  emitter.on(EmitterEvent.BALANCE_CHANGED, async (currencyCode: string, nativeBalance: string) => {
-    await mutexor('balanceChanged').runExclusive(async () => {
-      metadata.balance = nativeBalance
-      await setMetadata(walletLocalDisklet, metadata)
-    })
-  })
+  emitter.on(
+    EmitterEvent.BALANCE_CHANGED,
+    async (currencyCode: string, nativeBalance: string) => {
+      await mutexor('balanceChanged').runExclusive(async () => {
+        metadata.balance = nativeBalance
+        await setMetadata(walletLocalDisklet, metadata)
+      })
+    }
+  )
 
   emitter.on(EmitterEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
     metadata.lastSeenBlockHeight = height
@@ -107,8 +124,6 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       await blockBook.disconnect()
     },
 
-  
-
     getBalance(opts: EdgeCurrencyCodeOptions): string {
       return metadata.balance
     },
@@ -117,8 +132,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return metadata.lastSeenBlockHeight
     },
 
-    addCustomToken(_token: EdgeTokenInfo): Promise<unknown> {
-      return Promise.resolve(undefined)
+    async addCustomToken(_token: EdgeTokenInfo): Promise<unknown> {
+      return await Promise.resolve(undefined)
     },
 
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
@@ -147,12 +162,12 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return transaction
     },
 
-    changeUserSettings(_settings: JsonObject): Promise<unknown> {
-      return Promise.resolve(undefined)
+    async changeUserSettings(_settings: JsonObject): Promise<unknown> {
+      return await Promise.resolve(undefined)
     },
 
-    disableTokens(_tokens: string[]): Promise<unknown> {
-      return Promise.resolve(undefined)
+    async disableTokens(_tokens: string[]): Promise<unknown> {
+      return await Promise.resolve(undefined)
     },
 
     async dumpData(): Promise<EdgeDataDump> {
@@ -163,15 +178,15 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
           walletInfo: {
             walletFormat: getWalletFormat(walletInfo),
             walletFormatsSupported: getWalletSupportedFormats(walletInfo),
-            pluginType: currencyInfo.pluginId,
+            pluginType: currencyInfo.pluginId
           },
           state: await processor.dumpData()
         }
       }
     },
 
-    enableTokens(_tokens: string[]): Promise<unknown> {
-      return Promise.resolve(undefined)
+    async enableTokens(_tokens: string[]): Promise<unknown> {
+      return await Promise.resolve(undefined)
     },
 
     getDisplayPrivateSeed(): string | null {
@@ -182,11 +197,13 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return null
     },
 
-    getEnabledTokens(): Promise<string[]> {
-      return Promise.resolve([])
+    async getEnabledTokens(): Promise<string[]> {
+      return await Promise.resolve([])
     },
 
-    getFreshAddress(_opts: EdgeCurrencyCodeOptions): Promise<EdgeFreshAddress> | EdgeFreshAddress {
+    getFreshAddress(
+      _opts: EdgeCurrencyCodeOptions
+    ): Promise<EdgeFreshAddress> | EdgeFreshAddress {
       return state.getFreshAddress()
     },
 
@@ -194,7 +211,9 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return processor.getNumTransactions()
     },
 
-    async getPaymentProtocolInfo(paymentProtocolUrl: string): Promise<EdgePaymentProtocolInfo> {
+    async getPaymentProtocolInfo(
+      paymentProtocolUrl: string
+    ): Promise<EdgePaymentProtocolInfo> {
       return await getPaymentDetails(
         paymentProtocolUrl,
         network,
@@ -207,22 +226,29 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return false
     },
 
-    async getTransactions(opts: EdgeGetTransactionsOptions): Promise<EdgeTransaction[]> {
+    async getTransactions(
+      opts: EdgeGetTransactionsOptions
+    ): Promise<EdgeTransaction[]> {
       const txs = await processor.fetchTransactions(opts)
-      return await Promise.all(txs.map((tx: IProcessorTransaction) =>
-        toEdgeTransaction({
-          tx,
-          currencyCode: currencyInfo.currencyCode,
-          walletTools,
-          processor
-        })
-      ))
+      return await Promise.all(
+        txs.map(
+          async (tx: IProcessorTransaction) =>
+            await toEdgeTransaction({
+              tx,
+              currencyCode: currencyInfo.currencyCode,
+              walletTools,
+              processor
+            })
+        )
+      )
     },
 
-    // @ts-ignore
+    // @ts-expect-error
     async isAddressUsed(address: string): Promise<boolean> {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
-      const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+      const addressData = await processor.fetchAddressByScriptPubkey(
+        scriptPubkey
+      )
       return !!addressData?.used
     },
 
@@ -234,7 +260,9 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
           throw new Error('Invalid spend target')
         }
 
-        const scriptPubkey = walletTools.addressToScriptPubkey(target.publicAddress)
+        const scriptPubkey = walletTools.addressToScriptPubkey(
+          target.publicAddress
+        )
         if (await processor.hasSPubKey(scriptPubkey)) {
           ourReceiveAddresses.push(target.publicAddress)
         }
@@ -246,7 +274,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       }
 
       const freshAddress = await state.getFreshAddress(1)
-      const freshChangeAddress = freshAddress.segwitAddress ?? freshAddress.publicAddress
+      const freshChangeAddress =
+        freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = await processor.fetchAllUtxos()
       const feeRate = parseInt(calculateFeeRate(currencyInfo, edgeSpendInfo))
       const tx = await makeTx({
@@ -307,22 +336,27 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       await state.start()
     },
 
-    saveTx(tx: EdgeTransaction): Promise<void> {
-      return processor.saveTransaction(fromEdgeTransaction(tx), false)
+    async saveTx(tx: EdgeTransaction): Promise<void> {
+      return await processor.saveTransaction(fromEdgeTransaction(tx), false)
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
-      const { psbt, edgeSpendInfo }: Partial<UTXOTxOtherParams> = transaction.otherParams ?? {}
+      const { psbt, edgeSpendInfo }: Partial<UTXOTxOtherParams> =
+        transaction.otherParams ?? {}
       if (!psbt || !edgeSpendInfo) throw new Error('Invalid transaction data')
 
       const privateKeys = await Promise.all(
         psbt.inputs.map(async ({ hash, index }) => {
-          const txid = Buffer.isBuffer(hash) ? hash.reverse().toString('hex') : hash
+          const txid = Buffer.isBuffer(hash)
+            ? hash.reverse().toString('hex')
+            : hash
 
           const utxo = await processor.fetchUtxo(`${txid}_${index}`)
           if (!utxo) throw new Error('Invalid UTXO')
 
-          const address = await processor.fetchAddressByScriptPubkey(utxo.scriptPubkey)
+          const address = await processor.fetchAddressByScriptPubkey(
+            utxo.scriptPubkey
+          )
           if (!address?.path) throw new Error('Invalid script pubkey')
 
           return walletTools.getPrivateKey(address.path)
@@ -336,7 +370,8 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       transaction.txid = signedTx.id
       transaction.signedTx = signedTx.hex
 
-      const { paymentProtocolInfo } = transaction.otherParams?.edgeSpendInfo?.otherParams ?? {}
+      const { paymentProtocolInfo } =
+        transaction.otherParams?.edgeSpendInfo?.otherParams ?? {}
       if (paymentProtocolInfo != null) {
         const payment = createPayment(
           transaction.signedTx,
@@ -353,9 +388,11 @@ export async function makeUtxoEngine(config: EngineConfig): Promise<EdgeCurrency
       return transaction
     },
 
-    sweepPrivateKeys(_spendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
-      // @ts-ignore
-      return Promise.resolve(undefined)
+    async sweepPrivateKeys(
+      _spendInfo: EdgeSpendInfo
+    ): Promise<EdgeTransaction> {
+      // @ts-expect-error
+      return await Promise.resolve(undefined)
     }
   }
 

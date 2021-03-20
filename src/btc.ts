@@ -5,7 +5,7 @@ import { info } from './common/utxobased/info/bitcoin'
 
 const plugin = {
   [info.pluginId]: (options: EdgeCorePluginOptions) =>
-    makeCurrencyPlugin(options, info),
+    makeCurrencyPlugin(options, info)
 } as EdgeCorePlugins
 
 if (typeof window !== 'undefined') {

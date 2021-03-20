@@ -9,18 +9,18 @@ import BN from './bn'
 export enum CashaddrPrefixEnum {
   mainnet = 'bitcoincash',
   testnet = 'bchtest',
-  testnetalt = 'bitcoincashtestnet',
+  testnetalt = 'bitcoincashtestnet'
 }
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
   Mainnet = 'mainnet',
-  Testnet = 'testnet',
+  Testnet = 'testnet'
 }
 
 export enum CashaddrTypeEnum {
   pubkeyhash = 'pubkeyhash',
-  scripthash = 'scripthash',
+  scripthash = 'scripthash'
 }
 
 export interface BitcoinCashScriptHash {
@@ -33,8 +33,8 @@ const GENERATOR = [
   0x79b76d99e2,
   0xf33e5fb3c4,
   0xae2eabe2a8,
-  0x1e4f43e470,
-].map((x) => new BN(x))
+  0x1e4f43e470
+].map(x => new BN(x))
 
 // returns a BN object, which is not typed yet. Logs as <BN: dc0f07f285>
 const polymod = (data: number[]): any => {
@@ -286,7 +286,7 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
   const type = getType(versionByte)
   const info: BitcoinCashScriptHash = {
     scriptHash: Buffer.from(hash),
-    type: type,
+    type: type
   }
   return info
 }
