@@ -13,9 +13,9 @@ describe('currencyPlugins', function () {
   for (const fixture of fixtures) {
     describe(fixture.pluginId, function () {
       const fakeIo = makeFakeIo()
-      // @ts-expect-error
       const tools = makeCurrencyTools(
         fakeIo,
+        // @ts-expect-error
         allInfo[fixture.pluginId] ?? allInfo.bitcoin
       )
 

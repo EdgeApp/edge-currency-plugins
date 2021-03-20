@@ -243,7 +243,6 @@ export async function makeUtxoEngine(
       )
     },
 
-    // @ts-expect-error
     async isAddressUsed(address: string): Promise<boolean> {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddressByScriptPubkey(
@@ -379,6 +378,7 @@ export async function makeUtxoEngine(
         )
         Object.assign(transaction.otherParams, {
           paymentProtocolInfo: {
+            // @ts-expect-error
             ...edgeSpendInfo.otherParams.paymentProtocolInfo,
             payment
           }
