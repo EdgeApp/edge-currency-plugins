@@ -2081,10 +2081,10 @@ clean-stack@^2.0.0:
   resolved "https://registry.yarnpkg.com/clean-stack/-/clean-stack-2.2.0.tgz#ee8472dbb129e727b31e8a10a427dee9dfe4008b"
   integrity sha512-4diC9HaTE+KRAMWhDhrGOECgWZxoevMc5TlkObMqNSsVU62PYzXZ/SMTjzyGAFF1YusgxGcSWTEXBhp0CPwQ1A==
 
-cleaners@^0.3.2:
-  version "0.3.2"
-  resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.2.tgz#e240a3837f5b2d59975f18d753dea7d1bab0fd4b"
-  integrity sha512-SOjd7UOrU/8CF6V7QKZsfJB8MIBylrZOso+eJWYFaOm2jamKj7Wxbihg8vasnHzqtagv1vpwhN8xkD3liX/dIg==
+cleaners@^0.3.7:
+  version "0.3.7"
+  resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.7.tgz#b8fa056a430974d1125a1bb523ee128a6763fbfd"
+  integrity sha512-pRzWeIOXnbgJa211YAHjU1zW1kFMCdftJrB6DJC98nRAcd5XepWy0sAmvZ3kuh1g0y9gukRNSCli0+8aVNhwRg==
 
 cli-cursor@^2.1.0:
   version "2.1.0"
@@ -2825,15 +2825,15 @@ ecc-jsbn@~0.1.1:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
 
-edge-core-js@^0.17.22:
-  version "0.17.22"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.17.22.tgz#eb742439aab5b579bc1a1f0e3d2815915f672416"
-  integrity sha512-F8p10+Ywxf968AwXLkjJswGbJ8EKPFT8v9jKw3ugafoHCqaJTR/CoPP7FPVomLb7UlzzBg1WOivIICzOe8yzAQ==
+edge-core-js@^0.17.27-alpha.1:
+  version "0.17.27-alpha.1"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.17.27-alpha.1.tgz#973cf7c7222d8991c6c92dfb4f80ee71140ffd7a"
+  integrity sha512-6HGpuhxPFLIGvjVecbFqKsTRolJTRqjOyPvveyUjoeg2d2BP6e1m5T3DZV6/0OnjnESg5ej8Oj+cPkaKg4KKwg==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"
     biggystring "^3.0.2"
-    cleaners "^0.3.2"
+    cleaners "^0.3.7"
     currency-codes "^1.1.2"
     disklet "^0.4.5"
     elliptic "^6.4.0"
@@ -2850,6 +2850,7 @@ edge-core-js@^0.17.22:
     rfc4648 "^1.4.0"
     scrypt-js "^2.0.3"
     yaob "^0.3.6"
+    yavent "^0.1.1"
 
 ee-first@1.1.1:
   version "1.1.1"
@@ -6488,8 +6489,6 @@ rxjs@^6.6.3:
   version "6.6.3"
   resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-6.6.3.tgz#8ca84635c4daa900c0d3967a6ee7ac60271ee552"
   integrity sha512-trsQc+xYYXZ3urjOiJOuCOa5N3jAZ3eiSpQB5hIT8zGlL2QfnHLJ2r7GMkBGuIausdJN1OneaI6gQlsqNHHmZQ==
-  dependencies:
-    tslib "^1.9.0"
 
 safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@^5.2.0, safe-buffer@~5.2.0:
   version "5.2.1"
@@ -7875,6 +7874,11 @@ yargs@13.3.2:
     which-module "^2.0.0"
     y18n "^4.0.0"
     yargs-parser "^13.1.2"
+
+yavent@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/yavent/-/yavent-0.1.1.tgz#cc6458d24ded144da7126b8445163b11b967646f"
+  integrity sha512-jeFpwxVlI7AM9D+a+K36gmKV7lE41Nq0LZ48NhLQ+dKSWkf4GzxKn9NZ3yat/EsvEfNkKBdY1JTNNuXi0TdRuA==
 
 yn@3.1.1:
   version "3.1.1"
