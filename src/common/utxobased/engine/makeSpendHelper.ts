@@ -15,6 +15,7 @@ export function calculateFeeRate(
     spendTargets
   } = spendInfo
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (otherParams?.paymentProtocolInfo?.merchant?.requiredFeeRate) {
     const requiredFeeRate =
       otherParams.paymentProtocolInfo.merchant.requiredFeeRate
@@ -23,7 +24,7 @@ export function calculateFeeRate(
   }
 
   const customFeeSetting = customFeeSettings[0]
-  const customFeeAmount = customNetworkFee?.[customFeeSetting] ?? '0'
+  const customFeeAmount: string = customNetworkFee?.[customFeeSetting] ?? '0'
   if (networkFeeOption === 'custom' && customFeeAmount !== '0') {
     return customFeeAmount
   } else {

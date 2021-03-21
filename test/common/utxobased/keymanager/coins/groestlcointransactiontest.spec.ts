@@ -1,4 +1,3 @@
-import * as bitcoin from 'altcoin-js'
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 

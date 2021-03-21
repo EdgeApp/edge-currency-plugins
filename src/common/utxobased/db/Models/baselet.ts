@@ -6,8 +6,9 @@ import { BaseletConfig, IAddress, IProcessorTransaction, IUTXO } from '../types'
 export const RANGE_ID_KEY = 'idKey'
 export const RANGE_KEY = 'rangeKey'
 
-export const addressPathToPrefix = (path: Omit<AddressPath, 'addressIndex'>) =>
-  `${path.format}_${path.changeIndex}`
+export const addressPathToPrefix = (
+  path: Omit<AddressPath, 'addressIndex'>
+): string => `${path.format}_${path.changeIndex}`
 
 export type ScriptPubkeyByPath = string | undefined
 export const scriptPubkeyByPathConfig: BaseletConfig<BaseType.CountBase> = {

@@ -74,6 +74,7 @@ function setupBrowser(
   uri: string,
   callbacks?: InnerSocketCallbacks
 ): InnerSocket {
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (!window?.WebSocket)
     throw Error('Native browser WebSocket does not exists')
 
@@ -105,6 +106,7 @@ function setupBrowser(
 
     disconnect() {
       if (
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         !socket ||
         socket.readyState === WebSocket.CLOSING ||
         socket.readyState === WebSocket.CLOSED
@@ -128,6 +130,7 @@ function setupWS(uri: string, callbacks?: InnerSocketCallbacks): InnerSocket {
   })
 
   ws.on('message', (data: WS.Data) => {
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string
     callbacks?.onMessage?.(data.toString())
   })
 
@@ -151,6 +154,7 @@ function setupWS(uri: string, callbacks?: InnerSocketCallbacks): InnerSocket {
     },
 
     disconnect(): void {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!ws || ws.readyState === WS.CLOSING || ws.readyState === WS.CLOSED)
         return
 

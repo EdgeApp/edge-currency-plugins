@@ -33,20 +33,6 @@ export interface IAccountDetailsBasic {
   unconfirmedTxs: number
 }
 
-interface IAccountTokens {
-  usedTokens: number
-  tokens: Array<{
-    type: string
-    name: string
-    path: string
-    transfers: number
-    decimals: number
-    balance: string
-    totalReceived: string
-    totalSent: string
-  }>
-}
-
 interface ITransactionPaginationResponse {
   page: number
   totalPages: number
@@ -153,7 +139,7 @@ export interface BlockBook {
 
   watchAddresses: (
     addresses: string[],
-    cb?: (response: INewTransactionResponse) => void
+    cb?: (response: INewTransactionResponse) => Promise<void>
   ) => void
 
   watchBlocks: (cb: () => void | Promise<void>) => void
@@ -221,6 +207,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
             if (response.data?.subscribed === true) {
               return
             }
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             blockWatcherCallback()
             emitter.emit(
               EmitterEvent.BLOCK_HEIGHT_CHANGED,
@@ -236,6 +223,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
         }
 
         const fn = wsPendingMessages[response.id]
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete wsPendingMessages[response.id]
         if ('error' in response.data) {
           throw response.data.error
@@ -284,11 +272,11 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
       throw new Error('BlockBook websocket not connected')
     }
 
-    if (cb) wsPendingMessages[message.id] = cb
+    if (cb != null) wsPendingMessages[message.id] = cb
     socket.send(JSON.stringify(message))
   }
 
-  function ping() {
+  function ping(): void {
     sendWsMessage({
       id: PING_ID,
       method: PING_ID
@@ -326,7 +314,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   function watchAddresses(
     addresses: string[],
     cb?: (response: INewTransactionResponse) => void
-  ) {
+  ): void {
     addressesToWatch = addresses
     addressWatcherCallback = cb
     sendWsMessage(

@@ -1,10 +1,10 @@
 import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 import {
   addressToScriptPubkey,
+  privateKeyToPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   wifToPrivateKey,
-  privateKeyToPubkey,
   xprivToPrivateKey,
   xprivToXPub,
   xpubToPubkey
@@ -72,8 +72,9 @@ export function makeUtxoWalletTools(
   // Convert xprivs to xpubs
   const xpubKeys = Object.assign({}, xprivKeys)
   for (const key in xpubKeys) {
-    const format = <CurrencyFormat>key
+    const format = key as CurrencyFormat
     xpubKeys[format] = xprivToXPub({
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       xpriv: xpubKeys[format]!,
       type: currencyFormatToPurposeType(format),
       coin,
@@ -104,6 +105,7 @@ export function makeUtxoWalletTools(
         return privateKeyToPubkey(getPrivateKeyAtIndex(args))
       }
       return xpubToPubkey({
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         xpub: xpubKeys[args.format]!,
         network,
         coin,
@@ -155,6 +157,7 @@ export function makeUtxoWalletTools(
         return getPrivateKeyAtIndex(args)
       }
       return xprivToPrivateKey({
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         xpriv: xprivKeys[args.format]!,
         network,
         type: currencyFormatToPurposeType(args.format),

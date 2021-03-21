@@ -41,6 +41,7 @@ export const toEdgeTransaction = async (
       async (i: string) =>
         args.walletTools.scriptPubkeyToAddress({
           scriptPubkey: args.tx.outputs[parseInt(i)].scriptPubkey,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           format: (await args.processor.fetchAddressByScriptPubkey(
             args.tx.outputs[parseInt(i)].scriptPubkey
           ))!.path!.format

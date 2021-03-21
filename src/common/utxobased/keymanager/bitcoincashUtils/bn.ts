@@ -22,6 +22,7 @@ BN.Minus1 = new BN(-1)
 
 BN.fromNumber = function (n: number) {
   if (typeof n !== 'number') {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     throw new Error(`InvalidArgument: ${n} not a number`)
   }
   return new BN(n)
@@ -29,6 +30,7 @@ BN.fromNumber = function (n: number) {
 
 BN.fromString = function (str: string, base: number) {
   if (typeof str !== 'string') {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     throw new Error(`InvalidArgument: ${str} not a string`)
   }
   return new BN(str, base)

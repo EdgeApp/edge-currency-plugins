@@ -55,6 +55,7 @@ export async function getPaymentDetails(
 
   const edgePaymentProtocolInfo: EdgePaymentProtocolInfo = {
     nativeAmount: `${nativeAmount}`,
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     merchant: `{ ${paymentId}, ${requiredFeeRate} }`,
     memo,
     domain,

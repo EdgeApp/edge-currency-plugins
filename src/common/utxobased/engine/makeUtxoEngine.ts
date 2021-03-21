@@ -275,7 +275,8 @@ export async function makeUtxoEngine(
       }
 
       const freshAddress = await state.getFreshAddress(1)
-      const freshChangeAddress = freshAddress.segwitAddress ?? freshAddress.publicAddress
+      const freshChangeAddress =
+        freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
       let subtractFee = false
       if (options != null) {

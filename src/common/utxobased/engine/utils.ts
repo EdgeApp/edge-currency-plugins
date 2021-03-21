@@ -215,6 +215,7 @@ export const deriveXpub = (args: {
 }): string =>
   xprivToXPub({
     ...args,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     xpriv: deriveXprivFromKeys(args)[
       getCurrencyFormatFromPurposeType(args.type)
     ]!
