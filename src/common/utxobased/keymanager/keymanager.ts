@@ -933,7 +933,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     ? utxopicker.subtractFee
     : utxopicker.accumulative
   const result = utxopicking(mappedUtxos, targets, args.feeRate, changeScript)
-  if (!result.inputs || !result.outputs) {
+  if (result.inputs == null || result.outputs == null) {
     throw new Error('Make spend failed.')
   }
 

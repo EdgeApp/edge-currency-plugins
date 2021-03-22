@@ -20,6 +20,7 @@ interface CHARSET_INVERSE_INDEX {
   [value: string]: number
 }
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 const CHARSET_INVERSE_INDEX: CHARSET_INVERSE_INDEX = {
   q: 0,
   p: 1,
@@ -77,7 +78,6 @@ export function encode(data: number[]): string {
  */
 export function decode(base32: string): number[] {
   const data = []
-  type CHARSET_INVERSE_INDEX_KEYS = keyof CHARSET_INVERSE_INDEX
   for (let i = 0; i < base32.length; i++) {
     const value = base32[i]
     if (!(value in CHARSET_INVERSE_INDEX)) {

@@ -167,7 +167,8 @@ async function createOrOpen<T extends BaseType>(
     }
   } catch (err) {
     console.log('already exists', config)
-    if (!err.message.includes('already exists')) {
+    // eslint-disable-next-line no-extra-boolean-cast
+    if (!Boolean(err.message.includes('already exists'))) {
       throw err
     }
   }
@@ -235,7 +236,7 @@ export async function makeProcessor(
   const disklet = navigateDisklet(config.disklet, BASELET_DIR)
   let baselets = await makeBaselets(disklet)
 
-  async function processAndSaveAddress(data: IAddress) {
+  async function processAndSaveAddress(data: IAddress): Promise<void> {
     const [addressData] = await baselets.addressByScriptPubkey.query('', [
       data.scriptPubkey
     ])
@@ -247,6 +248,7 @@ export async function makeProcessor(
 
     // If there is path info on the address to save but not stored in
     // the previously existing data, save to the by path database.
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (data.path != null && !addressData?.path) {
       await innerSaveScriptPubkeyByPath(data.scriptPubkey, data.path)
     }
@@ -332,9 +334,9 @@ export async function makeProcessor(
     isInput: boolean,
     index: number,
     save = true
-  ) {
+  ): Promise<void> {
     const txs = await fns.fetchTransactionsByScriptPubkey(scriptPubkey)
-    if (!txs[tx.txid]) {
+    if (txs[tx.txid] != null) {
       txs[tx.txid] = {
         ins: {},
         outs: {}
@@ -348,8 +350,10 @@ export async function makeProcessor(
       }
     } else {
       if (isInput) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete txs[tx.txid].ins[index]
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete txs[tx.txid].outs[index]
       }
     }
@@ -391,6 +395,7 @@ export async function makeProcessor(
     const [address] = await baselets.addressByScriptPubkey.query('', [
       scriptPubkey
     ])
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!address) {
       throw new Error('Cannot update address that does not exist')
     }
@@ -412,7 +417,8 @@ export async function makeProcessor(
       address.lastTouched = data.lastTouched
     }
 
-    if (data.used && !address.used) {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    if (data.used != null && data.used && !address.used) {
       address.used = data.used
     }
 
@@ -480,13 +486,13 @@ export async function makeProcessor(
   async function innerUpdateTransaction(
     txId: string,
     data: Partial<IProcessorTransaction>
-  ) {
+  ): Promise<void> {
     const tx = await fns.fetchTransaction(txId)
     if (tx == null) {
       throw new Error('Cannot update transaction that does not exists')
     }
 
-    if (data.blockHeight) {
+    if (data.blockHeight != null) {
       if (tx.blockHeight < data.blockHeight) {
         await fns.removeTxIdByBlockHeight(tx.blockHeight, txId)
         await fns.insertTxIdByBlockHeight(data.blockHeight, txId)
@@ -499,7 +505,7 @@ export async function makeProcessor(
     if (data.ourOuts != null) {
       tx.ourOuts = data.ourOuts
     }
-    if (data.ourAmount) {
+    if (data.ourAmount != null) {
       tx.ourAmount = data.ourAmount
     }
 
@@ -508,7 +514,7 @@ export async function makeProcessor(
     await baselets.txById.insert('', txId, tx)
   }
 
-  async function innerDropTransaction(txId: string) {
+  async function innerDropTransaction(txId: string): Promise<void> {
     const tx = await fns.fetchTransaction(txId)
     if (tx == null) return
 
@@ -544,7 +550,7 @@ export async function makeProcessor(
     // TODO: recalculate balances
   }
 
-  async function innerSaveUtxo(utxo: IUTXO) {
+  async function innerSaveUtxo(utxo: IUTXO): Promise<void> {
     await baselets.utxoById.insert('', utxo.id, utxo)
     await baselets.utxoIdsBySize.insert('', {
       [RANGE_ID_KEY]: utxo.id,
@@ -563,7 +569,7 @@ export async function makeProcessor(
     )
   }
 
-  async function innerRemoveUtxo(utxo: IUTXO) {
+  async function innerRemoveUtxo(utxo: IUTXO): Promise<void> {
     await baselets.utxoById.delete('', [utxo.id])
     await baselets.utxoIdsBySize.delete('', parseInt(utxo.value), utxo.id)
     await baselets.utxoIdsByScriptPubkey.delete('', [utxo.scriptPubkey])
@@ -734,7 +740,7 @@ export async function makeProcessor(
       tx: IProcessorTransaction,
       withQueue = true
     ): Promise<void> {
-      const saveTx = async () => await innerSaveTransaction(tx)
+      const saveTx = async (): Promise<void> => await innerSaveTransaction(tx)
       return withQueue ? queue.add(saveTx) : await saveTx()
     },
 

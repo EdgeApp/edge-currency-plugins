@@ -1,3 +1,5 @@
+/* eslint-disable no-fallthrough */
+/* eslint-disable no-duplicate-case */
 import { ScriptTypeEnum } from '../keymanager'
 import { Input, Output, Result, UTXO } from './types'
 
@@ -40,7 +42,7 @@ export function inputBytes(input: UTXO): number {
   return base + scriptSize
 }
 
-export function outputBytes(output: Output) {
+export function outputBytes(output: Output): number {
   const base = 8 + sizeVarint(output.script.length)
 
   let scriptSize = 0

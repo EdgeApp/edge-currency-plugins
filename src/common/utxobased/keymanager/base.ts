@@ -25,6 +25,7 @@ export function base58Base(
     const newChecksum = checksumFn(payload)
 
     if (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       (checksum[0] ^ newChecksum[0]) |
       (checksum[1] ^ newChecksum[1]) |
       (checksum[2] ^ newChecksum[2]) |
@@ -49,7 +50,7 @@ export function base58Base(
     }
     const buffer = base58.decode(payload)
     const bPayload = decodeRaw(buffer)
-    if (!bPayload) throw new Error('Invalid checksum')
+    if (bPayload == null) throw new Error('Invalid checksum')
     return bPayload
   }
 
