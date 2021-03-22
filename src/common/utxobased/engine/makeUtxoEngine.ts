@@ -252,7 +252,10 @@ export async function makeUtxoEngine(
       return !!addressData?.used
     },
 
-    async makeSpend(edgeSpendInfo: EdgeSpendInfo, options?: TxOptions): Promise<EdgeTransaction> {
+    async makeSpend(
+      edgeSpendInfo: EdgeSpendInfo,
+      options?: TxOptions
+    ): Promise<EdgeTransaction> {
       const targets: MakeTxTarget[] = []
       const ourReceiveAddresses: string[] = []
       for (const target of edgeSpendInfo.spendTargets) {
@@ -449,7 +452,8 @@ export async function makeUtxoEngine(
           spendInfo.spendTargets = [
             { publicAddress: publicAddress.publicAddress, nativeAmount }
           ]
-
+          // TODO: TheCharlatan - add option to makeSpend declaration in edge-core-js
+          // @ts-expect-error
           this.makeSpend(spendInfo, options)
             .then(tx => success(tx))
             .catch(e => failure(e))
