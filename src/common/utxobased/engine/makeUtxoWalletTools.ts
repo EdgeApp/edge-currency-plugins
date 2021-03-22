@@ -3,6 +3,8 @@ import {
   addressToScriptPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  wifToPrivateKey,
+  privateKeyToPubkey,
   xprivToPrivateKey,
   xprivToXPub,
   xpubToPubkey
@@ -18,6 +20,7 @@ export interface UtxoKeyFormat {
   [mnemonicKey: string]: any // ${coinName}Key = mnemonic or seed string
   format?: CurrencyFormat
   coinType?: number
+  wifKeys?: string[]
 }
 
 export interface WalletToolsConfig {
@@ -78,8 +81,28 @@ export function makeUtxoWalletTools(
     })
   }
 
+  let wifKeys: string[]
+  if (config.keys.wifKeys != null) {
+    wifKeys = config.keys.wifKeys
+  }
+
+  const getPrivateKeyAtIndex = (args: AddressPath): string => {
+    if (args.changeIndex === 0 && wifKeys[args.addressIndex] != null) {
+      return wifToPrivateKey({
+        wifKey: wifKeys[args.addressIndex],
+        network,
+        coin
+      })
+    } else {
+      throw new Error('no wif key at index')
+    }
+  }
+
   const fns: UTXOPluginWalletTools = {
     getPubkey(args: AddressPath): string {
+      if (wifKeys != null) {
+        return privateKeyToPubkey(getPrivateKeyAtIndex(args))
+      }
       return xpubToPubkey({
         xpub: xpubKeys[args.format]!,
         network,
@@ -127,6 +150,10 @@ export function makeUtxoWalletTools(
     },
 
     getPrivateKey(args: AddressPath) {
+      // returning for any change index will result in duplicates
+      if (wifKeys != null) {
+        return getPrivateKeyAtIndex(args)
+      }
       return xprivToPrivateKey({
         xpriv: xprivKeys[args.format]!,
         network,

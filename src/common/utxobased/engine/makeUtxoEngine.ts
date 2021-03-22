@@ -13,8 +13,9 @@ import {
   EdgeTxidMap,
   JsonObject
 } from 'edge-core-js'
+import { EventEmitter } from 'events'
 
-import { EmitterEvent, EngineConfig } from '../../plugin/types'
+import { EmitterEvent, EngineConfig, TxOptions } from '../../plugin/types'
 import { clearMetadata, fetchMetadata, setMetadata } from '../../plugin/utils'
 import { makeProcessor } from '../db/makeProcessor'
 import {
@@ -251,7 +252,10 @@ export async function makeUtxoEngine(
       return !!addressData?.used
     },
 
-    async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
+    async makeSpend(
+      edgeSpendInfo: EdgeSpendInfo,
+      options?: TxOptions
+    ): Promise<EdgeTransaction> {
       const targets: MakeTxTarget[] = []
       const ourReceiveAddresses: string[] = []
       for (const target of edgeSpendInfo.spendTargets) {
@@ -273,9 +277,12 @@ export async function makeUtxoEngine(
       }
 
       const freshAddress = await state.getFreshAddress(1)
-      const freshChangeAddress =
-        freshAddress.segwitAddress ?? freshAddress.publicAddress
-      const utxos = await processor.fetchAllUtxos()
+      const freshChangeAddress = freshAddress.segwitAddress ?? freshAddress.publicAddress
+      const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
+      let subtractFee = false
+      if (options != null) {
+        subtractFee = options.subtractFee ?? false
+      }
       const feeRate = parseInt(calculateFeeRate(currencyInfo, edgeSpendInfo))
       const tx = await makeTx({
         utxos,
@@ -284,7 +291,8 @@ export async function makeUtxoEngine(
         coin: currencyInfo.network,
         network,
         rbf: false,
-        freshChangeAddress
+        freshChangeAddress,
+        subtractFee
       })
       if (tx.changeUsed) {
         ourReceiveAddresses.push(freshChangeAddress)
@@ -388,11 +396,88 @@ export async function makeUtxoEngine(
       return transaction
     },
 
-    async sweepPrivateKeys(
-      _spendInfo: EdgeSpendInfo
-    ): Promise<EdgeTransaction> {
-      // @ts-expect-error
-      return await Promise.resolve(undefined)
+    async sweepPrivateKeys(spendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
+      const privateKeys = spendInfo.privateKeys ?? []
+      if (privateKeys.length < 1) throw new Error('No private keys given')
+      let success: (
+        value: EdgeTransaction | PromiseLike<EdgeTransaction>
+      ) => void
+      let failure: (reason?: any) => void
+      const end: Promise<EdgeTransaction> = new Promise((resolve, reject) => {
+        success = resolve
+        failure = reject
+      })
+      const tmpDisklet = walletLocalDisklet
+      const tmpMetadata = await fetchMetadata(tmpDisklet)
+
+      const tmpEmitter = new EventEmitter() as any
+      tmpEmitter.on(
+        EmitterEvent.BALANCE_CHANGED,
+        async (currencyCode: string, nativeBalance: string) => {
+          metadata.balance = nativeBalance
+          await setMetadata(tmpDisklet, tmpMetadata)
+        }
+      )
+      tmpEmitter.on(
+        EmitterEvent.BLOCK_HEIGHT_CHANGED,
+        async (height: number) => {
+          metadata.lastSeenBlockHeight = height
+          await setMetadata(tmpDisklet, tmpMetadata)
+        }
+      )
+
+      const tmpProcessor = await makeProcessor({
+        disklet: tmpDisklet,
+        emitter: tmpEmitter
+      })
+      const blockBook = makeBlockBook({ emitter: tmpEmitter })
+      const tmpWalletTools = makeUtxoWalletTools({
+        keys: { wifKeys: privateKeys },
+        coin: currencyInfo.network,
+        network
+      })
+
+      tmpEmitter.on(EmitterEvent.ADDRESSES_CHECKED, async (ratio: number) => {
+        if (ratio === 1) {
+          await engineState.stop()
+          await blockBook.disconnect()
+
+          const utxos = await processor.fetchAllUtxos()
+          if (utxos === null || utxos.length < 1) {
+            throw new Error('Private key has no funds')
+          }
+          const publicAddress = await this.getFreshAddress({})
+          const nativeAmount = tmpMetadata.balance
+          const options: TxOptions = { utxos, subtractFee: true }
+          spendInfo.spendTargets = [
+            { publicAddress: publicAddress.publicAddress, nativeAmount }
+          ]
+          // TODO: TheCharlatan - add option to makeSpend declaration in edge-core-js
+          // @ts-expect-error
+          this.makeSpend(spendInfo, options)
+            .then(tx => success(tx))
+            .catch(e => failure(e))
+        }
+      })
+
+      const engineState = makeUtxoEngineState({
+        ...config,
+        options: {
+          ...config.options,
+          emitter: tmpEmitter
+        },
+        currencyInfo: {
+          ...config.currencyInfo,
+          // hack to not overflow the wallet tools private key array
+          gapLimit: privateKeys.length + 1
+        },
+        walletTools: tmpWalletTools,
+        processor: tmpProcessor,
+        blockBook,
+        metadata: tmpMetadata
+      })
+      await engineState.start()
+      return end
     }
   }
 

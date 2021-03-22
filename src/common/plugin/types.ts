@@ -9,7 +9,7 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/lib/types/types'
 
-import { IProcessorTransaction } from '../utxobased/db/types'
+import { IProcessorTransaction, IUTXO } from '../utxobased/db/types'
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
@@ -27,6 +27,11 @@ export interface AddressPath {
 
 export enum EngineCurrencyType {
   UTXO
+}
+
+export interface TxOptions {
+  utxos?: IUTXO[]
+  subtractFee?: boolean
 }
 
 export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
