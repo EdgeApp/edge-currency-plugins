@@ -47,6 +47,16 @@ export async function makeUtxoEngine(
     io
   } = config
 
+  const walletFormat = getWalletFormat(walletInfo)
+  if (
+    currencyInfo.formats == null ||
+    !currencyInfo.formats.includes(walletFormat)
+  ) {
+    const message = `Wallet format is not supported: ${walletFormat}`
+    io.console.error(message)
+    throw new Error(message)
+  }
+
   const mutexor = makeMutexor()
 
   // Merge in the xpriv into the local copy of wallet keys
@@ -175,7 +185,7 @@ export async function makeUtxoEngine(
         walletType: walletInfo.type,
         data: {
           walletInfo: {
-            walletFormat: getWalletFormat(walletInfo),
+            walletFormat,
             walletFormatsSupported: getWalletSupportedFormats(walletInfo),
             pluginType: currencyInfo.pluginId
           },
