@@ -438,8 +438,6 @@ export async function makeUtxoEngine(
         if (ratio === 1) {
           await engineState.stop()
           await blockBook.disconnect()
-          config.options.emitter = emitter
-          config.currencyInfo.gapLimit = currencyInfo.gapLimit
 
           const utxos = await processor.fetchAllUtxos()
           if (utxos === null || utxos.length < 1) {
@@ -458,11 +456,17 @@ export async function makeUtxoEngine(
         }
       })
 
-      config.options.emitter = tmpEmitter
-      // hack to not overflow the wallet tools private key array
-      config.currencyInfo.gapLimit = privateKeys.length + 1
       const engineState = makeUtxoEngineState({
         ...config,
+        options: {
+          ...config.options,
+          emitter: tmpEmitter
+        },
+        currencyInfo: {
+          ...config.currencyInfo,
+          // hack to not overflow the wallet tools private key array
+          gapLimit: privateKeys.length + 1
+        },
         walletTools: tmpWalletTools,
         processor: tmpProcessor,
         blockBook,
