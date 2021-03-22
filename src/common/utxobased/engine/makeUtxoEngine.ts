@@ -1,4 +1,3 @@
-import * as bitcoin from 'altcoin-js'
 import * as bs from 'biggystring'
 import {
   EdgeCurrencyCodeOptions,
@@ -10,7 +9,6 @@ import {
   EdgeSpendInfo,
   EdgeTokenInfo,
   EdgeTransaction,
-  EdgeTxidMap,
   JsonObject
 } from 'edge-core-js'
 import { EventEmitter } from 'events'
@@ -249,7 +247,7 @@ export async function makeUtxoEngine(
       const addressData = await processor.fetchAddressByScriptPubkey(
         scriptPubkey
       )
-      return !!addressData?.used
+      return addressData?.used === true
     },
 
     async makeSpend(
@@ -259,7 +257,7 @@ export async function makeUtxoEngine(
       const targets: MakeTxTarget[] = []
       const ourReceiveAddresses: string[] = []
       for (const target of edgeSpendInfo.spendTargets) {
-        if (!target.publicAddress || !target.nativeAmount) {
+        if (target.publicAddress == null || target.nativeAmount == null) {
           throw new Error('Invalid spend target')
         }
 
@@ -350,7 +348,8 @@ export async function makeUtxoEngine(
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
       const { psbt, edgeSpendInfo }: Partial<UTXOTxOtherParams> =
         transaction.otherParams ?? {}
-      if (!psbt || !edgeSpendInfo) throw new Error('Invalid transaction data')
+      if (psbt == null || edgeSpendInfo == null)
+        throw new Error('Invalid transaction data')
 
       const privateKeys = await Promise.all(
         psbt.inputs.map(async ({ hash, index }) => {
@@ -359,12 +358,12 @@ export async function makeUtxoEngine(
             : hash
 
           const utxo = await processor.fetchUtxo(`${txid}_${index}`)
-          if (!utxo) throw new Error('Invalid UTXO')
+          if (utxo == null) throw new Error('Invalid UTXO')
 
           const address = await processor.fetchAddressByScriptPubkey(
             utxo.scriptPubkey
           )
-          if (!address?.path) throw new Error('Invalid script pubkey')
+          if (address?.path == null) throw new Error('Invalid script pubkey')
 
           return walletTools.getPrivateKey(address.path)
         })
@@ -385,11 +384,7 @@ export async function makeUtxoEngine(
           transaction.currencyCode
         )
         Object.assign(transaction.otherParams, {
-          paymentProtocolInfo: {
-            // @ts-expect-error
-            ...edgeSpendInfo.otherParams.paymentProtocolInfo,
-            payment
-          }
+          paymentProtocolInfo: { ...paymentProtocolInfo, payment }
         })
       }
 

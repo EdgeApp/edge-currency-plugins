@@ -90,27 +90,30 @@ export interface Emitter {
 
   on: ((
     event: EmitterEvent.TRANSACTIONS_CHANGED,
-    listener: (transactions: EdgeTransaction[]) => void
+    listener: (transactions: EdgeTransaction[]) => void | Promise<void>
   ) => this) &
     ((
       event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED,
-      listener: (transaction: IProcessorTransaction) => void
+      listener: (transaction: IProcessorTransaction) => void | Promise<void>
     ) => this) &
     ((
       event: EmitterEvent.BALANCE_CHANGED,
-      listener: (currencyCode: string, nativeBalance: string) => void
+      listener: (
+        currencyCode: string,
+        nativeBalance: string
+      ) => void | Promise<void>
     ) => this) &
     ((
       event: EmitterEvent.BLOCK_HEIGHT_CHANGED,
-      listener: (blockHeight: number) => void
+      listener: (blockHeight: number) => void | Promise<void>
     ) => this) &
     ((
       event: EmitterEvent.ADDRESSES_CHECKED,
-      listener: (progressRatio: number) => void
+      listener: (progressRatio: number) => void | Promise<void>
     ) => this) &
     ((
       event: EmitterEvent.TXIDS_CHANGED,
-      listener: (txids: EdgeTxidMap) => void
+      listener: (txids: EdgeTxidMap) => void | Promise<void>
     ) => this)
 }
 
