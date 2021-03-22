@@ -376,11 +376,7 @@ export async function makeUtxoEngine(
           transaction.currencyCode
         )
         Object.assign(transaction.otherParams, {
-          paymentProtocolInfo: {
-            // @ts-expect-error
-            ...edgeSpendInfo.otherParams.paymentProtocolInfo,
-            payment
-          }
+          paymentProtocolInfo: { ...paymentProtocolInfo, payment }
         })
       }
 
