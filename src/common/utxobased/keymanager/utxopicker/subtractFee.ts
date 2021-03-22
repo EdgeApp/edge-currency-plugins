@@ -15,5 +15,5 @@ export function subtractFee(
   const fee = feeRate * utils.transactionBytes(utxos, outputs)
   targets[0].value -= fee
   outputs[0].value -= fee
-  return { inputs: utxos, outputs, fee }
+  return { inputs: utxos, outputs, fee, changeUsed: false }
 }
