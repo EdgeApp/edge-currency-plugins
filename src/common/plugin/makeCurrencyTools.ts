@@ -14,6 +14,7 @@ import * as uri from 'uri-js'
 import urlParse from 'url-parse'
 
 import * as utxoUtils from '../utxobased/engine/utils'
+import { CurrencyFormatKeys } from '../utxobased/engine/utils'
 import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
 import * as pluginUtils from './utils'
 
@@ -51,12 +52,12 @@ export function makeCurrencyTools(
 
     async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
       let key = 'publicKey'
-      let publicKey: string
+      let publicKey: CurrencyFormatKeys
       switch (currencyInfo.currencyType) {
         case EngineCurrencyType.UTXO:
           key = utxoUtils.getXpubKey({ coin: currencyInfo.network })
           // TODO: which xpub should be saved? the root path (m) or hardened path with the wallet format path (m/{purpose}'/{coinType}'/{account}')?
-          publicKey = utxoUtils.deriveXpubFromKeys({
+          publicKey = utxoUtils.deriveXpubsFromKeys({
             keys: walletInfo.keys,
             coin: currencyInfo.network,
             network: NetworkEnum.Mainnet
