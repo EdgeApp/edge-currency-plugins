@@ -212,14 +212,14 @@ export const deriveXpub = (args: {
   type: BIP43PurposeTypeEnum
   coin: string
   network: NetworkEnum
-}): string =>
-  xprivToXPub({
-    ...args,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    xpriv: deriveXprivFromKeys(args)[
-      getCurrencyFormatFromPurposeType(args.type)
-    ]!
-  })
+}): string => {
+  const xpriv = deriveXprivFromKeys(args)[
+    getCurrencyFormatFromPurposeType(args.type)
+  ]
+  if (xpriv == null)
+    throw new Error('Cannot derive xpub: no private key exists')
+  return xprivToXPub({ ...args, xpriv })
+}
 
 export const parsePathname = (args: {
   pathname: string
