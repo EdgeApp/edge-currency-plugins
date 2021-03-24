@@ -14,7 +14,12 @@ import {
 import { EventEmitter } from 'events'
 
 import { EmitterEvent, EngineConfig, TxOptions } from '../../plugin/types'
-import { clearMetadata, fetchMetadata, setMetadata } from '../../plugin/utils'
+import {
+  clearMetadata,
+  fetchMetadata,
+  getMnemonic,
+  setMetadata
+} from '../../plugin/utils'
 import { makeProcessor } from '../db/makeProcessor'
 import {
   fromEdgeTransaction,
@@ -199,7 +204,7 @@ export async function makeUtxoEngine(
     },
 
     getDisplayPrivateSeed(): string | null {
-      return null
+      return getMnemonic({ keys: walletInfo.keys, coin: currencyInfo.network })
     },
 
     getDisplayPublicSeed(): string | null {
