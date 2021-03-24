@@ -38,7 +38,8 @@ import {
   fetchOrDeriveXprivFromKeys,
   getWalletFormat,
   getWalletSupportedFormats,
-  getXprivKey
+  getXprivKey,
+  getXpubs
 } from './utils'
 
 export async function makeUtxoEngine(
@@ -208,7 +209,11 @@ export async function makeUtxoEngine(
     },
 
     getDisplayPublicSeed(): string | null {
-      return null
+      const xpubs = getXpubs({
+        keys: walletInfo.keys,
+        coin: currencyInfo.network
+      })
+      return Object.values(xpubs).join('\n')
     },
 
     async getEnabledTokens(): Promise<string[]> {

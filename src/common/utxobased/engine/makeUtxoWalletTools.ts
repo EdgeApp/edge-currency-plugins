@@ -6,14 +6,14 @@ import {
   scriptPubkeyToAddress,
   wifToPrivateKey,
   xprivToPrivateKey,
-  xprivToXPub,
   xpubToPubkey
 } from '../keymanager/keymanager'
 import {
   currencyFormatToPurposeType,
   getAddressTypeFromPurposeType,
   getScriptTypeFromPurposeType,
-  getXpriv
+  getXpriv,
+  getXpubs
 } from './utils'
 
 export interface UtxoKeyFormat {
@@ -69,18 +69,7 @@ export function makeUtxoWalletTools(
   const { coin, network } = config
 
   const xprivKeys = getXpriv(config)
-  // Convert xprivs to xpubs
-  const xpubKeys = Object.assign({}, xprivKeys)
-  for (const key in xpubKeys) {
-    const format = key as CurrencyFormat
-    xpubKeys[format] = xprivToXPub({
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      xpriv: xpubKeys[format]!,
-      type: currencyFormatToPurposeType(format),
-      coin,
-      network
-    })
-  }
+  const xpubKeys = getXpubs(config)
 
   let wifKeys: string[]
   if (config.keys.wifKeys != null) {
