@@ -78,7 +78,7 @@ export function makeCurrencyPlugin(
     },
 
     async makeCurrencyTools(): Promise<EdgeCurrencyTools> {
-      return await Promise.resolve(currencyTools)
+      return currencyTools
     }
   }
 }
