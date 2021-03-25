@@ -13,13 +13,9 @@ import {
 } from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import { makeMetadata } from '../../plugin/makeMetadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
-import {
-  clearMetadata,
-  fetchMetadata,
-  getMnemonic,
-  setMetadata
-} from '../../plugin/utils'
+import { getMnemonic } from '../../plugin/utils'
 import { makeProcessor } from '../db/makeProcessor'
 import {
   fromEdgeTransaction,
@@ -31,7 +27,6 @@ import { makeBlockBook } from '../network/BlockBook'
 import { calculateFeeRate } from './makeSpendHelper'
 import { makeUtxoEngineState } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
-import { makeMutexor } from './mutexor'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import { UTXOTxOtherParams } from './types'
 import {
@@ -63,8 +58,6 @@ export async function makeUtxoEngine(
     throw new Error(message)
   }
 
-  const mutexor = makeMutexor()
-
   // Merge in the xpriv into the local copy of wallet keys
   walletInfo.keys[
     getXprivKey({ coin: currencyInfo.network })
@@ -82,7 +75,8 @@ export async function makeUtxoEngine(
   })
 
   const blockBook = makeBlockBook({ emitter, log: io.console })
-  let metadata = await fetchMetadata(walletLocalDisklet)
+  const metadata = await makeMetadata({ disklet: walletLocalDisklet, emitter })
+
   const processor = await makeProcessor({
     disklet: walletLocalDisklet,
     emitter
@@ -91,37 +85,7 @@ export async function makeUtxoEngine(
     ...config,
     walletTools,
     processor,
-    blockBook,
-    metadata
-  })
-
-  emitter.on(
-    EngineEvent.PROCESSOR_TRANSACTION_CHANGED,
-    async (tx: IProcessorTransaction) => {
-      emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
-        await toEdgeTransaction({
-          tx,
-          currencyCode: currencyInfo.currencyCode,
-          walletTools,
-          processor
-        })
-      ])
-    }
-  )
-
-  emitter.on(
-    EngineEvent.BALANCE_CHANGED,
-    async (currencyCode: string, nativeBalance: string) => {
-      await mutexor('balanceChanged').runExclusive(async () => {
-        metadata.balance = nativeBalance
-        await setMetadata(walletLocalDisklet, metadata)
-      })
-    }
-  )
-
-  emitter.on(EngineEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
-    metadata.lastSeenBlockHeight = height
-    await setMetadata(walletLocalDisklet, metadata)
+    blockBook
   })
 
   const fns: EdgeCurrencyEngine = {
@@ -357,7 +321,7 @@ export async function makeUtxoEngine(
       await state.stop()
       // now get rid of all the db information
       await processor.clearAll()
-      metadata = await clearMetadata(walletLocalDisklet)
+      await metadata.clear()
 
       // finally restart the state
       await state.start()
@@ -422,35 +386,19 @@ export async function makeUtxoEngine(
       let success: (
         value: EdgeTransaction | PromiseLike<EdgeTransaction>
       ) => void
-      let failure: (reason?: any) => void
+      let failure: (reason?: never) => void
       const end: Promise<EdgeTransaction> = new Promise((resolve, reject) => {
         success = resolve
         failure = reject
       })
       const tmpDisklet = walletLocalDisklet
-      const tmpMetadata = await fetchMetadata(tmpDisklet)
-
       const tmpEmitter = new EngineEmitter()
-      tmpEmitter.on(
-        EngineEvent.BALANCE_CHANGED,
-        async (currencyCode: string, nativeBalance: string) => {
-          metadata.balance = nativeBalance
-          await setMetadata(tmpDisklet, tmpMetadata)
-        }
-      )
-      tmpEmitter.on(
-        EngineEvent.BLOCK_HEIGHT_CHANGED,
-        async (height: number) => {
-          metadata.lastSeenBlockHeight = height
-          await setMetadata(tmpDisklet, tmpMetadata)
-        }
-      )
 
-      const tmpProcessor = await makeProcessor({
-        disklet: tmpDisklet,
-        emitter: tmpEmitter
-      })
-      const blockBook = makeBlockBook({ emitter: tmpEmitter, log: io.console })
+      const tmpConfig = { disklet: tmpDisklet, emitter: tmpEmitter, log: io.console }
+      const tmpMetadata = await makeMetadata(tmpConfig)
+      const tmpProcessor = await makeProcessor(tmpConfig)
+      const tmpBlockBook = makeBlockBook(tmpConfig)
+
       const tmpWalletTools = makeUtxoWalletTools({
         keys: { wifKeys: privateKeys },
         coin: currencyInfo.network,
@@ -459,8 +407,8 @@ export async function makeUtxoEngine(
 
       tmpEmitter.on(EngineEvent.ADDRESSES_CHECKED, async (ratio: number) => {
         if (ratio === 1) {
-          await engineState.stop()
-          await blockBook.disconnect()
+          await tmpState.stop()
+          await tmpBlockBook.disconnect()
 
           const utxos = await processor.fetchAllUtxos()
           if (utxos === null || utxos.length < 1) {
@@ -479,7 +427,7 @@ export async function makeUtxoEngine(
         }
       })
 
-      const engineState = makeUtxoEngineState({
+      const tmpState = makeUtxoEngineState({
         ...config,
         options: {
           ...config.options,
@@ -492,10 +440,9 @@ export async function makeUtxoEngine(
         },
         walletTools: tmpWalletTools,
         processor: tmpProcessor,
-        blockBook,
-        metadata: tmpMetadata
+        blockBook: tmpBlockBook
       })
-      await engineState.start()
+      await tmpState.start()
       return end
     }
   }
