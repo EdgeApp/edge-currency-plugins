@@ -1,6 +1,6 @@
 import { EdgeTransaction } from 'edge-core-js'
 
-import { EmitterEvent } from '../../plugin/types'
+import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeSocket } from './Socket'
 
 export interface INewTransactionResponse {
@@ -9,17 +9,20 @@ export interface INewTransactionResponse {
 }
 
 interface IWsPendingMessages {
-  [id: string]: Function
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [id: string]: (value: any) => void
 }
 
 interface IWsMessage {
   id: string
   method: string
-  params?: object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params?: any
 }
 
 interface IWsResponse {
   id: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any
 }
 
@@ -88,7 +91,7 @@ interface IUTXO {
   lockTime?: number
 }
 
-interface IAccountUTXO extends IUTXO {
+export interface IAccountUTXO extends IUTXO {
   address?: string
   path?: string
 }
@@ -151,12 +154,8 @@ export interface BlockBook {
   broadcastTx: (transaction: EdgeTransaction) => Promise<void>
 }
 
-export interface BlockHeightEmitter {
-  emit: (event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number) => this
-}
-
 interface BlockBookConfig {
-  emitter: BlockHeightEmitter
+  emitter: EngineEmitter
   wsAddress?: string
 }
 
@@ -186,7 +185,9 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   let addressWatcherCallback:
     | undefined
     | ((response: INewTransactionResponse) => void)
-  let blockWatcherCallback: Callback = () => {}
+  let blockWatcherCallback: Callback = () => {
+    return
+  }
   const PING_ID = 'ping'
   const WATCH_NEW_BLOCK_EVENT_ID = 'WATCH_NEW_BLOCK_EVENT_ID'
   const WATCH_ADDRESS_TX_EVENT_ID = 'WATCH_ADDRESS_TX_EVENT_ID'
@@ -209,10 +210,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
             }
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
             blockWatcherCallback()
-            emitter.emit(
-              EmitterEvent.BLOCK_HEIGHT_CHANGED,
-              response.data.height
-            )
+            emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, response.data.height)
             break
           case WATCH_ADDRESS_TX_EVENT_ID:
             // Don't notify on successful subscribe
@@ -259,15 +257,18 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   async function promisifyWsMessage<T>(
     method: string,
-    params?: object
+    params?: Record<string, unknown>
   ): Promise<T> {
-    return await new Promise(resolve => {
+    return await new Promise<T>(resolve => {
       const id = wsIdCounter++
-      sendWsMessage({ id: id.toString(), method, params }, resolve)
+      sendWsMessage<T>({ id: id.toString(), method, params }, resolve)
     })
   }
 
-  function sendWsMessage(message: IWsMessage, cb?: Function): void {
+  function sendWsMessage<T>(
+    message: IWsMessage,
+    cb?: (response: T) => void
+  ): void {
     if (!instance.isConnected) {
       throw new Error('BlockBook websocket not connected')
     }
@@ -290,7 +291,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   async function fetchAddress(
     address: string,
     opts: IAccountOpts = {}
-  ): Promise<any> {
+  ): Promise<never> {
     opts = Object.assign(
       {},
       {
@@ -323,9 +324,9 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
         method: 'subscribeAddresses',
         params: { addresses }
       },
-      async (response: INewTransactionResponse) => {
+      (response: INewTransactionResponse) => {
         // Need to resubscribe to addresses
-        await watchAddresses(addressesToWatch, cb)
+        watchAddresses(addressesToWatch, cb)
         cb?.(response)
       }
     )

@@ -1,15 +1,13 @@
-import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
-import {
-  EdgeCurrencyInfo,
-  EdgeCurrencyTools,
-  EdgeIo
-} from 'edge-core-js/lib/types'
 import {
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
+  EdgeCurrencyTools,
+  EdgeIo,
   EdgeWalletInfo
-} from 'edge-core-js/lib/types/types'
+} from 'edge-core-js'
 
-import { IProcessorTransaction, IUTXO } from '../utxobased/db/types'
+import { IUTXO } from '../utxobased/db/types'
+import { EngineEmitter } from './makeEngineEmitter'
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
@@ -67,63 +65,7 @@ export interface EngineConfig {
 }
 
 interface EngineOptions extends EdgeCurrencyEngineOptions {
-  emitter: Emitter
-}
-
-export interface Emitter {
-  emit: ((
-    event: EmitterEvent.TRANSACTIONS_CHANGED,
-    transactions: EdgeTransaction[]
-  ) => this) &
-    ((
-      event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED,
-      transaction: IProcessorTransaction
-    ) => this) &
-    ((
-      event: EmitterEvent.BALANCE_CHANGED,
-      currencyCode: string,
-      nativeBalance: string
-    ) => this) &
-    ((event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number) => this) &
-    ((event: EmitterEvent.ADDRESSES_CHECKED, progressRatio: number) => this) &
-    ((event: EmitterEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => this)
-
-  on: ((
-    event: EmitterEvent.TRANSACTIONS_CHANGED,
-    listener: (transactions: EdgeTransaction[]) => void | Promise<void>
-  ) => this) &
-    ((
-      event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED,
-      listener: (transaction: IProcessorTransaction) => void | Promise<void>
-    ) => this) &
-    ((
-      event: EmitterEvent.BALANCE_CHANGED,
-      listener: (
-        currencyCode: string,
-        nativeBalance: string
-      ) => void | Promise<void>
-    ) => this) &
-    ((
-      event: EmitterEvent.BLOCK_HEIGHT_CHANGED,
-      listener: (blockHeight: number) => void | Promise<void>
-    ) => this) &
-    ((
-      event: EmitterEvent.ADDRESSES_CHECKED,
-      listener: (progressRatio: number) => void | Promise<void>
-    ) => this) &
-    ((
-      event: EmitterEvent.TXIDS_CHANGED,
-      listener: (txids: EdgeTxidMap) => void | Promise<void>
-    ) => this)
-}
-
-export enum EmitterEvent {
-  TRANSACTIONS_CHANGED = 'transactions:changed',
-  PROCESSOR_TRANSACTION_CHANGED = 'processor:transactions:changed',
-  BALANCE_CHANGED = 'balance:changed',
-  BLOCK_HEIGHT_CHANGED = 'block:height:changed',
-  ADDRESSES_CHECKED = 'addresses:checked',
-  TXIDS_CHANGED = 'txids:changed'
+  emitter: EngineEmitter
 }
 
 export interface LocalWalletMetadata {
