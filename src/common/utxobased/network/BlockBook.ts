@@ -1,6 +1,6 @@
 import { EdgeConsole, EdgeTransaction } from 'edge-core-js'
 
-import { Emitter, EmitterEvent } from '../../plugin/types'
+import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeSocket, potentialWsTask, WsTask } from './Socket'
 
 export interface INewTransactionResponse {
@@ -78,7 +78,7 @@ interface IUTXO {
   lockTime?: number
 }
 
-interface IAccountUTXO extends IUTXO {
+export interface IAccountUTXO extends IUTXO {
   address?: string
   path?: string
 }
@@ -141,12 +141,8 @@ export interface BlockBook {
   broadcastTx: (transaction: EdgeTransaction) => Promise<void>
 }
 
-export interface BlockHeightEmitter {
-  emit: (event: EmitterEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number) => this
-}
-
 interface BlockBookConfig {
-  emitter: Emitter
+  emitter: EngineEmitter
   wsAddress?: string
   log: EdgeConsole
 }
@@ -170,13 +166,13 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     broadcastTx
   }
 
-  emitter.on(EmitterEvent.CONNECTION_OPEN, () => {})
-  emitter.on(EmitterEvent.CONNECTION_CLOSE, (error?: Error) => {
+  emitter.on(EngineEvent.CONNECTION_OPEN, () => {})
+  emitter.on(EngineEvent.CONNECTION_CLOSE, (error?: Error) => {
     if (error != null) {
       throw new Error(`connection closing due to ${error.message}`)
     }
   })
-  emitter.on(EmitterEvent.CONNECTION_TIMER, (queryTime: number) => {})
+  emitter.on(EngineEvent.CONNECTION_TIMER, (queryTime: number) => {})
   const onQueueSpace = (): potentialWsTask => {
     return {}
   }
@@ -204,7 +200,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   async function promisifyWsMessage<T>(
     method: string,
-    params?: object
+    params?: Record<string, unknown>
   ): Promise<T> {
     return await new Promise((resolve, reject) => {
       sendWsMessage({ method, params, resolve, reject })
@@ -226,7 +222,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   async function fetchAddress(
     address: string,
     opts: IAccountOpts = {}
-  ): Promise<any> {
+  ): Promise<never> {
     opts = Object.assign(
       {},
       {
@@ -247,7 +243,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     const socketCb = async (value: INewBlockResponse): Promise<void> => {
       // eslint-disable-next-line no-void
       await cb()
-      emitter.emit(EmitterEvent.BLOCK_HEIGHT_CHANGED, value.height)
+      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, value.height)
     }
     socket.subscribe({
       method: 'subscribeNewBlock',
