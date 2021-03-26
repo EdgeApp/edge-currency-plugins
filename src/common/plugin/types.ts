@@ -42,15 +42,23 @@ export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
   gapLimit: number
   defaultFee: number
   feeUpdateInterval: number
-  customFeeSettings: string[]
+  earnComFeeInfoServer?: string
+  mempoolSpaceFeeInfoServer?: string
+  customFeeSettings: CustomFeeSetting[]
   simpleFeeSettings: SimpleFeeSettings
 }
 
-export interface SimpleFeeSettings {
-  highFee: string
+export type CustomFeeSetting = 'satPerByte'
+
+
+export interface FeeRates {
   lowFee: string
   standardFeeLow: string
   standardFeeHigh: string
+  highFee: string
+}
+
+export interface SimpleFeeSettings extends FeeRates {
   standardFeeLowAmount: string
   standardFeeHighAmount: string
 }
