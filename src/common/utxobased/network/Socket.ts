@@ -1,6 +1,7 @@
 import { EdgeConsole } from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import Deferred from './Deferred'
 import { setupWS } from './nodejsWS'
 import { pushUpdate, removeIdFromQueue } from './socketQueue'
 import { InnerSocket, InnerSocketCallbacks, ReadyState } from './types'
@@ -11,31 +12,33 @@ const KEEP_ALIVE_MS = 60000
 
 export type OnFailHandler = (error: Error) => void
 
-export interface potentialWsTask {
-  task?: WsTask
-}
-
-export interface WsTask {
+export interface WsTask<T> {
   method: string
-  params: object | undefined
-  resolve: (value: any) => void
-  reject: (reason?: any) => void
+  params: unknown
+  deferred: Deferred<T>
 }
 
 export interface WsSubscription {
   method: string
-  params: object | undefined
+  params: unknown
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   cb: (value: any) => void
+  subscribed: boolean
+  deferred: Deferred<unknown>
 }
 
 export interface Socket {
   readyState: ReadyState
   connect: () => Promise<void>
   disconnect: () => void
-  submitTask: (task: WsTask) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  submitTask: (task: WsTask<any>) => void
+  onQueueSpace: (cb: OnQueueSpaceCB) => void
   subscribe: (subscription: WsSubscription) => void
   isConnected: () => boolean
 }
+
+export type OnQueueSpaceCB = () => Promise<WsTask<unknown> | undefined>
 
 interface SocketConfig {
   queueSize?: number
@@ -43,20 +46,20 @@ interface SocketConfig {
   walletId?: string
   emitter: EngineEmitter
   log: EdgeConsole
-  onQueueSpace: () => potentialWsTask
-  healthCheck: () => Promise<object> // function for heartbeat, should submit task itself
+  healthCheck: () => Promise<unknown> // function for heartbeat, should submit task itself
 }
 
 interface WsMessage {
-  task: WsTask
+  task: WsTask<unknown>
   startTime: number
 }
 
 export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
-  const { emitter, onQueueSpace, log, queueSize = 5, walletId = '' } = config
+  const { emitter, log, queueSize = 5, walletId = '' } = config
   const version = ''
   const subscriptions: Map<string, WsSubscription> = new Map()
+  let onQueueSpace: OnQueueSpaceCB | undefined
   let pendingMessages: Map<string, WsMessage> = new Map()
   let nextId = 0
   let lastKeepAlive = 0
@@ -89,7 +92,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     cancelConnect = false
     pendingMessages.forEach((message, _id) => {
       try {
-        message.task.reject(err)
+        message.task.deferred.reject(err)
       } catch (e) {
         log.error(e.message)
       }
@@ -119,6 +122,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     })
 
     wakeUp()
+    setupTimer()
     cancelConnect = false
   }
 
@@ -126,17 +130,19 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     pushUpdate({
       id: walletId + '==' + uri,
       updateFunc: () => {
-        doWakeUp()
+        doWakeUp().catch(() => {
+          throw new Error('wake up')
+        })
       }
     })
   }
 
-  const doWakeUp = (): void => {
+  const doWakeUp = async (): Promise<void> => {
     if (connected && version != null) {
       while (pendingMessages.size < queueSize) {
-        const task = onQueueSpace()
-        if (task.task == null) break
-        submitTask(task.task)
+        const task = await onQueueSpace?.()
+        if (task == null) break
+        submitTask(task)
       }
     }
   }
@@ -154,7 +160,9 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     }
   }
 
-  const submitTask = (task: WsTask): void => {
+  // add any exception, since the passed in template parameter needs to be re-assigned
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const submitTask = (task: WsTask<any>): void => {
     const id = (nextId++).toString()
     const message = { task, startTime: Date.now() }
     pendingMessages.set(id.toString(), message)
@@ -194,7 +202,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     pendingMessages.forEach((message, id) => {
       if (message.startTime + timeout < now) {
         try {
-          message.task.reject(new Error('Timeout'))
+          message.task.deferred.reject(new Error('Timeout'))
         } catch (e) {
           log.error(e.message)
         }
@@ -206,6 +214,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const setupTimer = (): void => {
     let nextWakeUp = lastKeepAlive + KEEP_ALIVE_MS
+
     pendingMessages.forEach((message, _id) => {
       const to = message.startTime + timeout
       if (to < nextWakeUp) nextWakeUp = to
@@ -228,8 +237,12 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
               throw new Error(`cannot find subscription for ${id}`)
             }
             if (json.data?.subscribed != null) {
-              // dropping subscription accepted message
+              subscription.subscribed = true
+              subscription.deferred.resolve(json.data)
               return
+            }
+            if (!subscription.subscribed) {
+              subscription.deferred.reject()
             }
             subscription.cb(json.data)
             return
@@ -247,9 +260,9 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
               error.message != null ? error.message : error.connected
             throw new Error(errorMessage)
           }
-          message.task.resolve(json.data)
+          message.task.deferred.resolve(json.data)
         } catch (e) {
-          message.task.reject(e)
+          message.task.deferred.reject(e)
         }
       }
     } catch (e) {
@@ -257,8 +270,6 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     }
     wakeUp()
   }
-
-  setupTimer()
 
   // return a Socket
   return {
@@ -300,8 +311,12 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       return socket?.readyState === ReadyState.OPEN
     },
 
-    submitTask(task: WsTask): void {
+    submitTask(task: WsTask<unknown>): void {
       submitTask(task)
+    },
+
+    onQueueSpace(cb: OnQueueSpaceCB): void {
+      onQueueSpace = cb
     },
 
     subscribe(subscription: WsSubscription): void {

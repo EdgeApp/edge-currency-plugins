@@ -9,6 +9,7 @@ import {
   INewTransactionResponse,
   makeBlockBook
 } from '../../../../src/common/utxobased/network/BlockBook'
+import Deferred from '../../../../src/common/utxobased/network/Deferred'
 
 chai.should()
 
@@ -70,7 +71,7 @@ describe('BlockBook notifications tests with dummy server', function () {
     const blockCB = (): void => {
       test = true
     }
-    blockBook.watchBlocks(blockCB)
+    blockBook.watchBlocks(blockCB, new Deferred<unknown>())
     websocketClient.send(
       '{"id":"subscribeNewBlock","data":{"height":1916453,"hash":"0000000000000e0444fa7c1540a96e5658898a59733311d08f01292e114e8d5b"}}'
     )
@@ -94,7 +95,8 @@ describe('BlockBook notifications tests with dummy server', function () {
     test.should.be.false
     blockBook.watchAddresses(
       ['tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld'],
-      addressCB
+      addressCB,
+      new Deferred<unknown>()
     )
     websocketClient.send(
       '{"id":"subscribeAddresses","data":{"address":"tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld","tx":{"txid":"cfd4c31709bd48026c6c1027c47cef305c47947d73248129fee3f4b63ca1af43","version":1,"vin":[{"txid":"e0965d6df36a4ba811fb29819beeae0203fe68e48143344908146a58c5333996","vout":1,"sequence":4294967295,"n":0,"addresses":["tb1qrps90para9l48lydp2xga0p5yyckuj5l7vsu6t"],"isAddress":true,"value":"81581580"}],"vout":[{"value":"100000","n":0,"hex":"00143f3058aa25caf36c11d757debf76df3388ebf5cf","addresses":["tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld"],"isAddress":true},{"value":"81463900","n":1,"hex":"0014be4df3d4535bd56f4d35dc1ffdb58408b084ebaa","addresses":["tb1qhexl84znt02k7nf4ms0lmdvypzcgf6a2c9zduk"],"isAddress":true}],"blockHeight":0,"confirmations":0,"blockTime":1612198107,"value":"81563900","valueIn":"81581580","fees":"17680","hex":"01000000000101963933c5586a140849344381e468fe0302aeee9b8129fb11a84b6af36d5d96e00100000000ffffffff02a0860100000000001600143f3058aa25caf36c11d757debf76df3388ebf5cf5c0adb0400000000160014be4df3d4535bd56f4d35dc1ffdb58408b084ebaa0247304402201e7f25a03517d932b2df5d099da597132047f5b7bb5cff43252ba0113fc161d2022003b80682bf7f32e685b21a6f28abc494dcc73c34bc62233f918b54afbbaca36c0121029eea7dac242382a543f6288023ac5a62064bea27349d25fc93180b14d5dd117400000000"}}}'
