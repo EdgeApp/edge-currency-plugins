@@ -394,7 +394,11 @@ export async function makeUtxoEngine(
       const tmpDisklet = walletLocalDisklet
       const tmpEmitter = new EngineEmitter()
 
-      const tmpConfig = { disklet: tmpDisklet, emitter: tmpEmitter, log: io.console }
+      const tmpConfig = {
+        disklet: tmpDisklet,
+        emitter: tmpEmitter,
+        log: io.console
+      }
       const tmpMetadata = await makeMetadata(tmpConfig)
       const tmpProcessor = await makeProcessor(tmpConfig)
       const tmpBlockBook = makeBlockBook(tmpConfig)
