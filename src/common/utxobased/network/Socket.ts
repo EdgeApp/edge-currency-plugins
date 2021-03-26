@@ -1,3 +1,5 @@
+import { EdgeConsole } from 'edge-core-js'
+
 import { Emitter, EmitterEvent } from '../../plugin/types'
 import { setupWS } from './nodejsWS'
 import { pushUpdate, removeIdFromQueue } from './socketQueue'
@@ -40,6 +42,7 @@ interface SocketConfig {
   timeout?: number
   walletId?: string
   emitter: Emitter
+  log: EdgeConsole
   onQueueSpace: () => potentialWsTask
   healthCheck: () => Promise<object> // function for heartbeat, should submit task itself
 }
@@ -51,7 +54,7 @@ interface WsMessage {
 
 export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
-  const { emitter, onQueueSpace, queueSize = 5, walletId = '' } = config
+  const { emitter, onQueueSpace, log, queueSize = 5, walletId = '' } = config
   const version = ''
   const subscriptions: Map<string, WsSubscription> = new Map()
   let pendingMessages: Map<string, WsMessage> = new Map()
@@ -68,12 +71,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     if (connected && socket != null && socket.readyState === ReadyState.OPEN)
       disconnect()
     else cancelConnect = true
-    console.log('handled error!', e)
-  }
-
-  const logError = (e: Error): void => {
-    // TODO: change this to edge log
-    console.error(`${e.message}`)
+    log.info('handled error!', e)
   }
 
   const disconnect = (): void => {
@@ -93,14 +91,14 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       try {
         message.task.reject(err)
       } catch (e) {
-        logError(e)
+        log.error(e.message)
       }
     })
     pendingMessages = new Map()
     try {
       emitter.emit(EmitterEvent.CONNECTION_CLOSE, err)
     } catch (e) {
-      logError(e)
+      log.error(e.message)
     }
   }
 
@@ -185,13 +183,12 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     const now = Date.now() - TIMER_SLACK
     if (lastKeepAlive + KEEP_ALIVE_MS < now) {
       lastKeepAlive = now
-      // eslint-disable-next-line no-void
-      void config
+      config
         .healthCheck()
-        .catch((e: Error) => handleError(e))
         .then(() => {
           emitter.emit(EmitterEvent.CONNECTION_TIMER, now)
         })
+        .catch((e: Error) => handleError(e))
     }
 
     pendingMessages.forEach((message, id) => {
@@ -199,7 +196,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         try {
           message.task.reject(new Error('Timeout'))
         } catch (e) {
-          logError(e)
+          log.error(e.message)
         }
         pendingMessages.delete(id)
       }
@@ -247,9 +244,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         try {
           if (error != null) {
             const errorMessage =
-              error.message != null
-                ? error.message.split('\n')[0]
-                : error.connected
+              error.message != null ? error.message : error.connected
             throw new Error(errorMessage)
           }
           message.task.resolve(json.data)

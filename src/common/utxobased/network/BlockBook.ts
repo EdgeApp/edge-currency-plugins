@@ -1,4 +1,4 @@
-import { EdgeTransaction } from 'edge-core-js'
+import { EdgeConsole, EdgeTransaction } from 'edge-core-js'
 
 import { Emitter, EmitterEvent } from '../../plugin/types'
 import { makeSocket, potentialWsTask, WsTask } from './Socket'
@@ -148,12 +148,13 @@ export interface BlockHeightEmitter {
 interface BlockBookConfig {
   emitter: Emitter
   wsAddress?: string
+  log: EdgeConsole
 }
 
 const baseUri = 'btc1.trezor.io'
 
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
-  const emitter = config.emitter
+  const { emitter, log } = config
   const baseWSAddress = config.wsAddress ?? `wss://${baseUri}/websocket`
 
   const instance: BlockBook = {
@@ -183,6 +184,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   const socket = makeSocket(baseWSAddress, {
     healthCheck: ping,
     onQueueSpace,
+    log,
     emitter
   })
 

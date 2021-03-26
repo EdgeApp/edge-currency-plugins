@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import * as chai from 'chai'
+import { makeFakeIo } from 'edge-core-js'
 import { EventEmitter } from 'events'
 import WS from 'ws'
 
@@ -47,7 +48,12 @@ describe('BlockBook notifications tests with dummy server', function () {
       console.log(error)
     })
     const emitter = new EventEmitter() as any
-    blockBook = makeBlockBook({ emitter, wsAddress: 'ws://localhost:8080' })
+    const io = makeFakeIo()
+    blockBook = makeBlockBook({
+      emitter,
+      log: io.console,
+      wsAddress: 'ws://localhost:8080'
+    })
     await blockBook.connect()
     blockBook.isConnected.should.be.true
   })
@@ -79,7 +85,9 @@ describe('BlockBook notifications tests with dummy server', function () {
     test.should.be.true
     test = false
 
-    const addressCB = (response: INewTransactionResponse): void => {
+    const addressCB = async (
+      response: INewTransactionResponse
+    ): Promise<void> => {
       response.tx.blockHeight.should.be.equal(0)
       test = true
     }
@@ -107,10 +115,11 @@ describe('BlockBook', function () {
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
   const emitter = new EventEmitter() as any
+  const io = makeFakeIo()
   let blockBook: BlockBook
 
   beforeEach(async () => {
-    blockBook = makeBlockBook({ emitter })
+    blockBook = makeBlockBook({ emitter, log: io.console })
     await blockBook.connect()
   })
 
