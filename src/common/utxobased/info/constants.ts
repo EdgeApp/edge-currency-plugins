@@ -1,1 +1,1 @@
-export const imageServerUrl = 'https://developer.airbitz.co/content'
+export const imageServerUrl = 'https://content.edge.app'
