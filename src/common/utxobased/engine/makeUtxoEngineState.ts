@@ -359,23 +359,29 @@ const findLastUsedIndex = async (
 ): Promise<number> => {
   const { format, changeIndex, currencyInfo, processor } = args
 
-  const path: AddressPath = {
+  const addressCount = await processor.getNumAddressesFromPathPartition({
     format,
-    changeIndex,
-    addressIndex: 0 // tmp
-  }
-  const addressCount = await processor.getNumAddressesFromPathPartition(path)
-  // Get the assumed last used index
-  path.addressIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
+    changeIndex
+  })
+  // Start 1 index behind the assumed last used index
+  let lastUsedIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
 
-  for (let i = path.addressIndex; i < addressCount; i++) {
-    const addressData = await fetchAddressDataByPath({ ...args, path })
-    if (addressData.used) {
-      path.addressIndex = i
+  for (let i = lastUsedIndex; i < addressCount; i++) {
+    const { used } = await fetchAddressDataByPath({
+      ...args,
+      path: {
+        format,
+        changeIndex,
+        addressIndex: i
+      }
+    })
+
+    if (used) {
+      lastUsedIndex = i
     }
   }
 
-  return path.addressIndex
+  return lastUsedIndex
 }
 
 interface FetchAddressDataByPath extends CommonArgs {
