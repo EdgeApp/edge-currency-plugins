@@ -81,7 +81,7 @@ export async function makeUtxoEngine(
     network
   })
 
-  const blockBook = makeBlockBook({ emitter })
+  const blockBook = makeBlockBook({ emitter, log: io.console })
   let metadata = await fetchMetadata(walletLocalDisklet)
   const processor = await makeProcessor({
     disklet: walletLocalDisklet,
@@ -446,7 +446,7 @@ export async function makeUtxoEngine(
         disklet: tmpDisklet,
         emitter: tmpEmitter
       })
-      const blockBook = makeBlockBook({ emitter: tmpEmitter })
+      const blockBook = makeBlockBook({ emitter: tmpEmitter, log: io.console })
       const tmpWalletTools = makeUtxoWalletTools({
         keys: { wifKeys: privateKeys },
         coin: currencyInfo.network,

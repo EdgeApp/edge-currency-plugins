@@ -1,40 +1,266 @@
-import WS from 'ws'
+import { EdgeConsole } from 'edge-core-js'
 
-export enum ReadyState {
-  CONNECTING,
-  OPEN,
-  CLOSING,
-  CLOSED
+import { Emitter, EmitterEvent } from '../../plugin/types'
+import { setupWS } from './nodejsWS'
+import { pushUpdate, removeIdFromQueue } from './socketQueue'
+import { InnerSocket, InnerSocketCallbacks, ReadyState } from './types'
+import { setupBrowser } from './windowWS'
+
+const TIMER_SLACK = 500
+const KEEP_ALIVE_MS = 60000
+
+export type OnFailHandler = (error: Error) => void
+
+export interface potentialWsTask {
+  task?: WsTask
 }
 
-// cb?: (ev: MessageEvent) => any
-export interface Socket extends InnerSocket {
-  connect: () => Promise<void>
+export interface WsTask {
+  method: string
+  params: object | undefined
+  resolve: (value: any) => void
+  reject: (reason?: any) => void
 }
 
-interface InnerSocket {
+export interface WsSubscription {
+  method: string
+  params: object | undefined
+  cb: (value: any) => void
+}
+
+export interface Socket {
   readyState: ReadyState
+  connect: () => Promise<void>
   disconnect: () => void
-  send: (data: string) => void
+  submitTask: (task: WsTask) => void
+  subscribe: (subscription: WsSubscription) => void
+  isConnected: () => boolean
 }
 
 interface SocketConfig {
-  callbacks?: SocketCallbacks
+  queueSize?: number
+  timeout?: number
+  walletId?: string
+  emitter: Emitter
+  log: EdgeConsole
+  onQueueSpace: () => potentialWsTask
+  healthCheck: () => Promise<object> // function for heartbeat, should submit task itself
 }
 
-export interface SocketCallbacks {
-  onError?: (error?: Error) => void
-  onMessage?: (message: string) => void
+interface WsMessage {
+  task: WsTask
+  startTime: number
 }
 
-export interface InnerSocketCallbacks extends SocketCallbacks {
-  onOpen: () => void
-}
-
-export function makeSocket(uri: string, config?: SocketConfig): Socket {
+export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
+  const { emitter, onQueueSpace, log, queueSize = 5, walletId = '' } = config
+  const version = ''
+  const subscriptions: Map<string, WsSubscription> = new Map()
+  let pendingMessages: Map<string, WsMessage> = new Map()
+  let nextId = 0
+  let lastKeepAlive = 0
+  let connected = false
+  let cancelConnect = false
+  const timeout: number = 1000 * (config.timeout ?? 30)
+  let error: Error | undefined
+  let timer: NodeJS.Timeout
 
-  // return socket
+  const handleError = (e: Error): void => {
+    if (error == null) error = e
+    if (connected && socket != null && socket.readyState === ReadyState.OPEN)
+      disconnect()
+    else cancelConnect = true
+    log.info('handled error!', e)
+  }
+
+  const disconnect = (): void => {
+    clearTimeout(timer)
+    connected = false
+    if (socket != null) socket.disconnect()
+    removeIdFromQueue(uri)
+  }
+
+  const onSocketClose = (): void => {
+    const err = error ?? new Error('Socket close')
+    clearTimeout(timer)
+    connected = false
+    socket = null
+    cancelConnect = false
+    pendingMessages.forEach((message, _id) => {
+      try {
+        message.task.reject(err)
+      } catch (e) {
+        log.error(e.message)
+      }
+    })
+    pendingMessages = new Map()
+    try {
+      emitter.emit(EmitterEvent.CONNECTION_CLOSE, err)
+    } catch (e) {
+      log.error(e.message)
+    }
+  }
+
+  const onSocketConnect = (): void => {
+    if (cancelConnect) {
+      if (socket != null) socket.disconnect()
+      return
+    }
+    connected = true
+    lastKeepAlive = Date.now()
+    try {
+      emitter.emit(EmitterEvent.CONNECTION_OPEN)
+    } catch (e) {
+      handleError(e)
+    }
+    pendingMessages.forEach((message, id) => {
+      transmitMessage(id, message)
+    })
+
+    wakeUp()
+    cancelConnect = false
+  }
+
+  const wakeUp = (): void => {
+    pushUpdate({
+      id: walletId + '==' + uri,
+      updateFunc: () => {
+        doWakeUp()
+      }
+    })
+  }
+
+  const doWakeUp = (): void => {
+    if (connected && version != null) {
+      while (pendingMessages.size < queueSize) {
+        const task = onQueueSpace()
+        if (task.task == null) break
+        submitTask(task.task)
+      }
+    }
+  }
+
+  const subscribe = (subscription: WsSubscription): void => {
+    if (socket != null && socket.readyState === ReadyState.OPEN && connected) {
+      const id = subscription.method
+      const message = {
+        id,
+        method: subscription.method,
+        params: subscription.params ?? {}
+      }
+      subscriptions.set(id, subscription)
+      socket.send(JSON.stringify(message))
+    }
+  }
+
+  const submitTask = (task: WsTask): void => {
+    const id = (nextId++).toString()
+    const message = { task, startTime: Date.now() }
+    pendingMessages.set(id.toString(), message)
+    transmitMessage(id, message)
+  }
+
+  const transmitMessage = (id: string, pending: WsMessage): void => {
+    const now = Date.now()
+    if (
+      socket != null &&
+      socket.readyState === ReadyState.OPEN &&
+      connected &&
+      !cancelConnect
+    ) {
+      pending.startTime = now
+      const message = {
+        id,
+        method: pending.task.method,
+        params: pending.task.params ?? {}
+      }
+      socket.send(JSON.stringify(message))
+    }
+  }
+
+  const onTimer = (): void => {
+    const now = Date.now() - TIMER_SLACK
+    if (lastKeepAlive + KEEP_ALIVE_MS < now) {
+      lastKeepAlive = now
+      config
+        .healthCheck()
+        .then(() => {
+          emitter.emit(EmitterEvent.CONNECTION_TIMER, now)
+        })
+        .catch((e: Error) => handleError(e))
+    }
+
+    pendingMessages.forEach((message, id) => {
+      if (message.startTime + timeout < now) {
+        try {
+          message.task.reject(new Error('Timeout'))
+        } catch (e) {
+          log.error(e.message)
+        }
+        pendingMessages.delete(id)
+      }
+    })
+    setupTimer()
+  }
+
+  const setupTimer = (): void => {
+    let nextWakeUp = lastKeepAlive + KEEP_ALIVE_MS
+    pendingMessages.forEach((message, _id) => {
+      const to = message.startTime + timeout
+      if (to < nextWakeUp) nextWakeUp = to
+    })
+
+    const now = Date.now() - TIMER_SLACK
+    const delay = nextWakeUp < now ? 0 : nextWakeUp - now
+    timer = setTimeout(() => onTimer(), delay)
+  }
+
+  const onMessage = (messageJson: string): void => {
+    try {
+      const json = JSON.parse(messageJson)
+      if (json.id != null) {
+        const id: string = json.id.toString()
+        for (const cId of subscriptions.keys()) {
+          if (id === cId) {
+            const subscription = subscriptions.get(id)
+            if (subscription == null) {
+              throw new Error(`cannot find subscription for ${id}`)
+            }
+            if (json.data?.subscribed != null) {
+              // dropping subscription accepted message
+              return
+            }
+            subscription.cb(json.data)
+            return
+          }
+        }
+        const message = pendingMessages.get(id)
+        if (message == null) {
+          throw new Error(`Bad response id in ${messageJson}`)
+        }
+        pendingMessages.delete(id)
+        const { error } = json
+        try {
+          if (error != null) {
+            const errorMessage =
+              error.message != null ? error.message : error.connected
+            throw new Error(errorMessage)
+          }
+          message.task.resolve(json.data)
+        } catch (e) {
+          message.task.reject(e)
+        }
+      }
+    } catch (e) {
+      handleError(e)
+    }
+    wakeUp()
+  }
+
+  setupTimer()
+
+  // return a Socket
   return {
     get readyState(): ReadyState {
       return socket?.readyState ?? ReadyState.CLOSED
@@ -44,17 +270,22 @@ export function makeSocket(uri: string, config?: SocketConfig): Socket {
       socket?.disconnect()
 
       return await new Promise<void>(resolve => {
-        const callbacks: InnerSocketCallbacks = {
-          ...config?.callbacks,
-          onOpen() {
+        const cbs: InnerSocketCallbacks = {
+          onOpen: () => {
+            onSocketConnect()
             resolve()
-          }
+          },
+          onMessage: onMessage,
+          onError: event => {
+            error = new Error(JSON.stringify(event))
+          },
+          onClose: onSocketClose
         }
 
         try {
-          socket = setupBrowser(uri, callbacks)
+          socket = setupBrowser(uri, cbs)
         } catch {
-          socket = setupWS(uri, callbacks)
+          socket = setupWS(uri, cbs)
         }
       })
     },
@@ -62,108 +293,19 @@ export function makeSocket(uri: string, config?: SocketConfig): Socket {
     disconnect() {
       socket?.disconnect()
       socket = null
+      disconnect()
     },
 
-    send(data: string): void {
-      socket?.send?.(data)
-    }
-  }
-}
-
-function setupBrowser(
-  uri: string,
-  callbacks?: InnerSocketCallbacks
-): InnerSocket {
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  if (!window?.WebSocket)
-    throw Error('Native browser WebSocket does not exists')
-
-  const socket = new window.WebSocket(uri)
-  socket.onopen = () => {
-    callbacks?.onOpen?.()
-  }
-  socket.onmessage = (message: MessageEvent) => {
-    callbacks?.onMessage?.(message.data.toString())
-  }
-  socket.onerror = () => {
-    callbacks?.onError?.()
-  }
-
-  return {
-    get readyState(): ReadyState {
-      switch (socket?.readyState) {
-        case WebSocket.CONNECTING:
-          return ReadyState.CONNECTING
-        case WebSocket.OPEN:
-          return ReadyState.OPEN
-        case WebSocket.CLOSING:
-          return ReadyState.CLOSING
-        case WebSocket.CLOSED:
-        default:
-          return ReadyState.CLOSED
-      }
+    isConnected(): boolean {
+      return socket?.readyState === ReadyState.OPEN
     },
 
-    disconnect() {
-      if (
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        !socket ||
-        socket.readyState === WebSocket.CLOSING ||
-        socket.readyState === WebSocket.CLOSED
-      )
-        return
-
-      socket.close()
+    submitTask(task: WsTask): void {
+      submitTask(task)
     },
 
-    send(data: string) {
-      socket?.send(data)
-    }
-  }
-}
-
-function setupWS(uri: string, callbacks?: InnerSocketCallbacks): InnerSocket {
-  const ws = new WS(uri)
-
-  ws.on('open', () => {
-    callbacks?.onOpen?.()
-  })
-
-  ws.on('message', (data: WS.Data) => {
-    // eslint-disable-next-line @typescript-eslint/no-base-to-string
-    callbacks?.onMessage?.(data.toString())
-  })
-
-  ws.on('error', error => {
-    callbacks?.onError?.(error)
-  })
-
-  return {
-    get readyState(): ReadyState {
-      switch (ws.readyState) {
-        case WS.CONNECTING:
-          return ReadyState.CONNECTING
-        case WS.OPEN:
-          return ReadyState.OPEN
-        case WS.CLOSING:
-          return ReadyState.CLOSING
-        case WS.CLOSED:
-        default:
-          return ReadyState.CLOSED
-      }
-    },
-
-    disconnect(): void {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!ws || ws.readyState === WS.CLOSING || ws.readyState === WS.CLOSED)
-        return
-
-      ws.removeAllListeners()
-      ws.terminate()
-    },
-
-    send(data: string): void {
-      ws.send(data)
+    subscribe(subscription: WsSubscription): void {
+      subscribe(subscription)
     }
   }
 }

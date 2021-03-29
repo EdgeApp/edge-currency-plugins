@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import * as chai from 'chai'
+import { makeFakeIo } from 'edge-core-js'
 import { EventEmitter } from 'events'
 import WS from 'ws'
 
 import {
   BlockBook,
-  BlockHeightEmitter,
+  INewTransactionResponse,
   makeBlockBook
 } from '../../../../src/common/utxobased/network/BlockBook'
 
@@ -46,8 +47,13 @@ describe('BlockBook notifications tests with dummy server', function () {
     websocketServer.on('error', error => {
       console.log(error)
     })
-    const emitter: BlockHeightEmitter = new EventEmitter() as any
-    blockBook = makeBlockBook({ emitter, wsAddress: 'ws://localhost:8080' })
+    const emitter = new EventEmitter() as any
+    const io = makeFakeIo()
+    blockBook = makeBlockBook({
+      emitter,
+      log: io.console,
+      wsAddress: 'ws://localhost:8080'
+    })
     await blockBook.connect()
     blockBook.isConnected.should.be.true
   })
@@ -61,27 +67,43 @@ describe('BlockBook notifications tests with dummy server', function () {
   it('Test BlockBook watch address and watch block events', async () => {
     let test = false
     test.should.be.false
-    const cb = (): void => {
+    const blockCB = (): void => {
       test = true
     }
-    blockBook.watchBlocks(cb)
+    blockBook.watchBlocks(blockCB)
     websocketClient.send(
-      '{"id":"WATCH_NEW_BLOCK_EVENT_ID","data":{"height":1916453,"hash":"0000000000000e0444fa7c1540a96e5658898a59733311d08f01292e114e8d5b"}}'
+      '{"id":"subscribeNewBlock","data":{"height":1916453,"hash":"0000000000000e0444fa7c1540a96e5658898a59733311d08f01292e114e8d5b"}}'
     )
     await new Promise(resolve => setTimeout(resolve, 100))
     test.should.be.true
 
-    const cbA = async (): Promise<void> => {
-      await cb()
-    }
     test = false
+    websocketClient.send(
+      '{"id":"subscribeNewBlock","data":{"height":1916453,"hash":"0000000000000e0444fa7c1540a96e5658898a59733311d08f01292e114e8d5b"}}'
+    )
+    await new Promise(resolve => setTimeout(resolve, 100))
+    test.should.be.true
+    test = false
+
+    const addressCB = async (
+      response: INewTransactionResponse
+    ): Promise<void> => {
+      response.tx.blockHeight.should.be.equal(0)
+      test = true
+    }
     test.should.be.false
     blockBook.watchAddresses(
       ['tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld'],
-      cbA
+      addressCB
     )
     websocketClient.send(
-      '{"id":"WATCH_ADDRESS_TX_EVENT_ID","data":{"address":"tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld","tx":{"txid":"cfd4c31709bd48026c6c1027c47cef305c47947d73248129fee3f4b63ca1af43","version":1,"vin":[{"txid":"e0965d6df36a4ba811fb29819beeae0203fe68e48143344908146a58c5333996","vout":1,"sequence":4294967295,"n":0,"addresses":["tb1qrps90para9l48lydp2xga0p5yyckuj5l7vsu6t"],"isAddress":true,"value":"81581580"}],"vout":[{"value":"100000","n":0,"hex":"00143f3058aa25caf36c11d757debf76df3388ebf5cf","addresses":["tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld"],"isAddress":true},{"value":"81463900","n":1,"hex":"0014be4df3d4535bd56f4d35dc1ffdb58408b084ebaa","addresses":["tb1qhexl84znt02k7nf4ms0lmdvypzcgf6a2c9zduk"],"isAddress":true}],"blockHeight":0,"confirmations":0,"blockTime":1612198107,"value":"81563900","valueIn":"81581580","fees":"17680","hex":"01000000000101963933c5586a140849344381e468fe0302aeee9b8129fb11a84b6af36d5d96e00100000000ffffffff02a0860100000000001600143f3058aa25caf36c11d757debf76df3388ebf5cf5c0adb0400000000160014be4df3d4535bd56f4d35dc1ffdb58408b084ebaa0247304402201e7f25a03517d932b2df5d099da597132047f5b7bb5cff43252ba0113fc161d2022003b80682bf7f32e685b21a6f28abc494dcc73c34bc62233f918b54afbbaca36c0121029eea7dac242382a543f6288023ac5a62064bea27349d25fc93180b14d5dd117400000000"}}}'
+      '{"id":"subscribeAddresses","data":{"address":"tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld","tx":{"txid":"cfd4c31709bd48026c6c1027c47cef305c47947d73248129fee3f4b63ca1af43","version":1,"vin":[{"txid":"e0965d6df36a4ba811fb29819beeae0203fe68e48143344908146a58c5333996","vout":1,"sequence":4294967295,"n":0,"addresses":["tb1qrps90para9l48lydp2xga0p5yyckuj5l7vsu6t"],"isAddress":true,"value":"81581580"}],"vout":[{"value":"100000","n":0,"hex":"00143f3058aa25caf36c11d757debf76df3388ebf5cf","addresses":["tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld"],"isAddress":true},{"value":"81463900","n":1,"hex":"0014be4df3d4535bd56f4d35dc1ffdb58408b084ebaa","addresses":["tb1qhexl84znt02k7nf4ms0lmdvypzcgf6a2c9zduk"],"isAddress":true}],"blockHeight":0,"confirmations":0,"blockTime":1612198107,"value":"81563900","valueIn":"81581580","fees":"17680","hex":"01000000000101963933c5586a140849344381e468fe0302aeee9b8129fb11a84b6af36d5d96e00100000000ffffffff02a0860100000000001600143f3058aa25caf36c11d757debf76df3388ebf5cf5c0adb0400000000160014be4df3d4535bd56f4d35dc1ffdb58408b084ebaa0247304402201e7f25a03517d932b2df5d099da597132047f5b7bb5cff43252ba0113fc161d2022003b80682bf7f32e685b21a6f28abc494dcc73c34bc62233f918b54afbbaca36c0121029eea7dac242382a543f6288023ac5a62064bea27349d25fc93180b14d5dd117400000000"}}}'
+    )
+    await new Promise(resolve => setTimeout(resolve, 100))
+    test.should.be.true
+    test = false
+    websocketClient.send(
+      '{"id":"subscribeAddresses","data":{"address":"tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld","tx":{"txid":"cfd4c31709bd48026c6c1027c47cef305c47947d73248129fee3f4b63ca1af43","version":1,"vin":[{"txid":"e0965d6df36a4ba811fb29819beeae0203fe68e48143344908146a58c5333996","vout":1,"sequence":4294967295,"n":0,"addresses":["tb1qrps90para9l48lydp2xga0p5yyckuj5l7vsu6t"],"isAddress":true,"value":"81581580"}],"vout":[{"value":"100000","n":0,"hex":"00143f3058aa25caf36c11d757debf76df3388ebf5cf","addresses":["tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld"],"isAddress":true},{"value":"81463900","n":1,"hex":"0014be4df3d4535bd56f4d35dc1ffdb58408b084ebaa","addresses":["tb1qhexl84znt02k7nf4ms0lmdvypzcgf6a2c9zduk"],"isAddress":true}],"blockHeight":0,"confirmations":0,"blockTime":1612198107,"value":"81563900","valueIn":"81581580","fees":"17680","hex":"01000000000101963933c5586a140849344381e468fe0302aeee9b8129fb11a84b6af36d5d96e00100000000ffffffff02a0860100000000001600143f3058aa25caf36c11d757debf76df3388ebf5cf5c0adb0400000000160014be4df3d4535bd56f4d35dc1ffdb58408b084ebaa0247304402201e7f25a03517d932b2df5d099da597132047f5b7bb5cff43252ba0113fc161d2022003b80682bf7f32e685b21a6f28abc494dcc73c34bc62233f918b54afbbaca36c0121029eea7dac242382a543f6288023ac5a62064bea27349d25fc93180b14d5dd117400000000"}}}'
     )
     await new Promise(resolve => setTimeout(resolve, 100))
     test.should.be.true
@@ -92,11 +114,12 @@ describe('BlockBook', function () {
   this.timeout(10000)
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
-  const emitter: BlockHeightEmitter = new EventEmitter() as any
+  const emitter = new EventEmitter() as any
+  const io = makeFakeIo()
   let blockBook: BlockBook
 
   beforeEach(async () => {
-    blockBook = makeBlockBook({ emitter })
+    blockBook = makeBlockBook({ emitter, log: io.console })
     await blockBook.connect()
   })
 
@@ -120,6 +143,7 @@ describe('BlockBook', function () {
 
   describe('fetchInfo', function () {
     it('should fetch the BlockBook server info', async function () {
+      blockBook.isConnected.should.be.true
       const info = await blockBook.fetchInfo()
       info.should.have.keys(
         'name',
