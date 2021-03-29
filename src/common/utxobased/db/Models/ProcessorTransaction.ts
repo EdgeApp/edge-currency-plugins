@@ -28,30 +28,36 @@ interface ToEdgeTransactionArgs {
 
 export const toEdgeTransaction = async (
   args: ToEdgeTransactionArgs
-): Promise<EdgeTransaction> => ({
-  currencyCode: args.currencyCode,
-  txid: args.tx.txid,
-  blockHeight: args.tx.blockHeight,
-  date: args.tx.date,
-  nativeAmount: args.tx.ourAmount,
-  networkFee: args.tx.fees,
-  signedTx: args.tx.hex,
-  ourReceiveAddresses: await Promise.all(
-    args.tx.ourOuts.map(
-      async (i: string) =>
-        args.walletTools.scriptPubkeyToAddress({
-          scriptPubkey: args.tx.outputs[parseInt(i)].scriptPubkey,
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          format: (await args.processor.fetchAddressByScriptPubkey(
-            args.tx.outputs[parseInt(i)].scriptPubkey
-          ))!.path!.format
-        }).address
-    )
-  ),
-  otherParams: {
-    inputs: args.tx.inputs,
-    outputs: args.tx.outputs,
-    ourIns: args.tx.ourIns,
-    ourOuts: args.tx.ourOuts
+): Promise<EdgeTransaction> => {
+  const { tx, processor, walletTools } = args
+
+  const ourReceiveAddresses: string[] = []
+  for (const out of tx.ourOuts) {
+    const { scriptPubkey } = tx.outputs[parseInt(out)]
+    const address = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+    if (address?.path != null) {
+      const { address: addrStr } = walletTools.scriptPubkeyToAddress({
+        scriptPubkey,
+        format: address.path.format
+      })
+      ourReceiveAddresses.push(addrStr)
+    }
   }
-})
+
+  return {
+    currencyCode: args.currencyCode,
+    txid: args.tx.txid,
+    blockHeight: args.tx.blockHeight,
+    date: args.tx.date,
+    nativeAmount: args.tx.ourAmount,
+    networkFee: args.tx.fees,
+    signedTx: args.tx.hex,
+    ourReceiveAddresses,
+    otherParams: {
+      inputs: args.tx.inputs,
+      outputs: args.tx.outputs,
+      ourIns: args.tx.ourIns,
+      ourOuts: args.tx.ourOuts
+    }
+  }
+}
