@@ -50,7 +50,6 @@ export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
 
 export type CustomFeeSetting = 'satPerByte'
 
-
 export interface FeeRates {
   lowFee: string
   standardFeeLow: string

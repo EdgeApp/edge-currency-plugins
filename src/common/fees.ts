@@ -18,7 +18,7 @@ import { EngineCurrencyInfo, FeeRates, SimpleFeeSettings } from './plugin/types'
 
 type NetworkFeeOption = EdgeSpendInfo['networkFeeOption']
 
-const FEES_PATH = 'fees.json'
+export const FEES_PATH = 'fees.json'
 
 interface MakeFeesConfig extends Common {
   disklet: Disklet
@@ -34,6 +34,7 @@ export interface Fees {
   start: () => Promise<void>
   stop: () => void
   getRate: (edgeSpendInfo: EdgeSpendInfo) => Promise<string>
+  fees: SimpleFeeSettings
 }
 
 export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
@@ -41,10 +42,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
 
   const memlet = makeMemlet(config.disklet)
 
-  let fees: SimpleFeeSettings = {
-    ...currencyInfo.simpleFeeSettings,
-    ...(await fetchCachedFees(memlet))
-  }
+  let fees: SimpleFeeSettings = await fetchCachedFees(memlet, currencyInfo)
 
   // The last time the fees were updated
   let timestamp = 0
@@ -110,12 +108,22 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
         customNetworkFee[currencyInfo.customFeeSettings[0]]
       )
       return bs.mul(rate, BYTES_TO_KB)
+    },
+
+    get fees() {
+      return fees
     }
   }
 }
 
-const fetchCachedFees = async (memlet: Memlet): Promise<SimpleFeeSettings> =>
-  await memlet.getJson(FEES_PATH).catch(() => ({})) // Return empty object on error
+const fetchCachedFees = async (
+  memlet: Memlet,
+  currencyInfo: EngineCurrencyInfo
+): Promise<SimpleFeeSettings> =>
+  await memlet
+    .getJson(FEES_PATH)
+    // Return the simple fees settings from currency info by default
+    .catch(() => currencyInfo.simpleFeeSettings)
 
 const cacheFees = async (
   memlet: Memlet,
