@@ -1,11 +1,10 @@
 import * as bs from 'biggystring'
 import { EdgeFreshAddress, EdgeWalletInfo } from 'edge-core-js'
 
+import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
   AddressPath,
   CurrencyFormat,
-  Emitter,
-  EmitterEvent,
   EngineConfig,
   EngineCurrencyInfo,
   LocalWalletMetadata,
@@ -23,7 +22,6 @@ import {
   getCurrencyFormatFromPurposeType,
   getFormatSupportedBranches,
   getPurposeTypeFromKeys,
-  getWalletFormat,
   getWalletSupportedFormats,
   validScriptPubkeyFromAddress
 } from './utils'
@@ -63,7 +61,7 @@ export function makeUtxoEngineState(
 
   let processedCount = 0
   let processedPercent = 0
-  const onAddressChecked = async () => {
+  const onAddressChecked = async (): Promise<void> => {
     processedCount = processedCount + 1
     const totalCount = await getTotalAddressCount({
       walletInfo,
@@ -73,7 +71,7 @@ export function makeUtxoEngineState(
     const percent = processedCount / totalCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       processedPercent = percent
-      emitter.emit(EmitterEvent.ADDRESSES_CHECKED, percent)
+      emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
     }
   }
 
@@ -93,7 +91,7 @@ export function makeUtxoEngineState(
     mutexor
   }
 
-  const run = async () => {
+  const run = async (): Promise<void> => {
     const formatsToProcess = getWalletSupportedFormats(walletInfo)
     for (const format of formatsToProcess) {
       const args: FormatArgs = {
@@ -183,7 +181,7 @@ interface CommonArgs {
   walletTools: UTXOPluginWalletTools
   processor: Processor
   blockBook: BlockBook
-  emitter: Emitter
+  emitter: EngineEmitter
   addressesToWatch: Set<string>
   onAddressChecked: () => void
   metadata: LocalWalletMetadata
@@ -218,7 +216,7 @@ interface FormatArgs extends CommonArgs {
 
 interface SetLookAheadArgs extends FormatArgs {}
 
-const setLookAhead = async (args: SetLookAheadArgs) => {
+const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
   const { format, currencyInfo, walletTools, processor, mutexor } = args
 
   await mutexor(`setLookAhead-${format}`).runExclusive(async () => {
@@ -229,9 +227,9 @@ const setLookAhead = async (args: SetLookAheadArgs) => {
         changeIndex: branch
       }
 
-      const getLastUsed = async () =>
+      const getLastUsed = async (): Promise<number> =>
         await findLastUsedIndex({ ...args, ...partialPath })
-      const getAddressCount = () =>
+      const getAddressCount = (): number =>
         processor.getNumAddressesFromPathPartition(partialPath)
 
       while (
@@ -267,7 +265,7 @@ interface SaveAddressArgs {
 const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
   const { scriptPubkey, path, used = false, processor } = args
 
-  const saveNewAddress = async () =>
+  const saveNewAddress = async (): Promise<void> =>
     await processor.saveAddress({
       scriptPubkey,
       path,
@@ -279,13 +277,13 @@ const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
     })
 
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  if (!addressData) {
+  if (addressData == null) {
     await saveNewAddress()
   } else if (!addressData.used && used) {
     await processor.updateAddressByScriptPubkey(scriptPubkey, {
       used
     })
-  } else if (!addressData.path && path) {
+  } else if (addressData.path == null && path != null) {
     try {
       await processor.updateAddressByScriptPubkey(scriptPubkey, {
         ...addressData,
@@ -360,23 +358,29 @@ const findLastUsedIndex = async (
 ): Promise<number> => {
   const { format, changeIndex, currencyInfo, processor } = args
 
-  const path: AddressPath = {
+  const addressCount = await processor.getNumAddressesFromPathPartition({
     format,
-    changeIndex,
-    addressIndex: 0 // tmp
-  }
-  const addressCount = await processor.getNumAddressesFromPathPartition(path)
-  // Get the assumed last used index
-  path.addressIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
+    changeIndex
+  })
+  // Start 1 index behind the assumed last used index
+  let lastUsedIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
 
-  for (let i = path.addressIndex; i < addressCount; i++) {
-    const addressData = await fetchAddressDataByPath({ ...args, path })
-    if (addressData.used) {
-      path.addressIndex = i
+  for (let i = lastUsedIndex; i < addressCount; i++) {
+    const { used } = await fetchAddressDataByPath({
+      ...args,
+      path: {
+        format,
+        changeIndex,
+        addressIndex: i
+      }
+    })
+
+    if (used) {
+      lastUsedIndex = i
     }
   }
 
-  return path.addressIndex
+  return lastUsedIndex
 }
 
 interface FetchAddressDataByPath extends CommonArgs {
@@ -393,7 +397,7 @@ const fetchAddressDataByPath = async (
     walletTools.getScriptPubkey(path).scriptPubkey
 
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  if (!addressData) throw new Error('Address data unknown')
+  if (addressData == null) throw new Error('Address data unknown')
   return addressData
 }
 
@@ -419,6 +423,7 @@ const internalGetFreshAddress = async (
   let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
   scriptPubkey =
     scriptPubkey ?? (await walletTools.getScriptPubkey(path)).scriptPubkey
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (!scriptPubkey) {
     throw new Error('Unknown address path')
   }
@@ -428,58 +433,23 @@ const internalGetFreshAddress = async (
   })
 }
 
-interface ProcessFormatAddressesArgs extends FormatArgs {}
-
-const processFormatAddresses = async (args: ProcessFormatAddressesArgs) => {
-  const branches = getFormatSupportedBranches(args.format)
-  for (const branch of branches) {
-    await processPathAddresses({ ...args, changeIndex: branch })
-  }
-}
-
-interface ProcessPathAddressesArgs extends ProcessFormatAddressesArgs {
-  changeIndex: number
-}
-
-const processPathAddresses = async (args: ProcessPathAddressesArgs) => {
-  const { walletTools, processor, format, changeIndex } = args
-
-  const addressCount = await processor.getNumAddressesFromPathPartition({
-    format,
-    changeIndex
-  })
-  for (let i = 0; i < addressCount; i++) {
-    const path: AddressPath = {
-      format,
-      changeIndex,
-      addressIndex: i
-    }
-    let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
-    scriptPubkey =
-      scriptPubkey ?? walletTools.getScriptPubkey(path).scriptPubkey
-    const { address } = walletTools.scriptPubkeyToAddress({
-      scriptPubkey,
-      format
-    })
-
-    await processAddress({ ...args, address })
-  }
-}
-
 interface ProcessAddressArgs extends FormatArgs {
   address: string
 }
 
-const processAddress = async (args: ProcessAddressArgs) => {
+const processAddress = async (args: ProcessAddressArgs): Promise<void> => {
   const { address, blockBook, addressesToWatch, onAddressChecked } = args
 
   const firstProcess = !addressesToWatch.has(address)
   if (firstProcess) {
     addressesToWatch.add(address)
-    blockBook.watchAddresses(Array.from(addressesToWatch), async response => {
-      await setLookAhead(args)
-      await processAddress({ ...args, address: response.address })
-    })
+    blockBook.watchAddresses(
+      Array.from(addressesToWatch),
+      async (response): Promise<void> => {
+        await setLookAhead(args)
+        await processAddress({ ...args, address: response.address })
+      }
+    )
   }
 
   await Promise.all([
@@ -518,6 +488,7 @@ const processAddressTransactions = async (
 
   // If address is used and previously not marked as used, mark as used.
   const used = txs > 0 || unconfirmedTxs > 0
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (used && !addressData?.used && page === 1) {
     await processor.updateAddressByScriptPubkey(scriptPubkey, {
       used
@@ -526,6 +497,7 @@ const processAddressTransactions = async (
 
   for (const rawTx of transactions) {
     const tx = processRawTx({ ...args, tx: rawTx })
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     processor.saveTransaction(tx)
   }
 
@@ -587,7 +559,7 @@ const fetchTransaction = async (
 ): Promise<IProcessorTransaction> => {
   const { txid, processor, blockBook } = args
   let tx = await processor.fetchTransaction(txid)
-  if (!tx) {
+  if (tx == null) {
     const rawTx = await blockBook.fetchTransaction(txid)
     tx = processRawTx({ ...args, tx: rawTx })
   }
@@ -614,7 +586,7 @@ const processAddressUtxos = async (
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  if (!addressData?.path) {
+  if (addressData?.path == null) {
     return
   }
 
@@ -635,7 +607,8 @@ const processAddressUtxos = async (
 
     // Any UTXOs listed in the oldUtxoMap after the for loop will be deleted from the database.
     // If we do not already know about this UTXO, lets process it and add it to the database.
-    if (oldUtxoMap[id]) {
+    if (oldUtxoMap[id] != null) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete oldUtxoMap[id]
       continue
     }
@@ -685,7 +658,7 @@ const processAddressUtxos = async (
   if (diff !== '0') {
     const newWalletBalance = bs.add(metadata.balance, diff)
     emitter.emit(
-      EmitterEvent.BALANCE_CHANGED,
+      EngineEvent.BALANCE_CHANGED,
       currencyInfo.currencyCode,
       newWalletBalance
     )

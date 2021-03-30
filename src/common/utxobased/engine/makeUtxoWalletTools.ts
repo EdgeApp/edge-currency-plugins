@@ -1,23 +1,26 @@
 import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 import {
   addressToScriptPubkey,
+  privateKeyToPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
+  wifToPrivateKey,
   xprivToPrivateKey,
-  xprivToXPub,
   xpubToPubkey
 } from '../keymanager/keymanager'
 import {
   currencyFormatToPurposeType,
   getAddressTypeFromPurposeType,
   getScriptTypeFromPurposeType,
-  getXpriv
+  getXpriv,
+  getXpubs
 } from './utils'
 
 export interface UtxoKeyFormat {
   [mnemonicKey: string]: any // ${coinName}Key = mnemonic or seed string
   format?: CurrencyFormat
   coinType?: number
+  wifKeys?: string[]
 }
 
 export interface WalletToolsConfig {
@@ -66,21 +69,32 @@ export function makeUtxoWalletTools(
   const { coin, network } = config
 
   const xprivKeys = getXpriv(config)
-  // Convert xprivs to xpubs
-  const xpubKeys = Object.assign({}, xprivKeys)
-  for (const key in xpubKeys) {
-    const format = <CurrencyFormat>key
-    xpubKeys[format] = xprivToXPub({
-      xpriv: xpubKeys[format]!,
-      type: currencyFormatToPurposeType(format),
-      coin,
-      network
-    })
+  const xpubKeys = getXpubs(config)
+
+  let wifKeys: string[]
+  if (config.keys.wifKeys != null) {
+    wifKeys = config.keys.wifKeys
+  }
+
+  const getPrivateKeyAtIndex = (args: AddressPath): string => {
+    if (args.changeIndex === 0 && wifKeys[args.addressIndex] != null) {
+      return wifToPrivateKey({
+        wifKey: wifKeys[args.addressIndex],
+        network,
+        coin
+      })
+    } else {
+      throw new Error('no wif key at index')
+    }
   }
 
   const fns: UTXOPluginWalletTools = {
     getPubkey(args: AddressPath): string {
+      if (wifKeys != null) {
+        return privateKeyToPubkey(getPrivateKeyAtIndex(args))
+      }
       return xpubToPubkey({
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         xpub: xpubKeys[args.format]!,
         network,
         coin,
@@ -127,7 +141,12 @@ export function makeUtxoWalletTools(
     },
 
     getPrivateKey(args: AddressPath) {
+      // returning for any change index will result in duplicates
+      if (wifKeys != null) {
+        return getPrivateKeyAtIndex(args)
+      }
       return xprivToPrivateKey({
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         xpriv: xprivKeys[args.format]!,
         network,
         type: currencyFormatToPurposeType(args.format),

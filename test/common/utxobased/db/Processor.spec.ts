@@ -2,20 +2,12 @@ import * as chai from 'chai'
 import { expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { makeMemoryDisklet } from 'disklet'
-import { EventEmitter } from 'events'
 
-import {
-  CurrencyFormat,
-  NetworkEnum
-} from '../../../../src/common/plugin/types'
+import { EngineEmitter } from '../../../../src/common/plugin/makeEngineEmitter'
 import {
   makeProcessor,
   Processor
 } from '../../../../src/common/utxobased/db/makeProcessor'
-import {
-  BitcoinWalletToolsConfig,
-  makeUtxoWalletTools
-} from '../../../../src/common/utxobased/engine/makeUtxoWalletTools'
 
 chai.should()
 chai.use(chaiAsPromised)
@@ -23,21 +15,8 @@ chai.use(chaiAsPromised)
 describe('Processor', function () {
   const storage = {}
   const disklet = makeMemoryDisklet(storage)
-  const emitter = new EventEmitter() as any
+  const emitter = new EngineEmitter()
   let processor: Processor
-
-  const format: CurrencyFormat = 'bip44'
-  const walletToolsConfig: BitcoinWalletToolsConfig = {
-    keys: {
-      bitcoinKey:
-        'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb',
-      format,
-      coinType: 0
-    },
-    coin: 'bitcoin',
-    network: NetworkEnum.Mainnet
-  }
-  const walletTools = makeUtxoWalletTools(walletToolsConfig)
 
   beforeEach(async () => {
     processor = await makeProcessor({ disklet, emitter })
@@ -50,15 +29,19 @@ describe('Processor', function () {
     await processor.insertTxIdByBlockHeight(0, 'this')
     await processor.insertTxIdByBlockHeight(0, 'that')
     await processor.insertTxIdByBlockHeight(1, 'whatever')
+
     let zeroConf = await processor.fetchTxIdsByBlockHeight(0)
+    zeroConf.should.include.members(['that', 'this'])
+
     const oneConf = await processor.fetchTxIdsByBlockHeight(1)
+    oneConf[0].should.equal('whatever')
+
     const allConf = await processor.fetchTxIdsByBlockHeight(0, 1)
-    expect(zeroConf).to.eql(['that', 'this'])
-    expect(oneConf[0]).to.eql('whatever')
-    expect(allConf).to.eql(['that', 'this', 'whatever'])
+    allConf.should.include.members(['that', 'this', 'whatever'])
+
     await processor.removeTxIdByBlockHeight(0, 'this')
     zeroConf = await processor.fetchTxIdsByBlockHeight(0)
-    expect(zeroConf).to.eql(['that'])
+    zeroConf.should.include.members(['that'])
   })
 
   it('test reset', async () => {

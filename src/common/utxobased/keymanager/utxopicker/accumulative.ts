@@ -1,5 +1,3 @@
-import * as bitcoin from 'altcoin-js'
-
 import { Output, Result, Target, UTXO } from './types'
 import * as utils from './utils'
 // add inputs until we reach or surpass the target value (or deplete)

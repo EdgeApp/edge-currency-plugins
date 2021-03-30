@@ -71,6 +71,7 @@ const convertBits = (
   for (let i = 0; i < data.length; i++) {
     const value = data[i]
     if (value < 0 || value >> from !== 0) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`InvalidArgument in function convertBits: ${value}`)
     }
 

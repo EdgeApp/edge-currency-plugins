@@ -90,8 +90,10 @@ export const getXpriv = (args: {
   coin: string
 }): CurrencyFormatKeys => args.keys[getXprivKey(args)]
 
-export const getXpub = (args: { keys: UtxoKeyFormat; coin: string }): string =>
-  args.keys[getXpubKey(args)]
+export const getXpubs = (args: {
+  keys: UtxoKeyFormat
+  coin: string
+}): CurrencyFormatKeys => args.keys[getXpubKey(args)]
 
 export const getWalletCoinType = (args: { keys: UtxoKeyFormat }): number =>
   args.keys.coinType ?? 0
@@ -134,7 +136,7 @@ export const currencyFormatToPurposeType = (
 ): BIP43PurposeTypeEnum =>
   bip43PurposeNumberToTypeEnum(parseInt(format.replace('bip', '')))
 
-type CurrencyFormatKeys = {
+export type CurrencyFormatKeys = {
   [format in CurrencyFormat]?: string
 }
 
@@ -144,7 +146,7 @@ export const fetchOrDeriveXprivFromKeys = async (args: {
   coin: string
   network: NetworkEnum
 }): Promise<CurrencyFormatKeys> => {
-  const filename = 'privateKeys.json'
+  const filename = 'walletKeys.json'
   let keys: CurrencyFormatKeys
   try {
     const data = await args.walletLocalEncryptedDisklet.getText(filename)
@@ -197,28 +199,34 @@ export const deriveXprivFromKeys = (args: {
   return keys
 }
 
-export const deriveXpubFromKeys = (args: {
+export const deriveXpubsFromKeys = (args: {
   keys: UtxoKeyFormat
   coin: string
   network: NetworkEnum
-}): string =>
-  deriveXpub({
-    ...args,
-    type: getPurposeTypeFromKeys(args)
-  })
+}): CurrencyFormatKeys => {
+  const xpubs: CurrencyFormatKeys = {}
+  for (const format of getWalletSupportedFormats(args)) {
+    xpubs[format] = deriveXpub({
+      ...args,
+      type: currencyFormatToPurposeType(format)
+    })
+  }
+  return xpubs
+}
 
 export const deriveXpub = (args: {
   keys: UtxoKeyFormat
   type: BIP43PurposeTypeEnum
   coin: string
   network: NetworkEnum
-}): string =>
-  xprivToXPub({
-    ...args,
-    xpriv: deriveXprivFromKeys(args)[
-      getCurrencyFormatFromPurposeType(args.type)
-    ]!
-  })
+}): string => {
+  const xpriv = deriveXprivFromKeys(args)[
+    getCurrencyFormatFromPurposeType(args.type)
+  ]
+  if (xpriv == null)
+    throw new Error('Cannot derive xpub: no private key exists')
+  return xprivToXPub({ ...args, xpriv })
+}
 
 export const parsePathname = (args: {
   pathname: string

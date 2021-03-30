@@ -14,6 +14,7 @@ import * as uri from 'uri-js'
 import urlParse from 'url-parse'
 
 import * as utxoUtils from '../utxobased/engine/utils'
+import { CurrencyFormatKeys } from '../utxobased/engine/utils'
 import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
 import * as pluginUtils from './utils'
 
@@ -51,12 +52,12 @@ export function makeCurrencyTools(
 
     async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
       let key = 'publicKey'
-      let publicKey: string
+      let publicKey: CurrencyFormatKeys
       switch (currencyInfo.currencyType) {
         case EngineCurrencyType.UTXO:
           key = utxoUtils.getXpubKey({ coin: currencyInfo.network })
           // TODO: which xpub should be saved? the root path (m) or hardened path with the wallet format path (m/{purpose}'/{coinType}'/{account}')?
-          publicKey = utxoUtils.deriveXpubFromKeys({
+          publicKey = utxoUtils.deriveXpubsFromKeys({
             keys: walletInfo.keys,
             coin: currencyInfo.network,
             network: NetworkEnum.Mainnet
@@ -72,7 +73,7 @@ export function makeCurrencyTools(
 
       // If the currency URI belongs to the wrong network then error
       if (
-        protocol &&
+        protocol !== '' &&
         protocol !== currencyInfo.pluginId &&
         protocol !== currencyInfo.uriPrefix &&
         protocol !== 'pay'
@@ -83,18 +84,19 @@ export function makeCurrencyTools(
       // Get all possible query params
       const { pathname, query } = uriObj
       // If we don't have a pathname or a paymentProtocolURL uri then we bail
-      if (!pathname && !query.r) throw new Error('InvalidUriError')
+      if (pathname === '' && query.r == null) throw new Error('InvalidUriError')
 
       // Create the returned object
       const parsedUri: EdgeParsedUri = {}
       // Parse the pathname and add it to the result object
-      if (pathname) {
+      if (pathname !== '') {
         if (currencyInfo.currencyType === EngineCurrencyType.UTXO) {
           const parsedPath = utxoUtils.parsePathname({
             pathname: uriObj.pathname,
             coin: currencyInfo.network,
             network: NetworkEnum.Mainnet
           })
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!parsedPath) throw new Error('InvalidUriError')
 
           Object.assign(parsedUri, parsedPath)
@@ -103,17 +105,17 @@ export function makeCurrencyTools(
 
       // Assign the query params to the parsedUri object
       const metadata: EdgeMetadata = {}
-      if (query.label) metadata.name = query.label
-      if (query.message) metadata.notes = query.message
-      if (query.category) metadata.category = query.category
-      if (query.r) parsedUri.paymentProtocolUrl = query.r
+      if (query.label != null) metadata.name = query.label
+      if (query.message != null) metadata.notes = query.message
+      if (query.category != null) metadata.category = query.category
+      if (query.r != null) parsedUri.paymentProtocolUrl = query.r
       Object.assign(parsedUri, { metadata })
 
       // Get amount in native denomination if exists
       const denomination = currencyInfo.denominations.find(
         ({ name }) => name === currencyInfo.currencyCode
       )
-      if (denomination && query.amount) {
+      if (denomination != null && query.amount != null) {
         const { multiplier = '1' } = denomination
         const t = bn.mul(query.amount, multiplier.toString())
         parsedUri.currencyCode = currencyInfo.currencyCode
@@ -127,7 +129,7 @@ export function makeCurrencyTools(
       customTokens?: EdgeMetaToken[]
     ): Promise<string> {
       const { publicAddress } = obj
-      if (!publicAddress) {
+      if (publicAddress === '') {
         throw new Error('InvalidPublicAddressError')
       }
 
@@ -135,12 +137,12 @@ export function makeCurrencyTools(
 
       const query: string[] = []
 
-      if (obj.nativeAmount) {
+      if (obj.nativeAmount != null) {
         const currencyCode = obj.currencyCode ?? currencyInfo.currencyCode
         const denomination = currencyInfo.denominations.find(
           ({ name }) => name === currencyCode
         )
-        if (!denomination) {
+        if (denomination == null) {
           throw new Error('InvalidDenominationError')
         }
 
@@ -148,11 +150,11 @@ export function makeCurrencyTools(
         query.push(`amount=${amount}`)
       }
 
-      if (obj.label) {
+      if (obj.label != null) {
         query.push(`label=${obj.label}`)
       }
 
-      if (obj.message) {
+      if (obj.message != null) {
         query.push(`message=${obj.message}`)
       }
 

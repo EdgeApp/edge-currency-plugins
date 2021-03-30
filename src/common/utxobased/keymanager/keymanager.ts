@@ -204,6 +204,7 @@ export interface MakeTxArgs {
   rbf: boolean
   coin: string
   freshChangeAddress: string
+  subtractFee?: boolean
 }
 
 export interface MakeTxTarget {
@@ -927,13 +928,12 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     coin: coin.name,
     network: args.network
   })
-  const result = utxopicker.accumulative(
-    mappedUtxos,
-    targets,
-    args.feeRate,
-    changeScript
-  )
-  if (!result.inputs || !result.outputs) {
+  const subtractFee = args.subtractFee ?? false
+  const utxopicking = subtractFee
+    ? utxopicker.subtractFee
+    : utxopicker.accumulative
+  const result = utxopicking(mappedUtxos, targets, args.feeRate, changeScript)
+  if (result.inputs == null || result.outputs == null) {
     throw new Error('Make spend failed.')
   }
 

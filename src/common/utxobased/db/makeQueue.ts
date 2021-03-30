@@ -7,7 +7,7 @@ export function makeQueue(): IQueue {
   let running = false
   const queue: QueueFunction[] = []
 
-  async function run() {
+  async function run(): Promise<void> {
     running = true
 
     const fn = queue.shift()
