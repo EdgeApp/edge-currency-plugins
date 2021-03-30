@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import * as chai from 'chai'
 import { makeFakeIo } from 'edge-core-js'
-import { EventEmitter } from 'events'
 import WS from 'ws'
 
+import { EngineEmitter } from '../../../../src/common/plugin/makeEngineEmitter'
 import {
   BlockBook,
   INewTransactionResponse,
@@ -47,7 +47,7 @@ describe('BlockBook notifications tests with dummy server', function () {
     websocketServer.on('error', error => {
       console.log(error)
     })
-    const emitter = new EventEmitter() as any
+    const emitter = new EngineEmitter()
     const io = makeFakeIo()
     blockBook = makeBlockBook({
       emitter,
@@ -114,7 +114,7 @@ describe('BlockBook', function () {
   this.timeout(10000)
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
-  const emitter = new EventEmitter() as any
+  const emitter = new EngineEmitter()
   const io = makeFakeIo()
   let blockBook: BlockBook
 

@@ -11,9 +11,9 @@ import {
   EdgeTransaction,
   JsonObject
 } from 'edge-core-js'
-import { EventEmitter } from 'events'
 
-import { EmitterEvent, EngineConfig, TxOptions } from '../../plugin/types'
+import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import { EngineConfig, TxOptions } from '../../plugin/types'
 import {
   clearMetadata,
   fetchMetadata,
@@ -96,9 +96,9 @@ export async function makeUtxoEngine(
   })
 
   emitter.on(
-    EmitterEvent.PROCESSOR_TRANSACTION_CHANGED,
+    EngineEvent.PROCESSOR_TRANSACTION_CHANGED,
     async (tx: IProcessorTransaction) => {
-      emitter.emit(EmitterEvent.TRANSACTIONS_CHANGED, [
+      emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
         await toEdgeTransaction({
           tx,
           currencyCode: currencyInfo.currencyCode,
@@ -110,7 +110,7 @@ export async function makeUtxoEngine(
   )
 
   emitter.on(
-    EmitterEvent.BALANCE_CHANGED,
+    EngineEvent.BALANCE_CHANGED,
     async (currencyCode: string, nativeBalance: string) => {
       await mutexor('balanceChanged').runExclusive(async () => {
         metadata.balance = nativeBalance
@@ -119,7 +119,7 @@ export async function makeUtxoEngine(
     }
   )
 
-  emitter.on(EmitterEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
+  emitter.on(EngineEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
     metadata.lastSeenBlockHeight = height
     await setMetadata(walletLocalDisklet, metadata)
   })
@@ -129,7 +129,7 @@ export async function makeUtxoEngine(
       await blockBook.connect()
 
       const { bestHeight } = await blockBook.fetchInfo()
-      emitter.emit(EmitterEvent.BLOCK_HEIGHT_CHANGED, bestHeight)
+      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, bestHeight)
 
       await state.start()
     },
@@ -139,7 +139,7 @@ export async function makeUtxoEngine(
       await blockBook.disconnect()
     },
 
-    getBalance(opts: EdgeCurrencyCodeOptions): string {
+    getBalance(_opts: EdgeCurrencyCodeOptions): string {
       return metadata.balance
     },
 
@@ -151,8 +151,9 @@ export async function makeUtxoEngine(
       return await Promise.resolve(undefined)
     },
 
-    async addGapLimitAddresses(addresses: string[]): Promise<void> {
-      await state.addGapLimitAddresses(addresses)
+    addGapLimitAddresses(addresses: string[]): undefined {
+      void state.addGapLimitAddresses(addresses)
+      return
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
@@ -405,7 +406,10 @@ export async function makeUtxoEngine(
           transaction.currencyCode
         )
         Object.assign(transaction.otherParams, {
-          paymentProtocolInfo: { ...paymentProtocolInfo, payment }
+          paymentProtocolInfo: {
+            ...paymentProtocolInfo,
+            payment
+          }
         })
       }
 
@@ -426,16 +430,16 @@ export async function makeUtxoEngine(
       const tmpDisklet = walletLocalDisklet
       const tmpMetadata = await fetchMetadata(tmpDisklet)
 
-      const tmpEmitter = new EventEmitter() as any
+      const tmpEmitter = new EngineEmitter()
       tmpEmitter.on(
-        EmitterEvent.BALANCE_CHANGED,
+        EngineEvent.BALANCE_CHANGED,
         async (currencyCode: string, nativeBalance: string) => {
           metadata.balance = nativeBalance
           await setMetadata(tmpDisklet, tmpMetadata)
         }
       )
       tmpEmitter.on(
-        EmitterEvent.BLOCK_HEIGHT_CHANGED,
+        EngineEvent.BLOCK_HEIGHT_CHANGED,
         async (height: number) => {
           metadata.lastSeenBlockHeight = height
           await setMetadata(tmpDisklet, tmpMetadata)
@@ -453,7 +457,7 @@ export async function makeUtxoEngine(
         network
       })
 
-      tmpEmitter.on(EmitterEvent.ADDRESSES_CHECKED, async (ratio: number) => {
+      tmpEmitter.on(EngineEvent.ADDRESSES_CHECKED, async (ratio: number) => {
         if (ratio === 1) {
           await engineState.stop()
           await blockBook.disconnect()
@@ -468,8 +472,7 @@ export async function makeUtxoEngine(
           spendInfo.spendTargets = [
             { publicAddress: publicAddress.publicAddress, nativeAmount }
           ]
-          // TODO: TheCharlatan - add option to makeSpend declaration in edge-core-js
-          // @ts-expect-error
+          // @ts-expect-error TODO: TheCharlatan - add option to makeSpend declaration in edge-core-js
           this.makeSpend(spendInfo, options)
             .then(tx => success(tx))
             .catch(e => failure(e))
