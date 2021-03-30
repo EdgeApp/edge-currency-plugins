@@ -13,7 +13,8 @@ import * as bs from 'biggystring'
 import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeGetTransactionsOptions } from 'edge-core-js/lib/types'
 
-import { AddressPath, EmitterEvent } from '../../plugin/types'
+import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import { AddressPath } from '../../plugin/types'
 import { makeQueue } from './makeQueue'
 import {
   AddressByScriptPubkey,
@@ -48,16 +49,9 @@ import {
 
 const BASELET_DIR = 'tables'
 
-interface ProcessorEmitter {
-  emit: (
-    event: EmitterEvent.PROCESSOR_TRANSACTION_CHANGED,
-    transaction: IProcessorTransaction
-  ) => this
-}
-
 interface ProcessorConfig {
   disklet: Disklet
-  emitter: ProcessorEmitter
+  emitter: EngineEmitter
 }
 
 export interface Processor {
@@ -509,7 +503,7 @@ export async function makeProcessor(
       tx.ourAmount = data.ourAmount
     }
 
-    emitter.emit(EmitterEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
+    emitter.emit(EngineEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
 
     await baselets.txById.insert('', txId, tx)
   }

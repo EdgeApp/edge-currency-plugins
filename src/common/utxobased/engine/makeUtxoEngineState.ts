@@ -1,11 +1,10 @@
 import * as bs from 'biggystring'
 import { EdgeFreshAddress, EdgeWalletInfo } from 'edge-core-js'
 
+import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
   AddressPath,
   CurrencyFormat,
-  Emitter,
-  EmitterEvent,
   EngineConfig,
   EngineCurrencyInfo,
   LocalWalletMetadata,
@@ -72,7 +71,7 @@ export function makeUtxoEngineState(
     const percent = processedCount / totalCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       processedPercent = percent
-      emitter.emit(EmitterEvent.ADDRESSES_CHECKED, percent)
+      emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
     }
   }
 
@@ -182,7 +181,7 @@ interface CommonArgs {
   walletTools: UTXOPluginWalletTools
   processor: Processor
   blockBook: BlockBook
-  emitter: Emitter
+  emitter: EngineEmitter
   addressesToWatch: Set<string>
   onAddressChecked: () => void
   metadata: LocalWalletMetadata
@@ -653,7 +652,7 @@ const processAddressUtxos = async (
   if (diff !== '0') {
     const newWalletBalance = bs.add(metadata.balance, diff)
     emitter.emit(
-      EmitterEvent.BALANCE_CHANGED,
+      EngineEvent.BALANCE_CHANGED,
       currencyInfo.currencyCode,
       newWalletBalance
     )

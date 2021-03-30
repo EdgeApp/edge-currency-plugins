@@ -5,13 +5,11 @@ import {
   EdgeCurrencyTools,
   EdgeWalletInfo
 } from 'edge-core-js/lib/types/types'
-import { EventEmitter } from 'events'
 
 import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
 import { makeCurrencyTools } from './makeCurrencyTools'
+import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
 import {
-  Emitter,
-  EmitterEvent,
   EngineConfig,
   EngineCurrencyInfo,
   EngineCurrencyType,
@@ -32,25 +30,25 @@ export function makeCurrencyPlugin(
       walletInfo: EdgeWalletInfo,
       engineOptions: EdgeCurrencyEngineOptions
     ): Promise<EdgeCurrencyEngine> {
-      const emitter: Emitter = new EventEmitter() as any
+      const emitter = new EngineEmitter()
       emitter.on(
-        EmitterEvent.TRANSACTIONS_CHANGED,
+        EngineEvent.TRANSACTIONS_CHANGED,
         engineOptions.callbacks.onTransactionsChanged
       )
       emitter.on(
-        EmitterEvent.BALANCE_CHANGED,
+        EngineEvent.BALANCE_CHANGED,
         engineOptions.callbacks.onBalanceChanged
       )
       emitter.on(
-        EmitterEvent.BLOCK_HEIGHT_CHANGED,
+        EngineEvent.BLOCK_HEIGHT_CHANGED,
         engineOptions.callbacks.onBlockHeightChanged
       )
       emitter.on(
-        EmitterEvent.ADDRESSES_CHECKED,
+        EngineEvent.ADDRESSES_CHECKED,
         engineOptions.callbacks.onAddressesChecked
       )
       emitter.on(
-        EmitterEvent.TXIDS_CHANGED,
+        EngineEvent.TXIDS_CHANGED,
         engineOptions.callbacks.onTxidsChanged
       )
 

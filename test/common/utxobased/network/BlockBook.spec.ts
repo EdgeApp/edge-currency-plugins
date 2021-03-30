@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import * as chai from 'chai'
-import { EventEmitter } from 'events'
 import WS from 'ws'
 
+import { EngineEmitter } from '../../../../src/common/plugin/makeEngineEmitter'
 import {
   BlockBook,
-  BlockHeightEmitter,
   makeBlockBook
 } from '../../../../src/common/utxobased/network/BlockBook'
 
@@ -46,7 +45,7 @@ describe('BlockBook notifications tests with dummy server', function () {
     websocketServer.on('error', error => {
       console.log(error)
     })
-    const emitter: BlockHeightEmitter = new EventEmitter() as any
+    const emitter = new EngineEmitter()
     blockBook = makeBlockBook({ emitter, wsAddress: 'ws://localhost:8080' })
     await blockBook.connect()
     blockBook.isConnected.should.be.true
@@ -92,7 +91,7 @@ describe('BlockBook', function () {
   this.timeout(10000)
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
-  const emitter: BlockHeightEmitter = new EventEmitter() as any
+  const emitter = new EngineEmitter()
   let blockBook: BlockBook
 
   beforeEach(async () => {
