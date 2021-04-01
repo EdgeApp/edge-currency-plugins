@@ -36,7 +36,7 @@ export function makeCurrencyPlugin(
         engineOptions.callbacks.onTransactionsChanged
       )
       emitter.on(
-        EngineEvent.BALANCE_CHANGED,
+        EngineEvent.WALLET_BALANCE_CHANGED,
         engineOptions.callbacks.onBalanceChanged
       )
       emitter.on(
@@ -78,7 +78,7 @@ export function makeCurrencyPlugin(
     },
 
     async makeCurrencyTools(): Promise<EdgeCurrencyTools> {
-      return await Promise.resolve(currencyTools)
+      return currencyTools
     }
   }
 }
