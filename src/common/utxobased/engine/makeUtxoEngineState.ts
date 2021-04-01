@@ -7,7 +7,6 @@ import {
   CurrencyFormat,
   EngineConfig,
   EngineCurrencyInfo,
-  LocalWalletMetadata,
   NetworkEnum
 } from '../../plugin/types'
 import { Processor } from '../db/makeProcessor'
@@ -40,7 +39,6 @@ export interface UtxoEngineStateConfig extends EngineConfig {
   walletTools: UTXOPluginWalletTools
   processor: Processor
   blockBook: BlockBook
-  metadata: LocalWalletMetadata
 }
 
 export function makeUtxoEngineState(
@@ -53,8 +51,7 @@ export function makeUtxoEngineState(
     walletTools,
     options: { emitter },
     processor,
-    blockBook,
-    metadata
+    blockBook
   } = config
 
   const addressesToWatch = new Set<string>()
@@ -84,7 +81,6 @@ export function makeUtxoEngineState(
     walletTools,
     processor,
     blockBook,
-    metadata,
     emitter,
     addressesToWatch,
     onAddressChecked,
@@ -113,7 +109,10 @@ export function makeUtxoEngineState(
       await run()
     },
 
-    async stop(): Promise<void> {},
+    async stop(): Promise<void> {
+      // TODO: stop watching blocks
+      // TODO: stop watching addresses
+    },
 
     async getFreshAddress(branch = 0): Promise<EdgeFreshAddress> {
       const walletPurpose = getPurposeTypeFromKeys(walletInfo)
@@ -184,7 +183,6 @@ interface CommonArgs {
   emitter: EngineEmitter
   addressesToWatch: Set<string>
   onAddressChecked: () => void
-  metadata: LocalWalletMetadata
   mutexor: Mutexor
 }
 
@@ -262,7 +260,7 @@ interface SaveAddressArgs {
   processor: Processor
 }
 
-const saveAddress = async (args: SaveAddressArgs, count = 0): Promise<void> => {
+const saveAddress = async (args: SaveAddressArgs): Promise<void> => {
   const { scriptPubkey, path, used = false, processor } = args
 
   const saveNewAddress = async (): Promise<void> =>
@@ -580,8 +578,7 @@ const processAddressUtxos = async (
     walletTools,
     processor,
     blockBook,
-    emitter,
-    metadata
+    emitter
   } = args
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -656,11 +653,10 @@ const processAddressUtxos = async (
   const oldBalance = addressData?.balance ?? '0'
   const diff = bs.sub(balance, oldBalance)
   if (diff !== '0') {
-    const newWalletBalance = bs.add(metadata.balance, diff)
     emitter.emit(
-      EngineEvent.BALANCE_CHANGED,
+      EngineEvent.ADDRESS_BALANCE_CHANGED,
       currencyInfo.currencyCode,
-      newWalletBalance
+      diff
     )
 
     await processor.updateAddressByScriptPubkey(scriptPubkey, { balance })

@@ -1,38 +1,3 @@
-import { Disklet } from 'disklet'
-
-import { LocalWalletMetadata } from './types'
-
-const metadataPath = `metadata.json`
-
-export const fetchMetadata = async (
-  disklet: Disklet
-): Promise<LocalWalletMetadata> => {
-  try {
-    const dataStr = await disklet.getText(metadataPath)
-    return JSON.parse(dataStr)
-  } catch {
-    const data: LocalWalletMetadata = {
-      balance: '0',
-      lastSeenBlockHeight: 0
-    }
-    await setMetadata(disklet, data)
-    return data
-  }
-}
-
-export const clearMetadata = async (
-  disklet: Disklet
-): Promise<LocalWalletMetadata> => {
-  await disklet.delete(metadataPath)
-  return await fetchMetadata(disklet)
-}
-
-export const setMetadata = async (
-  disklet: Disklet,
-  data: LocalWalletMetadata
-): Promise<void> =>
-  await disklet.setText(metadataPath, JSON.stringify(data)).then()
-
 export const getMnemonicKey = ({ coin }: { coin: string }): string =>
   `${coin}Key`
 
