@@ -5,8 +5,12 @@ import { EdgeGetTransactionsOptions } from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { AddressPath } from '../../plugin/types'
-import { makeBaselets } from './makeBaselets'
-import { makeQueue } from './makeQueue'
+import {
+  AddressTables,
+  makeBaselets,
+  TransactionTables,
+  UTXOTables
+} from './makeBaselets'
 import {
   AddressByScriptPubkey,
   addressPathToPrefix,
@@ -29,7 +33,7 @@ interface ProcessorConfig {
 }
 
 export interface Processor {
-  dumpData: () => Promise<any>
+  dumpData: () => Promise<DumpDataReturn[]>
 
   clearAll: () => Promise<void>
 
@@ -99,366 +103,29 @@ export interface Processor {
 
   saveUtxo: (utxo: IUTXO) => void
 
-  removeUtxo: (utxo: IUTXO) => void
+  removeUtxo: (id: string) => Promise<IUTXO>
+}
+
+interface DumpDataReturn {
+  databaseName: string
+  data: never
 }
 
 export async function makeProcessor(
   config: ProcessorConfig
 ): Promise<Processor> {
-  const queue = makeQueue()
   const { emitter } = config
+
   const disklet = navigateDisklet(config.disklet, BASELET_DIR)
   let baselets = await makeBaselets({ disklet })
 
-  async function processAndSaveAddress(data: IAddress): Promise<void> {
-    const [addressData] = await baselets.all.addressByScriptPubkey.query('', [
-      data.scriptPubkey
-    ])
-    if (addressData != null) {
-      throw new Error(
-        'Address already exists. To update its data call `updateAddressByScriptPubkey`'
-      )
-    }
-
-    // If there is path info on the address to save but not stored in
-    // the previously existing data, save to the by path database.
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (data.path != null && !addressData?.path) {
-      await innerSaveScriptPubkeyByPath(data.scriptPubkey, data.path)
-    }
-
-    try {
-      await Promise.all([
-        baselets.all.addressByScriptPubkey.insert('', data.scriptPubkey, data),
-
-        baselets.all.scriptPubkeysByBalance.insert('', {
-          [RANGE_ID_KEY]: data.scriptPubkey,
-          [RANGE_KEY]: parseInt(data.balance)
-        })
-
-        // TODO: change to rangebase
-        // addressByMRU.insert('', index, data)
-      ])
-
-      await processScriptPubkeyTransactions(data.scriptPubkey)
-    } catch (err) {
-      // Undo any changes we made on a fail
-      await Promise.all([
-        baselets.all.scriptPubkeysByBalance.delete(
-          '',
-          parseInt(data.balance),
-          data.scriptPubkey
-        ),
-
-        baselets.all.addressByScriptPubkey.delete('', [data.scriptPubkey])
-      ])
-    }
-  }
-
-  // Find transactions associated with this scriptPubkey, process the balances and save it
-  async function processScriptPubkeyTransactions(
-    scriptPubkey: string
-  ): Promise<void> {
-    const byScriptPubkey = await fns.fetchTransactionsByScriptPubkey(
-      scriptPubkey
-    )
-    for (const txId in byScriptPubkey) {
-      const tx = byScriptPubkey[txId]
-      const txData = await fns.fetchTransaction(txId)
-      if (txData != null) {
-        const ourIns = [...txData.ourIns, ...Object.keys(tx.ins)]
-        const ourOuts = [...txData.ourOuts, ...Object.keys(tx.outs)]
-
-        await fns.updateAddressByScriptPubkey(scriptPubkey, {
-          lastTouched: txData.date,
-          used: true
-        })
-
-        txData.ourAmount = await calculateTransactionAmount(txData)
-        await innerUpdateTransaction(txId, { ourIns, ourOuts })
-      }
-    }
-  }
-
-  async function innerFetchAddressesByScriptPubkeys(
-    scriptPubkeys: string[]
-  ): Promise<AddressByScriptPubkey[]> {
-    if (scriptPubkeys.length === 0) return []
-    const addresses: AddressByScriptPubkey[] = await baselets.all.addressByScriptPubkey.query(
-      '',
-      scriptPubkeys
-    )
-
-    // Update the last query values
-    const now = Date.now()
-    addresses.map(async address => {
-      if (address != null) {
-        return await innerUpdateAddressByScriptPubkey(address.scriptPubkey, {
-          lastQuery: now
-        })
-      }
-    })
-
-    return addresses
-  }
-
-  async function saveTransactionByScriptPubkey(
-    scriptPubkey: string,
-    tx: IProcessorTransaction,
-    isInput: boolean,
-    index: number,
-    save = true
-  ): Promise<void> {
-    const txs = await fns.fetchTransactionsByScriptPubkey(scriptPubkey)
-    if (txs[tx.txid] != null) {
-      txs[tx.txid] = {
-        ins: {},
-        outs: {}
-      }
-    }
-    if (save) {
-      if (isInput) {
-        txs[tx.txid].ins[index] = true
-      } else {
-        txs[tx.txid].outs[index] = true
-      }
-    } else {
-      if (isInput) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete txs[tx.txid].ins[index]
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete txs[tx.txid].outs[index]
-      }
-    }
-
-    await baselets.all.txsByScriptPubkey.insert('', scriptPubkey, txs)
-  }
-
-  async function calculateTransactionAmount(
-    tx: IProcessorTransaction
-  ): Promise<string> {
-    let ourAmount = '0'
-    for (const i of tx.ourIns) {
-      const { amount } = tx.inputs[parseInt(i)]
-      ourAmount = bs.sub(ourAmount, amount)
-    }
-    for (const i of tx.ourOuts) {
-      const { amount } = tx.outputs[parseInt(i)]
-      ourAmount = bs.add(ourAmount, amount)
-    }
-
-    return ourAmount
-  }
-
-  async function innerSaveScriptPubkeyByPath(
-    scriptPubkey: string,
-    path: AddressPath
-  ): Promise<void> {
-    await baselets.all.scriptPubkeyByPath.insert(
-      addressPathToPrefix(path),
-      path.addressIndex,
-      scriptPubkey
-    )
-  }
-
-  async function innerUpdateAddressByScriptPubkey(
-    scriptPubkey: string,
-    data: Partial<IAddress>
-  ): Promise<IAddress> {
-    const [address] = await baselets.all.addressByScriptPubkey.query('', [
-      scriptPubkey
-    ])
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!address) {
-      throw new Error('Cannot update address that does not exist')
-    }
-
-    const promises: Array<Promise<any>> = []
-
-    if (
-      data.networkQueryVal != null &&
-      data.networkQueryVal > address.networkQueryVal
-    ) {
-      address.networkQueryVal = data.networkQueryVal
-    }
-
-    if (data.lastQuery != null && data.lastQuery > address.lastQuery) {
-      address.lastQuery = data.lastQuery
-    }
-
-    if (data.lastTouched != null && data.lastTouched > address.lastTouched) {
-      address.lastTouched = data.lastTouched
-    }
-
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (data.used != null && data.used && !address.used) {
-      address.used = data.used
-    }
-
-    if (data.balance != null && data.balance !== address.balance) {
-      const oldRange = parseInt(address.balance)
-      address.balance = data.balance
-      promises.push(
-        baselets.all.scriptPubkeysByBalance.update('', oldRange, {
-          [RANGE_ID_KEY]: address.scriptPubkey,
-          [RANGE_KEY]: parseInt(data.balance)
-        })
-      )
-    }
-
-    if (data.path != null && address.path == null) {
-      promises.push(innerSaveScriptPubkeyByPath(scriptPubkey, data.path))
-    }
-
-    await Promise.all([
-      ...promises,
-      baselets.all.addressByScriptPubkey.insert(
-        '',
-        address.scriptPubkey,
-        address
-      )
-    ])
-
-    return address
-  }
-
-  async function innerSaveTransaction(
-    tx: IProcessorTransaction
-  ): Promise<void> {
-    const existingTx = await fns.fetchTransaction(tx.txid)
-    if (existingTx == null) {
-      await baselets.all.txsByDate.insert('', {
-        [RANGE_ID_KEY]: tx.txid,
-        [RANGE_KEY]: tx.date
-      })
-    }
-
-    for (const inOout of [true, false]) {
-      const arr = inOout ? tx.inputs : tx.outputs
-      for (let i = 0; i < arr.length; i++) {
-        const { scriptPubkey } = arr[i]
-
-        await saveTransactionByScriptPubkey(scriptPubkey, tx, inOout, i)
-        const own = await fns.hasSPubKey(scriptPubkey)
-        if (own) {
-          if (inOout) {
-            tx.ourIns.push(i.toString())
-          } else {
-            tx.ourOuts.push(i.toString())
-          }
-
-          await innerUpdateAddressByScriptPubkey(scriptPubkey, {
-            lastTouched: tx.date,
-            used: true
-          })
-        }
-      }
-    }
-    await fns.insertTxIdByBlockHeight(tx.blockHeight, tx.txid)
-
-    tx.ourAmount = await calculateTransactionAmount(tx)
-    await baselets.all.txById.insert('', tx.txid, tx)
-  }
-
-  async function innerUpdateTransaction(
-    txId: string,
-    data: Partial<IProcessorTransaction>
-  ): Promise<void> {
-    const tx = await fns.fetchTransaction(txId)
-    if (tx == null) {
-      throw new Error('Cannot update transaction that does not exists')
-    }
-
-    if (data.blockHeight != null) {
-      if (tx.blockHeight < data.blockHeight) {
-        await fns.removeTxIdByBlockHeight(tx.blockHeight, txId)
-        await fns.insertTxIdByBlockHeight(data.blockHeight, txId)
-      }
-      tx.blockHeight = data.blockHeight
-    }
-    if (data.ourIns != null) {
-      tx.ourIns = data.ourIns
-    }
-    if (data.ourOuts != null) {
-      tx.ourOuts = data.ourOuts
-    }
-    if (data.ourAmount != null) {
-      tx.ourAmount = data.ourAmount
-    }
-
-    emitter.emit(EngineEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
-
-    await baselets.all.txById.insert('', txId, tx)
-  }
-
-  async function innerDropTransaction(txId: string): Promise<void> {
-    const tx = await fns.fetchTransaction(txId)
-    if (tx == null) return
-
-    for (let i = 0; i < tx.inputs.length; i++) {
-      const input = tx.inputs[i]
-
-      await saveTransactionByScriptPubkey(
-        input.scriptPubkey,
-        tx,
-        true,
-        i,
-        false
-      )
-    }
-
-    for (let i = 0; i < tx.outputs.length; i++) {
-      const output = tx.outputs[i]
-
-      await saveTransactionByScriptPubkey(
-        output.scriptPubkey,
-        tx,
-        false,
-        i,
-        false
-      )
-    }
-
-    await fns.removeTxIdByBlockHeight(tx.blockHeight, tx.txid)
-
-    tx.blockHeight = -1
-    await baselets.all.txById.insert('', tx.txid, tx)
-
-    // TODO: recalculate balances
-  }
-
-  async function innerSaveUtxo(utxo: IUTXO): Promise<void> {
-    await baselets.all.utxoById.insert('', utxo.id, utxo)
-    await baselets.all.utxoIdsBySize.insert('', {
-      [RANGE_ID_KEY]: utxo.id,
-      [RANGE_KEY]: parseInt(utxo.value)
-    })
-
-    const [utxoIds] = await baselets.all.utxoIdsByScriptPubkey.query('', [
-      utxo.scriptPubkey
-    ])
-    const set = new Set(utxoIds)
-    set.add(utxo.id)
-    await baselets.all.utxoIdsByScriptPubkey.insert(
-      '',
-      utxo.scriptPubkey,
-      Array.from(set)
-    )
-  }
-
-  async function innerRemoveUtxo(utxo: IUTXO): Promise<void> {
-    await baselets.all.utxoById.delete('', [utxo.id])
-    await baselets.all.utxoIdsBySize.delete('', parseInt(utxo.value), utxo.id)
-    await baselets.all.utxoIdsByScriptPubkey.delete('', [utxo.scriptPubkey])
-  }
-
-  const fns: Processor = {
-    async dumpData(): Promise<any> {
+  return {
+    async dumpData(): Promise<DumpDataReturn[]> {
+      const allBases = Object.values(baselets.all)
       return await Promise.all(
-        Object.values(baselets.all).map(async base => ({
+        allBases.map(async base => ({
           databaseName: base.databaseName,
-          data: await base.dumpData('')
+          data: (await base.dumpData('')) as never
         }))
       )
     },
@@ -485,185 +152,997 @@ export async function makeProcessor(
       blockHeightMin: number,
       blockHeightMax?: number
     ): Promise<string[]> {
-      const result = await baselets.all.txIdsByBlockHeight.query(
-        '',
-        blockHeightMin,
-        blockHeightMax
-      )
-      return result.map(({ [RANGE_ID_KEY]: id }) => id)
+      return await fetchTxIdsByBlockHeight({
+        tables: baselets.all,
+        fromBlock: blockHeightMin,
+        toBlock: blockHeightMax
+      })
     },
 
     async insertTxIdByBlockHeight(
       blockHeight: number,
-      txId: string
+      txid: string
     ): Promise<void> {
-      const data = await this.fetchTxIdsByBlockHeight(blockHeight)
-      if (data.includes(txId)) {
-        return
-      }
-      await baselets.all.txIdsByBlockHeight.insert('', {
-        [RANGE_ID_KEY]: txId,
-        [RANGE_KEY]: blockHeight
+      await baselets.tx(async tables => {
+        await saveTxIdByBlockHeight({ tables, txid, blockHeight })
       })
     },
 
     async removeTxIdByBlockHeight(
       blockHeight: number,
-      txId: string
+      txid: string
     ): Promise<void> {
-      const data = await this.fetchTxIdsByBlockHeight(blockHeight)
-      if (data === []) {
-        return
-      }
-      await baselets.all.txIdsByBlockHeight.delete('', blockHeight, txId)
+      await baselets.tx(async tables => {
+        await deleteTxIdByBlockHeight({ tables, txid, blockHeight })
+      })
     },
 
     async fetchAddressByScriptPubkey(
       scriptPubkey: string
     ): Promise<AddressByScriptPubkey> {
-      const [address] = await innerFetchAddressesByScriptPubkeys([scriptPubkey])
-      return address
+      // Lock address tables
+      return await baselets.address(async tables => {
+        const [address] = await fetchAddressesByScriptPubkeys({
+          tables,
+          scriptPubkeys: [scriptPubkey]
+        })
+
+        // If the address exists, update the last query values
+        if (address != null) {
+          await updateAddressByScriptPubkey({
+            tables,
+            scriptPubkey,
+            data: {
+              lastQuery: Date.now()
+            }
+          })
+        }
+
+        return address
+      })
     },
 
     async hasSPubKey(scriptPubkey: string): Promise<boolean> {
-      return await fns
-        .fetchAddressByScriptPubkey(scriptPubkey)
-        .then(address => !(address == null))
+      return await hasScriptPubkey({ tables: baselets.all, scriptPubkey })
     },
 
     async fetchAddressesByPath(
       path: Omit<AddressPath, 'addressIndex'>
     ): Promise<AddressByScriptPubkey[]> {
+      const { scriptPubkeyByPath } = baselets.all
+
+      // Determine table partition to use
       const partition = addressPathToPrefix(path)
-      const scriptPubkeys = await baselets.all.scriptPubkeyByPath.query(
+      // Fetch all script pubkeys for the given branch specified by the path
+      const startIndex = 0
+      const endIndex = scriptPubkeyByPath.length(partition) - 1
+      const scriptPubkeys = await scriptPubkeyByPath.query(
         partition,
-        0,
-        baselets.all.scriptPubkeyByPath.length(partition) - 1
+        startIndex,
+        endIndex
       )
-      return await innerFetchAddressesByScriptPubkeys(scriptPubkeys)
+
+      // Return address data for the script pubkeys
+      return await fetchAddressesByScriptPubkeys({
+        tables: baselets.all,
+        scriptPubkeys
+      })
     },
 
     getNumAddressesFromPathPartition(
       path: Omit<AddressPath, 'addressIndex'>
     ): number {
+      // Number of addresses is known by the scriptPubkeyByPath CountBase table
       return baselets.all.scriptPubkeyByPath.length(addressPathToPrefix(path))
     },
 
     // Returned in lowest first due to RangeBase
     async fetchScriptPubkeysByBalance(): Promise<ScriptPubkeysByBalance[]> {
-      const max = baselets.all.scriptPubkeysByBalance.max('') ?? 0
-      return await baselets.all.scriptPubkeysByBalance.query('', 0, max)
+      const { scriptPubkeysByBalance } = baselets.all
+
+      // Fetches all script pubkeys by getting the range value
+      const max = scriptPubkeysByBalance.max('') ?? 0
+      return await scriptPubkeysByBalance.query('', 0, max)
     },
 
     async saveAddress(data: IAddress): Promise<void> {
-      await processAndSaveAddress(data)
+      // Lock address tables
+      await baselets.address(async tables => {
+        // Process and save address data
+        await saveAddress({ tables, data })
+      })
+
+      // Lock transaction tables
+      const scriptPubkeyInfo = await baselets.tx(
+        async tables =>
+          // After address is saved, add to the queue processing any known transactions
+          await processScriptPubkeyTxs({
+            tables,
+            scriptPubkey: data.scriptPubkey
+          })
+      )
+
+      // If script pubkey is used, update values
+      if (scriptPubkeyInfo.used) {
+        // Lock address tables
+        await baselets.address(async tables => {
+          await updateAddressByScriptPubkey({
+            tables,
+            scriptPubkey: data.scriptPubkey,
+            data: scriptPubkeyInfo
+          })
+        })
+      }
     },
 
     async updateAddressByScriptPubkey(
       scriptPubkey: string,
       data: Partial<IAddress>
     ): Promise<void> {
-      await innerUpdateAddressByScriptPubkey(scriptPubkey, data)
+      // Lock address tables
+      await baselets.address(async tables => {
+        await updateAddressByScriptPubkey({ tables, scriptPubkey, data })
+      })
     },
 
     getNumTransactions(): number {
+      // Grab the current length of the transaction database
       return baselets.all.txsByDate.size('')
     },
 
-    async fetchTransaction(txId: string): Promise<TxById> {
-      const [data] = await baselets.all.txById.query('', [txId])
-      return data
+    async fetchTransaction(txid: string): Promise<TxById> {
+      // Lock transaction tables
+      return await baselets.tx(
+        async tables =>
+          // Fetch and return transaction from database
+          await fetchTx({ tables, txid })
+      )
     },
 
     async fetchTransactionsByScriptPubkey(
-      scriptHash: string
+      scriptPubkey: string
     ): Promise<TxsByScriptPubkey> {
-      const [txs] = await baselets.all.txsByScriptPubkey.query('', [scriptHash])
-      return txs ?? {}
+      // Lock transaction tables
+      return await baselets.tx(
+        async tables =>
+          // Fetch and return indices for transactions related to the script pubkey
+          await fetchTxsByScriptPubkey({ tables, scriptPubkey })
+      )
     },
 
     async fetchTransactions(
       opts: EdgeGetTransactionsOptions
     ): Promise<IProcessorTransaction[]> {
-      const {
-        startEntries,
-        startIndex,
-        startDate = new Date(0),
-        endDate = new Date()
-      } = opts
-
-      let txData: TxsByDate = []
-      if (startEntries != null && startIndex != null) {
-        txData = await baselets.all.txsByDate.queryByCount(
-          '',
+      // Lock transaction tables
+      return await baselets.tx(async tables => {
+        const {
           startEntries,
-          startIndex
-        )
-      } else {
-        txData = await baselets.all.txsByDate.query(
-          '',
-          startDate.getTime(),
-          endDate.getTime()
-        )
-      }
+          startIndex,
+          startDate = new Date(0),
+          endDate = new Date()
+        } = opts
 
-      const txPromises = txData.map(
-        async ({ [RANGE_ID_KEY]: txId }) =>
-          await baselets.all.txById.query('', [txId]).then(([tx]) => tx)
+        // Fetch transaction IDs ordered by date
+        let txData: TxsByDate
+        if (startEntries != null && startIndex != null) {
+          txData = await tables.txsByDate.queryByCount(
+            '',
+            startEntries,
+            startIndex
+          )
+        } else {
+          txData = await tables.txsByDate.query(
+            '',
+            startDate.getTime(),
+            endDate.getTime()
+          )
+        }
+
+        // Fetch transaction data from the IDs
+        const txs = await Promise.all(
+          txData.map(
+            async ({ [RANGE_ID_KEY]: txId }) =>
+              await baselets.all.txById.query('', [txId]).then(([tx]) => tx)
+          )
+        )
+        // Make sure only existing transactions are returned
+        return txs.filter(tx => tx != null)
+      })
+    },
+
+    async saveTransaction(tx: IProcessorTransaction): Promise<void> {
+      // Lock transaction tables
+      // Returns data about script pubkeys that were affected by adding the transaction
+      const affectedScriptPubkeys = await baselets.tx(
+        async tables =>
+          await saveTx({
+            tables,
+            tx,
+            // Pass helper function instead of address table to limit scope and prevent possibility of updating an address table
+            hasScriptPubkey: async scriptPubkey =>
+              await hasScriptPubkey({ tables: baselets.all, scriptPubkey })
+          })
       )
-      return Promise.all(txPromises)
+
+      // Lock address tables
+      await baselets.address(async tables => {
+        // Update relevant address data
+        for (const { scriptPubkey, ...data } of affectedScriptPubkeys) {
+          await updateAddressByScriptPubkey({ tables, scriptPubkey, data })
+        }
+      })
     },
 
-    async saveTransaction(
-      tx: IProcessorTransaction,
-      withQueue = true
-    ): Promise<void> {
-      const saveTx = async (): Promise<void> => await innerSaveTransaction(tx)
-      return withQueue ? queue.add(saveTx) : await saveTx()
-    },
-
-    updateTransaction(
-      txId: string,
+    async updateTransaction(
+      txid: string,
       data: Pick<IProcessorTransaction, 'blockHeight'>
-    ): void {
-      queue.add(async () => await innerUpdateTransaction(txId, data))
+    ): Promise<void> {
+      // Lock transaction tables
+      await baselets.tx(async tables => {
+        // Update transaction data
+        const tx = await updateTx({ tables, txid, data })
+
+        // Emit event that the transaction was updated
+        emitter.emit(EngineEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
+      })
     },
 
-    // TODO: delete everything from db?
-    dropTransaction(txId: string): void {
-      queue.add(async () => await innerDropTransaction(txId))
+    async dropTransaction(txid: string): Promise<void> {
+      // Lock transaction tables
+      await baselets.tx(async tables => {
+        await dropTx({ tables, txid })
+      })
     },
 
     async fetchUtxo(id: string): Promise<IUTXO> {
+      // Fetch UTXO data
       const [utxo] = await baselets.all.utxoById.query('', [id])
       return utxo
     },
 
     async fetchUtxosByScriptPubkey(scriptPubkey: string): Promise<IUTXO[]> {
-      const [ids = []] = await baselets.all.utxoIdsByScriptPubkey.query('', [
-        scriptPubkey
-      ])
-      return ids.length === 0 ? [] : await baselets.all.utxoById.query('', ids)
+      // Lock UTXO tables
+      return await baselets.utxo(async tables => {
+        const { utxoIdsByScriptPubkey, utxoById } = tables
+
+        // Fetch all the UTXO IDs for the script pubkey
+        const [ids = []] = await utxoIdsByScriptPubkey.query('', [scriptPubkey])
+
+        // Short circuit querying database
+        if (ids.length === 0) {
+          return []
+        }
+
+        // Fetch all UTXOs from IDs
+        return await utxoById.query('', ids)
+      })
     },
 
     async fetchAllUtxos(): Promise<IUTXO[]> {
-      const result = await baselets.all.utxoIdsBySize.query(
-        '',
-        0,
-        baselets.all.utxoIdsBySize.max('')
-      )
+      const { utxoIdsBySize, utxoById } = baselets.all
+
+      // Fetch all UTXO IDs
+      const result = await utxoIdsBySize.query('', 0, utxoIdsBySize.max(''))
+      // Short circuit querying database
+      if (result.length === 0) return []
+
+      // Just get the IDs
       const ids = result.map(({ [RANGE_ID_KEY]: id }) => id)
-      return ids.length === 0 ? [] : baselets.all.utxoById.query('', ids)
+
+      // Return all UTXO data
+      return utxoById.query('', ids)
     },
 
-    saveUtxo(utxo: IUTXO) {
-      queue.add(async () => await innerSaveUtxo(utxo))
+    async saveUtxo(utxo: IUTXO): Promise<void> {
+      // Lock UTXO tables
+      await baselets.utxo(async tables => {
+        await saveUtxo({ tables, utxo })
+      })
     },
 
-    removeUtxo(utxo: IUTXO) {
-      queue.add(async () => await innerRemoveUtxo(utxo))
+    async removeUtxo(id: string): Promise<IUTXO> {
+      // Lock UTXO tables
+      return await baselets.utxo(
+        async tables => await deleteUtxo({ tables, id })
+      )
+    }
+  }
+}
+
+interface ProcessAndSaveAddressArgs {
+  tables: AddressTables
+  data: IAddress
+}
+
+/**
+ * Saves a **new** address to the database and creates indices.
+ *
+ * Will throw an error if the address already exists. Instead, should update the
+ * address by calling `processor.updateAddressByScriptPubkey`.
+ * @param args {ProcessAndSaveAddressArgs}
+ */
+const saveAddress = async (args: ProcessAndSaveAddressArgs): Promise<void> => {
+  const { tables, data } = args
+
+  // Make sure that the address does not already exists
+  const [addressData] = await tables.addressByScriptPubkey.query('', [
+    data.scriptPubkey
+  ])
+  if (addressData != null) {
+    throw new Error('Address already exists.')
+  }
+
+  try {
+    // Only create an index by path if one was given
+    if (data.path != null) {
+      await saveScriptPubkeyByPath({
+        tables,
+        scriptPubkey: data.scriptPubkey,
+        path: data.path
+      })
+    }
+
+    // Create index for script pubkey by its balance
+    await tables.scriptPubkeysByBalance.insert('', {
+      [RANGE_ID_KEY]: data.scriptPubkey,
+      [RANGE_KEY]: parseInt(data.balance)
+    })
+
+    // // TODO: change to rangebase
+    // // Create index for most recently used
+    // await tables.addressPathByMRU.insert('', index, data)
+
+    // Save the address data by the script pubkey
+    await tables.addressByScriptPubkey.insert('', data.scriptPubkey, data)
+  } catch (err) {
+    // TODO: rethrow?
+  }
+}
+
+interface ProcessScriptPubkeyTxsArgs {
+  tables: TransactionTables
+  scriptPubkey: string
+}
+
+interface ProcessScriptPubkeyTxsReturn {
+  used: boolean
+  lastTouched: number
+}
+
+// Find transactions associated with this scriptPubkey, process the balances and save it
+/**
+ * Searches the database for transactions that are related to the given script pubkey and
+ * calculates the value (supplied or received) and the associated ourIns and ourOuts indices.
+ * @param args {ProcessScriptPubkeyTxsArgs}
+ * @returns Info on the given script pubkey after processing whether its been used or not
+ * and last timestamp it was used.
+ */
+const processScriptPubkeyTxs = async (
+  args: ProcessScriptPubkeyTxsArgs
+): Promise<ProcessScriptPubkeyTxsReturn> => {
+  const { tables, scriptPubkey } = args
+
+  let used = false
+  let lastTouched = 0
+
+  // Fetch the transaction hashes and known ins and outs related to the given script pubkey
+  const byScriptPubkey = await fetchTxsByScriptPubkey({ tables, scriptPubkey })
+  for (const txid in byScriptPubkey) {
+    // Mark script pubkey as used if there are any transactions found
+    used = true
+    // Fetch the transaction object from the database
+    const txData = await fetchTx({ tables, txid })
+    // Make sure transaction exists
+    if (txData != null) {
+      if (lastTouched < txData.date) {
+        lastTouched = txData.date
+      }
+
+      // Update the tx balance and ourIns and ourOuts
+      const tx = byScriptPubkey[txid]
+      const ourAmount = await calculateTxAmount(txData)
+      const ourIns = [...txData.ourIns, ...Object.keys(tx.ins)]
+      const ourOuts = [...txData.ourOuts, ...Object.keys(tx.outs)]
+      await updateTx({
+        tables,
+        txid,
+        data: {
+          ourAmount,
+          ourIns,
+          ourOuts
+        }
+      })
     }
   }
 
-  return fns
+  return {
+    used,
+    lastTouched
+  }
+}
+
+interface HasScriptPubkeyArgs {
+  tables: AddressTables
+  scriptPubkey: string
+}
+
+/**
+ * Checks the database if the wallet owns a script pubkey.
+ * @param args {HasScriptPubkeyArgs}
+ * @returns A boolean indicating if the wallet owns the script pubkey.
+ */
+const hasScriptPubkey = async (args: HasScriptPubkeyArgs): Promise<boolean> => {
+  const { tables, scriptPubkey } = args
+
+  // Fetches the address data by script pubkey
+  const [address] = await fetchAddressesByScriptPubkeys({
+    tables,
+    scriptPubkeys: [scriptPubkey]
+  })
+
+  // Return a boolean indicating if data for the script pubkey exists
+  return address != null
+}
+
+interface FetchAddressesByScriptPubkeysArgs {
+  tables: AddressTables
+  scriptPubkeys: string[]
+}
+
+/**
+ * Fetches address data for a given array of script pubkeys.
+ * @param args {FetchAddressesByScriptPubkeysArgs}
+ */
+const fetchAddressesByScriptPubkeys = async (
+  args: FetchAddressesByScriptPubkeysArgs
+): Promise<AddressByScriptPubkey[]> => {
+  const { tables, scriptPubkeys } = args
+
+  // Short circuit query to the database
+  if (scriptPubkeys.length === 0) return []
+  return await tables.addressByScriptPubkey.query('', scriptPubkeys)
+}
+
+interface SaveTxByScriptPubkeyArgs {
+  tables: TransactionTables
+  scriptPubkey: string
+  txid: string
+  isInput: boolean
+  index: number
+  save?: boolean
+}
+
+/**
+ * Creates an index reference for addresses linked to an input or output of transactions.
+ * @param args {SaveTxByScriptPubkeyArgs}
+ */
+const saveTxByScriptPubkey = async (
+  args: SaveTxByScriptPubkeyArgs
+): Promise<void> => {
+  const { tables, scriptPubkey, txid, isInput, index, save = true } = args
+
+  const txs = await fetchTxsByScriptPubkey({ tables, scriptPubkey })
+  if (txs[txid] == null) {
+    txs[txid] = {
+      ins: {},
+      outs: {}
+    }
+  }
+  if (save) {
+    if (isInput) {
+      txs[txid].ins[index] = true
+    } else {
+      txs[txid].outs[index] = true
+    }
+  } else {
+    if (isInput) {
+      const { [index]: _, ...stripped } = txs[txid].ins
+      txs[txid].ins = stripped
+    } else {
+      const { [index]: _, ...stripped } = txs[txid].outs
+      txs[txid].outs = stripped
+    }
+  }
+
+  await tables.txsByScriptPubkey.insert('', scriptPubkey, txs)
+}
+
+/**
+ * Calculates the transaction value supplied (negative) or received (positive). In order to calculate
+ * a value, the `ourIns` and `ourOuts` of the object must be populated with indices.
+ * @param tx {IProcessorTransaction} A transaction object with `ourIns` and `ourOuts` populated
+ */
+const calculateTxAmount = (tx: IProcessorTransaction): string => {
+  let ourAmount = '0'
+  for (const i of tx.ourIns) {
+    const { amount } = tx.inputs[parseInt(i)]
+    ourAmount = bs.sub(ourAmount, amount)
+  }
+  for (const i of tx.ourOuts) {
+    const { amount } = tx.outputs[parseInt(i)]
+    ourAmount = bs.add(ourAmount, amount)
+  }
+
+  return ourAmount
+}
+
+interface SaveScriptPubkeyByPathArgs {
+  tables: AddressTables
+  scriptPubkey: string
+  path: AddressPath
+}
+
+/**
+ * Saves an index record of a script pubkey for a specific account path.
+ * @param args {SaveScriptPubkeyByPathArgs}
+ */
+const saveScriptPubkeyByPath = async (
+  args: SaveScriptPubkeyByPathArgs
+): Promise<void> => {
+  await args.tables.scriptPubkeyByPath.insert(
+    addressPathToPrefix(args.path),
+    args.path.addressIndex,
+    args.scriptPubkey
+  )
+}
+
+interface UpdateAddressByScriptPubkeyArgs {
+  tables: AddressTables
+  scriptPubkey: string
+  data: Partial<IAddress>
+}
+
+/**
+ * Updates address data given a script pubkey.
+ * @param args {UpdateAddressByScriptPubkeyArgs}
+ * @returns The fully updated address data.
+ */
+const updateAddressByScriptPubkey = async (
+  args: UpdateAddressByScriptPubkeyArgs
+): Promise<IAddress> => {
+  const { tables, scriptPubkey, data } = args
+
+  // Make sure there is an address already saved for the given script pubkey
+  const [address]: Array<
+    IAddress | undefined
+  > = await tables.addressByScriptPubkey.query('', [scriptPubkey])
+  if (address == null) {
+    throw new Error('Cannot update address that does not exist')
+  }
+
+  // Holds array of promises that will be passed to a Promise.all
+  const promises: Array<Promise<unknown>> = []
+
+  // Only update the networkQueryVal if one was given and is greater than the existing value
+  if (
+    data.networkQueryVal != null &&
+    data.networkQueryVal > address.networkQueryVal
+  ) {
+    address.networkQueryVal = data.networkQueryVal
+  }
+
+  // Only update the lastQuery value if one was given and is greater than the existing value
+  if (data.lastQuery != null && data.lastQuery > address.lastQuery) {
+    address.lastQuery = data.lastQuery
+  }
+
+  // Only update the lastTouched value if one was given and is greater than the existing value
+  if (data.lastTouched != null && data.lastTouched > address.lastTouched) {
+    address.lastTouched = data.lastTouched
+  }
+
+  // Only update the used field if the given one is true and the existing one is false
+  if (data.used != null && data.used && !address.used) {
+    address.used = data.used
+  }
+
+  // Only update the balance field if one was given and does not equal the existing value
+  if (data.balance != null && data.balance !== address.balance) {
+    // Also update the index of the address by balance
+    const oldRange = parseInt(address.balance)
+    address.balance = data.balance
+    promises.push(
+      tables.scriptPubkeysByBalance.update('', oldRange, {
+        [RANGE_ID_KEY]: address.scriptPubkey,
+        [RANGE_KEY]: parseInt(data.balance)
+      })
+    )
+  }
+
+  // Only update the path field if one was given and currently does not have one
+  // NOTE: Addresses can be stored in the db without a path due to the `EdgeCurrencyEngine.addGapLimitAddresses` function
+  //  Once an address path is known, it should never be updated
+  if (data.path != null && address.path == null) {
+    address.path = data.path
+    promises.push(
+      saveScriptPubkeyByPath({ tables, scriptPubkey, path: data.path })
+    )
+  }
+
+  // Await the promises to update the address database
+  await Promise.all([
+    ...promises,
+    tables.addressByScriptPubkey.insert('', address.scriptPubkey, address)
+  ])
+
+  // Return the updated address data
+  return address
+}
+
+interface FetchTxByScriptPubkeyArgs {
+  tables: TransactionTables
+  scriptPubkey: string
+}
+
+/**
+ * Fetches the ins and outs for transactions that are related to the specified script pubkey.
+ * @param args {FetchTxByScriptPubkeyArgs}
+ * @returns An object with the keys as the transaction hashes and the values as the ins and out indices.
+ *  Example:
+ *      {
+ *        "fd174c5f3f...": {
+ *          "ins": {},
+ *          "outs": {
+ *            "0": true
+ *          }
+ *        }
+ *      }
+ */
+const fetchTxsByScriptPubkey = async (
+  args: FetchTxByScriptPubkeyArgs
+): Promise<TxsByScriptPubkey> => {
+  const { tables, scriptPubkey } = args
+
+  const [txs] = await tables.txsByScriptPubkey.query('', [scriptPubkey])
+  return txs ?? {}
+}
+
+interface FetchTxArgs {
+  tables: TransactionTables
+  txid: string
+}
+
+/**
+ * Fetches a transaction object from the database. Returns `undefined` if no transaction
+ * was found for the given `txid`.
+ * @param args {FetchTxArgs}
+ * @returns A `ProcessorTransaction` object or `undefined`
+ */
+const fetchTx = async (args: FetchTxArgs): Promise<TxById> => {
+  const { tables, txid } = args
+
+  const [data] = await tables.txById.query('', [txid])
+  return data
+}
+
+interface SaveTxArgs {
+  tables: TransactionTables
+  tx: IProcessorTransaction
+  hasScriptPubkey: (scriptPubkey: string) => Promise<boolean>
+}
+
+type SaveTxReturn = Array<{
+  scriptPubkey: string
+  used: boolean
+  lastTouched: number
+}>
+
+/**
+ * Saves a transaction to the database. Can call `saveTx` for transactions already
+ * in the database as several addresses will likely reference the same transaction.
+ * @param args {SaveTxArgs}
+ * @returns An array of script pubkeys and data to update it with
+ */
+const saveTx = async (args: SaveTxArgs): Promise<SaveTxReturn> => {
+  const { tables, tx, hasScriptPubkey } = args
+
+  // Update the date index
+  const existingTx = await fetchTx({ tables, txid: tx.txid })
+  // If the transaction does not already exists, add an index for the date
+  // NOTE: Multiple address can try to save the same transaction
+  if (existingTx == null) {
+    // Add an index for the date
+    await tables.txsByDate.insert('', {
+      [RANGE_ID_KEY]: tx.txid,
+      [RANGE_KEY]: tx.date
+    })
+  }
+
+  // Check every input and output of the transaction to create indices
+  // Keep reference of any script pubkeys in the tx that are in the wallet to update
+  const affectedScriptPubkeys: SaveTxReturn = []
+  for (const isInput of [true, false]) {
+    const arr = isInput ? tx.inputs : tx.outputs
+    for (let i = 0; i < arr.length; i++) {
+      const { scriptPubkey } = arr[i]
+
+      // Create index for this tx and script pubkey
+      await saveTxByScriptPubkey({
+        tables,
+        scriptPubkey,
+        txid: tx.txid,
+        isInput,
+        index: i
+      })
+
+      // If the script pubkey is in wallet, update ourIns and ourOuts
+      const own = await hasScriptPubkey(scriptPubkey)
+      if (own) {
+        if (isInput) {
+          tx.ourIns.push(i.toString())
+        } else {
+          tx.ourOuts.push(i.toString())
+        }
+
+        // Keep reference of script pubkeys that should be updated
+        affectedScriptPubkeys.push({
+          scriptPubkey,
+          used: true,
+          lastTouched: tx.date
+        })
+      }
+    }
+  }
+  // After ourIns and ourOuts have been determined, calculate tx amount
+  tx.ourAmount = await calculateTxAmount(tx)
+
+  // Create index by block height
+  await saveTxIdByBlockHeight({
+    tables,
+    txid: tx.txid,
+    blockHeight: tx.blockHeight
+  })
+
+  // Save transaction to database
+  await tables.txById.insert('', tx.txid, tx)
+
+  // Return script pubkeys to update
+  return affectedScriptPubkeys
+}
+
+interface UpdateTxArgs {
+  tables: TransactionTables
+  txid: string
+  data: Partial<IProcessorTransaction>
+}
+
+/**
+ * Updates a transaction data and indices.
+ * @param args {UpdateTxArgs}
+ * @returns The updated transaction data
+ */
+const updateTx = async (args: UpdateTxArgs): Promise<IProcessorTransaction> => {
+  const { tables, txid, data } = args
+
+  const tx = await fetchTx({ tables, txid })
+  if (tx == null) {
+    throw new Error('Cannot update transaction that does not exists')
+  }
+
+  // Only update blockHeight if one was given and is grater than the existing one
+  if (data.blockHeight != null && data.blockHeight > tx.blockHeight) {
+    // Update the index by block height
+    await deleteTxIdByBlockHeight({ tables, txid, blockHeight: tx.blockHeight })
+    await saveTxIdByBlockHeight({ tables, txid, blockHeight: data.blockHeight })
+
+    tx.blockHeight = data.blockHeight
+  }
+
+  // Only update the date index if the existing tx date does not match the one given
+  if (data.date !== tx.date) {
+    await tables.txsByDate.delete('', tx.date, tx.txid)
+    await tables.txsByDate.insert('', {
+      [RANGE_ID_KEY]: tx.txid,
+      [RANGE_KEY]: tx.date
+    })
+  }
+
+  // Only update ourIns if one was given
+  if (data.ourIns != null) {
+    tx.ourIns = data.ourIns
+  }
+
+  // Only update ourOuts if one was given
+  if (data.ourOuts != null) {
+    tx.ourOuts = data.ourOuts
+  }
+
+  // Only update ourAmount if one was given
+  if (data.ourAmount != null) {
+    tx.ourAmount = data.ourAmount
+  }
+
+  // Update the transaction record
+  await tables.txById.insert('', txid, tx)
+
+  // return the updated data
+  return tx
+}
+
+interface DropTxArgs {
+  tables: TransactionTables
+  txid: string
+}
+
+/**
+ * Deletes indices from the transaction database and sets the `blockHeight` to -1.
+ * @param args {DropTxArgs}
+ */
+const dropTx = async (args: DropTxArgs): Promise<void> => {
+  const { tables, txid } = args
+
+  // Make sure the transaction exists
+  const tx = await fetchTx({ tables, txid })
+  if (tx == null) return
+
+  // Delete indices for script pubkeys
+  for (const isInput of [true, false]) {
+    const arr = isInput ? tx.inputs : tx.outputs
+    for (let i = 0; i < arr.length; i++) {
+      const { scriptPubkey } = arr[i]
+      await saveTxByScriptPubkey({
+        tables,
+        scriptPubkey,
+        txid,
+        isInput,
+        index: i,
+        save: false
+      })
+    }
+  }
+
+  // Delete index for transaction by block height
+  await deleteTxIdByBlockHeight({
+    tables,
+    txid: tx.txid,
+    blockHeight: tx.blockHeight
+  })
+
+  // Update the block height
+  tx.blockHeight = -1
+
+  // Save transaction data
+  await tables.txById.insert('', tx.txid, tx)
+}
+
+interface FetchTxIdsByBlockHeightArgs {
+  tables: TransactionTables
+  fromBlock: number
+  toBlock?: number
+}
+
+/**
+ * Fetches transaction IDs from given block height range. If no `toBlock` field is
+ * given, it will only return IDs for transactions in the `fromBlock`.
+ * Newest transactions will be first.
+ * @param args {FetchTxIdsByBlockHeightArgs}
+ */
+const fetchTxIdsByBlockHeight = async (
+  args: FetchTxIdsByBlockHeightArgs
+): Promise<string[]> => {
+  const { tables, fromBlock, toBlock } = args
+
+  // Fetch transaction IDs
+  const result = await tables.txIdsByBlockHeight.query('', fromBlock, toBlock)
+
+  return (
+    result
+      // RangeBase returns values with lowest value first
+      .reverse()
+      // Return array of just the IDs
+      .map(({ [RANGE_ID_KEY]: id }) => id)
+  )
+}
+
+interface SaveTxIdByBlockHeightArgs {
+  tables: TransactionTables
+  txid: string
+  blockHeight: number
+}
+
+/**
+ * Add an index for a transaction by block height.
+ * @param args {SaveTxIdByBlockHeightArgs}
+ */
+const saveTxIdByBlockHeight = async (
+  args: SaveTxIdByBlockHeightArgs
+): Promise<void> => {
+  const { tables, txid, blockHeight } = args
+
+  // Short circuit adding index if already exists
+  const data = await fetchTxIdsByBlockHeight({ tables, fromBlock: blockHeight })
+  if (data.includes(txid)) return
+
+  // Save index by block height
+  await tables.txIdsByBlockHeight.insert('', {
+    [RANGE_ID_KEY]: txid,
+    [RANGE_KEY]: blockHeight
+  })
+}
+
+interface DeleteTxIdByBlockHeightArgs {
+  tables: TransactionTables
+  txid: string
+  blockHeight: number
+}
+
+/**
+ * Remove the index for a transaction by block height.
+ * @param args {DeleteTxIdByBlockHeightArgs}
+ */
+const deleteTxIdByBlockHeight = async (
+  args: DeleteTxIdByBlockHeightArgs
+): Promise<void> => {
+  const { tables, txid, blockHeight } = args
+
+  // Short circuit deleting index if one does not exists
+  const data = await fetchTxIdsByBlockHeight({ tables, fromBlock: blockHeight })
+  if (data.length === 0) return
+
+  // Delete index by block height
+  await tables.txIdsByBlockHeight.delete('', blockHeight, txid)
+}
+
+interface SaveUtxoArgs {
+  tables: UTXOTables
+  utxo: IUTXO
+}
+
+/**
+ * Saves a UTXO to the database and creates indices.
+ * @param args {SaveUtxoArgs}
+ */
+const saveUtxo = async (args: SaveUtxoArgs): Promise<void> => {
+  const { tables, utxo } = args
+
+  // Save the UTXO data
+  await tables.utxoById.insert('', utxo.id, utxo)
+
+  // Create index for size of value
+  await tables.utxoIdsBySize.insert('', {
+    [RANGE_ID_KEY]: utxo.id,
+    [RANGE_KEY]: parseInt(utxo.value)
+  })
+
+  // Create index for script pubkey
+  const [utxoIds] = await tables.utxoIdsByScriptPubkey.query('', [
+    utxo.scriptPubkey
+  ])
+  const set = new Set(utxoIds)
+  set.add(utxo.id)
+  await tables.utxoIdsByScriptPubkey.insert(
+    '',
+    utxo.scriptPubkey,
+    Array.from(set)
+  )
+}
+
+interface DeleteUtxoArgs {
+  tables: UTXOTables
+  id: string
+}
+
+/**
+ * Deletes a UTXO and its indices.
+ * @param args {DeleteUtxoArgs}
+ * @returns The deleted UTXO data
+ */
+const deleteUtxo = async (args: DeleteUtxoArgs): Promise<IUTXO> => {
+  const { tables, id } = args
+
+  // Fetch the UTXO data
+  const [utxo] = await tables.utxoById.query('', [id])
+  const { scriptPubkey, value } = utxo
+
+  // Delete UTXO data
+  await tables.utxoById.delete('', [id])
+
+  // Delete index for size of value
+  await tables.utxoIdsBySize.delete('', parseInt(value), id)
+
+  // Delete index for script pubkey
+  await tables.utxoIdsByScriptPubkey.delete('', [scriptPubkey])
+
+  // Return the deleted UTXO
+  return utxo
 }
