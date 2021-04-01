@@ -1,6 +1,7 @@
 import { Mutex } from 'async-mutex'
 import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
+import { makeMemlet, Memlet } from 'memlet'
 
 import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
 import { LocalWalletMetadata } from './types'
@@ -12,7 +13,7 @@ interface MetadataConfig {
   emitter: EngineEmitter
 }
 
-interface Metadata extends LocalWalletMetadata {
+export interface Metadata extends LocalWalletMetadata {
   clear: () => Promise<void>
 }
 
@@ -20,10 +21,11 @@ export const makeMetadata = async (
   config: MetadataConfig
 ): Promise<Metadata> => {
   const { disklet, emitter } = config
+  const memlet = makeMemlet(disklet)
 
   const mutex = new Mutex()
 
-  let cache: LocalWalletMetadata = await fetchMetadata(disklet)
+  let cache: LocalWalletMetadata = await fetchMetadata(memlet)
 
   emitter.on(
     EngineEvent.ADDRESS_BALANCE_CHANGED,
@@ -35,15 +37,17 @@ export const makeMetadata = async (
           currencyCode,
           cache.balance
         )
-        await setMetadata(disklet, cache)
+        await setMetadata(memlet, cache)
       })
     }
   )
 
   emitter.on(EngineEvent.BLOCK_HEIGHT_CHANGED, (height: number) => {
     void mutex.runExclusive(async () => {
-      cache.lastSeenBlockHeight = height
-      await setMetadata(disklet, cache)
+      if (height > cache.lastSeenBlockHeight) {
+        cache.lastSeenBlockHeight = height
+        await setMetadata(memlet, cache)
+      }
     })
   })
 
@@ -55,31 +59,29 @@ export const makeMetadata = async (
       return cache.lastSeenBlockHeight
     },
     clear: async () => {
-      await disklet.delete(metadataPath)
-      cache = await fetchMetadata(disklet)
+      await memlet.delete(metadataPath)
+      cache = await fetchMetadata(memlet)
     }
   }
 }
 
-const fetchMetadata = async (
-  disklet: Disklet
-): Promise<LocalWalletMetadata> => {
+const fetchMetadata = async (memlet: Memlet): Promise<LocalWalletMetadata> => {
   try {
-    const dataStr = await disklet.getText(metadataPath)
+    const dataStr = await memlet.getJson(metadataPath)
     return JSON.parse(dataStr)
   } catch {
     const data: LocalWalletMetadata = {
       balance: '0',
       lastSeenBlockHeight: 0
     }
-    await setMetadata(disklet, data)
+    await setMetadata(memlet, data)
     return data
   }
 }
 
 const setMetadata = async (
-  disklet: Disklet,
+  memlet: Memlet,
   data: LocalWalletMetadata
 ): Promise<void> => {
-  await disklet.setText(metadataPath, JSON.stringify(data))
+  await memlet.setJson(metadataPath, JSON.stringify(data))
 }
