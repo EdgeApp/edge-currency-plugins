@@ -36,7 +36,7 @@ export function makeCurrencyPlugin(
         engineOptions.callbacks.onTransactionsChanged
       )
       emitter.on(
-        EngineEvent.BALANCE_CHANGED,
+        EngineEvent.WALLET_BALANCE_CHANGED,
         engineOptions.callbacks.onBalanceChanged
       )
       emitter.on(

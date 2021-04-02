@@ -13,7 +13,12 @@ export declare interface EngineEmitter {
       transaction: IProcessorTransaction
     ) => boolean) &
     ((
-      event: EngineEvent.BALANCE_CHANGED,
+      event: EngineEvent.ADDRESS_BALANCE_CHANGED,
+      currencyCode: string,
+      nativeDiff: string
+    ) => boolean) &
+    ((
+      event: EngineEvent.WALLET_BALANCE_CHANGED,
       currencyCode: string,
       nativeBalance: string
     ) => boolean) &
@@ -36,10 +41,17 @@ export declare interface EngineEmitter {
       listener: (transaction: IProcessorTransaction) => Promise<void> | void
     ) => this) &
     ((
-      event: EngineEvent.BALANCE_CHANGED,
+      event: EngineEvent.ADDRESS_BALANCE_CHANGED,
       listener: (
         currencyCode: string,
-        balanceDiff: string
+        nativeDiff: string
+      ) => Promise<void> | void
+    ) => this) &
+    ((
+      event: EngineEvent.WALLET_BALANCE_CHANGED,
+      listener: (
+        currencyCode: string,
+        nativeBalance: string
       ) => Promise<void> | void
     ) => this) &
     ((
@@ -69,7 +81,8 @@ export class EngineEmitter extends EventEmitter {}
 export enum EngineEvent {
   TRANSACTIONS_CHANGED = 'transactions:changed',
   PROCESSOR_TRANSACTION_CHANGED = 'processor:transactions:changed',
-  BALANCE_CHANGED = 'balance:changed',
+  WALLET_BALANCE_CHANGED = 'wallet:balance:changed',
+  ADDRESS_BALANCE_CHANGED = 'address:balance:changed',
   BLOCK_HEIGHT_CHANGED = 'block:height:changed',
   ADDRESSES_CHECKED = 'addresses:checked',
   TXIDS_CHANGED = 'txids:changed',
