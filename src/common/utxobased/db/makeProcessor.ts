@@ -1098,11 +1098,17 @@ const saveUtxo = async (args: SaveUtxoArgs): Promise<void> => {
   // Save the UTXO data
   await tables.utxoById.insert('', utxo.id, utxo)
 
-  // Create index for size of value
-  await tables.utxoIdsBySize.insert('', {
-    [RANGE_ID_KEY]: utxo.id,
-    [RANGE_KEY]: parseInt(utxo.value)
-  })
+  try {
+    // Create index for size of value
+    await tables.utxoIdsBySize.insert('', {
+      [RANGE_ID_KEY]: utxo.id,
+      [RANGE_KEY]: parseInt(utxo.value)
+    })
+  } catch (err) {
+    if (err.message !== 'Cannot insert data because id already exists') {
+      throw err
+    }
+  }
 
   // Create index for script pubkey
   const [utxoIds] = await tables.utxoIdsByScriptPubkey.query('', [
