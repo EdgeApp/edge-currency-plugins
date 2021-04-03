@@ -16,9 +16,7 @@ export const asMempoolSpaceFees = asObject({
  * @param fees
  * @returns Partial<FeeRates>
  */
-export const processMempoolSpaceFees = async (
-  fees: any
-): Promise<FeeRates | null> => {
+export const processMempoolSpaceFees = (fees: any): FeeRates | null => {
   let mempoolFees: ReturnType<typeof asMempoolSpaceFees>
   try {
     mempoolFees = asMempoolSpaceFees(fees)

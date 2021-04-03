@@ -30,9 +30,7 @@ export const asEarnComFees = asObject({
  * @param fees
  * @returns {FeeRates}
  */
-export const processEarnComFees = async (
-  fees: any
-): Promise<FeeRates | null> => {
+export const processEarnComFees = (fees: any): FeeRates | null => {
   let earnComFees: ReturnType<typeof asEarnComFees>
   try {
     earnComFees = asEarnComFees(fees)

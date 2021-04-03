@@ -126,7 +126,7 @@ const sumSpendTargets = (spendTargets: EdgeSpendTarget[]): string =>
 
 interface FetchFeesArgs<T> extends Common {
   uri: string
-  processor: (fees: unknown) => Promise<T>
+  processor: (fees: unknown) => T
 }
 const fetchFees = async <T>(args: FetchFeesArgs<T>): Promise<T | null> => {
   const { uri, processor, io, log } = args
@@ -136,7 +136,7 @@ const fetchFees = async <T>(args: FetchFeesArgs<T>): Promise<T | null> => {
     if (!response.ok) throw new Error(`Error fetching fees from ${uri}`)
 
     const fees = await response.json()
-    return await processor(fees)
+    return processor(fees)
   } catch (err) {
     log(err.message)
     return null
