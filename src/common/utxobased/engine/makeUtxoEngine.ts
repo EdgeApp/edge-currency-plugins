@@ -14,7 +14,7 @@ import {
 } from 'edge-core-js'
 
 import { FEES_DISKLET_PATH } from '../../constants'
-import { makeFees } from '../../fees'
+import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
@@ -414,7 +414,11 @@ export async function makeUtxoEngine(
       })
       const tmpDisklet = walletLocalDisklet
       const tmpEmitter = new EngineEmitter()
-      const tmpConfig = { disklet: tmpDisklet, emitter: tmpEmitter }
+      const tmpConfig = {
+        disklet: tmpDisklet,
+        emitter: tmpEmitter,
+        log: io.console
+      }
       const tmpMetadata = await makeMetadata(tmpConfig)
       const tmpProcessor = await makeProcessor(tmpConfig)
       const tmpBlockBook = makeBlockBook(tmpConfig)

@@ -2,7 +2,7 @@ import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { makeMemoryDisklet } from 'disklet'
 
-import { Fees, FEES_PATH, makeFees } from '../../src/common/fees'
+import { Fees, FEES_PATH, makeFees } from '../../src/common/fees/makeFees'
 import { makeFakeCurrencyInfo, makeFakeIo, makeFakeLog } from '../utils'
 
 chai.should()
