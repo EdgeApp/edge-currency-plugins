@@ -11,6 +11,7 @@
     "simple-import-sort"
   ],
   "rules": {
+    "@typescript-eslint/restrict-template-expressions":  "off",
     "no-useless-return": "off",
     "no-void": "off",
     "simple-import-sort/imports": "error"

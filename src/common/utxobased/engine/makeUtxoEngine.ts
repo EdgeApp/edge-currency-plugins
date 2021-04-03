@@ -1,4 +1,5 @@
 import * as bs from 'biggystring'
+import { navigateDisklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
@@ -12,6 +13,8 @@ import {
   JsonObject
 } from 'edge-core-js'
 
+import { FEES_DISKLET_PATH } from '../../constants'
+import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
@@ -24,7 +27,6 @@ import {
 import { IProcessorTransaction } from '../db/types'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { makeBlockBook } from '../network/BlockBook'
-import { calculateFeeRate } from './makeSpendHelper'
 import { makeUtxoEngineState } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
@@ -74,6 +76,13 @@ export async function makeUtxoEngine(
     network
   })
 
+  const fees = await makeFees({
+    disklet: navigateDisklet(walletLocalDisklet, FEES_DISKLET_PATH),
+    currencyInfo,
+    io,
+    log: config.options.log
+  })
+
   const blockBook = makeBlockBook({ emitter, log: io.console })
   const metadata = await makeMetadata({ disklet: walletLocalDisklet, emitter })
   const processor = await makeProcessor({
@@ -104,15 +113,16 @@ export async function makeUtxoEngine(
   const fns: EdgeCurrencyEngine = {
     async startEngine(): Promise<void> {
       await blockBook.connect()
-
       const { bestHeight } = await blockBook.fetchInfo()
       emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, bestHeight)
 
+      await fees.start()
       await state.start()
     },
 
     async killEngine(): Promise<void> {
       await state.stop()
+      fees.stop()
       await blockBook.disconnect()
     },
 
@@ -276,11 +286,9 @@ export async function makeUtxoEngine(
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
-      let subtractFee = false
-      if (options != null) {
-        subtractFee = options.subtractFee ?? false
-      }
-      const feeRate = parseInt(calculateFeeRate(currencyInfo, edgeSpendInfo))
+      const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+      const subtractFee =
+        options?.subtractFee != null ? options.subtractFee : false
       const tx = await makeTx({
         utxos,
         targets,
@@ -406,7 +414,11 @@ export async function makeUtxoEngine(
       })
       const tmpDisklet = walletLocalDisklet
       const tmpEmitter = new EngineEmitter()
-      const tmpConfig = { disklet: tmpDisklet, emitter: tmpEmitter }
+      const tmpConfig = {
+        disklet: tmpDisklet,
+        emitter: tmpEmitter,
+        log: io.console
+      }
       const tmpMetadata = await makeMetadata(tmpConfig)
       const tmpProcessor = await makeProcessor(tmpConfig)
       const tmpBlockBook = makeBlockBook(tmpConfig)

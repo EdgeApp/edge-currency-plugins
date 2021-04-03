@@ -1,5 +1,5 @@
+import { IMAGE_SERVER_URL } from '../../constants'
 import { EngineCurrencyInfo, EngineCurrencyType } from '../../plugin/types'
-import { imageServerUrl } from './constants'
 
 export const info: EngineCurrencyInfo = {
   currencyType: EngineCurrencyType.UTXO,
@@ -72,6 +72,6 @@ export const info: EngineCurrencyInfo = {
   transactionExplorer: 'https://blockchair.com/litecoin/transaction/%s',
 
   // Images:
-  symbolImage: `${imageServerUrl}/litecoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/litecoin-logo-solo-64.png`
+  symbolImage: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`
 }
