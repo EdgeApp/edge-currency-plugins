@@ -150,12 +150,12 @@ export interface BlockBook {
   watchAddresses: (
     addresses: string[],
     cb: (response: INewTransactionResponse) => void | Promise<void>,
-    deferred: Deferred<unknown>
+    deferredAddressSub: Deferred<unknown>
   ) => void
 
   watchBlocks: (
     cb: () => void | Promise<void>,
-    deferred: Deferred<unknown>
+    deferredBlockSub: Deferred<unknown>
   ) => void
 
   fetchAddressUtxos: (account: string) => Promise<IAccountUTXO[]>
@@ -264,7 +264,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   async function watchBlocks(
     cb: Callback,
-    deferred: Deferred<unknown>
+    deferredBlockSub: Deferred<unknown>
   ): Promise<void> {
     const socketCb = async (value: INewBlockResponse): Promise<void> => {
       await cb()
@@ -273,7 +273,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.subscribe({
       ...subscribeNewBlockMessage(),
       cb: socketCb,
-      deferred,
+      deferred: deferredBlockSub,
       subscribed: false
     })
   }
@@ -281,12 +281,12 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   function watchAddresses(
     addresses: string[],
     cb: (response: INewTransactionResponse) => Promise<void> | void,
-    deferred: Deferred<unknown>
+    deferredAddressSub: Deferred<unknown>
   ): void {
     socket.subscribe({
       ...subscribeAddressesMessage(addresses),
       cb,
-      deferred,
+      deferred: deferredAddressSub,
       subscribed: false
     })
   }

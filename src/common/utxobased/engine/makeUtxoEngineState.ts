@@ -436,8 +436,8 @@ export const pickNextTask = async (
 
     taskCache.addressWatching = true
 
-    const deferred = new Deferred<unknown>()
-    deferred.promise.catch(() => {
+    const deferredAddressSub = new Deferred<unknown>()
+    deferredAddressSub.promise.catch(() => {
       taskCache.addressWatching = false
     })
     blockBook.watchAddresses(
@@ -461,7 +461,7 @@ export const pickNextTask = async (
           })
         }
       },
-      deferred
+      deferredAddressSub
     )
     return
   }
@@ -469,12 +469,15 @@ export const pickNextTask = async (
   // first check if blocks are already being watched
   if (!taskCache.blockWatching) {
     taskCache.blockWatching = true
-    const deferred = new Deferred<unknown>()
-    deferred.promise.catch(() => {
+    const deferredBlockSub = new Deferred<unknown>()
+    deferredBlockSub.promise.catch(() => {
       taskCache.blockWatching = false
     })
 
-    blockBook.watchBlocks(async () => await onNewBlock({ ...args }), deferred)
+    blockBook.watchBlocks(
+      async () => await onNewBlock({ ...args }),
+      deferredBlockSub
+    )
   }
 
   // filled when transactions potentially changed (e.g. through new block notification)
@@ -512,8 +515,8 @@ const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<ITransaction> => {
   const { txId, processor, taskCache } = args
-  const deferred = new Deferred<ITransaction>()
-  deferred.promise
+  const deferredITransaction = new Deferred<ITransaction>()
+  deferredITransaction.promise
     .then(async (rawTx: ITransaction) => {
       const tx = processRawTx({ ...args, tx: rawTx })
       // check if tx is still not confirmed, if so, don't change anything
@@ -529,7 +532,7 @@ const updateTransactions = (
     })
   return {
     ...transactionMessage(txId),
-    deferred: deferred
+    deferred: deferredITransaction
   }
 }
 
@@ -778,8 +781,8 @@ const processAddressTransactions = async (
     throw new Error(`could not find address with script pubkey ${scriptPubkey}`)
   }
 
-  const deferred = new Deferred<addressResponse>()
-  deferred.promise
+  const deferredAddressResponse = new Deferred<addressResponse>()
+  deferredAddressResponse.promise
     .then(async (value: addressResponse) => {
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
@@ -828,7 +831,7 @@ const processAddressTransactions = async (
       perPage: BLOCKBOOK_TXS_PER_PAGE,
       page
     }),
-    deferred: deferred
+    deferred: deferredAddressResponse
   }
 }
 
@@ -881,8 +884,8 @@ const processAddressUtxos = async (
 ): Promise<WsTask<IAccountUTXO[]>> => {
   const { address, walletTools, processor, taskCache, path } = args
   const { utxosCache, rawUtxosCache } = taskCache
-  const deferred = new Deferred<IAccountUTXO[]>()
-  deferred.promise
+  const deferredIAccountUTXOs = new Deferred<IAccountUTXO[]>()
+  deferredIAccountUTXOs.promise
     .then(async (utxos: IAccountUTXO[]) => {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddressByScriptPubkey(
@@ -910,7 +913,7 @@ const processAddressUtxos = async (
     })
   return {
     ...addressUtxosMessage(address),
-    deferred: deferred
+    deferred: deferredIAccountUTXOs
   }
 }
 
@@ -1017,8 +1020,8 @@ const processRawUtxo = async (
       // If we do not currently have it, add it to the queue to fetch it
       tx = await processor.fetchTransaction(utxo.txid)
       if (tx == null) {
-        const deferred = new Deferred<ITransaction>()
-        deferred.promise
+        const deferredITransaction = new Deferred<ITransaction>()
+        deferredITransaction.promise
           .then((rawTx: ITransaction) => {
             const processedTx = processRawTx({ ...args, tx: rawTx })
             script = processedTx.hex
@@ -1036,7 +1039,7 @@ const processRawUtxo = async (
           })
         return {
           ...transactionMessage(utxo.txid),
-          deferred: deferred
+          deferred: deferredITransaction
         }
       } else {
         script = tx.hex
