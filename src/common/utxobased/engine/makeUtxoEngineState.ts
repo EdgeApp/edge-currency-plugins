@@ -228,8 +228,8 @@ interface ShortPath {
 interface TaskCache {
   addressWatching: boolean
   blockWatching: boolean
-  addressSubscribeCache: Map<string, AddressUtxosCacheState>
-  utxosCache: Map<string, AddressUtxosCacheState>
+  addressSubscribeCache: Map<string, CommonCacheState>
+  utxosCache: Map<string, CommonCacheState>
   rawUtxosCache: Map<IAccountUTXO, RawUtxoCacheState>
   processedUtxosCache: Map<IAddress, ProcessedUtxoCacheState>
   transactionsCache: Map<string, AddressTransactionCacheState>
@@ -237,23 +237,23 @@ interface TaskCache {
 }
 
 interface UpdateTransactionCacheState {
-  fetching: boolean
+  processing: boolean
 }
-interface AddressUtxosCacheState {
-  fetching: boolean
+interface CommonCacheState {
+  processing: boolean
   path: ShortPath
 }
-interface ProcessedUtxoCacheState {
+interface ProcessedUtxoCacheState extends CommonCacheState {
   processing: boolean
   full: boolean
   utxos: Set<IUTXO>
   path: ShortPath
 }
-interface RawUtxoCacheState extends AddressUtxosCacheState {
+interface RawUtxoCacheState extends CommonCacheState {
   address: Required<IAddress>
   requiredCount: number
 }
-interface AddressTransactionCacheState extends AddressUtxosCacheState {
+interface AddressTransactionCacheState extends CommonCacheState {
   page: number
   networkQueryVal: number
 }
@@ -266,7 +266,7 @@ const onNewBlock = async (args: CommonArgs): Promise<void> => {
     return
   }
   for (const txId of txIds) {
-    taskCache.updateTransactionsCache.set(txId, { fetching: false })
+    taskCache.updateTransactionsCache.set(txId, { processing: false })
   }
 }
 
@@ -311,7 +311,7 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
 
       taskCache.addressSubscribeCache.set(address, {
         path: { format, branch },
-        fetching: false
+        processing: false
       })
     }
   })
@@ -330,7 +330,7 @@ const addToTransactionCache = async (
   const { networkQueryVal = 0 } =
     (await processor.fetchAddressByScriptPubkey(scriptPubkey)) ?? {}
   transactions.set(address, {
-    fetching: false,
+    processing: false,
     path: {
       format,
       branch
@@ -361,8 +361,8 @@ export const pickNextTask = async (
 
   // Loop unparsed utxos, some require a network call to get the full tx data
   for (const [utxo, state] of rawUtxosCache) {
-    if (!state.fetching) {
-      state.fetching = true
+    if (!state.processing) {
+      state.processing = true
       rawUtxosCache.delete(utxo)
       const wsTask = await processRawUtxo({
         ...args,
@@ -394,8 +394,8 @@ export const pickNextTask = async (
   // Loop to process addresses to utxos
   for (const [address, state] of utxosCache) {
     // Check if we need to fetch address UTXOs
-    if (!state.fetching) {
-      state.fetching = true
+    if (!state.processing) {
+      state.processing = true
 
       utxosCache.delete(address)
 
@@ -414,13 +414,13 @@ export const pickNextTask = async (
     // Loop each address that needs to be subscribed
     for (const [address, state] of addressSubscribeCache) {
       // Add address in the cache to the set of addresses to watch
-      const { path, fetching: subscribed } = state
+      const { path, processing: subscribed } = state
       // only process newly watched addresses
       if (subscribed) continue
       if (path != null) {
         // Add the newly watched addresses to the UTXO cache
         utxosCache.set(address, {
-          fetching: false,
+          processing: false,
           path
         })
         await addToTransactionCache(
@@ -431,7 +431,7 @@ export const pickNextTask = async (
           transactionsCache
         )
       }
-      state.fetching = true
+      state.processing = true
     }
 
     taskCache.addressWatching = true
@@ -447,7 +447,7 @@ export const pickNextTask = async (
         if (state != null) {
           const { path } = state
           utxosCache.set(response.address, {
-            fetching: false,
+            processing: false,
             path
           })
           addToTransactionCache(
@@ -479,8 +479,8 @@ export const pickNextTask = async (
 
   // filled when transactions potentially changed (e.g. through new block notification)
   for (const [txId, state] of updateTransactionsCache) {
-    if (!state.fetching) {
-      state.fetching = true
+    if (!state.processing) {
+      state.processing = true
       updateTransactionsCache.delete(txId)
       return updateTransactions({ ...args, txId })
     }
@@ -488,8 +488,8 @@ export const pickNextTask = async (
 
   // loop to get and process transaction history of single addresses, triggers setLookAhead
   for (const [address, state] of transactionsCache) {
-    if (!state.fetching) {
-      state.fetching = true
+    if (!state.processing) {
+      state.processing = true
 
       transactionsCache.delete(address)
 
@@ -525,7 +525,7 @@ const updateTransactions = (
       await processor.updateTransaction(txId, tx)
     })
     .catch(() => {
-      taskCache.updateTransactionsCache.set(txId, { fetching: false })
+      taskCache.updateTransactionsCache.set(txId, { processing: false })
     })
   return {
     ...transactionMessage(txId),
@@ -743,7 +743,7 @@ const processPathAddresses = async (
     })
     taskCache.addressSubscribeCache.set(address, {
       path: { format, branch },
-      fetching: false
+      processing: false
     })
     taskCache.addressWatching = false
   }
@@ -802,7 +802,7 @@ const processAddressTransactions = async (
         transactionsCache.set(address, {
           path,
           networkQueryVal,
-          fetching: false,
+          processing: false,
           page: page + 1
         })
       } else {
@@ -813,11 +813,11 @@ const processAddressTransactions = async (
       }
     })
     .catch(() => {
-      args.fetching = false
+      args.processing = false
       transactionsCache.set(address, {
         path,
         networkQueryVal,
-        fetching: args.fetching,
+        processing: args.processing,
         page
       })
     })
@@ -872,7 +872,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
   }
 }
 
-interface ProcessAddressUtxosArgs extends AddressUtxosCacheState, CommonArgs {
+interface ProcessAddressUtxosArgs extends CommonCacheState, CommonArgs {
   address: string
 }
 
@@ -893,7 +893,7 @@ const processAddressUtxos = async (
       }
       for (const utxo of utxos) {
         rawUtxosCache.set(utxo, {
-          fetching: false,
+          processing: false,
           requiredCount: utxos.length,
           path,
           // TypeScript yells otherwise
@@ -902,9 +902,9 @@ const processAddressUtxos = async (
       }
     })
     .catch(() => {
-      args.fetching = false
+      args.processing = false
       utxosCache.set(address, {
-        fetching: args.fetching,
+        processing: args.processing,
         path
       })
     })
@@ -1028,7 +1028,7 @@ const processRawUtxo = async (
           .catch(() => {
             // If something went wrong, add the UTXO back to the queue
             rawUtxosCache.set(utxo, {
-              fetching: false,
+              processing: false,
               path,
               address,
               requiredCount
