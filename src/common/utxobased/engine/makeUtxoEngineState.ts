@@ -68,8 +68,6 @@ export function makeUtxoEngineState(
     blockBook
   } = config
 
-  // const addressesToWatch = new Set<string>()
-  const addressesToWatch: Map<string, ShortPath> = new Map<string, ShortPath>()
   const taskCache: TaskCache = {
     addressWatching: false,
     blockWatching: false,
@@ -107,7 +105,6 @@ export function makeUtxoEngineState(
     walletTools,
     processor,
     emitter,
-    addressesToWatch,
     taskCache,
     onAddressChecked,
     mutexor,
@@ -182,10 +179,10 @@ export function makeUtxoEngineState(
     },
 
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
-      for (const address of addresses) {
+      for (const addr of addresses) {
         await saveAddress({
           ...commonArgs,
-          address,
+          scriptPubkey: walletTools.addressToScriptPubkey(addr),
           used: true
         })
       }
@@ -201,7 +198,6 @@ interface CommonArgs {
   walletTools: UTXOPluginWalletTools
   processor: Processor
   emitter: EngineEmitter
-  addressesToWatch: Map<string, ShortPath>
   taskCache: TaskCache
   onAddressChecked: () => void
   mutexor: Mutexor
@@ -232,17 +228,18 @@ interface ShortPath {
 interface TaskCache {
   addressWatching: boolean
   blockWatching: boolean
-  addressSubscribeCache: Map<string, ShortPath>
-  utxosCache: Map<string, AddressUtxoCacheState>
+  addressSubscribeCache: Map<string, AddressUtxosCacheState>
+  utxosCache: Map<string, AddressUtxosCacheState>
   rawUtxosCache: Map<IAccountUTXO, RawUtxoCacheState>
   processedUtxosCache: Map<IAddress, ProcessedUtxoCacheState>
   transactionsCache: Map<string, AddressTransactionCacheState>
-  updateTransactionsCache: Map<string, UpdateTransactionsCacheState>
+  updateTransactionsCache: Map<string, UpdateTransactionCacheState>
 }
-interface UpdateTransactionsCacheState {
+
+interface UpdateTransactionCacheState {
   fetching: boolean
 }
-interface AddressUtxoCacheState {
+interface AddressUtxosCacheState {
   fetching: boolean
   path: ShortPath
 }
@@ -252,20 +249,16 @@ interface ProcessedUtxoCacheState {
   utxos: Set<IUTXO>
   path: ShortPath
 }
-interface RawUtxoCacheState extends AddressUtxoCacheState {
+interface RawUtxoCacheState extends AddressUtxosCacheState {
   address: Required<IAddress>
   requiredCount: number
 }
-interface AddressTransactionCacheState extends AddressUtxoCacheState {
+interface AddressTransactionCacheState extends AddressUtxosCacheState {
   page: number
   networkQueryVal: number
 }
 
-interface OnNewBlockArgs extends CommonArgs {
-  blockBook: BlockBook
-}
-
-const onNewBlock = async (args: OnNewBlockArgs): Promise<void> => {
+const onNewBlock = async (args: CommonArgs): Promise<void> => {
   const { processor, taskCache } = args
 
   const txIds = await processor.fetchTxIdsByBlockHeight(0)
@@ -309,13 +302,17 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
         addressIndex: getAddressCount()
       }
       const { address } = walletTools.getAddress(path)
+      const scriptPubkey = walletTools.addressToScriptPubkey(address)
       await saveAddress({
         ...args,
-        address,
+        scriptPubkey,
         path
       })
 
-      taskCache.addressSubscribeCache.set(address, { format, branch })
+      taskCache.addressSubscribeCache.set(address, {
+        path: { format, branch },
+        fetching: false
+      })
     }
   })
 }
@@ -351,7 +348,7 @@ export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<WsTask<any> | undefined> => {
-  const { addressesToWatch, taskCache, blockBook } = args
+  const { taskCache, blockBook } = args
 
   const {
     addressSubscribeCache,
@@ -361,114 +358,6 @@ export const pickNextTask = async (
     transactionsCache,
     updateTransactionsCache
   } = taskCache
-
-  console.log({
-    addressSubscribeCache: addressSubscribeCache.size,
-    utxosCache: utxosCache.size,
-    rawUtxosCache: rawUtxosCache.size,
-    processedUtxosCache: processedUtxosCache.size,
-    transactionsCache: transactionsCache.size,
-    updateTransactionsCache: updateTransactionsCache.size
-  })
-
-  // first check if blocks are already being watched
-  if (!taskCache.blockWatching) {
-    taskCache.blockWatching = true
-    const deferred = new Deferred<unknown>()
-    deferred.promise.catch(() => {
-      taskCache.blockWatching = false
-    })
-
-    blockBook.watchBlocks(
-      async () => await onNewBlock({ ...args, blockBook }),
-      deferred
-    )
-  }
-
-  // Loop to process addresses to utxos
-  for (const [address, state] of utxosCache) {
-    // Check if we need to fetch address UTXOs
-    if (!state.fetching) {
-      state.fetching = true
-
-      utxosCache.delete(address)
-
-      // Fetch and process address UTXOs
-      const wsTask = await processAddressUtxos({
-        ...args,
-        ...state,
-        address
-      })
-      return wsTask
-    }
-  }
-
-  // Check if there are any addresses pending to be subscribed
-  if (addressSubscribeCache.size > 0 && !taskCache.addressWatching) {
-    // Loop each address that needs to be subscribed
-    for (const [address, path] of addressSubscribeCache) {
-      // Add address in the cache to the set of addresses to watch
-      addressesToWatch.set(address, path)
-
-      if (path != null) {
-        // Add the newly watched addresses to the UTXO cache
-        utxosCache.set(address, {
-          fetching: false,
-          path
-        })
-        await addToTransactionCache(
-          args,
-          address,
-          path.format,
-          path.branch,
-          transactionsCache
-        )
-      }
-    }
-
-    taskCache.addressWatching = true
-
-    const deferred = new Deferred<unknown>()
-    deferred.promise
-      .then(() => {
-        addressSubscribeCache.clear()
-      })
-      .catch(() => {
-        taskCache.addressWatching = false
-      })
-    blockBook.watchAddresses(
-      Array.from(addressesToWatch.keys()),
-      (response: INewTransactionResponse) => {
-        const path = addressesToWatch.get(response.address)
-        if (path != null) {
-          utxosCache.set(response.address, {
-            fetching: false,
-            path
-          })
-          addToTransactionCache(
-            args,
-            response.address,
-            path.format,
-            path.branch,
-            transactionsCache
-          ).catch(() => {
-            throw new Error('failed to add to transaction cache')
-          })
-        }
-      },
-      deferred
-    )
-    return
-  }
-
-  // filled when transactions potentially changed (e.g. through new block notification)
-  for (const [txId, state] of updateTransactionsCache) {
-    if (!state.fetching) {
-      state.fetching = true
-      updateTransactionsCache.delete(txId)
-      return updateTransactions({ ...args, txId })
-    }
-  }
 
   // Loop unparsed utxos, some require a network call to get the full tx data
   for (const [utxo, state] of rawUtxosCache) {
@@ -499,6 +388,101 @@ export const pickNextTask = async (
         path: state.path
       })
       processedUtxosCache.delete(address)
+    }
+  }
+
+  // Loop to process addresses to utxos
+  for (const [address, state] of utxosCache) {
+    // Check if we need to fetch address UTXOs
+    if (!state.fetching) {
+      state.fetching = true
+
+      utxosCache.delete(address)
+
+      // Fetch and process address UTXOs
+      const wsTask = await processAddressUtxos({
+        ...args,
+        ...state,
+        address
+      })
+      return wsTask
+    }
+  }
+
+  // Check if there are any addresses pending to be subscribed
+  if (addressSubscribeCache.size > 0 && !taskCache.addressWatching) {
+    // Loop each address that needs to be subscribed
+    for (const [address, state] of addressSubscribeCache) {
+      // Add address in the cache to the set of addresses to watch
+      const { path, fetching: subscribed } = state
+      // only process newly watched addresses
+      if (subscribed) continue
+      if (path != null) {
+        // Add the newly watched addresses to the UTXO cache
+        utxosCache.set(address, {
+          fetching: false,
+          path
+        })
+        await addToTransactionCache(
+          args,
+          address,
+          path.format,
+          path.branch,
+          transactionsCache
+        )
+      }
+      state.fetching = true
+    }
+
+    taskCache.addressWatching = true
+
+    const deferred = new Deferred<unknown>()
+    deferred.promise.catch(() => {
+      taskCache.addressWatching = false
+    })
+    blockBook.watchAddresses(
+      Array.from(addressSubscribeCache.keys()),
+      (response: INewTransactionResponse) => {
+        const state = addressSubscribeCache.get(response.address)
+        if (state != null) {
+          const { path } = state
+          utxosCache.set(response.address, {
+            fetching: false,
+            path
+          })
+          addToTransactionCache(
+            args,
+            response.address,
+            path.format,
+            path.branch,
+            transactionsCache
+          ).catch(() => {
+            throw new Error('failed to add to transaction cache')
+          })
+        }
+      },
+      deferred
+    )
+    return
+  }
+
+  // first check if blocks are already being watched
+  if (!taskCache.blockWatching) {
+    taskCache.blockWatching = true
+    const deferred = new Deferred<unknown>()
+    deferred.promise.catch(() => {
+      taskCache.blockWatching = false
+    })
+
+    blockBook.watchBlocks(async () => await onNewBlock({ ...args }), deferred)
+  }
+
+  // filled when transactions potentially changed (e.g. through new block notification)
+  for (const [txId, state] of updateTransactionsCache) {
+    if (!state.fetching) {
+      state.fetching = true
+      updateTransactionsCache.delete(txId)
+      return updateTransactions({ ...args, txId })
     }
   }
 
@@ -545,20 +529,18 @@ const updateTransactions = (
     })
   return {
     ...transactionMessage(txId),
-    deferred
+    deferred: deferred
   }
 }
 
 interface SaveAddressArgs extends CommonArgs {
-  address: string
+  scriptPubkey: string
   path?: AddressPath
   used?: boolean
 }
 
 const saveAddress = async (args: SaveAddressArgs): Promise<void> => {
-  const { address, path, used = false, processor, walletTools, mutexor } = args
-
-  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  const { scriptPubkey, path, used = false, processor, mutexor } = args
 
   await mutexor('saveAddress').runExclusive(async () => {
     try {
@@ -703,9 +685,9 @@ const internalGetFreshAddress = async (
     changeIndex: branch,
     addressIndex: (await findLastUsedIndex(args)) + 1
   }
-  let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
-  scriptPubkey =
-    scriptPubkey ?? (await walletTools.getScriptPubkey(path)).scriptPubkey
+  const scriptPubkey =
+    (await processor.fetchScriptPubkeyByPath(path)) ??
+    (await walletTools.getScriptPubkey(path)).scriptPubkey
   if (scriptPubkey == null) {
     throw new Error('Unknown address path')
   }
@@ -752,15 +734,17 @@ const processPathAddresses = async (
       changeIndex,
       addressIndex: i
     }
-    console.log('processing path', path)
-    let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
-    scriptPubkey =
-      scriptPubkey ?? walletTools.getScriptPubkey(path).scriptPubkey
+    const scriptPubkey =
+      (await processor.fetchScriptPubkeyByPath(path)) ??
+      walletTools.getScriptPubkey(path).scriptPubkey
     const { address } = walletTools.scriptPubkeyToAddress({
       scriptPubkey,
       format
     })
-    taskCache.addressSubscribeCache.set(address, { format, branch })
+    taskCache.addressSubscribeCache.set(address, {
+      path: { format, branch },
+      fetching: false
+    })
     taskCache.addressWatching = false
   }
 }
@@ -790,6 +774,9 @@ const processAddressTransactions = async (
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+  if (addressData == null) {
+    throw new Error(`could not find address with script pubkey ${scriptPubkey}`)
+  }
 
   const deferred = new Deferred<addressResponse>()
   deferred.promise
@@ -798,7 +785,7 @@ const processAddressTransactions = async (
 
       // If address is used and previously not marked as used, mark as used.
       const used = txs > 0 || unconfirmedTxs > 0
-      if (used && !(addressData?.used ?? false) && page === 1) {
+      if (used && !(addressData.used ?? false) && page === 1) {
         await processor.updateAddressByScriptPubkey(scriptPubkey, {
           used
         })
@@ -841,7 +828,7 @@ const processAddressTransactions = async (
       perPage: BLOCKBOOK_TXS_PER_PAGE,
       page
     }),
-    deferred
+    deferred: deferred
   }
 }
 
@@ -885,7 +872,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
   }
 }
 
-interface ProcessAddressUtxosArgs extends AddressUtxoCacheState, CommonArgs {
+interface ProcessAddressUtxosArgs extends AddressUtxosCacheState, CommonArgs {
   address: string
 }
 
@@ -923,7 +910,7 @@ const processAddressUtxos = async (
     })
   return {
     ...addressUtxosMessage(address),
-    deferred
+    deferred: deferred
   }
 }
 
@@ -1049,7 +1036,7 @@ const processRawUtxo = async (
           })
         return {
           ...transactionMessage(utxo.txid),
-          deferred
+          deferred: deferred
         }
       } else {
         script = tx.hex

@@ -246,6 +246,14 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     return await promisifyWsMessage(infoMessage())
   }
 
+  async function fetchAddressUtxos(account: string): Promise<IAccountUTXO[]> {
+    return await promisifyWsMessage(addressUtxosMessage(account))
+  }
+
+  async function fetchTransaction(hash: string): Promise<ITransaction> {
+    return await promisifyWsMessage(transactionMessage(hash))
+  }
+
   async function fetchAddress(
     address: string,
     opts: IAccountOpts = {}
@@ -281,14 +289,6 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
       deferred,
       subscribed: false
     })
-  }
-
-  async function fetchAddressUtxos(account: string): Promise<IAccountUTXO[]> {
-    return await promisifyWsMessage(addressUtxosMessage(account))
-  }
-
-  async function fetchTransaction(hash: string): Promise<ITransaction> {
-    return await promisifyWsMessage(transactionMessage(hash))
   }
 
   async function broadcastTx(transaction: EdgeTransaction): Promise<void> {

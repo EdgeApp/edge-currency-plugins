@@ -122,7 +122,6 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     })
 
     wakeUp()
-    setupTimer()
     cancelConnect = false
   }
 
@@ -270,6 +269,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     }
     wakeUp()
   }
+
+  setupTimer()
 
   // return a Socket
   return {
