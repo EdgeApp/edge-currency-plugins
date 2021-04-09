@@ -46,7 +46,7 @@ export async function makeUtxoEngine(
     network,
     currencyInfo,
     walletInfo,
-    options: { walletLocalDisklet, walletLocalEncryptedDisklet, emitter },
+    options: { walletLocalDisklet, walletLocalEncryptedDisklet, emitter, log },
     io
   } = config
 
@@ -56,7 +56,7 @@ export async function makeUtxoEngine(
     !currencyInfo.formats.includes(walletFormat)
   ) {
     const message = `Wallet format is not supported: ${walletFormat}`
-    io.console.error(message)
+    log.error(message)
     throw new Error(message)
   }
 
@@ -83,7 +83,7 @@ export async function makeUtxoEngine(
     log: config.options.log
   })
 
-  const blockBook = makeBlockBook({ emitter, log: io.console })
+  const blockBook = makeBlockBook({ emitter, log })
   const metadata = await makeMetadata({ disklet: walletLocalDisklet, emitter })
   const processor = await makeProcessor({
     disklet: walletLocalDisklet,
@@ -417,7 +417,7 @@ export async function makeUtxoEngine(
       const tmpConfig = {
         disklet: tmpDisklet,
         emitter: tmpEmitter,
-        log: io.console
+        log
       }
       const tmpMetadata = await makeMetadata(tmpConfig)
       const tmpProcessor = await makeProcessor(tmpConfig)

@@ -1,4 +1,4 @@
-import { EdgeConsole } from 'edge-core-js'
+import { EdgeLog } from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { setupWS } from './nodejsWS'
@@ -42,7 +42,7 @@ interface SocketConfig {
   timeout?: number
   walletId?: string
   emitter: EngineEmitter
-  log: EdgeConsole
+  log: EdgeLog
   onQueueSpace: () => potentialWsTask
   healthCheck: () => Promise<object> // function for heartbeat, should submit task itself
 }
@@ -71,7 +71,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     if (connected && socket != null && socket.readyState === ReadyState.OPEN)
       disconnect()
     else cancelConnect = true
-    log.info('handled error!', e)
+    log('handled error!', e)
   }
 
   const disconnect = (): void => {

@@ -1,5 +1,5 @@
 import * as bs from 'biggystring'
-import { EdgeFreshAddress, EdgeWalletInfo } from 'edge-core-js'
+import { EdgeFreshAddress, EdgeLog, EdgeWalletInfo } from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
@@ -49,7 +49,7 @@ export function makeUtxoEngineState(
     currencyInfo,
     walletInfo,
     walletTools,
-    options: { emitter },
+    options: { emitter, log },
     processor,
     blockBook
   } = config
@@ -66,7 +66,7 @@ export function makeUtxoEngineState(
       processor
     })
     const percent = processedCount / totalCount
-    config.io.console.info('processed', percent)
+    log('processed', percent)
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       processedPercent = percent
       emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
@@ -85,7 +85,8 @@ export function makeUtxoEngineState(
     emitter,
     addressesToWatch,
     onAddressChecked,
-    mutexor
+    mutexor,
+    log
   }
 
   let running = false
@@ -190,6 +191,7 @@ interface CommonArgs {
   addressesToWatch: Set<string>
   onAddressChecked: () => void
   mutexor: Mutexor
+  log: EdgeLog
 }
 
 interface OnNewBlockArgs extends CommonArgs {}
@@ -566,7 +568,8 @@ const processAddressUtxos = async (
     processor,
     blockBook,
     emitter,
-    mutexor
+    mutexor,
+    log
   } = args
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -612,7 +615,7 @@ const processAddressUtxos = async (
 
     const diff = bs.sub(newBalance, oldBalance)
     if (diff !== '0') {
-      console.log({ address, diff })
+      log({ address, diff })
       emitter.emit(
         EngineEvent.ADDRESS_BALANCE_CHANGED,
         currencyInfo.currencyCode,

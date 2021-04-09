@@ -1,4 +1,4 @@
-import { EdgeConsole, EdgeTransaction } from 'edge-core-js'
+import { EdgeLog, EdgeTransaction } from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeSocket, potentialWsTask, WsTask } from './Socket'
@@ -144,7 +144,7 @@ export interface BlockBook {
 interface BlockBookConfig {
   emitter: EngineEmitter
   wsAddress?: string
-  log: EdgeConsole
+  log: EdgeLog
 }
 
 const baseUri = 'btc1.trezor.io'
