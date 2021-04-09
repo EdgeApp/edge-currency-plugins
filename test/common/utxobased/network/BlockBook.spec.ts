@@ -153,7 +153,8 @@ describe('BlockBook', function () {
         'bestHeight',
         'bestHash',
         'block0Hash',
-        'testnet'
+        'testnet',
+        'backend'
       )
     })
   })

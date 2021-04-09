@@ -83,6 +83,11 @@ export interface IAccountUTXO extends IUTXO {
   path?: string
 }
 
+interface IServerInfoVersion {
+  version: string
+  subversion: string
+}
+
 interface IServerInfo {
   name: string
   shortcut: string
@@ -92,6 +97,7 @@ interface IServerInfo {
   bestHash: string
   block0Hash: string
   testnet: boolean
+  backend?: IServerInfoVersion
 }
 
 type Callback = () => void | Promise<void>
