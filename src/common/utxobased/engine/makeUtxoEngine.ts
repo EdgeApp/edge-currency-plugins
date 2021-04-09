@@ -26,7 +26,6 @@ import {
 } from '../db/Models/ProcessorTransaction'
 import { IProcessorTransaction } from '../db/types'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
-import { makeBlockBook } from '../network/BlockBook'
 import { makeUtxoEngineState } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
@@ -47,7 +46,8 @@ export async function makeUtxoEngine(
     currencyInfo,
     walletInfo,
     options: { walletLocalDisklet, walletLocalEncryptedDisklet, emitter, log },
-    io
+    io,
+    pluginState
   } = config
 
   const walletFormat = getWalletFormat(walletInfo)
@@ -83,7 +83,6 @@ export async function makeUtxoEngine(
     log: config.options.log
   })
 
-  const blockBook = makeBlockBook({ emitter, log })
   const metadata = await makeMetadata({ disklet: walletLocalDisklet, emitter })
   const processor = await makeProcessor({
     disklet: walletLocalDisklet,
@@ -93,7 +92,7 @@ export async function makeUtxoEngine(
     ...config,
     walletTools,
     processor,
-    blockBook
+    pluginState
   })
 
   emitter.on(
@@ -112,10 +111,6 @@ export async function makeUtxoEngine(
 
   const fns: EdgeCurrencyEngine = {
     async startEngine(): Promise<void> {
-      await blockBook.connect()
-      const { bestHeight } = await blockBook.fetchInfo()
-      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, bestHeight)
-
       await fees.start()
       await state.start()
     },
@@ -123,7 +118,6 @@ export async function makeUtxoEngine(
     async killEngine(): Promise<void> {
       await state.stop()
       fees.stop()
-      await blockBook.disconnect()
     },
 
     getBalance(_opts: EdgeCurrencyCodeOptions): string {
@@ -160,12 +154,15 @@ export async function makeUtxoEngine(
           )
         }
       }
-      await blockBook.broadcastTx(transaction)
+      const id = await state.broadcastTx(transaction)
+      if (id !== transaction.txid) {
+        throw new Error('broadcast response txid does not match original')
+      }
       return transaction
     },
 
-    async changeUserSettings(_settings: JsonObject): Promise<unknown> {
-      return await Promise.resolve(undefined)
+    async changeUserSettings(userSettings: JsonObject): Promise<void> {
+      await pluginState.updateServers(userSettings)
     },
 
     async disableTokens(_tokens: string[]): Promise<unknown> {
@@ -182,7 +179,8 @@ export async function makeUtxoEngine(
             walletFormatsSupported: getWalletSupportedFormats(walletInfo),
             pluginType: currencyInfo.pluginId
           },
-          state: await processor.dumpData()
+          processorState: await processor.dumpData(),
+          pluginState: pluginState.dumpData()
         }
       }
     },
@@ -341,6 +339,8 @@ export async function makeUtxoEngine(
       await state.stop()
       // now get rid of all the db information
       await processor.clearAll()
+      // clear the networking cache
+      await pluginState.clearCache()
       await metadata.clear()
 
       // finally restart the state
@@ -420,7 +420,6 @@ export async function makeUtxoEngine(
       }
       const tmpMetadata = await makeMetadata(tmpConfig)
       const tmpProcessor = await makeProcessor(tmpConfig)
-      const tmpBlockBook = makeBlockBook(tmpConfig)
       const tmpWalletTools = makeUtxoWalletTools({
         keys: { wifKeys: privateKeys },
         coin: currencyInfo.network,
@@ -430,7 +429,6 @@ export async function makeUtxoEngine(
       tmpEmitter.on(EngineEvent.ADDRESSES_CHECKED, async (ratio: number) => {
         if (ratio === 1) {
           await tmpState.stop()
-          await tmpBlockBook.disconnect()
 
           const utxos = await processor.fetchAllUtxos()
           if (utxos === null || utxos.length < 1) {
@@ -462,7 +460,7 @@ export async function makeUtxoEngine(
         },
         walletTools: tmpWalletTools,
         processor: tmpProcessor,
-        blockBook: tmpBlockBook
+        pluginState
       })
       await tmpState.start()
       return end

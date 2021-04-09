@@ -8,7 +8,7 @@ interface UpdateQueue {
 }
 
 const updateQueue: UpdateQueue[] = []
-let timeOut: NodeJS.Timeout
+let timeOut: ReturnType<typeof setTimeout>
 
 export function pushUpdate(update: UpdateQueue): void {
   if (updateQueue.length === 0) {

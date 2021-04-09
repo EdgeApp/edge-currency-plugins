@@ -38,17 +38,18 @@ export interface Socket {
   isConnected: () => boolean
 }
 
-export type OnQueueSpaceCB = () => Promise<
-  WsTask<unknown> | boolean | undefined
->
+export type OnQueueSpaceCB = (
+  uri: string
+) => Promise<WsTask<unknown> | boolean | undefined>
 
 interface SocketConfig {
   queueSize?: number
   timeout?: number
-  walletId?: string
+  walletId: string
   emitter: EngineEmitter
   log: EdgeLog
   healthCheck: () => Promise<Record<string, unknown>> // function for heartbeat, should submit task itself
+  onQueueSpaceCB: OnQueueSpaceCB
 }
 
 interface WsMessage {
@@ -58,10 +59,10 @@ interface WsMessage {
 
 export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
-  const { emitter, log, queueSize = 5, walletId = '' } = config
+  const { emitter, log, queueSize = 5, walletId } = config
   const version = ''
   const subscriptions: Map<string, WsSubscription> = new Map()
-  let onQueueSpace: OnQueueSpaceCB | undefined
+  let onQueueSpace = config.onQueueSpaceCB
   let pendingMessages: Map<string, WsMessage> = new Map()
   let nextId = 0
   let lastKeepAlive = 0
@@ -141,7 +142,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const doWakeUp = async (): Promise<void> => {
     if (connected && version != null) {
       while (pendingMessages.size < queueSize) {
-        const task = await onQueueSpace?.()
+        const task = await onQueueSpace?.(uri)
         if (task == null) break
         if (typeof task === 'boolean') {
           if (task) continue
