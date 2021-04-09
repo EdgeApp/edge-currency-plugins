@@ -1,7 +1,15 @@
 import * as bs from 'biggystring'
-import { EdgeFreshAddress, EdgeWalletInfo } from 'edge-core-js'
+import {
+  EdgeFreshAddress,
+  EdgeIo,
+  EdgeLog,
+  EdgeTransaction,
+  EdgeWalletInfo
+} from 'edge-core-js'
+import { parse } from 'uri-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import { PluginState } from '../../plugin/pluginState'
 import {
   AddressPath,
   CurrencyFormat,
@@ -18,7 +26,8 @@ import {
   IAccountUTXO,
   INewTransactionResponse,
   ITransaction,
-  ITransactionDetailsPaginationResponse
+  ITransactionDetailsPaginationResponse,
+  makeBlockBook
 } from '../network/BlockBook'
 import {
   addressMessage,
@@ -27,7 +36,13 @@ import {
 } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
-import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
+import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
+import {
+  BLOCKBOOK_TXS_PER_PAGE,
+  CACHE_THROTTLE,
+  MAX_CONNECTIONS,
+  NEW_CONNECTIONS
+} from './constants'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import { makeMutexor, Mutexor } from './mutexor'
 import {
@@ -40,6 +55,9 @@ import {
 } from './utils'
 
 export interface UtxoEngineState {
+  processedPercent: number
+  serverList: string[]
+
   start: () => Promise<void>
 
   stop: () => Promise<void>
@@ -47,12 +65,21 @@ export interface UtxoEngineState {
   getFreshAddress: (branch?: number) => Promise<EdgeFreshAddress>
 
   addGapLimitAddresses: (addresses: string[]) => Promise<void>
+
+  broadcastTx: (transaction: EdgeTransaction) => Promise<string>
+
+  refillServers: () => void
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
   walletTools: UTXOPluginWalletTools
   processor: Processor
-  blockBook: BlockBook
+}
+
+interface ServerState {
+  subscribedBlocks: boolean
+  txids: Set<string>
+  addresses: Set<string>
 }
 
 export function makeUtxoEngineState(
@@ -63,12 +90,11 @@ export function makeUtxoEngineState(
     currencyInfo,
     walletInfo,
     walletTools,
-    options: { emitter },
+    options: { emitter, log },
     processor,
-    blockBook
+    pluginState
   } = config
 
-  // const addressesToWatch = new Set<string>()
   const addressesToWatch: Map<string, ShortPath> = new Map<string, ShortPath>()
   const taskCache: TaskCache = {
     addressWatching: false,
@@ -99,8 +125,17 @@ export function makeUtxoEngineState(
   }
 
   const mutexor = makeMutexor()
+  const connections = new Map<string, BlockBook>()
+  const serverList: string[] = []
+  const reconnectCounter = 0
+  const reconnectTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
+    return
+  }, 0)
+  const engineStarted = false
+  const serverStates = new Map<string, ServerState>()
 
   const commonArgs: CommonArgs = {
+    engineStarted,
     network,
     currencyInfo,
     walletInfo,
@@ -110,28 +145,40 @@ export function makeUtxoEngineState(
     addressesToWatch,
     taskCache,
     onAddressChecked,
-    mutexor
+    mutexor,
+    serverList,
+    connections,
+    pluginState,
+    io: config.io,
+    log,
+    reconnectCounter,
+    reconnectTimer,
+    serverStates
   }
 
   void run(commonArgs, setLookAhead)
 
   return {
+    processedPercent,
+    serverList,
     async start(): Promise<void> {
       processedCount = 0
       processedPercent = 0
 
-      blockBook.onQueueSpace(async () => {
-        return await pickNextTask({
-          ...commonArgs,
-          blockBook
-        })
-      })
+      refillServers(commonArgs)
 
       await run(commonArgs, setLookAhead)
       await run(commonArgs, processFormatAddresses)
     },
 
     async stop(): Promise<void> {
+      removeIdFromQueue(walletInfo.id)
+      clearTimeout(reconnectTimer)
+      for (const uri of connections.keys()) {
+        const blockBook = connections.get(uri)
+        if (blockBook == null) continue
+        await blockBook.disconnect()
+      }
       // TODO: stop watching blocks
       // TODO: stop watching addresses
     },
@@ -189,11 +236,54 @@ export function makeUtxoEngineState(
         })
       }
       await run(commonArgs, setLookAhead)
+    },
+
+    async broadcastTx(transaction: EdgeTransaction): Promise<string> {
+      return await new Promise((resolve, reject) => {
+        const uris = Object.keys(connections).filter(uri => {
+          const blockBook = connections.get(uri)
+          if (blockBook == null) return false
+          return blockBook.isConnected
+        })
+        if (uris == null || uris.length < 1) {
+          reject(
+            new Error('No available connections\nCheck your internet signal')
+          )
+        }
+        let resolved = false
+        let bad = 0
+        for (const uri of uris) {
+          const blockBook = connections.get(uri)
+          if (blockBook == null) continue
+          blockBook
+            .broadcastTx(transaction)
+            .then(response => {
+              if (!resolved) {
+                resolved = true
+                resolve(response.result)
+              }
+            })
+            .catch((e?: Error) => {
+              if (++bad === uris.length) {
+                const msg = e != null ? `With error ${e.message}` : ''
+                log.error(
+                  `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
+                )
+                reject(e)
+              }
+            })
+        }
+      })
+    },
+
+    refillServers() {
+      refillServers(commonArgs)
     }
   }
 }
 
 interface CommonArgs {
+  engineStarted: boolean
   network: NetworkEnum
   currencyInfo: EngineCurrencyInfo
   walletInfo: EdgeWalletInfo
@@ -204,6 +294,14 @@ interface CommonArgs {
   taskCache: TaskCache
   onAddressChecked: () => void
   mutexor: Mutexor
+  pluginState: PluginState
+  serverList: string[]
+  io: EdgeIo
+  log: EdgeLog
+  connections: Map<string, BlockBook>
+  reconnectCounter: number
+  reconnectTimer: ReturnType<typeof setTimeout>
+  serverStates: Map<string, ServerState>
 }
 
 const run = async (
@@ -257,6 +355,151 @@ interface RawUtxoCacheState extends AddressUtxoCacheState {
 interface AddressTransactionCacheState extends AddressUtxoCacheState {
   page: number
   networkQueryVal: number
+}
+
+const reconnect = (args: CommonArgs): void => {
+  let { reconnectCounter } = args
+  if (args.engineStarted) {
+    if (reconnectCounter < 5) reconnectCounter++
+    args.reconnectTimer = setTimeout(() => {
+      clearTimeout(args.reconnectTimer)
+      // args.reconnectTimer = null
+      refillServers(args)
+    }, args.reconnectCounter * 1000)
+  }
+}
+
+const refillServers = (args: CommonArgs): void => {
+  pushUpdate({
+    id: args.walletInfo.id,
+    updateFunc: () => {
+      doRefillServers(args)
+    }
+  })
+}
+
+const doRefillServers = (args: CommonArgs): void => {
+  const {
+    pluginState,
+    connections,
+    emitter,
+    walletInfo,
+    log,
+    serverStates
+  } = args
+  const includePatterns = ['wss:']
+  if (args.serverList.length === 0) {
+    args.serverList = pluginState.getServers(NEW_CONNECTIONS, includePatterns)
+  }
+  log(`refillServers: Top ${NEW_CONNECTIONS} servers:`, args.serverList)
+  let chanceToBePicked = 1.25
+  while (connections.size < MAX_CONNECTIONS) {
+    if (args.serverList.length === 0) break
+    const uri = args.serverList.shift()
+    if (uri == null) {
+      reconnect(args)
+      break
+    }
+    if (connections.get(uri) != null) {
+      continue
+    }
+    // Validate the URI of server to make sure it is valid
+    const parsed = parse(uri)
+    if (
+      parsed.scheme == null ||
+      parsed.scheme.length < 3 ||
+      parsed.host == null ||
+      parsed.port == null
+    ) {
+      continue
+    }
+    chanceToBePicked -= chanceToBePicked > 0.5 ? 0.25 : 0
+    if (Math.random() > chanceToBePicked) {
+      args.serverList.push(uri)
+      continue
+    }
+    const prefix = `${uri.replace('electrum://', '')}:`
+
+    emitter.on(EngineEvent.CONNECTION_OPEN, () => {
+      args.reconnectCounter = 0
+      log(`${prefix} ** Connected **`)
+    })
+    emitter.on(EngineEvent.CONNECTION_CLOSE, (error?: Error) => {
+      connections.delete(uri)
+      serverStates.delete(uri)
+      const msg =
+        error != null ? ` !! Connection ERROR !! ${error.message}` : ''
+      log(`${prefix} onClose ${msg}`)
+      if (error != null) {
+        pluginState.serverScoreDown(uri)
+      }
+      reconnect(args)
+    })
+    emitter.on(EngineEvent.CONNECTION_TIMER, (queryDate: number) => {
+      const queryTime = Date.now() - queryDate
+      log(`${prefix} returned version in ${queryTime}ms`)
+      pluginState.serverScoreUp(uri, queryTime)
+    })
+    emitter.on(EngineEvent.BLOCK_HEIGHT_CHANGED, (height: number) => {
+      log(`${prefix} returned height: ${height}`)
+      const serverState = serverStates.get(uri)
+      if (serverState == null) {
+        serverStates.set(uri, {
+          subscribedBlocks: true,
+          txids: new Set(),
+          addresses: new Set()
+        })
+      } else if (!serverState.subscribedBlocks) {
+        serverState.subscribedBlocks = true
+      }
+    })
+
+    serverStates.set(uri, {
+      subscribedBlocks: false,
+      txids: new Set(),
+      addresses: new Set()
+    })
+
+    const onQueueSpaceCB = async (): Promise<WsTask<any> | undefined> => {
+      const blockBook = connections.get(uri)
+      if (blockBook == null) {
+        return
+      }
+      const task = await pickNextTask({ ...args, blockBook, uri })
+      if (task != null) {
+        const taskMessage = `${task.method} params: ${JSON.stringify(
+          task.params
+        )}`
+        log(`${prefix} nextTask: ${taskMessage}`)
+      }
+      return task
+    }
+
+    connections.set(
+      uri,
+      makeBlockBook({
+        wsAddress: uri,
+        emitter,
+        log,
+        onQueueSpaceCB,
+        walletId: walletInfo.id
+      })
+    )
+
+    const blockBook = connections.get(uri)
+    if (blockBook == null) continue
+    blockBook
+      .connect()
+      .then(async () => {
+        const queryTime = Date.now()
+        const { bestHeight } = await blockBook.fetchInfo()
+        pluginState.serverScoreUp(uri, Date.now() - queryTime)
+        emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, bestHeight)
+      })
+      .catch(e => {
+        log.error(`${JSON.stringify(e.message)}`)
+      })
+  }
 }
 
 interface OnNewBlockArgs extends CommonArgs {
@@ -352,13 +595,21 @@ const addToTransactionCache = async (
 
 interface NextTaskArgs extends CommonArgs {
   blockBook: BlockBook
+  uri: string
 }
 
 export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<WsTask<any> | undefined> => {
-  const { addressesToWatch, taskCache, blockBook } = args
+  const {
+    addressesToWatch,
+    taskCache,
+    blockBook,
+    pluginState,
+    uri,
+    serverStates
+  } = args
 
   const {
     addressSubscribeCache,
@@ -378,13 +629,40 @@ export const pickNextTask = async (
     updateTransactionsCache: updateTransactionsCache.size
   })
 
-  // first check if blocks are already being watched
-  if (!taskCache.blockWatching) {
-    taskCache.blockWatching = true
+  const serverState = serverStates.get(uri)
+  if (serverState == null) return
+
+  const serverCanGetTx = (txid: string): boolean => {
+    if (serverState.txids.has(txid)) return true
+
+    for (const state of serverStates.values()) {
+      if (state.txids.has(txid)) return false
+    }
+    return true
+  }
+
+  const serverCanGetAddress = (address: string): boolean => {
+    if (serverState.addresses.has(address)) return true
+
+    for (const state of serverStates.values()) {
+      if (state.addresses.has(address)) return false
+    }
+    return true
+  }
+
+  // subscribe all servers to new blocks
+  if (!serverState.subscribedBlocks) {
+    serverState.subscribedBlocks = true
+    const queryTime = Date.now()
     const deferred = new Deferred<unknown>()
-    deferred.promise.catch(() => {
-      taskCache.blockWatching = false
-    })
+    deferred.promise
+      .then(() => {
+        pluginState.serverScoreUp(uri, Date.now() - queryTime)
+      })
+      .catch(() => {
+        // taskCache.blockWatching = false
+        serverState.subscribedBlocks = false
+      })
 
     blockBook.watchBlocks(
       async () => await onNewBlock({ ...args, blockBook }),
@@ -395,7 +673,7 @@ export const pickNextTask = async (
   // Loop to process addresses to utxos
   for (const [address, state] of utxosCache) {
     // Check if we need to fetch address UTXOs
-    if (!state.fetching) {
+    if (!state.fetching && serverCanGetAddress(address)) {
       state.fetching = true
 
       utxosCache.delete(address)
@@ -406,6 +684,13 @@ export const pickNextTask = async (
         ...state,
         address
       })
+      wsTask.deferred.promise
+        .then(() => {
+          serverState.addresses.add(address)
+        })
+        .catch(e => {
+          throw e
+        })
       return wsTask
     }
   }
@@ -435,9 +720,11 @@ export const pickNextTask = async (
 
     taskCache.addressWatching = true
 
+    const queryTime = Date.now()
     const deferred = new Deferred<unknown>()
     deferred.promise
       .then(() => {
+        pluginState.serverScoreUp(uri, Date.now() - queryTime)
         addressSubscribeCache.clear()
       })
       .catch(() => {
@@ -446,6 +733,7 @@ export const pickNextTask = async (
     blockBook.watchAddresses(
       Array.from(addressesToWatch.keys()),
       (response: INewTransactionResponse) => {
+        serverState.txids.add(response.tx.txid)
         const path = addressesToWatch.get(response.address)
         if (path != null) {
           utxosCache.set(response.address, {
@@ -470,16 +758,33 @@ export const pickNextTask = async (
 
   // filled when transactions potentially changed (e.g. through new block notification)
   for (const [txId, state] of updateTransactionsCache) {
-    if (!state.fetching) {
+    if (!state.fetching && serverCanGetTx(txId)) {
       state.fetching = true
       updateTransactionsCache.delete(txId)
-      return updateTransactions({ ...args, txId })
+      const updateTransactionTask = updateTransactions({ ...args, txId })
+      // once resolved, add the txid to the server cache
+      updateTransactionTask.deferred.promise
+        .then(() => {
+          serverState.txids.add(txId)
+        })
+        .catch(e => {
+          throw e
+        })
     }
   }
 
   // Loop unparsed utxos, some require a network call to get the full tx data
   for (const [utxo, state] of rawUtxosCache) {
     if (!state.fetching) {
+      // check if we need to fetch additional network content for legacy purpose type
+      const purposeType = currencyFormatToPurposeType(state.path.format)
+      if (
+        purposeType === BIP43PurposeTypeEnum.Airbitz ||
+        purposeType === BIP43PurposeTypeEnum.Legacy
+      ) {
+        // if we do need to make a network call, check with the serverState
+        if (!serverCanGetTx(utxo.txid)) return
+      }
       state.fetching = true
       rawUtxosCache.delete(utxo)
       const wsTask = await processRawUtxo({
@@ -511,7 +816,7 @@ export const pickNextTask = async (
 
   // loop to get and process transaction history of single addresses, triggers setLookAhead
   for (const [address, state] of transactionsCache) {
-    if (!state.fetching) {
+    if (!state.fetching && serverCanGetAddress(address)) {
       state.fetching = true
 
       transactionsCache.delete(address)
@@ -522,6 +827,13 @@ export const pickNextTask = async (
         ...state,
         address
       })
+      wsTask.deferred.promise
+        .then(() => {
+          serverState.addresses.add(address)
+        })
+        .catch(e => {
+          throw e
+        })
       return wsTask
     }
   }
@@ -768,6 +1080,7 @@ interface ProcessAddressTxsArgs
   extends AddressTransactionCacheState,
     CommonArgs {
   address: string
+  uri: string
 }
 
 type addressResponse = IAccountDetailsBasic &
@@ -783,16 +1096,20 @@ const processAddressTransactions = async (
     processor,
     walletTools,
     path,
-    taskCache
+    taskCache,
+    pluginState,
+    uri
   } = args
   const transactionsCache = taskCache.transactionsCache
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
 
+  const queryTime = Date.now()
   const deferred = new Deferred<addressResponse>()
   deferred.promise
     .then(async (value: addressResponse) => {
+      pluginState.serverScoreUp(uri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
       // If address is used and previously not marked as used, mark as used.
@@ -886,16 +1203,27 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
 
 interface ProcessAddressUtxosArgs extends AddressUtxoCacheState, CommonArgs {
   address: string
+  uri: string
 }
 
 const processAddressUtxos = async (
   args: ProcessAddressUtxosArgs
 ): Promise<WsTask<IAccountUTXO[]>> => {
-  const { address, walletTools, processor, taskCache, path } = args
+  const {
+    address,
+    walletTools,
+    processor,
+    taskCache,
+    path,
+    pluginState,
+    uri
+  } = args
   const { utxosCache, rawUtxosCache } = taskCache
+  const queryTime = Date.now()
   const deferred = new Deferred<IAccountUTXO[]>()
   deferred.promise
     .then(async (utxos: IAccountUTXO[]) => {
+      pluginState.serverScoreUp(uri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddressByScriptPubkey(
         scriptPubkey
@@ -990,6 +1318,7 @@ interface ProcessRawUtxoArgs extends FormatArgs, RawUtxoCacheState {
   utxo: IAccountUTXO
   id: string
   address: Required<IAddress>
+  uri: string
 }
 
 const processRawUtxo = async (
@@ -1004,7 +1333,9 @@ const processRawUtxo = async (
     processor,
     path,
     taskCache,
-    requiredCount
+    requiredCount,
+    pluginState,
+    uri
   } = args
   const { rawUtxosCache, processedUtxosCache } = taskCache
   let scriptType: ScriptTypeEnum
@@ -1021,9 +1352,11 @@ const processRawUtxo = async (
       // If we do not currently have it, add it to the queue to fetch it
       tx = await processor.fetchTransaction(utxo.txid)
       if (tx == null) {
+        const queryTime = Date.now()
         const deferred = new Deferred<ITransaction>()
         deferred.promise
           .then((rawTx: ITransaction) => {
+            pluginState.serverScoreUp(uri, Date.now() - queryTime)
             const processedTx = processRawTx({ ...args, tx: rawTx })
             script = processedTx.hex
             // Only after we have successfully fetched the tx, set our script and call done

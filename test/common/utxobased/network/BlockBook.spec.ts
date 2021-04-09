@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import * as chai from 'chai'
-import { makeFakeIo } from 'edge-core-js'
 import WS from 'ws'
 
 import { EngineEmitter } from '../../../../src/common/plugin/makeEngineEmitter'
@@ -10,6 +9,7 @@ import {
   makeBlockBook
 } from '../../../../src/common/utxobased/network/BlockBook'
 import Deferred from '../../../../src/common/utxobased/network/Deferred'
+import { WsTask } from '../../../../src/common/utxobased/network/Socket'
 
 chai.should()
 
@@ -49,10 +49,28 @@ describe('BlockBook notifications tests with dummy server', function () {
       console.log(error)
     })
     const emitter = new EngineEmitter()
-    const io = makeFakeIo()
+
+    const log = (..._args: unknown[]): void => {
+      return
+    }
+    log.warn = (..._args: unknown[]): void => {
+      return
+    }
+    log.error = (..._args: unknown[]): void => {
+      return
+    }
+
+    const onQueueSpaceCB = async (
+      _uri: string
+    ): Promise<WsTask<unknown> | undefined> => {
+      return
+    }
+
     blockBook = makeBlockBook({
       emitter,
-      log: io.console,
+      log,
+      walletId: '',
+      onQueueSpaceCB,
       wsAddress: 'ws://localhost:8080'
     })
     await blockBook.connect()
@@ -117,11 +135,25 @@ describe('BlockBook', function () {
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
   const emitter = new EngineEmitter()
-  const io = makeFakeIo()
   let blockBook: BlockBook
+  const log = (..._args: unknown[]): void => {
+    return
+  }
+  log.warn = (..._args: unknown[]): void => {
+    return
+  }
+  log.error = (..._args: unknown[]): void => {
+    return
+  }
+
+  const onQueueSpaceCB = async (
+    _uri: string
+  ): Promise<WsTask<unknown> | undefined> => {
+    return
+  }
 
   beforeEach(async () => {
-    blockBook = makeBlockBook({ emitter, log: io.console })
+    blockBook = makeBlockBook({ emitter, log, walletId: '', onQueueSpaceCB })
     await blockBook.connect()
   })
 

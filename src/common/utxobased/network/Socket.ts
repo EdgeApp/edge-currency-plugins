@@ -1,4 +1,4 @@
-import { EdgeConsole } from 'edge-core-js'
+import { EdgeLog } from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import Deferred from './Deferred'
@@ -38,15 +38,18 @@ export interface Socket {
   isConnected: () => boolean
 }
 
-export type OnQueueSpaceCB = () => Promise<WsTask<unknown> | undefined>
+export type OnQueueSpaceCB = (
+  uri: string
+) => Promise<WsTask<unknown> | undefined>
 
 interface SocketConfig {
   queueSize?: number
   timeout?: number
-  walletId?: string
+  walletId: string
   emitter: EngineEmitter
-  log: EdgeConsole
+  log: EdgeLog
   healthCheck: () => Promise<unknown> // function for heartbeat, should submit task itself
+  onQueueSpaceCB: OnQueueSpaceCB
 }
 
 interface WsMessage {
@@ -56,10 +59,10 @@ interface WsMessage {
 
 export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
-  const { emitter, log, queueSize = 5, walletId = '' } = config
+  const { emitter, log, queueSize = 5, walletId } = config
   const version = ''
   const subscriptions: Map<string, WsSubscription> = new Map()
-  let onQueueSpace: OnQueueSpaceCB | undefined
+  let onQueueSpace = config.onQueueSpaceCB
   let pendingMessages: Map<string, WsMessage> = new Map()
   let nextId = 0
   let lastKeepAlive = 0
@@ -74,7 +77,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     if (connected && socket != null && socket.readyState === ReadyState.OPEN)
       disconnect()
     else cancelConnect = true
-    log.info('handled error!', e)
+    log('handled error!', e)
   }
 
   const disconnect = (): void => {
@@ -140,7 +143,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const doWakeUp = async (): Promise<void> => {
     if (connected && version != null) {
       while (pendingMessages.size < queueSize) {
-        const task = await onQueueSpace?.()
+        const task = await onQueueSpace?.(uri)
         if (task == null) break
         submitTask(task)
       }

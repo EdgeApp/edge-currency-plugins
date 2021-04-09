@@ -8,6 +8,7 @@ import {
 
 import { IUTXO } from '../utxobased/db/types'
 import { EngineEmitter } from './makeEngineEmitter'
+import { PluginState } from './pluginState'
 
 // this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
 export enum NetworkEnum {
@@ -62,6 +63,7 @@ export interface EngineConfig {
   currencyTools: EdgeCurrencyTools
   options: EngineOptions
   io: EdgeIo
+  pluginState: PluginState
 }
 
 interface EngineOptions extends EdgeCurrencyEngineOptions {

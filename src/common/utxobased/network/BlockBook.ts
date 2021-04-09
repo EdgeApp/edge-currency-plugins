@@ -1,4 +1,4 @@
-import { EdgeConsole, EdgeTransaction } from 'edge-core-js'
+import { EdgeLog, EdgeTransaction } from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
@@ -14,6 +14,10 @@ import {
 } from './BlockBookAPI'
 import Deferred from './Deferred'
 import { makeSocket, OnQueueSpaceCB } from './Socket'
+
+export interface ITransactionBroadcastResponse {
+  result: string // txid
+}
 
 export interface INewTransactionResponse {
   address: string
@@ -156,7 +160,9 @@ export interface BlockBook {
 
   fetchTransaction: (hash: string) => Promise<ITransaction>
 
-  broadcastTx: (transaction: EdgeTransaction) => Promise<void>
+  broadcastTx: (
+    transaction: EdgeTransaction
+  ) => Promise<ITransactionBroadcastResponse>
 }
 
 export interface BlockHeightEmitter {
@@ -166,13 +172,15 @@ export interface BlockHeightEmitter {
 interface BlockBookConfig {
   emitter: EngineEmitter
   wsAddress?: string
-  log: EdgeConsole
+  log: EdgeLog
+  walletId: string
+  onQueueSpaceCB: OnQueueSpaceCB
 }
 
 const baseUri = 'btc1.trezor.io'
 
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
-  const { emitter, log } = config
+  const { emitter, log, onQueueSpaceCB, walletId } = config
   const baseWSAddress = config.wsAddress ?? `wss://${baseUri}/websocket`
 
   const instance: BlockBook = {
@@ -189,20 +197,12 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     broadcastTx
   }
 
-  emitter.on(EngineEvent.CONNECTION_OPEN, () => {
-    return
-  })
-  emitter.on(EngineEvent.CONNECTION_CLOSE, (error?: Error) => {
-    log.warn(error)
-  })
-  emitter.on(EngineEvent.CONNECTION_TIMER, (_queryTime: number) => {
-    return
-  })
-
   const socket = makeSocket(baseWSAddress, {
     healthCheck: ping,
+    onQueueSpaceCB,
     log,
-    emitter
+    emitter,
+    walletId
   })
 
   async function connect(): Promise<void> {
@@ -282,8 +282,10 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     return await promisifyWsMessage(transactionMessage(hash))
   }
 
-  async function broadcastTx(transaction: EdgeTransaction): Promise<void> {
-    await promisifyWsMessage(broadcastTxMessage(transaction))
+  async function broadcastTx(
+    transaction: EdgeTransaction
+  ): Promise<ITransactionBroadcastResponse> {
+    return await promisifyWsMessage(broadcastTxMessage(transaction))
   }
 
   return instance

@@ -4,11 +4,11 @@ const QUEUE_RUN_DELAY = 200
 interface UpdateQueue {
   id: string
   action?: string
-  updateFunc: Function
+  updateFunc: () => void
 }
 
 const updateQueue: UpdateQueue[] = []
-let timeOut: NodeJS.Timeout
+let timeOut: ReturnType<typeof setTimeout>
 
 export function pushUpdate(update: UpdateQueue): void {
   if (updateQueue.length === 0) {
