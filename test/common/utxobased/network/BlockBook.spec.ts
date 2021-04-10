@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import * as chai from 'chai'
-import { makeFakeIo } from 'edge-core-js'
 import WS from 'ws'
 
 import { EngineEmitter } from '../../../../src/common/plugin/makeEngineEmitter'
@@ -48,10 +47,18 @@ describe('BlockBook notifications tests with dummy server', function () {
       console.log(error)
     })
     const emitter = new EngineEmitter()
-    const io = makeFakeIo()
+    const log = (..._args: unknown[]): void => {
+      return
+    }
+    log.warn = (..._args: unknown[]): void => {
+      return
+    }
+    log.error = (..._args: unknown[]): void => {
+      return
+    }
     blockBook = makeBlockBook({
       emitter,
-      log: io.console,
+      log,
       wsAddress: 'ws://localhost:8080'
     })
     await blockBook.connect()
@@ -115,11 +122,19 @@ describe('BlockBook', function () {
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
   const emitter = new EngineEmitter()
-  const io = makeFakeIo()
+  const log = (..._args: unknown[]): void => {
+    return
+  }
+  log.warn = (..._args: unknown[]): void => {
+    return
+  }
+  log.error = (..._args: unknown[]): void => {
+    return
+  }
   let blockBook: BlockBook
 
   beforeEach(async () => {
-    blockBook = makeBlockBook({ emitter, log: io.console })
+    blockBook = makeBlockBook({ emitter, log })
     await blockBook.connect()
   })
 
