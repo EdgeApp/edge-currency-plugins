@@ -258,7 +258,8 @@ export async function makeProcessor(
           // After address is saved, add to the queue processing any known transactions
           await processScriptPubkeyTxs({
             tables,
-            scriptPubkey: data.scriptPubkey
+            scriptPubkey: data.scriptPubkey,
+            emitter
           })
       )
 
@@ -358,6 +359,7 @@ export async function makeProcessor(
           await saveTx({
             tables,
             tx,
+            emitter,
             // Pass helper function instead of address table to limit scope and prevent possibility of updating an address table
             hasScriptPubkey: async scriptPubkey =>
               await hasScriptPubkey({ tables: baselets.all, scriptPubkey })
@@ -380,10 +382,7 @@ export async function makeProcessor(
       // Lock transaction tables
       await baselets.tx(async tables => {
         // Update transaction data
-        const tx = await updateTx({ tables, txid, data })
-
-        // Emit event that the transaction was updated
-        emitter.emit(EngineEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
+        await updateTx({ tables, txid, data, emitter })
       })
     },
 
@@ -502,6 +501,7 @@ const saveAddress = async (args: ProcessAndSaveAddressArgs): Promise<void> => {
 interface ProcessScriptPubkeyTxsArgs {
   tables: TransactionTables
   scriptPubkey: string
+  emitter: EngineEmitter
 }
 
 interface ProcessScriptPubkeyTxsReturn {
@@ -520,7 +520,7 @@ interface ProcessScriptPubkeyTxsReturn {
 const processScriptPubkeyTxs = async (
   args: ProcessScriptPubkeyTxsArgs
 ): Promise<ProcessScriptPubkeyTxsReturn> => {
-  const { tables, scriptPubkey } = args
+  const { tables, scriptPubkey, emitter } = args
 
   let used = false
   let lastTouched = 0
@@ -550,7 +550,8 @@ const processScriptPubkeyTxs = async (
           ourAmount,
           ourIns,
           ourOuts
-        }
+        },
+        emitter
       })
     }
   }
@@ -818,6 +819,7 @@ const fetchTx = async (args: FetchTxArgs): Promise<TxById> => {
 interface SaveTxArgs {
   tables: TransactionTables
   tx: IProcessorTransaction
+  emitter: EngineEmitter
   hasScriptPubkey: (scriptPubkey: string) => Promise<boolean>
 }
 
@@ -834,7 +836,7 @@ type SaveTxReturn = Array<{
  * @returns An array of script pubkeys and data to update it with
  */
 const saveTx = async (args: SaveTxArgs): Promise<SaveTxReturn> => {
-  const { tables, tx, hasScriptPubkey } = args
+  const { tables, tx, emitter, hasScriptPubkey } = args
 
   // Update the date index
   const existingTx = await fetchTx({ tables, txid: tx.txid })
@@ -896,6 +898,9 @@ const saveTx = async (args: SaveTxArgs): Promise<SaveTxReturn> => {
   // Save transaction to database
   await tables.txById.insert('', tx.txid, tx)
 
+  // Emit event that the transaction was saved
+  emitter.emit(EngineEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
+
   // Return script pubkeys to update
   return affectedScriptPubkeys
 }
@@ -904,6 +909,7 @@ interface UpdateTxArgs {
   tables: TransactionTables
   txid: string
   data: Partial<IProcessorTransaction>
+  emitter: EngineEmitter
 }
 
 /**
@@ -912,7 +918,7 @@ interface UpdateTxArgs {
  * @returns The updated transaction data
  */
 const updateTx = async (args: UpdateTxArgs): Promise<IProcessorTransaction> => {
-  const { tables, txid, data } = args
+  const { tables, txid, data, emitter } = args
 
   const tx = await fetchTx({ tables, txid })
   if (tx == null) {
@@ -954,6 +960,9 @@ const updateTx = async (args: UpdateTxArgs): Promise<IProcessorTransaction> => {
 
   // Update the transaction record
   await tables.txById.insert('', txid, tx)
+
+  // Emit event that the transaction was updated
+  emitter.emit(EngineEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
 
   // return the updated data
   return tx
