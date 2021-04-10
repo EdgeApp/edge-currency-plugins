@@ -83,6 +83,11 @@ export interface IAccountUTXO extends IUTXO {
   path?: string
 }
 
+interface IServerInfoVersion {
+  version: string
+  subversion: string
+}
+
 interface IServerInfo {
   name: string
   shortcut: string
@@ -92,6 +97,7 @@ interface IServerInfo {
   bestHash: string
   block0Hash: string
   testnet: boolean
+  backend?: IServerInfoVersion
 }
 
 type Callback = () => void | Promise<void>
@@ -166,13 +172,17 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     broadcastTx
   }
 
-  emitter.on(EngineEvent.CONNECTION_OPEN, () => {})
+  emitter.on(EngineEvent.CONNECTION_OPEN, () => {
+    return
+  })
   emitter.on(EngineEvent.CONNECTION_CLOSE, (error?: Error) => {
     if (error != null) {
       throw new Error(`connection closing due to ${error.message}`)
     }
   })
-  emitter.on(EngineEvent.CONNECTION_TIMER, (queryTime: number) => {})
+  emitter.on(EngineEvent.CONNECTION_TIMER, (_queryTime: number) => {
+    return
+  })
   const onQueueSpace = (): potentialWsTask => {
     return {}
   }
@@ -211,7 +221,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.submitTask(task)
   }
 
-  async function ping(): Promise<object> {
+  async function ping(): Promise<Record<string, unknown>> {
     return await promisifyWsMessage('ping')
   }
 
