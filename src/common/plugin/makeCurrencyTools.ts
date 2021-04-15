@@ -15,6 +15,7 @@ import urlParse from 'url-parse'
 
 import * as utxoUtils from '../utxobased/engine/utils'
 import { CurrencyFormatKeys } from '../utxobased/engine/utils'
+import * as networks from '../utxobased/info/all'
 import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
 import * as pluginUtils from './utils'
 
@@ -167,8 +168,20 @@ export function makeCurrencyTools(
         : publicAddress
     },
 
-    getSplittableTypes(_walletInfo: EdgeWalletInfo): string[] {
-      return []
+    getSplittableTypes(walletInfo: EdgeWalletInfo): string[] {
+      const getFormatsForNetwork = (network: string): string[] => {
+        for (const coin of networks.all) {
+          if (coin.network === network) return coin.formats ?? []
+        }
+        return []
+      }
+
+      const { keys: { format = 'bip32' } = {} } = walletInfo
+      const forks = currencyInfo.forks ?? []
+
+      return forks
+        .filter(network => getFormatsForNetwork(network).includes(format))
+        .map(network => `wallet:${network}`)
     }
   }
 
