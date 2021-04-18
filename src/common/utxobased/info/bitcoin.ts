@@ -5,6 +5,7 @@ export const info: EngineCurrencyInfo = {
   currencyType: EngineCurrencyType.UTXO,
   coinType: 0,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
+  forks: ['bitcoincash', 'bitcoingold'],
   network: 'bitcoin',
   pluginId: 'bitcoin',
   walletType: 'wallet:bitcoin',
