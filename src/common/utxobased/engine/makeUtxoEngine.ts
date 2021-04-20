@@ -1,4 +1,5 @@
 import * as bs from 'biggystring'
+import { navigateDisklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
@@ -12,6 +13,8 @@ import {
   JsonObject
 } from 'edge-core-js'
 
+import { FEES_DISKLET_PATH } from '../../constants'
+import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
@@ -23,7 +26,11 @@ import {
 } from '../db/Models/ProcessorTransaction'
 import { IProcessorTransaction } from '../db/types'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
+<<<<<<< HEAD
 import { calculateFeeRate } from './makeSpendHelper'
+=======
+import { makeBlockBook } from '../network/BlockBook'
+>>>>>>> master
 import { makeUtxoEngineState } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
@@ -44,8 +51,12 @@ export async function makeUtxoEngine(
     currencyInfo,
     walletInfo,
     options: { walletLocalDisklet, walletLocalEncryptedDisklet, emitter, log },
+<<<<<<< HEAD
     io,
     pluginState
+=======
+    io
+>>>>>>> master
   } = config
 
   const walletFormat = getWalletFormat(walletInfo)
@@ -74,8 +85,20 @@ export async function makeUtxoEngine(
     network
   })
 
+<<<<<<< HEAD
   const metadata = await makeMetadata({ disklet: walletLocalDisklet, emitter })
 
+=======
+  const fees = await makeFees({
+    disklet: navigateDisklet(walletLocalDisklet, FEES_DISKLET_PATH),
+    currencyInfo,
+    io,
+    log: config.options.log
+  })
+
+  const blockBook = makeBlockBook({ emitter, log })
+  const metadata = await makeMetadata({ disklet: walletLocalDisklet, emitter })
+>>>>>>> master
   const processor = await makeProcessor({
     disklet: walletLocalDisklet,
     emitter
@@ -84,17 +107,49 @@ export async function makeUtxoEngine(
     ...config,
     walletTools,
     processor,
+<<<<<<< HEAD
     pluginState
   })
 
   const fns: EdgeCurrencyEngine = {
     async startEngine(): Promise<void> {
+=======
+    blockBook
+  })
+
+  emitter.on(
+    EngineEvent.PROCESSOR_TRANSACTION_CHANGED,
+    async (tx: IProcessorTransaction) => {
+      emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
+        await toEdgeTransaction({
+          tx,
+          currencyCode: currencyInfo.currencyCode,
+          walletTools,
+          processor
+        })
+      ])
+    }
+  )
+
+  const fns: EdgeCurrencyEngine = {
+    async startEngine(): Promise<void> {
+      await blockBook.connect()
+      const { bestHeight } = await blockBook.fetchInfo()
+      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, bestHeight)
+
+      await fees.start()
+>>>>>>> master
       await state.start()
     },
 
     async killEngine(): Promise<void> {
       await state.stop()
+<<<<<<< HEAD
       // await blockBook.disconnect()
+=======
+      fees.stop()
+      await blockBook.disconnect()
+>>>>>>> master
     },
 
     getBalance(_opts: EdgeCurrencyCodeOptions): string {
@@ -261,11 +316,9 @@ export async function makeUtxoEngine(
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
-      let subtractFee = false
-      if (options != null) {
-        subtractFee = options.subtractFee ?? false
-      }
-      const feeRate = parseInt(calculateFeeRate(currencyInfo, edgeSpendInfo))
+      const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+      const subtractFee =
+        options?.subtractFee != null ? options.subtractFee : false
       const tx = await makeTx({
         utxos,
         targets,
@@ -319,8 +372,11 @@ export async function makeUtxoEngine(
       await state.stop()
       // now get rid of all the db information
       await processor.clearAll()
+<<<<<<< HEAD
       // clear the networking cache
       await pluginState.clearCache()
+=======
+>>>>>>> master
       await metadata.clear()
 
       // finally restart the state
@@ -393,7 +449,10 @@ export async function makeUtxoEngine(
       })
       const tmpDisklet = walletLocalDisklet
       const tmpEmitter = new EngineEmitter()
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
       const tmpConfig = {
         disklet: tmpDisklet,
         emitter: tmpEmitter,
@@ -401,7 +460,11 @@ export async function makeUtxoEngine(
       }
       const tmpMetadata = await makeMetadata(tmpConfig)
       const tmpProcessor = await makeProcessor(tmpConfig)
+<<<<<<< HEAD
 
+=======
+      const tmpBlockBook = makeBlockBook(tmpConfig)
+>>>>>>> master
       const tmpWalletTools = makeUtxoWalletTools({
         keys: { wifKeys: privateKeys },
         coin: currencyInfo.network,
@@ -411,6 +474,10 @@ export async function makeUtxoEngine(
       tmpEmitter.on(EngineEvent.ADDRESSES_CHECKED, async (ratio: number) => {
         if (ratio === 1) {
           await tmpState.stop()
+<<<<<<< HEAD
+=======
+          await tmpBlockBook.disconnect()
+>>>>>>> master
 
           const utxos = await processor.fetchAllUtxos()
           if (utxos === null || utxos.length < 1) {
@@ -442,7 +509,11 @@ export async function makeUtxoEngine(
         },
         walletTools: tmpWalletTools,
         processor: tmpProcessor,
+<<<<<<< HEAD
         pluginState
+=======
+        blockBook: tmpBlockBook
+>>>>>>> master
       })
       await tmpState.start()
       return end

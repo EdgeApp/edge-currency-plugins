@@ -17,6 +17,7 @@ import * as utxoUtils from '../utxobased/engine/utils'
 import { CurrencyFormatKeys } from '../utxobased/engine/utils'
 import { EngineCurrencyInfo, EngineCurrencyType, NetworkEnum } from './types'
 import * as pluginUtils from './utils'
+import { getFormatsForNetwork } from './utils'
 
 /**
  * The core currency plugin.
@@ -167,8 +168,13 @@ export function makeCurrencyTools(
         : publicAddress
     },
 
-    getSplittableTypes(_walletInfo: EdgeWalletInfo): string[] {
-      return []
+    getSplittableTypes(walletInfo: EdgeWalletInfo): string[] {
+      const { keys: { format = 'bip32' } = {} } = walletInfo
+      const forks = currencyInfo.forks ?? []
+
+      return forks
+        .filter(network => getFormatsForNetwork(network).includes(format))
+        .map(network => `wallet:${network}`)
     }
   }
 

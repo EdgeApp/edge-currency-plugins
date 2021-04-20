@@ -48,8 +48,13 @@ interface SocketConfig {
   walletId: string
   emitter: EngineEmitter
   log: EdgeLog
+<<<<<<< HEAD
   healthCheck: () => Promise<unknown> // function for heartbeat, should submit task itself
   onQueueSpaceCB: OnQueueSpaceCB
+=======
+  onQueueSpace: () => potentialWsTask
+  healthCheck: () => Promise<object> // function for heartbeat, should submit task itself
+>>>>>>> master
 }
 
 interface WsMessage {

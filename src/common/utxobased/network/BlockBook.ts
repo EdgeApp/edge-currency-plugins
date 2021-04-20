@@ -101,6 +101,11 @@ export interface IAccountUTXO extends IUTXO {
   path?: string
 }
 
+interface IServerInfoVersion {
+  version: string
+  subversion: string
+}
+
 interface IServerInfo {
   name: string
   shortcut: string
@@ -110,6 +115,7 @@ interface IServerInfo {
   bestHash: string
   block0Hash: string
   testnet: boolean
+  backend?: IServerInfoVersion
 }
 
 type Callback = () => void | Promise<void>
@@ -173,8 +179,11 @@ interface BlockBookConfig {
   emitter: EngineEmitter
   wsAddress?: string
   log: EdgeLog
+<<<<<<< HEAD
   walletId: string
   onQueueSpaceCB: OnQueueSpaceCB
+=======
+>>>>>>> master
 }
 
 const baseUri = 'btc1.trezor.io'
@@ -197,6 +206,24 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     broadcastTx
   }
 
+<<<<<<< HEAD
+=======
+  emitter.on(EngineEvent.CONNECTION_OPEN, () => {
+    return
+  })
+  emitter.on(EngineEvent.CONNECTION_CLOSE, (error?: Error) => {
+    if (error != null) {
+      throw new Error(`connection closing due to ${error.message}`)
+    }
+  })
+  emitter.on(EngineEvent.CONNECTION_TIMER, (_queryTime: number) => {
+    return
+  })
+  const onQueueSpace = (): potentialWsTask => {
+    return {}
+  }
+
+>>>>>>> master
   const socket = makeSocket(baseWSAddress, {
     healthCheck: ping,
     onQueueSpaceCB,
@@ -229,8 +256,13 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     return await deferred.promise
   }
 
+<<<<<<< HEAD
   async function ping(): Promise<never> {
     return await promisifyWsMessage(pingMessage())
+=======
+  async function ping(): Promise<Record<string, unknown>> {
+    return await promisifyWsMessage('ping')
+>>>>>>> master
   }
 
   async function fetchInfo(): Promise<IServerInfo> {

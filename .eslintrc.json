@@ -17,6 +17,10 @@
       "ignoreRestSiblings": true,
       "argsIgnorePattern": "^_"
     }],
+<<<<<<< HEAD
+=======
+    "@typescript-eslint/restrict-template-expressions":  "off",
+>>>>>>> master
     "no-unused-vars": "off",
     "no-useless-return": "off",
     "no-void": "off",

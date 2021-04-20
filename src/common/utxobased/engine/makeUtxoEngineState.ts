@@ -1,4 +1,5 @@
 import * as bs from 'biggystring'
+<<<<<<< HEAD
 import {
   EdgeFreshAddress,
   EdgeIo,
@@ -7,6 +8,9 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js'
 import { parse } from 'uri-js'
+=======
+import { EdgeFreshAddress, EdgeLog, EdgeWalletInfo } from 'edge-core-js'
+>>>>>>> master
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { PluginState } from '../../plugin/pluginState'
@@ -20,6 +24,7 @@ import {
 import { Processor } from '../db/makeProcessor'
 import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
+<<<<<<< HEAD
 import {
   BlockBook,
   IAccountDetailsBasic,
@@ -43,6 +48,10 @@ import {
   MAX_CONNECTIONS,
   NEW_CONNECTIONS
 } from './constants'
+=======
+import { BlockBook, IAccountUTXO, ITransaction } from '../network/BlockBook'
+import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
+>>>>>>> master
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import { makeMutexor, Mutexor } from './mutexor'
 import {
@@ -74,12 +83,16 @@ export interface UtxoEngineState {
 export interface UtxoEngineStateConfig extends EngineConfig {
   walletTools: UTXOPluginWalletTools
   processor: Processor
+<<<<<<< HEAD
 }
 
 interface ServerState {
   subscribedBlocks: boolean
   txids: Set<string>
   addresses: Set<string>
+=======
+  blockBook: BlockBook
+>>>>>>> master
 }
 
 export function makeUtxoEngineState(
@@ -92,7 +105,11 @@ export function makeUtxoEngineState(
     walletTools,
     options: { emitter, log },
     processor,
+<<<<<<< HEAD
     pluginState
+=======
+    blockBook
+>>>>>>> master
   } = config
 
   const addressesToWatch: Map<string, ShortPath> = new Map<string, ShortPath>()
@@ -117,7 +134,11 @@ export function makeUtxoEngineState(
       processor
     })
     const percent = processedCount / totalCount
+<<<<<<< HEAD
     console.log(percent)
+=======
+    log('processed', percent)
+>>>>>>> master
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       processedPercent = percent
       emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
@@ -141,11 +162,16 @@ export function makeUtxoEngineState(
     walletInfo,
     walletTools,
     processor,
+<<<<<<< HEAD
+=======
+    blockBook,
+>>>>>>> master
     emitter,
     addressesToWatch,
     taskCache,
     onAddressChecked,
     mutexor,
+<<<<<<< HEAD
     serverList,
     connections,
     pluginState,
@@ -157,6 +183,29 @@ export function makeUtxoEngineState(
   }
 
   void run(commonArgs, setLookAhead)
+=======
+    log
+  }
+
+  let running = false
+  const run = async (): Promise<void> => {
+    if (running) return
+    running = true
+
+    const formatsToProcess = getWalletSupportedFormats(walletInfo)
+    for (const format of formatsToProcess) {
+      const branches = getFormatSupportedBranches(format)
+      for (const branch of branches) {
+        const args: SetLookAheadArgs = {
+          ...commonArgs,
+          format,
+          branch
+        }
+        await setLookAhead(args)
+      }
+    }
+  }
+>>>>>>> master
 
   return {
     processedPercent,
@@ -172,6 +221,7 @@ export function makeUtxoEngineState(
     },
 
     async stop(): Promise<void> {
+<<<<<<< HEAD
       removeIdFromQueue(walletInfo.id)
       clearTimeout(reconnectTimer)
       for (const uri of connections.keys()) {
@@ -179,6 +229,8 @@ export function makeUtxoEngineState(
         if (blockBook == null) continue
         await blockBook.disconnect()
       }
+=======
+>>>>>>> master
       // TODO: stop watching blocks
       // TODO: stop watching addresses
     },
@@ -228,6 +280,7 @@ export function makeUtxoEngineState(
     },
 
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
+<<<<<<< HEAD
       for (const address of addresses) {
         await saveAddress({
           ...commonArgs,
@@ -278,6 +331,16 @@ export function makeUtxoEngineState(
 
     refillServers() {
       refillServers(commonArgs)
+=======
+      for (const addr of addresses) {
+        await saveAddress({
+          ...commonArgs,
+          scriptPubkey: walletTools.addressToScriptPubkey(addr),
+          used: true
+        })
+      }
+      await run()
+>>>>>>> master
     }
   }
 }
@@ -294,6 +357,7 @@ interface CommonArgs {
   taskCache: TaskCache
   onAddressChecked: () => void
   mutexor: Mutexor
+<<<<<<< HEAD
   pluginState: PluginState
   serverList: string[]
   io: EdgeIo
@@ -500,6 +564,9 @@ const doRefillServers = (args: CommonArgs): void => {
         log.error(`${JSON.stringify(e.message)}`)
       })
   }
+=======
+  log: EdgeLog
+>>>>>>> master
 }
 
 interface OnNewBlockArgs extends CommonArgs {
@@ -518,11 +585,19 @@ const onNewBlock = async (args: OnNewBlockArgs): Promise<void> => {
   }
 }
 
+<<<<<<< HEAD
 interface FormatArgs extends CommonArgs, ShortPath {}
+=======
+interface FormatArgs extends CommonArgs {
+  format: CurrencyFormat
+  branch: number
+}
+>>>>>>> master
 
 interface SetLookAheadArgs extends FormatArgs {}
 
 const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
+<<<<<<< HEAD
   const {
     format,
     branch,
@@ -715,7 +790,36 @@ export const pickNextTask = async (
           path.branch,
           transactionsCache
         )
+=======
+  const { format, branch, currencyInfo, walletTools, processor, mutexor } = args
+
+  await mutexor(`setLookAhead-${format}-${branch}`).runExclusive(async () => {
+    const partialPath: Omit<AddressPath, 'addressIndex'> = {
+      format,
+      changeIndex: branch
+    }
+
+    const getLastUsed = async (): Promise<number> =>
+      await findLastUsedIndex({ ...args, ...partialPath })
+    const getAddressCount = (): number =>
+      processor.getNumAddressesFromPathPartition(partialPath)
+
+    while ((await getLastUsed()) + currencyInfo.gapLimit > getAddressCount()) {
+      const path: AddressPath = {
+        ...partialPath,
+        addressIndex: getAddressCount()
+>>>>>>> master
       }
+      const { address } = walletTools.getAddress(path)
+      const scriptPubkey = walletTools.addressToScriptPubkey(address)
+      await saveAddress({
+        ...args,
+        scriptPubkey,
+        path
+      })
+
+      // TODO: don't process addresses during setLookAhead. Addresses should be added to a queue here
+      await processAddress({ ...args, address })
     }
 
     taskCache.addressWatching = true
@@ -869,15 +973,23 @@ const updateTransactions = (
 }
 
 interface SaveAddressArgs extends CommonArgs {
+<<<<<<< HEAD
   address: string
+=======
+  scriptPubkey: string
+>>>>>>> master
   path?: AddressPath
   used?: boolean
 }
 
 const saveAddress = async (args: SaveAddressArgs): Promise<void> => {
+<<<<<<< HEAD
   const { address, path, used = false, processor, walletTools, mutexor } = args
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
+=======
+  const { scriptPubkey, path, used = false, processor, mutexor } = args
+>>>>>>> master
 
   await mutexor('saveAddress').runExclusive(async () => {
     try {
@@ -960,6 +1072,7 @@ const findLastUsedIndex = async (
 ): Promise<number> => {
   const { format, branch, currencyInfo, processor } = args
 
+<<<<<<< HEAD
   const path: AddressPath = {
     format,
     changeIndex: branch,
@@ -973,6 +1086,29 @@ const findLastUsedIndex = async (
     const addressData = await fetchAddressDataByPath({ ...args, path })
     if (addressData.used) {
       path.addressIndex = i
+=======
+  const partialPath: Omit<AddressPath, 'addressIndex'> = {
+    format,
+    changeIndex: branch
+  }
+  const addressCount = await processor.getNumAddressesFromPathPartition(
+    partialPath
+  )
+  // Start 1 index behind the assumed last used index
+  let lastUsedIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
+
+  for (let i = lastUsedIndex; i < addressCount; i++) {
+    const { used } = await fetchAddressDataByPath({
+      ...args,
+      path: {
+        ...partialPath,
+        addressIndex: i
+      }
+    })
+
+    if (used) {
+      lastUsedIndex = i
+>>>>>>> master
     }
   }
 
@@ -1105,6 +1241,7 @@ const processAddressTransactions = async (
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
 
+<<<<<<< HEAD
   const queryTime = Date.now()
   const deferred = new Deferred<addressResponse>()
   deferred.promise
@@ -1125,6 +1262,22 @@ const processAddressTransactions = async (
         const tx = processRawTx({ ...args, tx: rawTx })
         await processor.saveTransaction(tx)
       }
+=======
+  // If address is used and previously not marked as used, mark as used.
+  const used = txs > 0 || unconfirmedTxs > 0
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  if (used && !addressData?.used && page === 1) {
+    await processor.updateAddressByScriptPubkey(scriptPubkey, {
+      used
+    })
+    await setLookAhead(args)
+  }
+
+  for (const rawTx of transactions) {
+    const tx = processRawTx({ ...args, tx: rawTx })
+    await processor.saveTransaction(tx)
+  }
+>>>>>>> master
 
       if (page < totalPages) {
         // Add the address back to the cache, incrementing the page
@@ -1211,6 +1364,7 @@ const processAddressUtxos = async (
 ): Promise<WsTask<IAccountUTXO[]>> => {
   const {
     address,
+<<<<<<< HEAD
     walletTools,
     processor,
     taskCache,
@@ -1285,8 +1439,68 @@ const processUtxoTransactions = async (
       } else {
         toAdd.add(utxo)
       }
+=======
+    currencyInfo,
+    walletTools,
+    processor,
+    blockBook,
+    emitter,
+    mutexor,
+    log
+  } = args
+
+  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  await mutexor(`utxos-${scriptPubkey}`).runExclusive(async () => {
+    let newBalance = '0'
+    let oldBalance = '0'
+    const currentUtxos = await processor.fetchUtxosByScriptPubkey(scriptPubkey)
+    const currentUtxoIds = new Set(
+      currentUtxos.map(({ id, value }) => {
+        oldBalance = bs.add(oldBalance, value)
+        return id
+      })
+    )
+
+    const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+    if (addressData == null || addressData.path == null) throw new Error()
+
+    const toAdd = new Set<IUTXO>()
+    const rawUtxos = await blockBook.fetchAddressUtxos(address)
+    for (const rawUtxo of rawUtxos) {
+      const id = `${rawUtxo.txid}_${rawUtxo.vout}`
+      if (currentUtxoIds.has(id)) {
+        currentUtxoIds.delete(id)
+      } else {
+        const utxo = await processRawUtxo({
+          ...args,
+          id,
+          utxo: rawUtxo,
+          address: addressData as Required<IAddress>
+        })
+        toAdd.add(utxo)
+      }
     }
 
+    for (const utxo of toAdd) {
+      await processor.saveUtxo(utxo)
+      newBalance = bs.add(newBalance, utxo.value)
+>>>>>>> master
+    }
+    for (const id of currentUtxoIds) {
+      const utxo = await processor.removeUtxo(id)
+      newBalance = bs.sub(newBalance, utxo.value)
+    }
+
+    const diff = bs.sub(newBalance, oldBalance)
+    if (diff !== '0') {
+      log({ address, diff })
+      emitter.emit(
+        EngineEvent.ADDRESS_BALANCE_CHANGED,
+        currencyInfo.currencyCode,
+        diff
+      )
+
+<<<<<<< HEAD
     for (const utxo of toAdd) {
       await processor.saveUtxo(utxo)
       newBalance = bs.add(newBalance, utxo.value)
@@ -1294,8 +1508,18 @@ const processUtxoTransactions = async (
     for (const id of currentUtxoIds) {
       const utxo = await processor.removeUtxo(id)
       newBalance = bs.sub(newBalance, utxo.value)
+=======
+      await processor.updateAddressByScriptPubkey(scriptPubkey, {
+        balance: newBalance,
+        used: true
+      })
+      await setLookAhead(args)
+>>>>>>> master
     }
+  })
+}
 
+<<<<<<< HEAD
     const diff = bs.sub(newBalance, oldBalance)
     if (diff !== '0') {
       console.log({ address, diff })
@@ -1431,6 +1655,47 @@ const addToProcessedUtxosCache = (
     processing: false,
     path,
     full: false
+=======
+interface ProcessRawUtxoArgs extends FormatArgs {
+  utxo: IAccountUTXO
+  id: string
+  address: Required<IAddress>
+}
+
+const processRawUtxo = async (args: ProcessRawUtxoArgs): Promise<IUTXO> => {
+  const { utxo, id, address, format, walletTools } = args
+
+  let scriptType: ScriptTypeEnum
+  let script: string
+  let redeemScript: string | undefined
+  switch (currencyFormatToPurposeType(format)) {
+    case BIP43PurposeTypeEnum.Airbitz:
+    case BIP43PurposeTypeEnum.Legacy:
+      script = (await fetchTransaction({ ...args, txid: utxo.txid })).hex
+      scriptType = ScriptTypeEnum.p2pkh
+      break
+    case BIP43PurposeTypeEnum.WrappedSegwit:
+      script = address.scriptPubkey
+      scriptType = ScriptTypeEnum.p2wpkhp2sh
+      redeemScript = walletTools.getScriptPubkey(address.path).redeemScript
+      break
+    case BIP43PurposeTypeEnum.Segwit:
+      script = address.scriptPubkey
+      scriptType = ScriptTypeEnum.p2wpkh
+      break
+  }
+
+  return {
+    id,
+    txid: utxo.txid,
+    vout: utxo.vout,
+    value: utxo.value,
+    scriptPubkey: address.scriptPubkey,
+    script,
+    redeemScript,
+    scriptType,
+    blockHeight: utxo.height ?? 0
+>>>>>>> master
   }
   processedUtxos.utxos.add(utxo)
   processedUtxos.full = processedUtxos.utxos.size >= requiredCount

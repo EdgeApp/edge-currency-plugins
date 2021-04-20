@@ -49,7 +49,10 @@ describe('BlockBook notifications tests with dummy server', function () {
       console.log(error)
     })
     const emitter = new EngineEmitter()
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
     const log = (..._args: unknown[]): void => {
       return
     }
@@ -59,6 +62,7 @@ describe('BlockBook notifications tests with dummy server', function () {
     log.error = (..._args: unknown[]): void => {
       return
     }
+<<<<<<< HEAD
 
     const onQueueSpaceCB = async (
       _uri: string
@@ -71,6 +75,11 @@ describe('BlockBook notifications tests with dummy server', function () {
       log,
       walletId: '',
       onQueueSpaceCB,
+=======
+    blockBook = makeBlockBook({
+      emitter,
+      log,
+>>>>>>> master
       wsAddress: 'ws://localhost:8080'
     })
     await blockBook.connect()
@@ -135,6 +144,18 @@ describe('BlockBook', function () {
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
   const emitter = new EngineEmitter()
+<<<<<<< HEAD
+=======
+  const log = (..._args: unknown[]): void => {
+    return
+  }
+  log.warn = (..._args: unknown[]): void => {
+    return
+  }
+  log.error = (..._args: unknown[]): void => {
+    return
+  }
+>>>>>>> master
   let blockBook: BlockBook
   const log = (..._args: unknown[]): void => {
     return
@@ -153,7 +174,11 @@ describe('BlockBook', function () {
   }
 
   beforeEach(async () => {
+<<<<<<< HEAD
     blockBook = makeBlockBook({ emitter, log, walletId: '', onQueueSpaceCB })
+=======
+    blockBook = makeBlockBook({ emitter, log })
+>>>>>>> master
     await blockBook.connect()
   })
 
@@ -187,7 +212,8 @@ describe('BlockBook', function () {
         'bestHeight',
         'bestHash',
         'block0Hash',
-        'testnet'
+        'testnet',
+        'backend'
       )
     })
   })

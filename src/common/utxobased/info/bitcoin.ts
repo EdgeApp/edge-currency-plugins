@@ -1,10 +1,11 @@
+import { IMAGE_SERVER_URL } from '../../constants'
 import { EngineCurrencyInfo, EngineCurrencyType } from '../../plugin/types'
-import { imageServerUrl } from './constants'
 
 export const info: EngineCurrencyInfo = {
   currencyType: EngineCurrencyType.UTXO,
   coinType: 0,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
+  forks: ['bitcoincash', 'bitcoingold'],
   network: 'bitcoin',
   pluginId: 'bitcoin',
   walletType: 'wallet:bitcoin',
@@ -13,6 +14,8 @@ export const info: EngineCurrencyInfo = {
   gapLimit: 25,
   defaultFee: 1000,
   feeUpdateInterval: 60000,
+  earnComFeeInfoServer: 'https://Bitcoinfees.Earn.com/api/v1/fees/list',
+  mempoolSpaceFeeInfoServer: 'https://mempool.space/api/v1/fees/recommended',
   customFeeSettings: ['satPerByte'],
   simpleFeeSettings: {
     highFee: '150',
@@ -52,6 +55,6 @@ export const info: EngineCurrencyInfo = {
   transactionExplorer: 'https://blockchair.com/bitcoin/transaction/%s',
 
   // Images:
-  symbolImage: `${imageServerUrl}/bitcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/bitcoin-logo-solo-64.png`
+  symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`
 }

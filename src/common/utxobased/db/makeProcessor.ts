@@ -258,7 +258,12 @@ export async function makeProcessor(
           // After address is saved, add to the queue processing any known transactions
           await processScriptPubkeyTxs({
             tables,
+<<<<<<< HEAD
             scriptPubkey: data.scriptPubkey
+=======
+            scriptPubkey: data.scriptPubkey,
+            emitter
+>>>>>>> master
           })
       )
 
@@ -358,6 +363,10 @@ export async function makeProcessor(
           await saveTx({
             tables,
             tx,
+<<<<<<< HEAD
+=======
+            emitter,
+>>>>>>> master
             // Pass helper function instead of address table to limit scope and prevent possibility of updating an address table
             hasScriptPubkey: async scriptPubkey =>
               await hasScriptPubkey({ tables: baselets.all, scriptPubkey })
@@ -380,10 +389,14 @@ export async function makeProcessor(
       // Lock transaction tables
       await baselets.tx(async tables => {
         // Update transaction data
+<<<<<<< HEAD
         const tx = await updateTx({ tables, txid, data })
 
         // Emit event that the transaction was updated
         emitter.emit(EngineEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
+=======
+        await updateTx({ tables, txid, data, emitter })
+>>>>>>> master
       })
     },
 
@@ -502,6 +515,10 @@ const saveAddress = async (args: ProcessAndSaveAddressArgs): Promise<void> => {
 interface ProcessScriptPubkeyTxsArgs {
   tables: TransactionTables
   scriptPubkey: string
+<<<<<<< HEAD
+=======
+  emitter: EngineEmitter
+>>>>>>> master
 }
 
 interface ProcessScriptPubkeyTxsReturn {
@@ -520,7 +537,11 @@ interface ProcessScriptPubkeyTxsReturn {
 const processScriptPubkeyTxs = async (
   args: ProcessScriptPubkeyTxsArgs
 ): Promise<ProcessScriptPubkeyTxsReturn> => {
+<<<<<<< HEAD
   const { tables, scriptPubkey } = args
+=======
+  const { tables, scriptPubkey, emitter } = args
+>>>>>>> master
 
   let used = false
   let lastTouched = 0
@@ -550,7 +571,12 @@ const processScriptPubkeyTxs = async (
           ourAmount,
           ourIns,
           ourOuts
+<<<<<<< HEAD
         }
+=======
+        },
+        emitter
+>>>>>>> master
       })
     }
   }
@@ -641,6 +667,7 @@ const saveTxByScriptPubkey = async (
     } else {
       const { [index]: _, ...stripped } = txs[txid].outs
       txs[txid].outs = stripped
+<<<<<<< HEAD
     }
   }
 
@@ -991,6 +1018,366 @@ const dropTx = async (args: DropTxArgs): Promise<void> => {
     }
   }
 
+=======
+    }
+  }
+
+  await tables.txsByScriptPubkey.insert('', scriptPubkey, txs)
+}
+
+/**
+ * Calculates the transaction value supplied (negative) or received (positive). In order to calculate
+ * a value, the `ourIns` and `ourOuts` of the object must be populated with indices.
+ * @param tx {IProcessorTransaction} A transaction object with `ourIns` and `ourOuts` populated
+ */
+const calculateTxAmount = (tx: IProcessorTransaction): string => {
+  let ourAmount = '0'
+  for (const i of tx.ourIns) {
+    const { amount } = tx.inputs[parseInt(i)]
+    ourAmount = bs.sub(ourAmount, amount)
+  }
+  for (const i of tx.ourOuts) {
+    const { amount } = tx.outputs[parseInt(i)]
+    ourAmount = bs.add(ourAmount, amount)
+  }
+
+  return ourAmount
+}
+
+interface SaveScriptPubkeyByPathArgs {
+  tables: AddressTables
+  scriptPubkey: string
+  path: AddressPath
+}
+
+/**
+ * Saves an index record of a script pubkey for a specific account path.
+ * @param args {SaveScriptPubkeyByPathArgs}
+ */
+const saveScriptPubkeyByPath = async (
+  args: SaveScriptPubkeyByPathArgs
+): Promise<void> => {
+  await args.tables.scriptPubkeyByPath.insert(
+    addressPathToPrefix(args.path),
+    args.path.addressIndex,
+    args.scriptPubkey
+  )
+}
+
+interface UpdateAddressByScriptPubkeyArgs {
+  tables: AddressTables
+  scriptPubkey: string
+  data: Partial<IAddress>
+}
+
+/**
+ * Updates address data given a script pubkey.
+ * @param args {UpdateAddressByScriptPubkeyArgs}
+ * @returns The fully updated address data.
+ */
+const updateAddressByScriptPubkey = async (
+  args: UpdateAddressByScriptPubkeyArgs
+): Promise<IAddress> => {
+  const { tables, scriptPubkey, data } = args
+
+  // Make sure there is an address already saved for the given script pubkey
+  const [address]: Array<
+    IAddress | undefined
+  > = await tables.addressByScriptPubkey.query('', [scriptPubkey])
+  if (address == null) {
+    throw new Error('Cannot update address that does not exist')
+  }
+
+  // Holds array of promises that will be passed to a Promise.all
+  const promises: Array<Promise<unknown>> = []
+
+  // Only update the networkQueryVal if one was given and is greater than the existing value
+  if (
+    data.networkQueryVal != null &&
+    data.networkQueryVal > address.networkQueryVal
+  ) {
+    address.networkQueryVal = data.networkQueryVal
+  }
+
+  // Only update the lastQuery value if one was given and is greater than the existing value
+  if (data.lastQuery != null && data.lastQuery > address.lastQuery) {
+    address.lastQuery = data.lastQuery
+  }
+
+  // Only update the lastTouched value if one was given and is greater than the existing value
+  if (data.lastTouched != null && data.lastTouched > address.lastTouched) {
+    address.lastTouched = data.lastTouched
+  }
+
+  // Only update the used field if the given one is true and the existing one is false
+  if (data.used != null && data.used && !address.used) {
+    address.used = data.used
+  }
+
+  // Only update the balance field if one was given and does not equal the existing value
+  if (data.balance != null && data.balance !== address.balance) {
+    // Also update the index of the address by balance
+    const oldRange = parseInt(address.balance)
+    address.balance = data.balance
+    promises.push(
+      tables.scriptPubkeysByBalance.update('', oldRange, {
+        [RANGE_ID_KEY]: address.scriptPubkey,
+        [RANGE_KEY]: parseInt(data.balance)
+      })
+    )
+  }
+
+  // Only update the path field if one was given and currently does not have one
+  // NOTE: Addresses can be stored in the db without a path due to the `EdgeCurrencyEngine.addGapLimitAddresses` function
+  //  Once an address path is known, it should never be updated
+  if (data.path != null && address.path == null) {
+    address.path = data.path
+    promises.push(
+      saveScriptPubkeyByPath({ tables, scriptPubkey, path: data.path })
+    )
+  }
+
+  // Await the promises to update the address database
+  await Promise.all([
+    ...promises,
+    tables.addressByScriptPubkey.insert('', address.scriptPubkey, address)
+  ])
+
+  // Return the updated address data
+  return address
+}
+
+interface FetchTxByScriptPubkeyArgs {
+  tables: TransactionTables
+  scriptPubkey: string
+}
+
+/**
+ * Fetches the ins and outs for transactions that are related to the specified script pubkey.
+ * @param args {FetchTxByScriptPubkeyArgs}
+ * @returns An object with the keys as the transaction hashes and the values as the ins and out indices.
+ *  Example:
+ *      {
+ *        "fd174c5f3f...": {
+ *          "ins": {},
+ *          "outs": {
+ *            "0": true
+ *          }
+ *        }
+ *      }
+ */
+const fetchTxsByScriptPubkey = async (
+  args: FetchTxByScriptPubkeyArgs
+): Promise<TxsByScriptPubkey> => {
+  const { tables, scriptPubkey } = args
+
+  const [txs] = await tables.txsByScriptPubkey.query('', [scriptPubkey])
+  return txs ?? {}
+}
+
+interface FetchTxArgs {
+  tables: TransactionTables
+  txid: string
+}
+
+/**
+ * Fetches a transaction object from the database. Returns `undefined` if no transaction
+ * was found for the given `txid`.
+ * @param args {FetchTxArgs}
+ * @returns A `ProcessorTransaction` object or `undefined`
+ */
+const fetchTx = async (args: FetchTxArgs): Promise<TxById> => {
+  const { tables, txid } = args
+
+  const [data] = await tables.txById.query('', [txid])
+  return data
+}
+
+interface SaveTxArgs {
+  tables: TransactionTables
+  tx: IProcessorTransaction
+  emitter: EngineEmitter
+  hasScriptPubkey: (scriptPubkey: string) => Promise<boolean>
+}
+
+type SaveTxReturn = Array<{
+  scriptPubkey: string
+  used: boolean
+  lastTouched: number
+}>
+
+/**
+ * Saves a transaction to the database. Can call `saveTx` for transactions already
+ * in the database as several addresses will likely reference the same transaction.
+ * @param args {SaveTxArgs}
+ * @returns An array of script pubkeys and data to update it with
+ */
+const saveTx = async (args: SaveTxArgs): Promise<SaveTxReturn> => {
+  const { tables, tx, emitter, hasScriptPubkey } = args
+
+  // Update the date index
+  const existingTx = await fetchTx({ tables, txid: tx.txid })
+  // If the transaction does not already exists, add an index for the date
+  // NOTE: Multiple address can try to save the same transaction
+  if (existingTx == null) {
+    // Add an index for the date
+    await tables.txsByDate.insert('', {
+      [RANGE_ID_KEY]: tx.txid,
+      [RANGE_KEY]: tx.date
+    })
+  }
+
+  // Check every input and output of the transaction to create indices
+  // Keep reference of any script pubkeys in the tx that are in the wallet to update
+  const affectedScriptPubkeys: SaveTxReturn = []
+  for (const isInput of [true, false]) {
+    const arr = isInput ? tx.inputs : tx.outputs
+    for (let i = 0; i < arr.length; i++) {
+      const { scriptPubkey } = arr[i]
+
+      // Create index for this tx and script pubkey
+      await saveTxByScriptPubkey({
+        tables,
+        scriptPubkey,
+        txid: tx.txid,
+        isInput,
+        index: i
+      })
+
+      // If the script pubkey is in wallet, update ourIns and ourOuts
+      const own = await hasScriptPubkey(scriptPubkey)
+      if (own) {
+        if (isInput) {
+          tx.ourIns.push(i.toString())
+        } else {
+          tx.ourOuts.push(i.toString())
+        }
+
+        // Keep reference of script pubkeys that should be updated
+        affectedScriptPubkeys.push({
+          scriptPubkey,
+          used: true,
+          lastTouched: tx.date
+        })
+      }
+    }
+  }
+  // After ourIns and ourOuts have been determined, calculate tx amount
+  tx.ourAmount = await calculateTxAmount(tx)
+
+  // Create index by block height
+  await saveTxIdByBlockHeight({
+    tables,
+    txid: tx.txid,
+    blockHeight: tx.blockHeight
+  })
+
+  // Save transaction to database
+  await tables.txById.insert('', tx.txid, tx)
+
+  // Emit event that the transaction was saved
+  emitter.emit(EngineEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
+
+  // Return script pubkeys to update
+  return affectedScriptPubkeys
+}
+
+interface UpdateTxArgs {
+  tables: TransactionTables
+  txid: string
+  data: Partial<IProcessorTransaction>
+  emitter: EngineEmitter
+}
+
+/**
+ * Updates a transaction data and indices.
+ * @param args {UpdateTxArgs}
+ * @returns The updated transaction data
+ */
+const updateTx = async (args: UpdateTxArgs): Promise<IProcessorTransaction> => {
+  const { tables, txid, data, emitter } = args
+
+  const tx = await fetchTx({ tables, txid })
+  if (tx == null) {
+    throw new Error('Cannot update transaction that does not exists')
+  }
+
+  // Only update blockHeight if one was given and is grater than the existing one
+  if (data.blockHeight != null && data.blockHeight > tx.blockHeight) {
+    // Update the index by block height
+    await deleteTxIdByBlockHeight({ tables, txid, blockHeight: tx.blockHeight })
+    await saveTxIdByBlockHeight({ tables, txid, blockHeight: data.blockHeight })
+
+    tx.blockHeight = data.blockHeight
+  }
+
+  // Only update the date index if the existing tx date does not match the one given
+  if (data.date !== tx.date) {
+    await tables.txsByDate.delete('', tx.date, tx.txid)
+    await tables.txsByDate.insert('', {
+      [RANGE_ID_KEY]: tx.txid,
+      [RANGE_KEY]: tx.date
+    })
+  }
+
+  // Only update ourIns if one was given
+  if (data.ourIns != null) {
+    tx.ourIns = data.ourIns
+  }
+
+  // Only update ourOuts if one was given
+  if (data.ourOuts != null) {
+    tx.ourOuts = data.ourOuts
+  }
+
+  // Only update ourAmount if one was given
+  if (data.ourAmount != null) {
+    tx.ourAmount = data.ourAmount
+  }
+
+  // Update the transaction record
+  await tables.txById.insert('', txid, tx)
+
+  // Emit event that the transaction was updated
+  emitter.emit(EngineEvent.PROCESSOR_TRANSACTION_CHANGED, tx)
+
+  // return the updated data
+  return tx
+}
+
+interface DropTxArgs {
+  tables: TransactionTables
+  txid: string
+}
+
+/**
+ * Deletes indices from the transaction database and sets the `blockHeight` to -1.
+ * @param args {DropTxArgs}
+ */
+const dropTx = async (args: DropTxArgs): Promise<void> => {
+  const { tables, txid } = args
+
+  // Make sure the transaction exists
+  const tx = await fetchTx({ tables, txid })
+  if (tx == null) return
+
+  // Delete indices for script pubkeys
+  for (const isInput of [true, false]) {
+    const arr = isInput ? tx.inputs : tx.outputs
+    for (let i = 0; i < arr.length; i++) {
+      const { scriptPubkey } = arr[i]
+      await saveTxByScriptPubkey({
+        tables,
+        scriptPubkey,
+        txid,
+        isInput,
+        index: i,
+        save: false
+      })
+    }
+  }
+
+>>>>>>> master
   // Delete index for transaction by block height
   await deleteTxIdByBlockHeight({
     tables,
@@ -1098,11 +1485,25 @@ const saveUtxo = async (args: SaveUtxoArgs): Promise<void> => {
   // Save the UTXO data
   await tables.utxoById.insert('', utxo.id, utxo)
 
+<<<<<<< HEAD
   // Create index for size of value
   await tables.utxoIdsBySize.insert('', {
     [RANGE_ID_KEY]: utxo.id,
     [RANGE_KEY]: parseInt(utxo.value)
   })
+=======
+  try {
+    // Create index for size of value
+    await tables.utxoIdsBySize.insert('', {
+      [RANGE_ID_KEY]: utxo.id,
+      [RANGE_KEY]: parseInt(utxo.value)
+    })
+  } catch (err) {
+    if (err.message !== 'Cannot insert data because id already exists') {
+      throw err
+    }
+  }
+>>>>>>> master
 
   // Create index for script pubkey
   const [utxoIds] = await tables.utxoIdsByScriptPubkey.query('', [
