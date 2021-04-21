@@ -346,8 +346,8 @@ interface NextTaskArgs extends CommonArgs {
 export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<WsTask<any> | undefined> => {
-  const { taskCache, blockBook } = args
+): Promise<WsTask<any> | undefined | boolean> => {
+  const { taskCache, blockBook, log } = args
 
   const {
     addressSubscribeCache,
@@ -376,18 +376,21 @@ export const pickNextTask = async (
   }
 
   // Loop processed utxos, these are just database ops, triggers setLookAhead
-  for (const [address, state] of processedUtxosCache) {
-    // Only process when all utxos for a specific address have been gathered
-    if (!state.processing && state.full) {
-      state.processing = true
-      await processUtxoTransactions({
-        ...args,
-        address,
-        utxos: state.utxos,
-        path: state.path
-      })
-      processedUtxosCache.delete(address)
+  if (processedUtxosCache.size > 0) {
+    for (const [address, state] of processedUtxosCache) {
+      // Only process when all utxos for a specific address have been gathered
+      if (!state.processing && state.full) {
+        state.processing = true
+        await processUtxoTransactions({
+          ...args,
+          address,
+          utxos: state.utxos,
+          path: state.path
+        })
+        processedUtxosCache.delete(address)
+      }
     }
+    return true
   }
 
   // Loop to process addresses to utxos
@@ -458,11 +461,14 @@ export const pickNextTask = async (
           ).catch(() => {
             throw new Error('failed to add to transaction cache')
           })
+          setLookAhead({ ...args, ...path }).catch(e => {
+            log(e)
+          })
         }
       },
       deferredAddressSub
     )
-    return
+    return true
   }
 
   // first check if blocks are already being watched
@@ -477,15 +483,19 @@ export const pickNextTask = async (
       async () => await onNewBlock({ ...args }),
       deferredBlockSub
     )
+    return true
   }
 
   // filled when transactions potentially changed (e.g. through new block notification)
-  for (const [txId, state] of updateTransactionsCache) {
-    if (!state.processing) {
-      state.processing = true
-      updateTransactionsCache.delete(txId)
-      return updateTransactions({ ...args, txId })
+  if (updateTransactionsCache.size > 0) {
+    for (const [txId, state] of updateTransactionsCache) {
+      if (!state.processing) {
+        state.processing = true
+        updateTransactionsCache.delete(txId)
+        return updateTransactions({ ...args, txId })
+      }
     }
+    return true
   }
 
   // loop to get and process transaction history of single addresses, triggers setLookAhead
