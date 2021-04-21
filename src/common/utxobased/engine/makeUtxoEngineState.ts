@@ -274,15 +274,7 @@ interface FormatArgs extends CommonArgs, ShortPath {}
 interface SetLookAheadArgs extends FormatArgs {}
 
 const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
-  const {
-    format,
-    branch,
-    currencyInfo,
-    walletTools,
-    processor,
-    mutexor,
-    taskCache
-  } = args
+  const { format, branch, currencyInfo, walletTools, processor, mutexor } = args
 
   await mutexor(`setLookAhead-${format}-${branch}`).runExclusive(async () => {
     const partialPath: Omit<AddressPath, 'addressIndex'> = {
@@ -307,13 +299,21 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
         scriptPubkey,
         path
       })
-
-      taskCache.addressSubscribeCache.set(address, {
-        path: { format, branch },
-        processing: false
-      })
+      addToAddressSubscribeCache(args, address, { format, branch })
     }
   })
+}
+
+const addToAddressSubscribeCache = (
+  args: CommonArgs,
+  address: string,
+  path: ShortPath
+): void => {
+  args.taskCache.addressSubscribeCache.set(address, {
+    path,
+    processing: false
+  })
+  args.taskCache.addressWatching = false
 }
 
 const addToTransactionCache = async (
