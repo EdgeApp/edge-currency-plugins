@@ -12,7 +12,21 @@ import {
 import { Processor } from '../db/makeProcessor'
 import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
-import { BlockBook, IAccountUTXO, ITransaction } from '../network/BlockBook'
+import {
+  BlockBook,
+  IAccountDetailsBasic,
+  IAccountUTXO,
+  INewTransactionResponse,
+  ITransaction,
+  ITransactionDetailsPaginationResponse
+} from '../network/BlockBook'
+import {
+  addressMessage,
+  addressUtxosMessage,
+  transactionMessage
+} from '../network/BlockBookAPI'
+import Deferred from '../network/Deferred'
+import { WsTask } from '../network/Socket'
 import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import { makeMutexor, Mutexor } from './mutexor'
@@ -54,7 +68,16 @@ export function makeUtxoEngineState(
     blockBook
   } = config
 
-  const addressesToWatch = new Set<string>()
+  const taskCache: TaskCache = {
+    addressWatching: false,
+    blockWatching: false,
+    addressSubscribeCache: new Map(),
+    transactionsCache: new Map(),
+    utxosCache: new Map(),
+    rawUtxosCache: new Map(),
+    processedUtxosCache: new Map(),
+    updateTransactionsCache: new Map()
+  }
 
   let processedCount = 0
   let processedPercent = 0
@@ -81,41 +104,29 @@ export function makeUtxoEngineState(
     walletInfo,
     walletTools,
     processor,
-    blockBook,
     emitter,
-    addressesToWatch,
+    taskCache,
     onAddressChecked,
     mutexor,
     log
   }
 
-  let running = false
-  const run = async (): Promise<void> => {
-    if (running) return
-    running = true
-
-    const formatsToProcess = getWalletSupportedFormats(walletInfo)
-    for (const format of formatsToProcess) {
-      const branches = getFormatSupportedBranches(format)
-      for (const branch of branches) {
-        const args: SetLookAheadArgs = {
-          ...commonArgs,
-          format,
-          branch
-        }
-        await setLookAhead(args)
-      }
-    }
-  }
+  void run(commonArgs, setLookAhead)
 
   return {
     async start(): Promise<void> {
       processedCount = 0
       processedPercent = 0
 
-      blockBook.watchBlocks(async () => await onNewBlock(commonArgs))
+      blockBook.onQueueSpace(async () => {
+        return await pickNextTask({
+          ...commonArgs,
+          blockBook
+        })
+      })
 
-      await run()
+      await run(commonArgs, setLookAhead)
+      await run(commonArgs, processFormatAddresses)
     },
 
     async stop(): Promise<void> {
@@ -175,7 +186,7 @@ export function makeUtxoEngineState(
           used: true
         })
       }
-      await run()
+      await run(commonArgs, setLookAhead)
     }
   }
 }
@@ -186,45 +197,93 @@ interface CommonArgs {
   walletInfo: EdgeWalletInfo
   walletTools: UTXOPluginWalletTools
   processor: Processor
-  blockBook: BlockBook
   emitter: EngineEmitter
-  addressesToWatch: Set<string>
+  taskCache: TaskCache
   onAddressChecked: () => void
   mutexor: Mutexor
   log: EdgeLog
 }
 
-interface OnNewBlockArgs extends CommonArgs {}
+const run = async (
+  args: CommonArgs,
+  executor: (args: FormatArgs) => unknown
+): Promise<void> => {
+  const formatsToProcess = getWalletSupportedFormats(args.walletInfo)
+  for (const format of formatsToProcess) {
+    const branches = getFormatSupportedBranches(format)
+    for (const branch of branches) {
+      await executor({
+        ...args,
+        format,
+        branch
+      })
+    }
+  }
+}
 
-const onNewBlock = async (args: OnNewBlockArgs): Promise<void> => {
-  const { processor, blockBook } = args
+interface ShortPath {
+  format: CurrencyFormat
+  branch: number
+}
+interface TaskCache {
+  addressWatching: boolean
+  blockWatching: boolean
+  addressSubscribeCache: Map<string, CommonCacheState>
+  utxosCache: Map<string, CommonCacheState>
+  rawUtxosCache: Map<IAccountUTXO, RawUtxoCacheState>
+  processedUtxosCache: Map<IAddress, ProcessedUtxoCacheState>
+  transactionsCache: Map<string, AddressTransactionCacheState>
+  updateTransactionsCache: Map<string, UpdateTransactionCacheState>
+}
+
+interface UpdateTransactionCacheState {
+  processing: boolean
+}
+interface CommonCacheState {
+  processing: boolean
+  path: ShortPath
+}
+interface ProcessedUtxoCacheState extends CommonCacheState {
+  processing: boolean
+  full: boolean
+  utxos: Set<IUTXO>
+  path: ShortPath
+}
+interface RawUtxoCacheState extends CommonCacheState {
+  address: Required<IAddress>
+  requiredCount: number
+}
+interface AddressTransactionCacheState extends CommonCacheState {
+  page: number
+  networkQueryVal: number
+}
+
+const onNewBlock = async (args: CommonArgs): Promise<void> => {
+  const { processor, taskCache } = args
 
   const txIds = await processor.fetchTxIdsByBlockHeight(0)
   if (txIds === []) {
     return
   }
   for (const txId of txIds) {
-    const rawTx = await blockBook.fetchTransaction(txId)
-    const tx = processRawTx({ ...args, tx: rawTx })
-    // check if tx is still not confirmed, if so, don't change anything
-    if (tx.blockHeight < 1) {
-      return
-    }
-    await processor.removeTxIdByBlockHeight(0, txId)
-    await processor.insertTxIdByBlockHeight(tx.blockHeight, txId)
-    await processor.updateTransaction(txId, tx)
+    taskCache.updateTransactionsCache.set(txId, { processing: false })
   }
 }
 
-interface FormatArgs extends CommonArgs {
-  format: CurrencyFormat
-  branch: number
-}
+interface FormatArgs extends CommonArgs, ShortPath {}
 
 interface SetLookAheadArgs extends FormatArgs {}
 
 const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
-  const { format, branch, currencyInfo, walletTools, processor, mutexor } = args
+  const {
+    format,
+    branch,
+    currencyInfo,
+    walletTools,
+    processor,
+    mutexor,
+    taskCache
+  } = args
 
   await mutexor(`setLookAhead-${format}-${branch}`).runExclusive(async () => {
     const partialPath: Omit<AddressPath, 'addressIndex'> = {
@@ -250,10 +309,231 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
         path
       })
 
-      // TODO: don't process addresses during setLookAhead. Addresses should be added to a queue here
-      await processAddress({ ...args, address })
+      taskCache.addressSubscribeCache.set(address, {
+        path: { format, branch },
+        processing: false
+      })
     }
   })
+}
+
+const addToTransactionCache = async (
+  args: CommonArgs,
+  address: string,
+  format: CurrencyFormat,
+  branch: number,
+  transactions: Map<string, AddressTransactionCacheState>
+): Promise<void> => {
+  const { walletTools, processor } = args
+  // Fetch the networkQueryVal from the database
+  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  const { networkQueryVal = 0 } =
+    (await processor.fetchAddressByScriptPubkey(scriptPubkey)) ?? {}
+  transactions.set(address, {
+    processing: false,
+    path: {
+      format,
+      branch
+    },
+    page: 1, // Page starts on 1
+    networkQueryVal
+  })
+}
+
+interface NextTaskArgs extends CommonArgs {
+  blockBook: BlockBook
+}
+
+export const pickNextTask = async (
+  args: NextTaskArgs
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<WsTask<any> | undefined> => {
+  const { taskCache, blockBook } = args
+
+  const {
+    addressSubscribeCache,
+    utxosCache,
+    rawUtxosCache,
+    processedUtxosCache,
+    transactionsCache,
+    updateTransactionsCache
+  } = taskCache
+
+  // Loop unparsed utxos, some require a network call to get the full tx data
+  for (const [utxo, state] of rawUtxosCache) {
+    if (!state.processing) {
+      state.processing = true
+      rawUtxosCache.delete(utxo)
+      const wsTask = await processRawUtxo({
+        ...args,
+        ...state,
+        ...state.path,
+        address: state.address,
+        utxo,
+        id: `${utxo.txid}_${utxo.vout}`
+      })
+      return wsTask
+    }
+  }
+
+  // Loop processed utxos, these are just database ops, triggers setLookAhead
+  for (const [address, state] of processedUtxosCache) {
+    // Only process when all utxos for a specific address have been gathered
+    if (!state.processing && state.full) {
+      state.processing = true
+      await processUtxoTransactions({
+        ...args,
+        address,
+        utxos: state.utxos,
+        path: state.path
+      })
+      processedUtxosCache.delete(address)
+    }
+  }
+
+  // Loop to process addresses to utxos
+  for (const [address, state] of utxosCache) {
+    // Check if we need to fetch address UTXOs
+    if (!state.processing) {
+      state.processing = true
+
+      utxosCache.delete(address)
+
+      // Fetch and process address UTXOs
+      const wsTask = await processAddressUtxos({
+        ...args,
+        ...state,
+        address
+      })
+      return wsTask
+    }
+  }
+
+  // Check if there are any addresses pending to be subscribed
+  if (addressSubscribeCache.size > 0 && !taskCache.addressWatching) {
+    // Loop each address that needs to be subscribed
+    for (const [address, state] of addressSubscribeCache) {
+      // Add address in the cache to the set of addresses to watch
+      const { path, processing: subscribed } = state
+      // only process newly watched addresses
+      if (subscribed) continue
+      if (path != null) {
+        // Add the newly watched addresses to the UTXO cache
+        utxosCache.set(address, {
+          processing: false,
+          path
+        })
+        await addToTransactionCache(
+          args,
+          address,
+          path.format,
+          path.branch,
+          transactionsCache
+        )
+      }
+      state.processing = true
+    }
+
+    taskCache.addressWatching = true
+
+    const deferredAddressSub = new Deferred<unknown>()
+    deferredAddressSub.promise.catch(() => {
+      taskCache.addressWatching = false
+    })
+    blockBook.watchAddresses(
+      Array.from(addressSubscribeCache.keys()),
+      (response: INewTransactionResponse) => {
+        const state = addressSubscribeCache.get(response.address)
+        if (state != null) {
+          const { path } = state
+          utxosCache.set(response.address, {
+            processing: false,
+            path
+          })
+          addToTransactionCache(
+            args,
+            response.address,
+            path.format,
+            path.branch,
+            transactionsCache
+          ).catch(() => {
+            throw new Error('failed to add to transaction cache')
+          })
+        }
+      },
+      deferredAddressSub
+    )
+    return
+  }
+
+  // first check if blocks are already being watched
+  if (!taskCache.blockWatching) {
+    taskCache.blockWatching = true
+    const deferredBlockSub = new Deferred<unknown>()
+    deferredBlockSub.promise.catch(() => {
+      taskCache.blockWatching = false
+    })
+
+    blockBook.watchBlocks(
+      async () => await onNewBlock({ ...args }),
+      deferredBlockSub
+    )
+  }
+
+  // filled when transactions potentially changed (e.g. through new block notification)
+  for (const [txId, state] of updateTransactionsCache) {
+    if (!state.processing) {
+      state.processing = true
+      updateTransactionsCache.delete(txId)
+      return updateTransactions({ ...args, txId })
+    }
+  }
+
+  // loop to get and process transaction history of single addresses, triggers setLookAhead
+  for (const [address, state] of transactionsCache) {
+    if (!state.processing) {
+      state.processing = true
+
+      transactionsCache.delete(address)
+
+      // Fetch and process address UTXOs
+      const wsTask = await processAddressTransactions({
+        ...args,
+        ...state,
+        address
+      })
+      return wsTask
+    }
+  }
+}
+
+interface UpdateTransactionsArgs extends CommonArgs {
+  txId: string
+}
+
+const updateTransactions = (
+  args: UpdateTransactionsArgs
+): WsTask<ITransaction> => {
+  const { txId, processor, taskCache } = args
+  const deferredITransaction = new Deferred<ITransaction>()
+  deferredITransaction.promise
+    .then(async (rawTx: ITransaction) => {
+      const tx = processRawTx({ ...args, tx: rawTx })
+      // check if tx is still not confirmed, if so, don't change anything
+      if (tx.blockHeight < 1) {
+        return
+      }
+      await processor.removeTxIdByBlockHeight(0, txId)
+      await processor.insertTxIdByBlockHeight(tx.blockHeight, txId)
+      await processor.updateTransaction(txId, tx)
+    })
+    .catch(() => {
+      taskCache.updateTransactionsCache.set(txId, { processing: false })
+    })
+  return {
+    ...transactionMessage(txId),
+    deferred: deferredITransaction
+  }
 }
 
 interface SaveAddressArgs extends CommonArgs {
@@ -408,11 +688,10 @@ const internalGetFreshAddress = async (
     changeIndex: branch,
     addressIndex: (await findLastUsedIndex(args)) + 1
   }
-  let scriptPubkey = await processor.fetchScriptPubkeyByPath(path)
-  scriptPubkey =
-    scriptPubkey ?? (await walletTools.getScriptPubkey(path)).scriptPubkey
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  if (!scriptPubkey) {
+  const scriptPubkey =
+    (await processor.fetchScriptPubkeyByPath(path)) ??
+    (await walletTools.getScriptPubkey(path)).scriptPubkey
+  if (scriptPubkey == null) {
     throw new Error('Unknown address path')
   }
   return walletTools.scriptPubkeyToAddress({
@@ -421,80 +700,138 @@ const internalGetFreshAddress = async (
   })
 }
 
-interface ProcessAddressArgs extends FormatArgs {
-  address: string
-}
+interface ProcessFormatAddressesArgs extends FormatArgs {}
 
-const processAddress = async (args: ProcessAddressArgs): Promise<void> => {
-  const { address, blockBook, addressesToWatch, onAddressChecked } = args
-
-  const firstProcess = !addressesToWatch.has(address)
-  if (firstProcess) {
-    addressesToWatch.add(address)
-    blockBook.watchAddresses(
-      Array.from(addressesToWatch),
-      async (response): Promise<void> => {
-        await setLookAhead(args)
-        await processAddress({ ...args, address: response.address })
-      }
-    )
+const processFormatAddresses = async (
+  args: ProcessFormatAddressesArgs
+): Promise<void> => {
+  const branches = getFormatSupportedBranches(args.format)
+  for (const branch of branches) {
+    await processPathAddresses({ ...args, changeIndex: branch })
   }
-
-  await Promise.all([
-    processAddressTransactions(args),
-    processAddressUtxos(args)
-  ])
-
-  firstProcess && onAddressChecked()
 }
 
-interface ProcessAddressTxsArgs extends FormatArgs {
+interface ProcessPathAddressesArgs extends ProcessFormatAddressesArgs {
+  changeIndex: number
+}
+
+const processPathAddresses = async (
+  args: ProcessPathAddressesArgs
+): Promise<void> => {
+  const {
+    walletTools,
+    processor,
+    format,
+    branch,
+    changeIndex,
+    taskCache
+  } = args
+
+  const addressCount = await processor.getNumAddressesFromPathPartition({
+    format,
+    changeIndex
+  })
+  for (let i = 0; i < addressCount; i++) {
+    const path: AddressPath = {
+      format,
+      changeIndex,
+      addressIndex: i
+    }
+    const scriptPubkey =
+      (await processor.fetchScriptPubkeyByPath(path)) ??
+      walletTools.getScriptPubkey(path).scriptPubkey
+    const { address } = walletTools.scriptPubkeyToAddress({
+      scriptPubkey,
+      format
+    })
+    taskCache.addressSubscribeCache.set(address, {
+      path: { format, branch },
+      processing: false
+    })
+    taskCache.addressWatching = false
+  }
+}
+
+interface ProcessAddressTxsArgs
+  extends AddressTransactionCacheState,
+    CommonArgs {
   address: string
-  page?: number
-  networkQueryVal?: number
 }
+
+type addressResponse = IAccountDetailsBasic &
+  ITransactionDetailsPaginationResponse
 
 const processAddressTransactions = async (
   args: ProcessAddressTxsArgs
-): Promise<void> => {
-  const { address, page = 1, processor, walletTools, blockBook } = args
+): Promise<WsTask<addressResponse>> => {
+  const {
+    address,
+    page = 1,
+    networkQueryVal,
+    processor,
+    walletTools,
+    path,
+    taskCache
+  } = args
+  const transactionsCache = taskCache.transactionsCache
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  const networkQueryVal = args.networkQueryVal ?? addressData?.networkQueryVal
-  const {
-    transactions = [],
-    txs,
-    unconfirmedTxs,
-    totalPages
-  } = await blockBook.fetchAddress(address, {
-    details: 'txs',
-    from: networkQueryVal,
-    perPage: BLOCKBOOK_TXS_PER_PAGE,
-    page
-  })
-
-  // If address is used and previously not marked as used, mark as used.
-  const used = txs > 0 || unconfirmedTxs > 0
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  if (used && !addressData?.used && page === 1) {
-    await processor.updateAddressByScriptPubkey(scriptPubkey, {
-      used
-    })
-    await setLookAhead(args)
+  if (addressData == null) {
+    throw new Error(`could not find address with script pubkey ${scriptPubkey}`)
   }
 
-  for (const rawTx of transactions) {
-    const tx = processRawTx({ ...args, tx: rawTx })
-    await processor.saveTransaction(tx)
-  }
+  const deferredAddressResponse = new Deferred<addressResponse>()
+  deferredAddressResponse.promise
+    .then(async (value: addressResponse) => {
+      const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
-  if (page < totalPages) {
-    await processAddressTransactions({
-      ...args,
-      page: page + 1,
-      networkQueryVal
+      // If address is used and previously not marked as used, mark as used.
+      const used = txs > 0 || unconfirmedTxs > 0
+      if (used && !(addressData.used ?? false) && page === 1) {
+        await processor.updateAddressByScriptPubkey(scriptPubkey, {
+          used
+        })
+        await setLookAhead({ ...args, ...path })
+      }
+
+      for (const rawTx of transactions) {
+        const tx = processRawTx({ ...args, tx: rawTx })
+        await processor.saveTransaction(tx)
+      }
+
+      if (page < totalPages) {
+        // Add the address back to the cache, incrementing the page
+        transactionsCache.set(address, {
+          path,
+          networkQueryVal,
+          processing: false,
+          page: page + 1
+        })
+      } else {
+        // Callback for when an address has been fully processed
+        args.onAddressChecked()
+
+        await setLookAhead({ ...args, ...path })
+      }
     })
+    .catch(() => {
+      args.processing = false
+      transactionsCache.set(address, {
+        path,
+        networkQueryVal,
+        processing: args.processing,
+        page
+      })
+    })
+  return {
+    ...addressMessage(address, {
+      details: 'txs',
+      from: networkQueryVal,
+      perPage: BLOCKBOOK_TXS_PER_PAGE,
+      page
+    }),
+    deferred: deferredAddressResponse
   }
 }
 
@@ -538,45 +875,73 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
   }
 }
 
-interface FetchTransactionArgs extends CommonArgs {
-  txid: string
-}
-
-const fetchTransaction = async (
-  args: FetchTransactionArgs
-): Promise<IProcessorTransaction> => {
-  const { txid, processor, blockBook } = args
-  let tx = await processor.fetchTransaction(txid)
-  if (tx == null) {
-    const rawTx = await blockBook.fetchTransaction(txid)
-    tx = processRawTx({ ...args, tx: rawTx })
-  }
-  return tx
-}
-
-interface ProcessAddressUtxosArgs extends FormatArgs {
+interface ProcessAddressUtxosArgs extends CommonCacheState, CommonArgs {
   address: string
 }
 
 const processAddressUtxos = async (
   args: ProcessAddressUtxosArgs
+): Promise<WsTask<IAccountUTXO[]>> => {
+  const { address, walletTools, processor, taskCache, path } = args
+  const { utxosCache, rawUtxosCache } = taskCache
+  const deferredIAccountUTXOs = new Deferred<IAccountUTXO[]>()
+  deferredIAccountUTXOs.promise
+    .then(async (utxos: IAccountUTXO[]) => {
+      const scriptPubkey = walletTools.addressToScriptPubkey(address)
+      const addressData = await processor.fetchAddressByScriptPubkey(
+        scriptPubkey
+      )
+      if (addressData == null || addressData.path == null) {
+        return
+      }
+      for (const utxo of utxos) {
+        rawUtxosCache.set(utxo, {
+          processing: false,
+          requiredCount: utxos.length,
+          path,
+          // TypeScript yells otherwise
+          address: { ...addressData, path: addressData.path }
+        })
+      }
+    })
+    .catch(() => {
+      args.processing = false
+      utxosCache.set(address, {
+        processing: args.processing,
+        path
+      })
+    })
+  return {
+    ...addressUtxosMessage(address),
+    deferred: deferredIAccountUTXOs
+  }
+}
+
+interface ProcessUtxoTransactionArgs extends CommonArgs {
+  address: IAddress
+  utxos: Set<IUTXO>
+  path: ShortPath
+}
+
+const processUtxoTransactions = async (
+  args: ProcessUtxoTransactionArgs
 ): Promise<void> => {
   const {
     address,
+    utxos,
     currencyInfo,
-    walletTools,
     processor,
-    blockBook,
     emitter,
     mutexor,
     log
   } = args
 
-  const scriptPubkey = walletTools.addressToScriptPubkey(address)
-  await mutexor(`utxos-${scriptPubkey}`).runExclusive(async () => {
+  await mutexor(`utxos-${address.scriptPubkey}`).runExclusive(async () => {
     let newBalance = '0'
     let oldBalance = '0'
-    const currentUtxos = await processor.fetchUtxosByScriptPubkey(scriptPubkey)
+    const currentUtxos = await processor.fetchUtxosByScriptPubkey(
+      address.scriptPubkey
+    )
     const currentUtxoIds = new Set(
       currentUtxos.map(({ id, value }) => {
         oldBalance = bs.add(oldBalance, value)
@@ -584,22 +949,11 @@ const processAddressUtxos = async (
       })
     )
 
-    const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-    if (addressData == null || addressData.path == null) throw new Error()
-
     const toAdd = new Set<IUTXO>()
-    const rawUtxos = await blockBook.fetchAddressUtxos(address)
-    for (const rawUtxo of rawUtxos) {
-      const id = `${rawUtxo.txid}_${rawUtxo.vout}`
-      if (currentUtxoIds.has(id)) {
-        currentUtxoIds.delete(id)
+    for (const utxo of utxos) {
+      if (currentUtxoIds.has(utxo.id)) {
+        currentUtxoIds.delete(utxo.id)
       } else {
-        const utxo = await processRawUtxo({
-          ...args,
-          id,
-          utxo: rawUtxo,
-          address: addressData as Required<IAddress>
-        })
         toAdd.add(utxo)
       }
     }
@@ -622,53 +976,129 @@ const processAddressUtxos = async (
         diff
       )
 
-      await processor.updateAddressByScriptPubkey(scriptPubkey, {
+      await processor.updateAddressByScriptPubkey(address.scriptPubkey, {
         balance: newBalance,
         used: true
       })
-      await setLookAhead(args)
+      await setLookAhead({ ...args, ...args.path })
     }
   })
 }
 
-interface ProcessRawUtxoArgs extends FormatArgs {
+interface ProcessRawUtxoArgs extends FormatArgs, RawUtxoCacheState {
   utxo: IAccountUTXO
   id: string
   address: Required<IAddress>
 }
 
-const processRawUtxo = async (args: ProcessRawUtxoArgs): Promise<IUTXO> => {
-  const { utxo, id, address, format, walletTools } = args
-
+const processRawUtxo = async (
+  args: ProcessRawUtxoArgs
+): Promise<WsTask<ITransaction> | undefined> => {
+  const {
+    utxo,
+    id,
+    address,
+    format,
+    walletTools,
+    processor,
+    path,
+    taskCache,
+    requiredCount
+  } = args
+  const { rawUtxosCache, processedUtxosCache } = taskCache
   let scriptType: ScriptTypeEnum
   let script: string
   let redeemScript: string | undefined
+
+  let tx: IProcessorTransaction | undefined
   switch (currencyFormatToPurposeType(format)) {
     case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
-      script = (await fetchTransaction({ ...args, txid: utxo.txid })).hex
       scriptType = ScriptTypeEnum.p2pkh
+
+      // Legacy UTXOs need the previous transaction hex as the script
+      // If we do not currently have it, add it to the queue to fetch it
+      tx = await processor.fetchTransaction(utxo.txid)
+      if (tx == null) {
+        const deferredITransaction = new Deferred<ITransaction>()
+        deferredITransaction.promise
+          .then((rawTx: ITransaction) => {
+            const processedTx = processRawTx({ ...args, tx: rawTx })
+            script = processedTx.hex
+            // Only after we have successfully fetched the tx, set our script and call done
+            done()
+          })
+          .catch(() => {
+            // If something went wrong, add the UTXO back to the queue
+            rawUtxosCache.set(utxo, {
+              processing: false,
+              path,
+              address,
+              requiredCount
+            })
+          })
+        return {
+          ...transactionMessage(utxo.txid),
+          deferred: deferredITransaction
+        }
+      } else {
+        script = tx.hex
+      }
+
       break
     case BIP43PurposeTypeEnum.WrappedSegwit:
-      script = address.scriptPubkey
       scriptType = ScriptTypeEnum.p2wpkhp2sh
+      script = address.scriptPubkey
       redeemScript = walletTools.getScriptPubkey(address.path).redeemScript
+
       break
     case BIP43PurposeTypeEnum.Segwit:
-      script = address.scriptPubkey
       scriptType = ScriptTypeEnum.p2wpkh
+      script = address.scriptPubkey
+
       break
   }
 
-  return {
-    id,
-    txid: utxo.txid,
-    vout: utxo.vout,
-    value: utxo.value,
-    scriptPubkey: address.scriptPubkey,
-    script,
-    redeemScript,
-    scriptType,
-    blockHeight: utxo.height ?? 0
+  // Function to call once we are finished
+  const done = (): void =>
+    addToProcessedUtxosCache(
+      processedUtxosCache,
+      path,
+      address,
+      requiredCount,
+      {
+        id,
+        txid: utxo.txid,
+        vout: utxo.vout,
+        value: utxo.value,
+        scriptPubkey: address.scriptPubkey,
+        script,
+        redeemScript,
+        scriptType,
+        blockHeight: utxo.height ?? 0
+      }
+    )
+
+  // Since we have everything, call done
+  done()
+}
+
+const addToProcessedUtxosCache = (
+  processedUtxosCache: Map<IAddress, ProcessedUtxoCacheState>,
+  path: ShortPath,
+  address: IAddress,
+  requiredCount: number,
+  utxo: IUTXO
+): void => {
+  const processedUtxos: ProcessedUtxoCacheState = processedUtxosCache.get(
+    address
+  ) ?? {
+    utxos: new Set(),
+    processing: false,
+    path,
+    full: false
   }
+  processedUtxos.utxos.add(utxo)
+  processedUtxos.full = processedUtxos.utxos.size >= requiredCount
+  processedUtxosCache.set(address, processedUtxos)
 }
