@@ -296,10 +296,12 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
     const getAddressCount = (): number =>
       processor.getNumAddressesFromPathPartition(partialPath)
 
-    while ((await getLastUsed()) + currencyInfo.gapLimit > getAddressCount()) {
+    let lastUsed = await getLastUsed()
+    let addressCount = getAddressCount()
+    while (lastUsed + currencyInfo.gapLimit > addressCount) {
       const path: AddressPath = {
         ...partialPath,
-        addressIndex: getAddressCount()
+        addressIndex: addressCount
       }
       const { address } = walletTools.getAddress(path)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -313,6 +315,9 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
         path: { format, branch },
         processing: false
       })
+
+      lastUsed = await getLastUsed()
+      addressCount = getAddressCount()
     }
   })
 }
