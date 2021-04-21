@@ -111,6 +111,13 @@ export function makeUtxoEngineState(
     log
   }
 
+  blockBook.onQueueSpace(async () => {
+    return await pickNextTask({
+      ...commonArgs,
+      blockBook
+    })
+  })
+
   let running = false
   const run = async (): Promise<void> => {
     if (running) return
@@ -134,13 +141,6 @@ export function makeUtxoEngineState(
     async start(): Promise<void> {
       processedCount = 0
       processedPercent = 0
-
-      blockBook.onQueueSpace(async () => {
-        return await pickNextTask({
-          ...commonArgs,
-          blockBook
-        })
-      })
 
       await run()
     },
