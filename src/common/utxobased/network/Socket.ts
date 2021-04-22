@@ -38,7 +38,9 @@ export interface Socket {
   isConnected: () => boolean
 }
 
-export type OnQueueSpaceCB = () => Promise<WsTask<unknown> | undefined>
+export type OnQueueSpaceCB = () => Promise<
+  WsTask<unknown> | boolean | undefined
+>
 
 interface SocketConfig {
   queueSize?: number
@@ -141,6 +143,10 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       while (pendingMessages.size < queueSize) {
         const task = await onQueueSpace?.()
         if (task == null) break
+        if (typeof task === 'boolean') {
+          if (task) continue
+          break
+        }
         submitTask(task)
       }
     }
