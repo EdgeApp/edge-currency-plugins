@@ -6,7 +6,11 @@ export function setupWS(
   uri: string,
   callbacks: InnerSocketCallbacks
 ): InnerSocket {
-  const ws = new WS(uri)
+  const ws = new WS(uri, {
+    headers: {
+      'User-Agent': 'NodeJS-WS-agent'
+    }
+  })
 
   ws.on('open', () => {
     callbacks.onOpen()
