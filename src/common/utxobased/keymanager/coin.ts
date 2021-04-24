@@ -36,8 +36,8 @@ export interface Coin {
   sighash?: number
   sighashFunction?: (Hash: Buffer) => Buffer
   bs58DecodeFunc?: (payload: string | undefined) => Buffer
-  bs58EncodeFunc?: (payload: any) => string
-  wifEncodeFunc?: (prefix: any, key: any, compressed: any) => string
+  bs58EncodeFunc?: (payload: unknown) => string
+  wifEncodeFunc?: (prefix: unknown, key: unknown, compressed: unknown) => string
   bip32FromBase58Func?: (
     xKey: string,
     network: BitcoinJSNetwork

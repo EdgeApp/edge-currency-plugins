@@ -37,6 +37,7 @@ const GENERATOR = [
 ].map(x => new BN(x))
 
 // returns a BN object, which is not typed yet. Logs as <BN: dc0f07f285>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const polymod = (data: number[]): any => {
   let checksum = new BN(1)
   const C = new BN(0x07ffffffff)
@@ -56,7 +57,7 @@ const polymod = (data: number[]): any => {
 }
 
 const convertBits = (
-  data: any,
+  data: number[],
   from: number,
   to: number,
   strict?: boolean
@@ -104,7 +105,7 @@ const convertBits = (
   return result
 }
 
-const prefixToArray = (prefix: any): number[] => {
+const prefixToArray = (prefix: CashaddrPrefixEnum): number[] => {
   const result = []
   for (let i = 0; i < prefix.length; i++) {
     result.push(prefix.charCodeAt(i) & 31)
@@ -118,6 +119,7 @@ export const hashToCashAddress = (
   network: NetworkEnum
 ): string => {
   // Not any, but a BN object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function checksumToArray(checksum: any): number[] {
     const result = []
     const N31 = new BN(31)
@@ -208,6 +210,8 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
     return hasSingleCase
   }
 
+  // not any, but a bignum payload
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function validChecksum(prefix: string, payload: any): boolean {
     function prefixToArray(prefix: string): number[] {
       const result = []

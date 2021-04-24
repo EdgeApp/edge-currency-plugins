@@ -86,6 +86,7 @@ const makeFakeFetch = (): EdgeFetchFunction => async (
     headers: {
       forEach: (
         callback: (value: string, name: string, self: EdgeFetchHeaders) => void,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         thisArg?: any
       ): undefined => {
         return undefined
@@ -97,6 +98,7 @@ const makeFakeFetch = (): EdgeFetchFunction => async (
         return false
       }
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async json(): Promise<any> {
       return {}
     },

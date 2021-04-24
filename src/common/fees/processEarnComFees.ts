@@ -30,7 +30,7 @@ export const asEarnComFees = asObject({
  * @param fees
  * @returns {FeeRates}
  */
-export const processEarnComFees = (fees: any): FeeRates | null => {
+export const processEarnComFees = (fees: unknown): FeeRates | null => {
   let earnComFees: ReturnType<typeof asEarnComFees>
   try {
     earnComFees = asEarnComFees(fees)

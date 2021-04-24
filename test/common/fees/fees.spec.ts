@@ -1,9 +1,11 @@
 import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { makeMemoryDisklet } from 'disklet'
+import { MemoryStorage } from 'disklet/lib/src/backends/memory'
 
 import { FEES_PATH } from '../../../src/common/constants'
 import { Fees, makeFees } from '../../../src/common/fees/makeFees'
+import { SimpleFeeSettings } from '../../../src/common/plugin/types'
 import { makeFakeCurrencyInfo, makeFakeIo, makeFakeLog } from '../../utils'
 
 chai.should()
@@ -14,16 +16,18 @@ describe('fees', function () {
   const fakeIo = makeFakeIo()
   const fakeLog = makeFakeLog()
   const fakeCurrencyInfo = makeFakeCurrencyInfo()
-  const memory: any = {}
+  const memory: MemoryStorage = {}
   const disklet = makeMemoryDisklet(memory)
   let fees: Fees
 
-  const testJson = (expected?: any): void => {
+  const testJson = (expected?: SimpleFeeSettings): void => {
     const str = memory[`/${FEES_PATH}`]
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    expected == null
-      ? expect(str).to.be.undefined
-      : expect(JSON.parse(str)).to.eql(expected)
+    if (typeof str === 'string') {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      expected == null
+        ? expect(str).to.be.undefined
+        : expect(JSON.parse(str)).to.eql(expected)
+    }
   }
 
   describe('makeFees', () => {

@@ -1,6 +1,7 @@
 import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { Disklet, makeMemoryDisklet } from 'disklet'
+import { MemoryStorage } from 'disklet/lib/src/backends/memory'
 
 import {
   EngineEmitter,
@@ -15,7 +16,7 @@ const wait = async (seconds: number): Promise<void> =>
   await new Promise(resolve => setTimeout(resolve, seconds * 1000))
 
 describe('makeMetadata', () => {
-  const memory: any = {}
+  const memory: MemoryStorage = {}
   let disklet: Disklet
   let metadata: Metadata
   const emitter = new EngineEmitter()

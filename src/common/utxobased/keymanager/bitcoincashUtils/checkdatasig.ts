@@ -32,12 +32,12 @@ export const cdsScriptTemplates = {
     cds(CDS_SIGNATURE, CDS_MESSAGE, CDS_PUBKEY, pubKey).join(
       OP_CHECKDATASIGVERIFY
     ),
-  checkdatasig: (pubKey: any) => (
+  checkdatasig: (pubKey: string) => (
     cdsSig: string = '',
     cdsMsg: string = '',
     cdsPubKey: string = ''
   ) => cds(cdsSig, cdsMsg, cdsPubKey, pubKey).join(OP_CHECKDATASIG),
-  checkdatasigverify: (pubKey: any) => (
+  checkdatasigverify: (pubKey: string) => (
     cdsSig: string = '',
     cdsMsg: string = '',
     cdsPubKey: string = ''

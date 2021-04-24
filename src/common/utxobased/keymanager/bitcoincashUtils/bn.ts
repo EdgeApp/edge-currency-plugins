@@ -182,15 +182,15 @@ BN.prototype.toScriptNumBuffer = function () {
   })
 }
 
-BN.prototype.gt = function (b: any) {
+BN.prototype.gt = function (b: unknown) {
   return this.cmp(b) > 0
 }
 
-BN.prototype.gte = function (b: any) {
+BN.prototype.gte = function (b: unknown) {
   return this.cmp(b) >= 0
 }
 
-BN.prototype.lt = function (b: any) {
+BN.prototype.lt = function (b: unknown) {
   return this.cmp(b) < 0
 }
 
