@@ -71,8 +71,9 @@ const convertBits = (
   for (let i = 0; i < data.length; i++) {
     const value = data[i]
     if (value < 0 || value >> from !== 0) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      throw new Error(`InvalidArgument in function convertBits: ${value}`)
+      throw new Error(
+        `InvalidArgument in function convertBits: ${JSON.stringify(value)}`
+      )
     }
 
     accumulator = (accumulator << from) | value
@@ -201,7 +202,7 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
     }
   }
 
-  function hasSingleCase(string: string): Boolean {
+  function hasSingleCase(string: string): boolean {
     const lowerCase = string.toLowerCase()
     const upperCase = string.toUpperCase()
     const hasSingleCase = string === lowerCase || string === upperCase
@@ -221,7 +222,7 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
     return polymod(prefixData.concat(payload)).eqn(0)
   }
 
-  if (hasSingleCase(address) === false) {
+  if (!hasSingleCase(address)) {
     throw new Error(`InvalidArgument: ${address} has Mixed case`)
   }
   address = address.toLowerCase()

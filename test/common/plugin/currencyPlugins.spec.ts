@@ -15,13 +15,13 @@ describe('currencyPlugins', function () {
       const fakeIo = makeFakeIo()
       const tools = makeCurrencyTools(
         fakeIo,
-        // @ts-expect-error
+        // @ts-expect-error - allow access by implicit any
         allInfo[fixture.pluginId] ?? allInfo.bitcoin
       )
 
       describe('parseUri', function () {
         Object.keys(fixture.parseUri).forEach(test => {
-          // @ts-expect-error
+          // @ts-expect-error - allow access by implicit any
           const [data, expectedParseUri] = fixture.parseUri[test] as any
 
           const promise = tools.parseUri(data)
@@ -39,7 +39,7 @@ describe('currencyPlugins', function () {
 
       describe('encodeUri', function () {
         Object.keys(fixture.encodeUri).forEach(test => {
-          // @ts-expect-error
+          // @ts-expect-error - allow access by implicit any
           const [data, expectedEncodeUri] = fixture.encodeUri[test] as any
 
           const promise = tools.encodeUri(data)

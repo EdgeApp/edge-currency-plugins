@@ -10,18 +10,17 @@
 /***
  * Charset containing the 32 symbols used in the base32 encoding.
  */
-const CHARSET: string = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'
+const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'
 
 /***
  * Inverted index mapping each symbol into its index within the charset.
  */
 
-interface CHARSET_INVERSE_INDEX {
+interface CHARSET_INVERSE_INDEX_TYPE {
   [value: string]: number
 }
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-const CHARSET_INVERSE_INDEX: CHARSET_INVERSE_INDEX = {
+const CHARSET_INVERSE_INDEX: CHARSET_INVERSE_INDEX_TYPE = {
   q: 0,
   p: 1,
   z: 2,

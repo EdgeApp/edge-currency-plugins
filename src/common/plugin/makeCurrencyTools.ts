@@ -97,8 +97,7 @@ export function makeCurrencyTools(
             coin: currencyInfo.network,
             network: NetworkEnum.Mainnet
           })
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (!parsedPath) throw new Error('InvalidUriError')
+          if (parsedPath == null) throw new Error('InvalidUriError')
 
           Object.assign(parsedUri, parsedPath)
         }
@@ -127,7 +126,7 @@ export function makeCurrencyTools(
 
     async encodeUri(
       obj: EdgeEncodeUri,
-      customTokens?: EdgeMetaToken[]
+      _customTokens?: EdgeMetaToken[]
     ): Promise<string> {
       const { publicAddress } = obj
       if (publicAddress === '') {

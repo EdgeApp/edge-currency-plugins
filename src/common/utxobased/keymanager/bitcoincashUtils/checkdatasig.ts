@@ -28,18 +28,19 @@ const cds = (
 }
 
 export const cdsScriptTemplates = {
-  replayProtection: (pubKey: string) =>
+  replayProtection: (pubKey: string): string =>
     cds(CDS_SIGNATURE, CDS_MESSAGE, CDS_PUBKEY, pubKey).join(
       OP_CHECKDATASIGVERIFY
     ),
-  checkdatasig: (pubKey: any) => (
-    cdsSig: string = '',
-    cdsMsg: string = '',
-    cdsPubKey: string = ''
-  ) => cds(cdsSig, cdsMsg, cdsPubKey, pubKey).join(OP_CHECKDATASIG),
-  checkdatasigverify: (pubKey: any) => (
-    cdsSig: string = '',
-    cdsMsg: string = '',
-    cdsPubKey: string = ''
-  ) => cds(cdsSig, cdsMsg, cdsPubKey, pubKey).join(OP_CHECKDATASIGVERIFY)
+  checkdatasig: (pubKey: string) => (
+    cdsSig = '',
+    cdsMsg = '',
+    cdsPubKey = ''
+  ): string => cds(cdsSig, cdsMsg, cdsPubKey, pubKey).join(OP_CHECKDATASIG),
+  checkdatasigverify: (pubKey: string) => (
+    cdsSig = '',
+    cdsMsg = '',
+    cdsPubKey = ''
+  ): string =>
+    cds(cdsSig, cdsMsg, cdsPubKey, pubKey).join(OP_CHECKDATASIGVERIFY)
 }

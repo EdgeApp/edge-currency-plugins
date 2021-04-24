@@ -55,8 +55,9 @@ export async function getPaymentDetails(
 
   const edgePaymentProtocolInfo: EdgePaymentProtocolInfo = {
     nativeAmount: `${nativeAmount}`,
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-    merchant: `{ ${paymentId}, ${requiredFeeRate} }`,
+    merchant: `{ ${JSON.stringify(paymentId)}, ${JSON.stringify(
+      requiredFeeRate
+    )} }`,
     memo,
     domain,
     spendTargets

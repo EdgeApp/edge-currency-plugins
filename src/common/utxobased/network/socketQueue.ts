@@ -4,7 +4,7 @@ const QUEUE_RUN_DELAY = 200
 interface UpdateQueue {
   id: string
   action?: string
-  updateFunc: Function
+  updateFunc: () => void
 }
 
 const updateQueue: UpdateQueue[] = []
