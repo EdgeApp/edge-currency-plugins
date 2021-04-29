@@ -44,9 +44,15 @@ export const makeFakeCurrencyInfo = (
 }
 
 export const makeFakeLog = (): EdgeLog => {
-  const fakeLog = (): void => {}
-  fakeLog.warn = () => {}
-  fakeLog.error = () => {}
+  const fakeLog = (): void => {
+    return
+  }
+  fakeLog.warn = () => {
+    return
+  }
+  fakeLog.error = () => {
+    return
+  }
   return fakeLog
 }
 
@@ -55,20 +61,20 @@ interface FakeIoConfig {
 }
 export const makeFakeIo = (config?: FakeIoConfig): EdgeIo => {
   return {
-    // @ts-expect-error
+    // @ts-expect-error - assigned to null
     console: null,
     disklet: config?.disklet ?? makeMemoryDisklet(),
     fetch: makeFakeFetch(),
-    random(bytes: number): Uint8Array {
+    random(_bytes: number): Uint8Array {
       return new Uint8Array()
     },
     async scrypt(
-      data: Uint8Array,
-      salt: Uint8Array,
-      n: number,
-      r: number,
-      p: number,
-      dklen: number
+      _data: Uint8Array,
+      _salt: Uint8Array,
+      _n: number,
+      _r: number,
+      _p: number,
+      _dklen: number
     ): Promise<Uint8Array> {
       return new Uint8Array()
     }
@@ -76,8 +82,8 @@ export const makeFakeIo = (config?: FakeIoConfig): EdgeIo => {
 }
 
 const makeFakeFetch = (): EdgeFetchFunction => async (
-  uri: string,
-  opts?: EdgeFetchOptions
+  _uri: string,
+  _opts?: EdgeFetchOptions
 ) => {
   return {
     async arrayBuffer(): Promise<ArrayBuffer> {
@@ -85,16 +91,20 @@ const makeFakeFetch = (): EdgeFetchFunction => async (
     },
     headers: {
       forEach: (
-        callback: (value: string, name: string, self: EdgeFetchHeaders) => void,
+        _callback: (
+          value: string,
+          name: string,
+          self: EdgeFetchHeaders
+        ) => void,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        thisArg?: any
+        _thisArg?: any
       ): undefined => {
         return undefined
       },
-      get: (name: string): string | null => {
+      get: (_name: string): string | null => {
         return null
       },
-      has: (name: string): boolean => {
+      has: (_name: string): boolean => {
         return false
       }
     },

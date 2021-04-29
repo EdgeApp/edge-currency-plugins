@@ -94,9 +94,13 @@ export function makeUtxoWalletTools(
       if (wifKeys != null) {
         return privateKeyToPubkey(getPrivateKeyAtIndex(args))
       }
+      if (xpubKeys[args.format] == null) {
+        throw new Error(
+          `wallet tools: xpub with format ${args.format} does not exist`
+        )
+      }
       return xpubToPubkey({
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        xpub: xpubKeys[args.format]!,
+        xpub: xpubKeys[args.format] ?? '',
         network,
         coin,
         type: currencyFormatToPurposeType(args.format),
@@ -146,9 +150,13 @@ export function makeUtxoWalletTools(
       if (wifKeys != null) {
         return getPrivateKeyAtIndex(args)
       }
+      if (xprivKeys[args.format] != null) {
+        throw new Error(
+          `wallet tools: xpriv with format ${args.format} does not exist`
+        )
+      }
       return xprivToPrivateKey({
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        xpriv: xprivKeys[args.format]!,
+        xpriv: xprivKeys[args.format] ?? '',
         network,
         type: currencyFormatToPurposeType(args.format),
         coin,

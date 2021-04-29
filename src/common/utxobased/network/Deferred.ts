@@ -23,7 +23,6 @@ export default class Deferred<T> {
     this._resolve(value)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public reject(reason?: unknown): void {
     this._reject(reason)
   }

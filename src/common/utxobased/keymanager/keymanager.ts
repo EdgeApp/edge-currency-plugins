@@ -283,8 +283,8 @@ export function bip43PurposeNumberToTypeEnum(
 function bip32NetworkFromCoinPrefix(
   sigType: BIP43PurposeTypeEnum,
   coinPrefixes: CoinPrefixes,
-  segwit: Boolean,
-  forWIF: Boolean
+  _segwit: boolean,
+  forWIF: boolean
 ): BitcoinJSNetwork {
   let xKeyPrefixes: Bip32
   switch (sigType) {
@@ -324,7 +324,7 @@ function bip32NetworkFromCoinPrefix(
   }
 
   const bech32: string = coinPrefixes.bech32 ?? 'bc'
-  if (forWIF === true) {
+  if (forWIF) {
     return {
       messagePrefix: coinPrefixes.messagePrefix,
       wif: coinPrefixes.wif,
@@ -486,7 +486,7 @@ export function xprivToXPub(args: XPrivToXPubArgs): string {
 export function derivationLevelScriptHash(): number {
   // currently returns the derivation for an empty script template for a bitcoin cash
   // replay protection script (without key material)
-  let hash: string = '0000'
+  let hash = '0000'
   hash = bitcoin.crypto
     .hash160(Buffer.from(cdsScriptTemplates.replayProtection(''), 'hex'))
     .slice(0, 4)
@@ -869,9 +869,8 @@ export function scriptPubkeyToElectrumScriptHash(scriptPubkey: string): string {
   ).toString('hex')
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
 export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
-  let sequence: number = 0xffffffff
+  let sequence = 0xffffffff
   if (args.rbf) {
     sequence -= 2
   }
@@ -951,12 +950,12 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
 
 export function createTx(args: CreateTxArgs): CreateTxReturn {
   const psbt = new bitcoin.Psbt()
-  let sequence: number = 0xffffffff
+  let sequence = 0xffffffff
   if (args.rbf) {
     sequence -= 2
   }
-  let segwit: boolean = false
-  let txVSize: number = 0
+  let segwit = false
+  let txVSize = 0
 
   // get coin specific replay protection sighhash bits
   let hashType = bitcoin.Transaction.SIGHASH_ALL
@@ -967,7 +966,7 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
     }
   }
 
-  for (let i: number = 0; i < args.inputs.length; i++) {
+  for (let i = 0; i < args.inputs.length; i++) {
     const input: TxInput = args.inputs[i]
     if (input.type === TransactionInputTypeEnum.Legacy) {
       if (typeof input.prevTx === 'undefined') {
@@ -1042,7 +1041,7 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
       txVSize += 91
     }
   }
-  for (let i: number = 0; i < args.outputs.length; i++) {
+  for (let i = 0; i < args.outputs.length; i++) {
     psbt.addOutput({
       script: Buffer.from(args.outputs[i].scriptPubkey, 'hex'),
       value: args.outputs[i].amount
@@ -1067,7 +1066,6 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
   return { psbt: psbt.toBase64(), vSize: txVSize }
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
 export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
   const psbt = bitcoin.Psbt.fromBase64(args.psbtBase64)
   const coin = getCoinFromString(args.coin)
