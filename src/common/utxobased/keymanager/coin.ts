@@ -36,7 +36,8 @@ export interface Coin {
   sighash?: number
   sighashFunction?: (Hash: Buffer) => Buffer
   bs58DecodeFunc?: (payload: string | undefined) => Buffer
-  bs58EncodeFunc?: (payload: unknown) => string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  bs58EncodeFunc?: (payload: any) => string
   wifEncodeFunc?: (prefix: unknown, key: unknown, compressed: unknown) => string
   bip32FromBase58Func?: (
     xKey: string,
