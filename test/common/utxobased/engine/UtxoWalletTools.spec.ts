@@ -25,7 +25,7 @@ describe('wallet tools tests', () => {
     network: NetworkEnum.Mainnet
   })
 
-  it('Get Pubkey test', () => {
+  it('Get Address test', () => {
     const address = walletTools.getAddress({
       format: 'bip49',
       changeIndex: 0,
@@ -33,7 +33,7 @@ describe('wallet tools tests', () => {
     })
     expect(address.address).to.eqls('37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf')
   })
-  it('', () => {
+  it('Get ScriptPubkey test', () => {
     const scriptPubkey = walletTools.getScriptPubkey({
       format: 'bip49',
       changeIndex: 0,
