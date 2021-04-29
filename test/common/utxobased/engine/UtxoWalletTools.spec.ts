@@ -44,3 +44,42 @@ describe('wallet tools tests', () => {
     )
   })
 })
+
+describe('wallet tools wif test', () => {
+  const walletTools = makeUtxoWalletTools({
+    keys: {
+      wifKeys: ['L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr']
+    },
+    coin: 'bitcoin',
+    network: NetworkEnum.Mainnet
+  })
+
+  it('Get Address test', () => {
+    const address = walletTools.getAddress({
+      format: 'bip32',
+      changeIndex: 0,
+      addressIndex: 0
+    })
+    expect(address.legacyAddress).to.eqls('1DjrqoDMoDaMKjVi4mNZXxoiE5Wk9iU9eZ')
+  })
+  it('Get ScriptPubkey test', () => {
+    const scriptPubkey = walletTools.getScriptPubkey({
+      format: 'bip49',
+      changeIndex: 0,
+      addressIndex: 0
+    })
+    expect(scriptPubkey.scriptPubkey).to.eqls(
+      'a9142427d83a84e5793ce6f6efc33020d844dd217dbb87'
+    )
+  })
+  it('Get Address fail', () => {
+    expect(() =>
+      walletTools.getAddress({
+        format: 'bip32',
+        changeIndex: 0,
+        addressIndex: 1
+      })
+    ).to.throw()
+    // expect(address.legacyAddress).to.eqls('lol!')
+  })
+})
