@@ -17,6 +17,7 @@ import {
 } from './utils'
 
 export interface UtxoKeyFormat {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [mnemonicKey: string]: any // ${coinName}Key = mnemonic or seed string
   format?: CurrencyFormat
   coinType?: number

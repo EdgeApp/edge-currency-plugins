@@ -123,7 +123,6 @@ export interface ScriptPubkeyToAddressArgs {
 }
 
 export interface ScriptPubkeyToAddressReturn {
-  [x: string]: any
   address: string
   legacyAddress: string
 }

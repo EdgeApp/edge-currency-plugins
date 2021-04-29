@@ -22,7 +22,7 @@ describe('currencyPlugins', function () {
       describe('parseUri', function () {
         Object.keys(fixture.parseUri).forEach(test => {
           // @ts-expect-error - allow access by implicit any
-          const [data, expectedParseUri] = fixture.parseUri[test] as any
+          const [data, expectedParseUri] = fixture.parseUri[test] as unknown
 
           const promise = tools.parseUri(data)
 
@@ -40,7 +40,7 @@ describe('currencyPlugins', function () {
       describe('encodeUri', function () {
         Object.keys(fixture.encodeUri).forEach(test => {
           // @ts-expect-error - allow access by implicit any
-          const [data, expectedEncodeUri] = fixture.encodeUri[test] as any
+          const [data, expectedEncodeUri] = fixture.encodeUri[test] as unknown
 
           const promise = tools.encodeUri(data)
 

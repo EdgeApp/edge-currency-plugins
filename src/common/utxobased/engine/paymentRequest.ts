@@ -1,4 +1,8 @@
-import { EdgePaymentProtocolInfo, EdgeSpendTarget } from 'edge-core-js'
+import {
+  EdgeFetchFunction,
+  EdgePaymentProtocolInfo,
+  EdgeSpendTarget
+} from 'edge-core-js'
 import parse from 'url-parse'
 
 interface BitPayOutput {
@@ -30,14 +34,14 @@ export async function getPaymentDetails(
   paymentProtocolURL: string,
   network: string,
   currencyCode: string,
-  fetch: any
+  fetch: EdgeFetchFunction
 ): Promise<EdgePaymentProtocolInfo> {
   const headers = {
     Accept: 'application/payment-request',
     'x-currency': currencyCode
   }
   const result = await fetch(paymentProtocolURL, { headers })
-  if (parseInt(result.status) !== 200) {
+  if (result.status !== 200) {
     const error = await result.text()
     throw new Error(error)
   }
@@ -66,14 +70,23 @@ export async function getPaymentDetails(
   return edgePaymentProtocolInfo
 }
 
-export function createPayment(tx: string, currencyCode: string): any {
+interface CreatePaymentReturn {
+  currency: string
+  transactions: string[]
+}
+
+export function createPayment(
+  tx: string,
+  currencyCode: string
+): CreatePaymentReturn {
   return { currency: currencyCode, transactions: [tx] }
 }
 
 export async function sendPayment(
-  fetch: any,
+  fetch: EdgeFetchFunction,
   paymentUrl: string,
-  payment: any
+  payment: unknown
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
   const headers = { 'Content-Type': 'application/payment' }
   const result = await fetch(paymentUrl, {
@@ -81,7 +94,7 @@ export async function sendPayment(
     headers,
     body: JSON.stringify(payment)
   })
-  if (parseInt(result.status) !== 200) {
+  if (result.status !== 200) {
     const error = await result.text()
     throw new Error(error)
   }

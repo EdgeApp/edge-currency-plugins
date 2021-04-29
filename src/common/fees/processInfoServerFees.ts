@@ -19,7 +19,9 @@ const asInfoServerFees = asObject<SimpleFeeSettings>({
  * @param fees
  * @returns {SimpleFeeSettings}
  */
-export const processInfoServerFees = (fees: any): SimpleFeeSettings | null => {
+export const processInfoServerFees = (
+  fees: unknown
+): SimpleFeeSettings | null => {
   try {
     return asInfoServerFees(fees)
   } catch {
