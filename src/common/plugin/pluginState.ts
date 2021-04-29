@@ -155,7 +155,7 @@ export class PluginState extends ServerCache {
     this.serverCacheDirty = true
     for (const engine of this.engines) {
       if (engine.processedPercent === 1) {
-        for (const uri of engine.serverList) {
+        for (const uri of engine.getServerList()) {
           if (uri === serverUrl) {
             this.saveServerCache().catch(e => {
               this.log(`${this.pluginId} - ${JSON.stringify(e.toString())}`)
@@ -209,7 +209,7 @@ export class PluginState extends ServerCache {
     const disconnects = []
     for (const engine of this.engines) {
       engines.push(engine)
-      engine.serverList = []
+      engine.setServerList([])
       disconnects.push(engine.stop())
     }
     await Promise.all(disconnects)

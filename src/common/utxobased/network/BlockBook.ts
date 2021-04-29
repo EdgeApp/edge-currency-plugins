@@ -119,6 +119,10 @@ interface IServerInfo {
 }
 
 type Callback = () => void | Promise<void>
+export type WatchAddressesCB = (
+  response: INewTransactionResponse
+) => void | Promise<void>
+export type WatchBlocksCB = () => void | Promise<void>
 
 export interface BlockBook {
   isConnected: boolean
