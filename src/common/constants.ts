@@ -1,5 +1,5 @@
-export const IMAGE_SERVER_URL: string = 'https://content.edge.app'
-export const INFO_SERVER_URI: string = 'https://info1.edgesecure.co:8444/v1'
+export const IMAGE_SERVER_URL = 'https://content.edge.app'
+export const INFO_SERVER_URI = 'https://info1.edgesecure.co:8444/v1'
 
 export const BYTES_TO_KB = '1000'
 

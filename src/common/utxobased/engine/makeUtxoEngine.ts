@@ -156,7 +156,6 @@ export async function makeUtxoEngine(
         )
         if (typeof paymentAck === 'undefined') {
           throw new Error(
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
             `Error when sending to ${otherParams.paymentProtocolInfo.paymentUrl}`
           )
         }

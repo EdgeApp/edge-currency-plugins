@@ -25,11 +25,11 @@ export function base58Base(
     const newChecksum = checksumFn(payload)
 
     if (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      (checksum[0] ^ newChecksum[0]) |
-      (checksum[1] ^ newChecksum[1]) |
-      (checksum[2] ^ newChecksum[2]) |
-      (checksum[3] ^ newChecksum[3])
+      ((checksum[0] ^ newChecksum[0]) |
+        (checksum[1] ^ newChecksum[1]) |
+        (checksum[2] ^ newChecksum[2]) |
+        (checksum[3] ^ newChecksum[3])) ===
+      1
     )
       return
 

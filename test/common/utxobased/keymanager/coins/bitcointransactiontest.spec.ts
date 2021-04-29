@@ -235,7 +235,7 @@ describe('bitcoin transaction creation and signing test', () => {
   })
 
   it('create a legacy tx with segwit outputs, then create another tx consuming these outputs', async () => {
-    const nOutputs: number = 3
+    const nOutputs = 3
     const txInput: TxInput = {
       type: TransactionInputTypeEnum.Legacy,
       prevTxid:
@@ -274,7 +274,7 @@ describe('bitcoin transaction creation and signing test', () => {
     )
 
     const txInputs: TxInput[] = Array(nOutputs)
-    for (let i: number = 0; i < txInputs.length; i++) {
+    for (let i = 0; i < txInputs.length; i++) {
       txInputs[i] = {
         type: TransactionInputTypeEnum.Segwit,
         prevTxid:
@@ -385,7 +385,7 @@ describe('bitcoin transaction creation and signing test', () => {
   })
 
   it('create a legacy tx with one input and 100 outputs, then create another legacy tx with 100 inputs and two outputs', async () => {
-    const nOutputs: number = 100
+    const nOutputs = 100
     const txInput: TxInput = {
       type: TransactionInputTypeEnum.Legacy,
       prevTxid:
@@ -427,7 +427,7 @@ describe('bitcoin transaction creation and signing test', () => {
     })
 
     const txInputs: TxInput[] = Array(nOutputs)
-    for (let i: number = 0; i < txInputs.length; i++) {
+    for (let i = 0; i < txInputs.length; i++) {
       txInputs[i] = {
         type: TransactionInputTypeEnum.Legacy,
         prevTxid:
