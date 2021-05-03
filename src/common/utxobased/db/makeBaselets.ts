@@ -1,4 +1,3 @@
-import { Mutex } from 'async-mutex'
 import {
   BaseType,
   createCountBase,
@@ -111,10 +110,6 @@ export interface UTXOTables {
 export const makeBaselets = async (
   config: MakeBaseletsConfig
 ): Promise<Baselets> => {
-  const addressMutex = new Mutex()
-  const txMutex = new Mutex()
-  const utxoMutex = new Mutex()
-
   const countBases = await Promise.all([
     createOrOpen(config.disklet, scriptPubkeyByPathConfig),
     createOrOpen(config.disklet, addressPathByMRUConfig)
@@ -172,15 +167,15 @@ export const makeBaselets = async (
     async address<E extends Executor<'address'>>(
       fn: E
     ): Promise<ReturnType<E>> {
-      return await addressMutex.runExclusive(async () => await fn(addressBases))
+      return await fn(addressBases)
     },
 
     async tx<E extends Executor<'tx'>>(fn: E): Promise<ReturnType<E>> {
-      return await txMutex.runExclusive(async () => await fn(txBases))
+      return await fn(txBases)
     },
 
     async utxo<E extends Executor<'utxo'>>(fn: E): Promise<ReturnType<E>> {
-      return await utxoMutex.runExclusive(async () => await fn(utxoBases))
+      return await fn(utxoBases)
     },
 
     all: {
