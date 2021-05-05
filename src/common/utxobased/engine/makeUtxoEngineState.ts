@@ -146,6 +146,7 @@ export function makeUtxoEngineState(
     },
 
     async stop(): Promise<void> {
+      running = false
       // TODO: stop watching blocks
       // TODO: stop watching addresses
     },
