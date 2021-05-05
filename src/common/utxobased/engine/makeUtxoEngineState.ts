@@ -290,6 +290,16 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
 
     let lastUsed = await getLastUsed()
     let addressCount = getAddressCount()
+    const addresses = new Set<string>()
+
+    if (args.taskCache.addressSubscribeCache.size === 0) {
+      for (let addressIndex = 0; addressIndex <= addressCount; addressIndex++) {
+        addresses.add(
+          walletTools.getAddress({ ...partialPath, addressIndex }).address
+        )
+      }
+    }
+
     while (lastUsed + currencyInfo.gapLimit > addressCount) {
       const path: AddressPath = {
         ...partialPath,
@@ -302,24 +312,28 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
         scriptPubkey,
         path
       })
-      addToAddressSubscribeCache(args, address, { format, branch })
+      addresses.add(address)
 
       lastUsed = await getLastUsed()
       addressCount = getAddressCount()
     }
+
+    addToAddressSubscribeCache(args, addresses, { format, branch })
   })
 }
 
 const addToAddressSubscribeCache = (
   args: CommonArgs,
-  address: string,
+  addresses: Set<string>,
   path: ShortPath
 ): void => {
-  args.taskCache.addressSubscribeCache.set(address, {
-    path,
-    processing: false
+  addresses.forEach(address => {
+    args.taskCache.addressSubscribeCache.set(address, {
+      path,
+      processing: false
+    })
+    args.taskCache.addressWatching = false
   })
-  args.taskCache.addressWatching = false
 }
 
 const addToTransactionCache = async (
