@@ -178,6 +178,7 @@ export function makeUtxoEngineState(
 
     async stop(): Promise<void> {
       serverStates.stop()
+      running = false
     },
 
     async getFreshAddress(branch = 0): Promise<EdgeFreshAddress> {
