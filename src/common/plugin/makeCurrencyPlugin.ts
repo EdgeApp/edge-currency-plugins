@@ -9,6 +9,7 @@ import {
 import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
 import { makeCurrencyTools } from './makeCurrencyTools'
 import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
+import { PluginState } from './pluginState'
 import {
   EngineConfig,
   EngineCurrencyInfo,
@@ -20,9 +21,25 @@ export function makeCurrencyPlugin(
   pluginOptions: EdgeCorePluginOptions,
   currencyInfo: EngineCurrencyInfo
 ): EdgeCurrencyPlugin {
-  const { io } = pluginOptions
+  const { io, log } = pluginOptions
   const currencyTools = makeCurrencyTools(io, currencyInfo)
-
+  const { defaultSettings, pluginId, currencyCode } = currencyInfo
+  const {
+    customFeeSettings,
+    electrumServers,
+    disableFetchingServers
+  } = defaultSettings
+  const state = new PluginState({
+    io,
+    currencyCode,
+    pluginId,
+    log,
+    defaultSettings: {
+      customFeeSettings,
+      electrumServers,
+      disableFetchingServers
+    }
+  })
   return {
     currencyInfo,
 
@@ -64,7 +81,8 @@ export function makeCurrencyPlugin(
           ...pluginOptions,
           ...engineOptions,
           emitter
-        }
+        },
+        pluginState: state
       }
 
       let engine: EdgeCurrencyEngine
@@ -78,6 +96,9 @@ export function makeCurrencyPlugin(
     },
 
     async makeCurrencyTools(): Promise<EdgeCurrencyTools> {
+      state.load().catch(e => {
+        throw e
+      })
       return currencyTools
     }
   }
