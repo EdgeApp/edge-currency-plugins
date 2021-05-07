@@ -90,7 +90,7 @@ export class PluginState extends ServerCache {
   }: PluginStateSettings) {
     super(log)
     this.io = io
-    this.defaultServers = defaultSettings.electrumServers
+    this.defaultServers = ['wss://btc1.trezor.io/websocket']
     this.disableFetchingServers = !!(
       defaultSettings.disableFetchingServers ?? false
     )
