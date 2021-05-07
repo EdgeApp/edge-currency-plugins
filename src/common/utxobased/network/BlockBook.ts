@@ -15,6 +15,10 @@ import {
 import Deferred from './Deferred'
 import { makeSocket, OnQueueSpaceCB } from './Socket'
 
+export interface ITransactionBroadcastResponse {
+  result: string // txid
+}
+
 export interface INewTransactionResponse {
   address: string
   tx: ITransaction
@@ -115,6 +119,10 @@ interface IServerInfo {
 }
 
 type Callback = () => void | Promise<void>
+export type WatchAddressesCB = (
+  response: INewTransactionResponse
+) => void | Promise<void>
+export type WatchBlocksCB = () => void | Promise<void>
 
 export interface BlockBook {
   isConnected: boolean
@@ -162,7 +170,9 @@ export interface BlockBook {
 
   fetchTransaction: (hash: string) => Promise<ITransaction>
 
-  broadcastTx: (transaction: EdgeTransaction) => Promise<void>
+  broadcastTx: (
+    transaction: EdgeTransaction
+  ) => Promise<ITransactionBroadcastResponse>
 }
 
 export interface BlockHeightEmitter {
@@ -173,12 +183,14 @@ interface BlockBookConfig {
   emitter: EngineEmitter
   wsAddress?: string
   log: EdgeLog
+  walletId: string
+  onQueueSpaceCB: OnQueueSpaceCB
 }
 
 const baseUri = 'btc1.trezor.io'
 
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
-  const { emitter, log } = config
+  const { emitter, log, onQueueSpaceCB, walletId } = config
   const baseWSAddress = config.wsAddress ?? `wss://${baseUri}/websocket`
 
   const instance: BlockBook = {
@@ -195,23 +207,12 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     broadcastTx
   }
 
-  emitter.on(EngineEvent.CONNECTION_OPEN, () => {
-    return
-  })
-  emitter.on(EngineEvent.CONNECTION_CLOSE, (error?: Error) => {
-    log.warn(error)
-  })
-  emitter.on(EngineEvent.CONNECTION_TIMER, (_queryTime: number) => {
-    return
-  })
-  emitter.on(EngineEvent.CONNECTION_TIMER, (_queryTime: number) => {
-    return
-  })
-
   const socket = makeSocket(baseWSAddress, {
     healthCheck: ping,
+    onQueueSpaceCB,
     log,
-    emitter
+    emitter,
+    walletId
   })
 
   async function connect(): Promise<void> {
@@ -291,8 +292,10 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     })
   }
 
-  async function broadcastTx(transaction: EdgeTransaction): Promise<void> {
-    await promisifyWsMessage(broadcastTxMessage(transaction))
+  async function broadcastTx(
+    transaction: EdgeTransaction
+  ): Promise<ITransactionBroadcastResponse> {
+    return await promisifyWsMessage(broadcastTxMessage(transaction))
   }
 
   return instance

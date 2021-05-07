@@ -1,5 +1,11 @@
 import * as bs from 'biggystring'
-import { EdgeFreshAddress, EdgeLog, EdgeWalletInfo } from 'edge-core-js'
+import {
+  EdgeFreshAddress,
+  EdgeIo,
+  EdgeLog,
+  EdgeTransaction,
+  EdgeWalletInfo
+} from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
@@ -13,7 +19,6 @@ import { Processor } from '../db/makeProcessor'
 import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import {
-  BlockBook,
   IAccountDetailsBasic,
   IAccountUTXO,
   INewTransactionResponse,
@@ -28,6 +33,7 @@ import {
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
 import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
+import { makeServerStates, ServerStates } from './makeServerStates'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import {
   currencyFormatToPurposeType,
@@ -39,6 +45,8 @@ import {
 } from './utils'
 
 export interface UtxoEngineState {
+  processedPercent: number
+
   start: () => Promise<void>
 
   stop: () => Promise<void>
@@ -46,12 +54,19 @@ export interface UtxoEngineState {
   getFreshAddress: (branch?: number) => Promise<EdgeFreshAddress>
 
   addGapLimitAddresses: (addresses: string[]) => Promise<void>
+
+  broadcastTx: (transaction: EdgeTransaction) => Promise<string>
+
+  refillServers: () => void
+
+  getServerList: () => string[]
+
+  setServerList: (serverList: string[]) => void
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
   walletTools: UTXOPluginWalletTools
   processor: Processor
-  blockBook: BlockBook
 }
 
 export function makeUtxoEngineState(
@@ -64,7 +79,7 @@ export function makeUtxoEngineState(
     walletTools,
     options: { emitter, log },
     processor,
-    blockBook
+    pluginState
   } = config
 
   const taskCache: TaskCache = {
@@ -95,7 +110,17 @@ export function makeUtxoEngineState(
     }
   }
 
+  const engineStarted = false
+
+  const serverStates = makeServerStates({
+    engineStarted,
+    walletInfo,
+    pluginState,
+    emitter,
+    log
+  })
   const commonArgs: CommonArgs = {
+    engineStarted,
     network,
     currencyInfo,
     walletInfo,
@@ -104,15 +129,19 @@ export function makeUtxoEngineState(
     emitter,
     taskCache,
     onAddressChecked,
-    log
+    io: config.io,
+    log,
+    serverStates
   }
 
-  blockBook.onQueueSpace(async () => {
-    return await pickNextTask({
-      ...commonArgs,
-      blockBook
-    })
-  })
+  const pickNextTaskCB = async (
+    uri: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<boolean | WsTask<any> | undefined> => {
+    return await pickNextTask({ ...commonArgs, uri })
+  }
+
+  serverStates.setPickNextTaskCB(pickNextTaskCB)
 
   let running = false
   const run = async (): Promise<void> => {
@@ -134,16 +163,18 @@ export function makeUtxoEngineState(
   }
 
   return {
+    processedPercent,
     async start(): Promise<void> {
       processedCount = 0
       processedPercent = 0
 
       await run()
+      serverStates.refillServers()
     },
 
     async stop(): Promise<void> {
-      // TODO: stop watching blocks
-      // TODO: stop watching addresses
+      serverStates.stop()
+      running = false
     },
 
     async getFreshAddress(branch = 0): Promise<EdgeFreshAddress> {
@@ -199,11 +230,25 @@ export function makeUtxoEngineState(
         })
       }
       await run()
+    },
+
+    async broadcastTx(transaction: EdgeTransaction): Promise<string> {
+      return await serverStates.broadcastTx(transaction)
+    },
+    refillServers(): void {
+      serverStates.refillServers()
+    },
+    getServerList(): string[] {
+      return serverStates.getServerList()
+    },
+    setServerList(serverList: string[]) {
+      serverStates.setServerList(serverList)
     }
   }
 }
 
 interface CommonArgs {
+  engineStarted: boolean
   network: NetworkEnum
   currencyInfo: EngineCurrencyInfo
   walletInfo: EdgeWalletInfo
@@ -212,7 +257,9 @@ interface CommonArgs {
   emitter: EngineEmitter
   taskCache: TaskCache
   onAddressChecked: () => void
+  io: EdgeIo
   log: EdgeLog
+  serverStates: ServerStates
 }
 
 interface ShortPath {
@@ -283,6 +330,16 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
 
   let lastUsed = await getLastUsed()
   let addressCount = getAddressCount()
+  const addresses = new Set<string>()
+
+  if (args.taskCache.addressSubscribeCache.size === 0) {
+    for (let addressIndex = 0; addressIndex <= addressCount; addressIndex++) {
+      addresses.add(
+        walletTools.getAddress({ ...partialPath, addressIndex }).address
+      )
+    }
+  }
+
   while (lastUsed + currencyInfo.gapLimit > addressCount) {
     const path: AddressPath = {
       ...partialPath,
@@ -295,23 +352,27 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
       scriptPubkey,
       path
     })
-    addToAddressSubscribeCache(args, address, { format, branch })
+    addresses.add(address)
 
     lastUsed = await getLastUsed()
     addressCount = getAddressCount()
   }
+
+  addToAddressSubscribeCache(args, addresses, { format, branch })
 }
 
 const addToAddressSubscribeCache = (
   args: CommonArgs,
-  address: string,
+  addresses: Set<string>,
   path: ShortPath
 ): void => {
-  args.taskCache.addressSubscribeCache.set(address, {
-    path,
-    processing: false
+  addresses.forEach(address => {
+    args.taskCache.addressSubscribeCache.set(address, {
+      path,
+      processing: false
+    })
+    args.taskCache.addressWatching = false
   })
-  args.taskCache.addressWatching = false
 }
 
 const addToTransactionCache = async (
@@ -338,14 +399,14 @@ const addToTransactionCache = async (
 }
 
 interface NextTaskArgs extends CommonArgs {
-  blockBook: BlockBook
+  uri: string
 }
 
 export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<WsTask<any> | undefined | boolean> => {
-  const { taskCache, blockBook, log } = args
+  const { taskCache, uri, serverStates, log } = args
 
   const {
     addressSubscribeCache,
@@ -356,9 +417,21 @@ export const pickNextTask = async (
     updateTransactionsCache
   } = taskCache
 
+  const serverState = serverStates.getServerState(uri)
+  if (serverState == null) return
+
   // Loop unparsed utxos, some require a network call to get the full tx data
   for (const [utxo, state] of rawUtxosCache) {
     if (!state.processing) {
+      // check if we need to fetch additional network content for legacy purpose type
+      const purposeType = currencyFormatToPurposeType(state.path.format)
+      if (
+        purposeType === BIP43PurposeTypeEnum.Airbitz ||
+        purposeType === BIP43PurposeTypeEnum.Legacy
+      ) {
+        // if we do need to make a network call, check with the serverState
+        if (!serverStates.serverCanGetTx(uri, utxo.txid)) return
+      }
       state.processing = true
       rawUtxosCache.delete(utxo)
       const wsTask = await processRawUtxo({
@@ -394,7 +467,7 @@ export const pickNextTask = async (
   // Loop to process addresses to utxos
   for (const [address, state] of utxosCache) {
     // Check if we need to fetch address UTXOs
-    if (!state.processing) {
+    if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
       state.processing = true
 
       utxosCache.delete(address)
@@ -405,6 +478,13 @@ export const pickNextTask = async (
         ...state,
         address
       })
+      wsTask.deferred.promise
+        .then(() => {
+          serverState.addresses.add(address)
+        })
+        .catch(e => {
+          throw e
+        })
       return wsTask
     }
   }
@@ -436,13 +516,23 @@ export const pickNextTask = async (
 
     taskCache.addressWatching = true
 
+    const queryTime = Date.now()
     const deferredAddressSub = new Deferred<unknown>()
+    deferredAddressSub.promise
+      .then(() => {
+        serverStates.serverScoreUp(uri, Date.now() - queryTime)
+      })
+      .catch(() => {
+        taskCache.addressWatching = false
+      })
     deferredAddressSub.promise.catch(() => {
       taskCache.addressWatching = false
     })
-    blockBook.watchAddresses(
+    serverStates.watchAddresses(
+      uri,
       Array.from(addressSubscribeCache.keys()),
       (response: INewTransactionResponse) => {
+        serverState.txids.add(response.tx.txid)
         const state = addressSubscribeCache.get(response.address)
         if (state != null) {
           const { path } = state
@@ -469,15 +559,20 @@ export const pickNextTask = async (
     return true
   }
 
-  // first check if blocks are already being watched
-  if (!taskCache.blockWatching) {
-    taskCache.blockWatching = true
+  // subscribe all servers to new blocks
+  if (!serverState.subscribedBlocks) {
+    serverState.subscribedBlocks = true
+    const queryTime = Date.now()
     const deferredBlockSub = new Deferred<unknown>()
-    deferredBlockSub.promise.catch(() => {
-      taskCache.blockWatching = false
-    })
-
-    blockBook.watchBlocks(
+    deferredBlockSub.promise
+      .then(() => {
+        serverStates.serverScoreUp(uri, Date.now() - queryTime)
+      })
+      .catch(() => {
+        serverState.subscribedBlocks = false
+      })
+    serverStates.watchBlocks(
+      uri,
       async () => await onNewBlock({ ...args }),
       deferredBlockSub
     )
@@ -487,10 +582,19 @@ export const pickNextTask = async (
   // filled when transactions potentially changed (e.g. through new block notification)
   if (updateTransactionsCache.size > 0) {
     for (const [txId, state] of updateTransactionsCache) {
-      if (!state.processing) {
+      if (!state.processing && serverStates.serverCanGetTx(uri, txId)) {
         state.processing = true
         updateTransactionsCache.delete(txId)
-        return updateTransactions({ ...args, txId })
+        const updateTransactionTask = updateTransactions({ ...args, txId })
+        // once resolved, add the txid to the server cache
+        updateTransactionTask.deferred.promise
+          .then(() => {
+            serverState.txids.add(txId)
+          })
+          .catch(e => {
+            throw e
+          })
+        return updateTransactionTask
       }
     }
     return true
@@ -498,7 +602,7 @@ export const pickNextTask = async (
 
   // loop to get and process transaction history of single addresses, triggers setLookAhead
   for (const [address, state] of transactionsCache) {
-    if (!state.processing) {
+    if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
       state.processing = true
 
       transactionsCache.delete(address)
@@ -509,6 +613,13 @@ export const pickNextTask = async (
         ...state,
         address
       })
+      wsTask.deferred.promise
+        .then(() => {
+          serverState.addresses.add(address)
+        })
+        .catch(e => {
+          throw e
+        })
       return wsTask
     }
   }
@@ -709,6 +820,7 @@ interface ProcessAddressTxsArgs
   extends AddressTransactionCacheState,
     CommonArgs {
   address: string
+  uri: string
 }
 
 type addressResponse = IAccountDetailsBasic &
@@ -724,7 +836,9 @@ const processAddressTransactions = async (
     processor,
     walletTools,
     path,
-    taskCache
+    taskCache,
+    serverStates,
+    uri
   } = args
   const transactionsCache = taskCache.transactionsCache
 
@@ -734,9 +848,11 @@ const processAddressTransactions = async (
     throw new Error(`could not find address with script pubkey ${scriptPubkey}`)
   }
 
+  const queryTime = Date.now()
   const deferredAddressResponse = new Deferred<addressResponse>()
   deferredAddressResponse.promise
     .then(async (value: addressResponse) => {
+      serverStates.serverScoreUp(uri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
       // If address is used and previously not marked as used, mark as used.
@@ -830,16 +946,27 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
 
 interface ProcessAddressUtxosArgs extends CommonCacheState, CommonArgs {
   address: string
+  uri: string
 }
 
 const processAddressUtxos = async (
   args: ProcessAddressUtxosArgs
 ): Promise<WsTask<IAccountUTXO[]>> => {
-  const { address, walletTools, processor, taskCache, path } = args
+  const {
+    address,
+    walletTools,
+    processor,
+    taskCache,
+    path,
+    serverStates,
+    uri
+  } = args
   const { utxosCache, rawUtxosCache } = taskCache
+  const queryTime = Date.now()
   const deferredIAccountUTXOs = new Deferred<IAccountUTXO[]>()
   deferredIAccountUTXOs.promise
     .then(async (utxos: IAccountUTXO[]) => {
+      serverStates.serverScoreUp(uri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddressByScriptPubkey(
         scriptPubkey
@@ -932,6 +1059,7 @@ interface ProcessRawUtxoArgs extends FormatArgs, RawUtxoCacheState {
   utxo: IAccountUTXO
   id: string
   address: Required<IAddress>
+  uri: string
 }
 
 const processRawUtxo = async (
@@ -946,7 +1074,9 @@ const processRawUtxo = async (
     processor,
     path,
     taskCache,
-    requiredCount
+    requiredCount,
+    serverStates,
+    uri
   } = args
   const { rawUtxosCache, processedUtxosCache } = taskCache
   let scriptType: ScriptTypeEnum
@@ -963,9 +1093,11 @@ const processRawUtxo = async (
       // If we do not currently have it, add it to the queue to fetch it
       tx = await processor.fetchTransaction(utxo.txid)
       if (tx == null) {
+        const queryTime = Date.now()
         const deferredITransaction = new Deferred<ITransaction>()
         deferredITransaction.promise
           .then((rawTx: ITransaction) => {
+            serverStates.serverScoreUp(uri, Date.now() - queryTime)
             const processedTx = processRawTx({ ...args, tx: rawTx })
             script = processedTx.hex
             // Only after we have successfully fetched the tx, set our script and call done

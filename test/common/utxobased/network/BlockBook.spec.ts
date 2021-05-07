@@ -9,6 +9,7 @@ import {
   makeBlockBook
 } from '../../../../src/common/utxobased/network/BlockBook'
 import Deferred from '../../../../src/common/utxobased/network/Deferred'
+import { WsTask } from '../../../../src/common/utxobased/network/Socket'
 
 chai.should()
 
@@ -57,9 +58,18 @@ describe('BlockBook notifications tests with dummy server', function () {
     log.error = (..._args: unknown[]): void => {
       return
     }
+
+    const onQueueSpaceCB = async (
+      _uri: string
+    ): Promise<WsTask<unknown> | undefined> => {
+      return
+    }
+
     blockBook = makeBlockBook({
       emitter,
       log,
+      walletId: '',
+      onQueueSpaceCB,
       wsAddress: 'ws://localhost:8080'
     })
     await blockBook.connect()
@@ -135,8 +145,14 @@ describe('BlockBook', function () {
   }
   let blockBook: BlockBook
 
+  const onQueueSpaceCB = async (
+    _uri: string
+  ): Promise<WsTask<unknown> | undefined> => {
+    return
+  }
+
   beforeEach(async () => {
-    blockBook = makeBlockBook({ emitter, log })
+    blockBook = makeBlockBook({ emitter, log, walletId: '', onQueueSpaceCB })
     await blockBook.connect()
   })
 
