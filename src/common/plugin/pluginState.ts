@@ -4,7 +4,7 @@ import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
-import { ServerCache, ServerInfo } from './serverCache.js'
+import { ServerCache, ServerInfo } from './serverCache'
 
 const InfoServer = 'https://info1.edge.app/v1'
 const FixCurrencyCode = (currencyCode: string): string => {
