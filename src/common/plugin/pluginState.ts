@@ -4,7 +4,7 @@ import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
-import { ServerCache, ServerInfo } from './serverCache.js'
+import { ServerCache, ServerInfo } from './serverCache'
 
 const InfoServer = 'https://info1.edge.app/v1'
 const FixCurrencyCode = (currencyCode: string): string => {
@@ -90,7 +90,7 @@ export class PluginState extends ServerCache {
   }: PluginStateSettings) {
     super(log)
     this.io = io
-    this.defaultServers = defaultSettings.electrumServers
+    this.defaultServers = ['wss://btc1.trezor.io/websocket']
     this.disableFetchingServers = !!(
       defaultSettings.disableFetchingServers ?? false
     )

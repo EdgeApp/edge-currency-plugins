@@ -73,7 +73,7 @@ export interface EngineConfig {
   pluginState: PluginState
 }
 
-interface EngineOptions extends EdgeCurrencyEngineOptions {
+export interface EngineOptions extends EdgeCurrencyEngineOptions {
   emitter: EngineEmitter
 }
 
