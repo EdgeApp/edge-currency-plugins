@@ -93,6 +93,17 @@ export function makeUtxoEngineState(
     updateTransactionsCache: new Map()
   }
 
+  const clearTaskCache = (): void => {
+    taskCache.addressWatching = false
+    taskCache.blockWatching = false
+    taskCache.addressSubscribeCache.clear()
+    taskCache.transactionsCache.clear()
+    taskCache.utxosCache.clear()
+    taskCache.rawUtxosCache.clear()
+    taskCache.processedUtxosCache.clear()
+    taskCache.updateTransactionsCache.clear()
+  }
+
   let processedCount = 0
   let processedPercent = 0
   const onAddressChecked = async (): Promise<void> => {
@@ -174,6 +185,7 @@ export function makeUtxoEngineState(
 
     async stop(): Promise<void> {
       serverStates.stop()
+      clearTaskCache()
       running = false
     },
 
