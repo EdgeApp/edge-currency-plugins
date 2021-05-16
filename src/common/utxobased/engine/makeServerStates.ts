@@ -6,9 +6,8 @@ import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { PluginState } from '../../plugin/pluginState'
 import {
   BlockBook,
-  makeBlockBook,
-  WatchAddressesCB,
-  WatchBlocksCB
+  INewTransactionResponse,
+  makeBlockBook
 } from '../network/BlockBook'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
@@ -46,14 +45,9 @@ export interface ServerStates {
   watchAddresses: (
     uri: string,
     addresses: string[],
-    cb: WatchAddressesCB,
     deferredAddressSub: Deferred<unknown>
   ) => void
-  watchBlocks: (
-    uri: string,
-    cb: WatchBlocksCB,
-    deferredBlockSub: Deferred<unknown>
-  ) => void
+  watchBlocks: (uri: string, deferredBlockSub: Deferred<unknown>) => void
 }
 
 export function makeServerStates(config: ServerStateConfig): ServerStates {
@@ -67,6 +61,53 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   let reconnectTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
     return
   }, 0)
+
+  // set server specific event emitters
+  emitter.on(EngineEvent.CONNECTION_OPEN, (uri: string) => {
+    reconnectCounter = 0
+    log(`${uri} ** Connected **`)
+  })
+  emitter.on(EngineEvent.CONNECTION_CLOSE, (uri: string, error?: Error) => {
+    connections.delete(uri)
+    serverStates.delete(uri)
+    const msg = error != null ? ` !! Connection ERROR !! ${error.message}` : ''
+    log(`${uri} onClose ${msg}`)
+    if (error != null) {
+      pluginState.serverScoreDown(uri)
+    }
+    reconnect()
+  })
+  emitter.on(EngineEvent.CONNECTION_TIMER, (uri: string, queryDate: number) => {
+    const queryTime = Date.now() - queryDate
+    log(`${uri} returned version in ${queryTime}ms`)
+    pluginState.serverScoreUp(uri, queryTime)
+  })
+  emitter.on(
+    EngineEvent.BLOCK_HEIGHT_CHANGED,
+    (uri: string, height: number) => {
+      log(`${uri} returned height: ${height}`)
+      const serverState = serverStates.get(uri)
+      if (serverState == null) {
+        serverStates.set(uri, {
+          subscribedBlocks: true,
+          txids: new Set(),
+          addresses: new Set()
+        })
+      } else if (!serverState.subscribedBlocks) {
+        serverState.subscribedBlocks = true
+      }
+    }
+  )
+  emitter.on(
+    EngineEvent.NEW_ADDRESS_TRANSACTION,
+    (uri: string, newTx: INewTransactionResponse) => {
+      const serverState = serverStates.get(uri)
+      if (serverState != null) {
+        serverState.txids.add(newTx.tx.txid)
+      }
+    }
+  )
+
   let pickNextTaskCB: (
     uri: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -141,40 +182,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       }
       const shortUrl = `${uri.replace('wss://', '').replace('/websocket', '')}:`
 
-      emitter.on(EngineEvent.CONNECTION_OPEN, () => {
-        reconnectCounter = 0
-        log(`${shortUrl} ** Connected **`)
-      })
-      emitter.on(EngineEvent.CONNECTION_CLOSE, (error?: Error) => {
-        connections.delete(uri)
-        serverStates.delete(uri)
-        const msg =
-          error != null ? ` !! Connection ERROR !! ${error.message}` : ''
-        log(`${shortUrl} onClose ${msg}`)
-        if (error != null) {
-          pluginState.serverScoreDown(uri)
-        }
-        reconnect()
-      })
-      emitter.on(EngineEvent.CONNECTION_TIMER, (queryDate: number) => {
-        const queryTime = Date.now() - queryDate
-        log(`${shortUrl} returned version in ${queryTime}ms`)
-        pluginState.serverScoreUp(uri, queryTime)
-      })
-      emitter.on(EngineEvent.BLOCK_HEIGHT_CHANGED, (height: number) => {
-        log(`${shortUrl} returned height: ${height}`)
-        const serverState = serverStates.get(uri)
-        if (serverState == null) {
-          serverStates.set(uri, {
-            subscribedBlocks: true,
-            txids: new Set(),
-            addresses: new Set()
-          })
-        } else if (!serverState.subscribedBlocks) {
-          serverState.subscribedBlocks = true
-        }
-      })
-
       serverStates.set(uri, {
         subscribedBlocks: false,
         txids: new Set(),
@@ -216,9 +223,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         .connect()
         .then(async () => {
           const queryTime = Date.now()
-          const { bestHeight } = await blockBook.fetchInfo()
+          await blockBook.fetchInfo()
           pluginState.serverScoreUp(uri, Date.now() - queryTime)
-          emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, bestHeight)
         })
         .catch(e => {
           log.error(`${JSON.stringify(e.message)}`)
@@ -305,24 +311,22 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   const watchAddresses = (
     uri: string,
     addresses: string[],
-    cb: WatchAddressesCB,
     deferredAddressSub: Deferred<unknown>
   ): void => {
     const blockbook = connections.get(uri)
     if (blockbook == null)
       throw new Error(`No blockbook connection with ${uri}`)
-    blockbook.watchAddresses(addresses, cb, deferredAddressSub)
+    blockbook.watchAddresses(addresses, deferredAddressSub)
   }
 
   const watchBlocks = (
     uri: string,
-    cb: WatchBlocksCB,
     deferredBlockSub: Deferred<unknown>
   ): void => {
     const blockbook = connections.get(uri)
     if (blockbook == null)
       throw new Error(`No blockbook connection with ${uri}`)
-    blockbook.watchBlocks(cb, deferredBlockSub)
+    blockbook.watchBlocks(deferredBlockSub)
   }
 
   refillServers()

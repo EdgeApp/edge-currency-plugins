@@ -58,7 +58,9 @@ export function makeCurrencyPlugin(
       )
       emitter.on(
         EngineEvent.BLOCK_HEIGHT_CHANGED,
-        engineOptions.callbacks.onBlockHeightChanged
+        (_uri: string, height: number) => {
+          engineOptions.callbacks.onBlockHeightChanged(height)
+        }
       )
       emitter.on(
         EngineEvent.ADDRESSES_CHECKED,

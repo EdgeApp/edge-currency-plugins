@@ -35,11 +35,11 @@ describe('makeMetadata', () => {
 
       metadata.lastSeenBlockHeight.should.eql(0)
 
-      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, 10)
+      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, '', 10)
       await wait(1)
       metadata.lastSeenBlockHeight.should.eql(10)
 
-      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, 5)
+      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, '', 5)
       await wait(1)
       metadata.lastSeenBlockHeight.should.eql(10)
     })

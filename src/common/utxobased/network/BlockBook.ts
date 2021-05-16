@@ -118,7 +118,6 @@ interface IServerInfo {
   backend?: IServerInfoVersion
 }
 
-type Callback = () => void | Promise<void>
 export type WatchAddressesCB = (
   response: INewTransactionResponse
 ) => void | Promise<void>
@@ -157,14 +156,10 @@ export interface BlockBook {
 
   watchAddresses: (
     addresses: string[],
-    cb: (response: INewTransactionResponse) => void | Promise<void>,
     deferredAddressSub: Deferred<unknown>
   ) => void
 
-  watchBlocks: (
-    cb: () => void | Promise<void>,
-    deferredBlockSub: Deferred<unknown>
-  ) => void
+  watchBlocks: (deferredBlockSub: Deferred<unknown>) => void
 
   fetchAddressUtxos: (account: string) => Promise<IAccountUTXO[]>
 
@@ -173,10 +168,6 @@ export interface BlockBook {
   broadcastTx: (
     transaction: EdgeTransaction
   ) => Promise<ITransactionBroadcastResponse>
-}
-
-export interface BlockHeightEmitter {
-  emit: (event: EngineEvent.BLOCK_HEIGHT_CHANGED, blockHeight: number) => this
 }
 
 interface BlockBookConfig {
@@ -264,12 +255,14 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   }
 
   async function watchBlocks(
-    cb: Callback,
     deferredBlockSub: Deferred<unknown>
   ): Promise<void> {
     const socketCb = async (value: INewBlockResponse): Promise<void> => {
-      await cb()
-      emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, value.height)
+      emitter.emit(
+        EngineEvent.BLOCK_HEIGHT_CHANGED,
+        baseWSAddress,
+        value.height
+      )
     }
     socket.subscribe({
       ...subscribeNewBlockMessage(),
@@ -281,12 +274,14 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   function watchAddresses(
     addresses: string[],
-    cb: (response: INewTransactionResponse) => Promise<void> | void,
     deferredAddressSub: Deferred<unknown>
   ): void {
+    const socketCb = async (value: INewTransactionResponse): Promise<void> => {
+      emitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, baseWSAddress, value)
+    }
     socket.subscribe({
       ...subscribeAddressesMessage(addresses),
-      cb,
+      cb: socketCb,
       deferred: deferredAddressSub,
       subscribed: false
     })
