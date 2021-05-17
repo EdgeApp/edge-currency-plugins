@@ -102,7 +102,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     })
     pendingMessages = new Map()
     try {
-      emitter.emit(EngineEvent.CONNECTION_CLOSE, err)
+      emitter.emit(EngineEvent.CONNECTION_CLOSE, uri, err)
     } catch (e) {
       log.error(e.message)
     }
@@ -116,7 +116,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     connected = true
     lastKeepAlive = Date.now()
     try {
-      emitter.emit(EngineEvent.CONNECTION_OPEN)
+      emitter.emit(EngineEvent.CONNECTION_OPEN, uri)
     } catch (e) {
       handleError(e)
     }
@@ -200,7 +200,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       config
         .healthCheck()
         .then(() => {
-          emitter.emit(EngineEvent.CONNECTION_TIMER, now)
+          emitter.emit(EngineEvent.CONNECTION_TIMER, uri, now)
         })
         .catch((e: Error) => handleError(e))
     }

@@ -2,7 +2,10 @@
 import * as chai from 'chai'
 import WS from 'ws'
 
-import { EngineEmitter } from '../../../../src/common/plugin/makeEngineEmitter'
+import {
+  EngineEmitter,
+  EngineEvent
+} from '../../../../src/common/plugin/makeEngineEmitter'
 import {
   BlockBook,
   INewTransactionResponse,
@@ -17,6 +20,7 @@ describe('BlockBook notifications tests with dummy server', function () {
   let websocketServer: WS.Server
   let blockBook: BlockBook
   let websocketClient: WebSocket
+  let emitter: EngineEmitter
 
   beforeEach(async () => {
     websocketServer = new WS.Server({ port: 8080 })
@@ -48,7 +52,7 @@ describe('BlockBook notifications tests with dummy server', function () {
     websocketServer.on('error', error => {
       console.log(error)
     })
-    const emitter = new EngineEmitter()
+    emitter = new EngineEmitter()
     const log = (..._args: unknown[]): void => {
       return
     }
@@ -85,10 +89,15 @@ describe('BlockBook notifications tests with dummy server', function () {
   it('Test BlockBook watch address and watch block events', async () => {
     let test = false
     test.should.be.false
-    const blockCB = (): void => {
-      test = true
-    }
-    blockBook.watchBlocks(blockCB, new Deferred<unknown>())
+
+    emitter.on(
+      EngineEvent.BLOCK_HEIGHT_CHANGED,
+      (_uri: string, _blockHeight: number) => {
+        test = true
+      }
+    )
+
+    blockBook.watchBlocks(new Deferred<unknown>())
     websocketClient.send(
       '{"id":"subscribeNewBlock","data":{"height":1916453,"hash":"0000000000000e0444fa7c1540a96e5658898a59733311d08f01292e114e8d5b"}}'
     )
@@ -103,16 +112,16 @@ describe('BlockBook notifications tests with dummy server', function () {
     test.should.be.true
     test = false
 
-    const addressCB = async (
-      response: INewTransactionResponse
-    ): Promise<void> => {
-      response.tx.blockHeight.should.be.equal(0)
-      test = true
-    }
     test.should.be.false
+
+    emitter.on(
+      EngineEvent.NEW_ADDRESS_TRANSACTION,
+      (_uri: string, _newTx: INewTransactionResponse) => {
+        test = true
+      }
+    )
     blockBook.watchAddresses(
       ['tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld'],
-      addressCB,
       new Deferred<unknown>()
     )
     websocketClient.send(

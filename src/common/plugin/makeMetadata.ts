@@ -37,12 +37,15 @@ export const makeMetadata = async (
     }
   )
 
-  emitter.on(EngineEvent.BLOCK_HEIGHT_CHANGED, async (height: number) => {
-    if (height > cache.lastSeenBlockHeight) {
-      cache.lastSeenBlockHeight = height
-      await setMetadata(memlet, cache)
+  emitter.on(
+    EngineEvent.BLOCK_HEIGHT_CHANGED,
+    async (uri: string, height: number) => {
+      if (height > cache.lastSeenBlockHeight) {
+        cache.lastSeenBlockHeight = height
+        await setMetadata(memlet, cache)
+      }
     }
-  })
+  )
 
   return {
     get balance() {
