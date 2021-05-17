@@ -2,6 +2,7 @@ import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
 import { EventEmitter } from 'events'
 
 import { IProcessorTransaction } from '../utxobased/db/types'
+import { INewTransactionResponse } from '../utxobased/network/BlockBook'
 
 export declare interface EngineEmitter {
   emit: ((
@@ -24,13 +25,27 @@ export declare interface EngineEmitter {
     ) => boolean) &
     ((
       event: EngineEvent.BLOCK_HEIGHT_CHANGED,
+      uri: string,
       blockHeight: number
+    ) => boolean) &
+    ((
+      event: EngineEvent.NEW_ADDRESS_TRANSACTION,
+      uri: string,
+      newTx: INewTransactionResponse
     ) => boolean) &
     ((event: EngineEvent.ADDRESSES_CHECKED, progressRatio: number) => boolean) &
     ((event: EngineEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => boolean) &
-    ((event: EngineEvent.CONNECTION_OPEN) => void) &
-    ((event: EngineEvent.CONNECTION_CLOSE, error?: Error) => this) &
-    ((event: EngineEvent.CONNECTION_TIMER, queryTime: number) => this)
+    ((event: EngineEvent.CONNECTION_OPEN, uri: string) => void) &
+    ((
+      event: EngineEvent.CONNECTION_CLOSE,
+      uri: string,
+      error?: Error
+    ) => this) &
+    ((
+      event: EngineEvent.CONNECTION_TIMER,
+      uri: string,
+      queryTime: number
+    ) => this)
 
   on: ((
     event: EngineEvent.TRANSACTIONS_CHANGED,
@@ -56,7 +71,14 @@ export declare interface EngineEmitter {
     ) => this) &
     ((
       event: EngineEvent.BLOCK_HEIGHT_CHANGED,
-      listener: (blockHeight: number) => Promise<void> | void
+      listener: (uri: string, blockHeight: number) => Promise<void> | void
+    ) => this) &
+    ((
+      event: EngineEvent.NEW_ADDRESS_TRANSACTION,
+      listener: (
+        uri: string,
+        newTx: INewTransactionResponse
+      ) => Promise<void> | void
     ) => this) &
     ((
       event: EngineEvent.ADDRESSES_CHECKED,
@@ -66,14 +88,17 @@ export declare interface EngineEmitter {
       event: EngineEvent.TXIDS_CHANGED,
       listener: (txids: EdgeTxidMap) => Promise<void> | void
     ) => this) &
-    ((event: EngineEvent.CONNECTION_OPEN, listener: () => void) => this) &
+    ((
+      event: EngineEvent.CONNECTION_OPEN,
+      listener: (uri: string) => void
+    ) => this) &
     ((
       event: EngineEvent.CONNECTION_CLOSE,
-      listener: (error?: Error) => void
+      listener: (uri: string, error?: Error) => void
     ) => this) &
     ((
       event: EngineEvent.CONNECTION_TIMER,
-      listener: (queryTime: number) => void
+      listener: (uri: string, queryTime: number) => void
     ) => this)
 }
 export class EngineEmitter extends EventEmitter {}
@@ -84,6 +109,7 @@ export enum EngineEvent {
   WALLET_BALANCE_CHANGED = 'wallet:balance:changed',
   ADDRESS_BALANCE_CHANGED = 'address:balance:changed',
   BLOCK_HEIGHT_CHANGED = 'block:height:changed',
+  NEW_ADDRESS_TRANSACTION = 'address:transaction:changed',
   ADDRESSES_CHECKED = 'addresses:checked',
   TXIDS_CHANGED = 'txids:changed',
   CONNECTION_OPEN = 'connection:open',

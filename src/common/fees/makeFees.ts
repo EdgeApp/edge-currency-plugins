@@ -3,7 +3,7 @@ import { Disklet } from 'disklet'
 import { EdgeIo, EdgeLog, EdgeSpendInfo, EdgeSpendTarget } from 'edge-core-js'
 import { makeMemlet, Memlet } from 'memlet'
 
-import { BYTES_TO_KB, FEES_PATH, INFO_SERVER_URI } from '../constants'
+import { FEES_PATH, INFO_SERVER_URI } from '../constants'
 import { EngineCurrencyInfo, SimpleFeeSettings } from '../plugin/types'
 import { calcMinerFeePerByte } from './calcMinerFeePerByte'
 import { processEarnComFees } from './processEarnComFees'
@@ -81,10 +81,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       const requiredFeeRate =
         otherParams.paymentProtocolInfo?.merchant?.requiredFeeRate
       if (requiredFeeRate != null) {
-        const rate = bs.add(
-          bs.mul(bs.mul(requiredFeeRate, BYTES_TO_KB), '1.5'),
-          '1'
-        )
+        const rate = bs.add(bs.mul(requiredFeeRate, '1.5'), '1')
         return bs.toFixed(rate, 0, 0)
       }
 
@@ -94,7 +91,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
         networkFeeOption,
         customNetworkFee[currencyInfo.customFeeSettings[0]]
       )
-      return bs.mul(rate, BYTES_TO_KB)
+      return rate
     },
 
     get fees() {
