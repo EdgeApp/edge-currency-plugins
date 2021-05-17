@@ -284,6 +284,7 @@ export async function makeUtxoEngine(
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
       const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+      log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
         options?.subtractFee != null ? options.subtractFee : false
       const tx = await makeTx({
