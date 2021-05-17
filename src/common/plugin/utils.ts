@@ -7,7 +7,11 @@ export const getMnemonicKey = ({ coin }: { coin: string }): string =>
 export const getMnemonic = (args: {
   keys: UtxoKeyFormat
   coin: string
-}): string => args.keys[getMnemonicKey(args)]
+}): string => {
+  const key = args.keys[getMnemonicKey(args)]
+  if (key == null) throw new Error('Cannot derive key from watch-only wallet')
+  return key
+}
 
 export const getFormatsForNetwork = (network: string): string[] => {
   for (const coin of networks) {
