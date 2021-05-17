@@ -100,6 +100,11 @@ export async function makeUtxoEngine(
 
   const fns: EdgeCurrencyEngine = {
     async startEngine(): Promise<void> {
+      emitter.emit(
+        EngineEvent.WALLET_BALANCE_CHANGED,
+        config.currencyInfo.currencyCode,
+        metadata.balance
+      )
       await fees.start()
       await state.start()
     },
@@ -331,7 +336,7 @@ export async function makeUtxoEngine(
       await processor.clearAll()
       // clear the networking cache
       await pluginState.clearCache()
-      await metadata.clear(currencyInfo.currencyCode)
+      await metadata.clear()
 
       // finally restart the state
       await state.start()

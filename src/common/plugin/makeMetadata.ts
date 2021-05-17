@@ -13,7 +13,7 @@ interface MetadataConfig {
 }
 
 export interface Metadata extends LocalWalletMetadata {
-  clear: (currencyCode: string) => Promise<void>
+  clear: () => Promise<void>
 }
 
 export const makeMetadata = async (
@@ -39,7 +39,7 @@ export const makeMetadata = async (
 
   emitter.on(
     EngineEvent.BLOCK_HEIGHT_CHANGED,
-    async (uri: string, height: number) => {
+    async (_uri: string, height: number) => {
       if (height > cache.lastSeenBlockHeight) {
         cache.lastSeenBlockHeight = height
         await setMetadata(memlet, cache)
@@ -54,14 +54,9 @@ export const makeMetadata = async (
     get lastSeenBlockHeight() {
       return cache.lastSeenBlockHeight
     },
-    clear: async (currencyCode: string) => {
+    clear: async () => {
       await memlet.delete(metadataPath)
       cache = await resetMetadata(memlet)
-      emitter.emit(
-        EngineEvent.WALLET_BALANCE_CHANGED,
-        currencyCode,
-        cache.balance
-      )
     }
   }
 }
