@@ -162,6 +162,44 @@ export function makeUtxoEngineState(
     }
   }
 
+  emitter.on(
+    EngineEvent.BLOCK_HEIGHT_CHANGED,
+    async (_uri: string, _blockHeight: number): Promise<void> => {
+      const txIds = await processor.fetchTxIdsByBlockHeight({
+        blockHeightMin: 0
+      })
+      for (const txId of txIds) {
+        taskCache.updateTransactionsCache.set(txId, { processing: false })
+      }
+    }
+  )
+
+  emitter.on(
+    EngineEvent.NEW_ADDRESS_TRANSACTION,
+    async (_uri: string, response: INewTransactionResponse): Promise<void> => {
+      const state = taskCache.addressSubscribeCache.get(response.address)
+      if (state != null) {
+        const { path } = state
+        taskCache.utxosCache.set(response.address, {
+          processing: false,
+          path
+        })
+        addToTransactionCache(
+          commonArgs,
+          response.address,
+          path.format,
+          path.branch,
+          taskCache.transactionsCache
+        ).catch(() => {
+          throw new Error('failed to add to transaction cache')
+        })
+        setLookAhead({ ...commonArgs, ...path }).catch(e => {
+          log(e)
+        })
+      }
+    }
+  )
+
   return {
     processedPercent,
     async start(): Promise<void> {
@@ -299,18 +337,6 @@ interface AddressTransactionCacheState extends CommonCacheState {
   networkQueryVal: number
 }
 
-const onNewBlock = async (args: CommonArgs): Promise<void> => {
-  const { processor, taskCache } = args
-
-  const txIds = await processor.fetchTxIdsByBlockHeight({ blockHeightMin: 0 })
-  if (txIds === []) {
-    return
-  }
-  for (const txId of txIds) {
-    taskCache.updateTransactionsCache.set(txId, { processing: false })
-  }
-}
-
 interface FormatArgs extends CommonArgs, ShortPath {}
 
 interface SetLookAheadArgs extends FormatArgs {}
@@ -406,7 +432,7 @@ export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<WsTask<any> | undefined | boolean> => {
-  const { taskCache, uri, serverStates, log } = args
+  const { taskCache, uri, serverStates } = args
 
   const {
     addressSubscribeCache,
@@ -531,29 +557,6 @@ export const pickNextTask = async (
     serverStates.watchAddresses(
       uri,
       Array.from(addressSubscribeCache.keys()),
-      (response: INewTransactionResponse) => {
-        serverState.txids.add(response.tx.txid)
-        const state = addressSubscribeCache.get(response.address)
-        if (state != null) {
-          const { path } = state
-          utxosCache.set(response.address, {
-            processing: false,
-            path
-          })
-          addToTransactionCache(
-            args,
-            response.address,
-            path.format,
-            path.branch,
-            transactionsCache
-          ).catch(() => {
-            throw new Error('failed to add to transaction cache')
-          })
-          setLookAhead({ ...args, ...path }).catch(e => {
-            log(e)
-          })
-        }
-      },
       deferredAddressSub
     )
     return true
@@ -571,11 +574,7 @@ export const pickNextTask = async (
       .catch(() => {
         serverState.subscribedBlocks = false
       })
-    serverStates.watchBlocks(
-      uri,
-      async () => await onNewBlock({ ...args }),
-      deferredBlockSub
-    )
+    serverStates.watchBlocks(uri, deferredBlockSub)
     return true
   }
 

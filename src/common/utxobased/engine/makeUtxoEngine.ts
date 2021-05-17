@@ -34,7 +34,6 @@ import {
   fetchOrDeriveXprivFromKeys,
   getWalletFormat,
   getWalletSupportedFormats,
-  getXprivKey,
   getXpubs
 } from './utils'
 
@@ -59,16 +58,6 @@ export async function makeUtxoEngine(
     log.error(message)
     throw new Error(message)
   }
-
-  // Merge in the xpriv into the local copy of wallet keys
-  walletInfo.keys[
-    getXprivKey({ coin: currencyInfo.network })
-  ] = await fetchOrDeriveXprivFromKeys({
-    keys: walletInfo.keys,
-    walletLocalEncryptedDisklet,
-    coin: currencyInfo.network,
-    network
-  })
 
   const walletTools = makeUtxoWalletTools({
     keys: walletInfo.keys,
@@ -284,6 +273,7 @@ export async function makeUtxoEngine(
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
       const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+      log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
         options?.subtractFee != null ? options.subtractFee : false
       const tx = await makeTx({
@@ -357,6 +347,14 @@ export async function makeUtxoEngine(
       if (psbt == null || edgeSpendInfo == null)
         throw new Error('Invalid transaction data')
 
+      // Derive the xprivs on the fly, since we do not persist them
+      const xprivKeys = await fetchOrDeriveXprivFromKeys({
+        keys: walletInfo.keys,
+        walletLocalEncryptedDisklet,
+        coin: currencyInfo.network,
+        network
+      })
+
       const privateKeys = await Promise.all(
         psbt.inputs.map(async ({ hash, index }) => {
           const txid = Buffer.isBuffer(hash)
@@ -371,7 +369,7 @@ export async function makeUtxoEngine(
           )
           if (address?.path == null) throw new Error('Invalid script pubkey')
 
-          return walletTools.getPrivateKey(address.path)
+          return walletTools.getPrivateKey({ path: address.path, xprivKeys })
         })
       )
       const signedTx = await signTx({

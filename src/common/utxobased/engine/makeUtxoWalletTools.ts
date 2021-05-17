@@ -9,10 +9,10 @@ import {
   xpubToPubkey
 } from '../keymanager/keymanager'
 import {
+  CurrencyFormatKeys,
   currencyFormatToPurposeType,
   getAddressTypeFromPurposeType,
   getScriptTypeFromPurposeType,
-  getXpriv,
   getXpubs
 } from './utils'
 
@@ -46,7 +46,7 @@ export interface UTXOPluginWalletTools {
 
   scriptPubkeyToAddress: (args: ScriptPubkeyToAddressArgs) => AddressReturn
 
-  getPrivateKey: (args: AddressPath) => string
+  getPrivateKey: (args: GetPrivateKeyArgs) => string
 }
 
 interface ScriptPubkeyReturn {
@@ -59,6 +59,11 @@ interface ScriptPubkeyToAddressArgs {
   format: CurrencyFormat
 }
 
+interface GetPrivateKeyArgs {
+  path: AddressPath
+  xprivKeys: CurrencyFormatKeys
+}
+
 interface AddressReturn {
   address: string
   legacyAddress: string
@@ -69,7 +74,6 @@ export function makeUtxoWalletTools(
 ): UTXOPluginWalletTools {
   const { coin, network } = config
 
-  const xprivKeys = getXpriv(config)
   const xpubKeys = getXpubs(config)
 
   let wifKeys: string[]
@@ -145,23 +149,23 @@ export function makeUtxoWalletTools(
       })
     },
 
-    getPrivateKey(args: AddressPath) {
-      // returning for any change index will result in duplicates
+    getPrivateKey(args: GetPrivateKeyArgs): string {
+      const { path, xprivKeys } = args
       if (wifKeys != null) {
-        return getPrivateKeyAtIndex(args)
+        return getPrivateKeyAtIndex(path)
       }
-      if (xprivKeys[args.format] != null) {
+      if (xprivKeys[path.format] != null) {
         throw new Error(
-          `wallet tools: xpriv with format ${args.format} does not exist`
+          `wallet tools: xpriv with format ${path.format} does not exist`
         )
       }
       return xprivToPrivateKey({
-        xpriv: xprivKeys[args.format] ?? '',
+        xpriv: xprivKeys[path.format] ?? '',
         network,
-        type: currencyFormatToPurposeType(args.format),
+        type: currencyFormatToPurposeType(path.format),
         coin,
-        bip44ChangeIndex: args.changeIndex,
-        bip44AddressIndex: args.addressIndex
+        bip44ChangeIndex: path.changeIndex,
+        bip44AddressIndex: path.addressIndex
       })
     }
   }
