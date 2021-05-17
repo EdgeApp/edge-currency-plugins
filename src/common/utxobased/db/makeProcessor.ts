@@ -32,6 +32,31 @@ interface ProcessorConfig {
   emitter: EngineEmitter
 }
 
+interface UpdatePartialAddressByScriptPubkeyArgs {
+  scriptPubkey: string
+  data: Partial<IAddress>
+}
+
+interface FetchTxIdsByBlockHeightOrRangeArgs {
+  blockHeightMin: number
+  blockHeightMax?: number
+}
+
+interface InsertTxIdByBlockHeightArgs {
+  blockHeight: number
+  txid: string
+}
+
+interface RemoveTxIdByBlockHeightArgs {
+  blockHeight: number
+  txid: string
+}
+
+interface UpdateTransactionArgs {
+  txid: string
+  data: Pick<IProcessorTransaction, 'blockHeight'>
+}
+
 export interface Processor {
   dumpData: () => Promise<DumpDataReturn[]>
 
@@ -58,20 +83,18 @@ export interface Processor {
   saveAddress: (data: IAddress) => Promise<void>
 
   updateAddressByScriptPubkey: (
-    scriptPubkey: string,
-    data: Partial<IAddress>
+    args: UpdatePartialAddressByScriptPubkeyArgs
   ) => Promise<void>
 
   getNumTransactions: () => number
 
   fetchTxIdsByBlockHeight: (
-    blockHeightMin: number,
-    blockHeightMax?: number
+    args: FetchTxIdsByBlockHeightOrRangeArgs
   ) => Promise<string[]>
 
-  insertTxIdByBlockHeight: (blockHeight: number, data: string) => Promise<void>
+  insertTxIdByBlockHeight: (args: InsertTxIdByBlockHeightArgs) => Promise<void>
 
-  removeTxIdByBlockHeight: (blockHeight: number, txId: string) => Promise<void>
+  removeTxIdByBlockHeight: (args: RemoveTxIdByBlockHeightArgs) => Promise<void>
 
   fetchTransaction: (txId: string) => Promise<TxById>
 
@@ -83,17 +106,11 @@ export interface Processor {
     opts: EdgeGetTransactionsOptions
   ) => Promise<IProcessorTransaction[]>
 
-  saveTransaction: (
-    tx: IProcessorTransaction,
-    withQueue?: boolean
-  ) => Promise<void>
+  saveTransaction: (args: IProcessorTransaction) => Promise<void>
 
-  updateTransaction: (
-    txId: string,
-    data: Pick<IProcessorTransaction, 'blockHeight'>
-  ) => void
+  updateTransaction: (args: UpdateTransactionArgs) => Promise<void>
 
-  dropTransaction: (txId: string) => void
+  dropTransaction: (txId: string) => Promise<void>
 
   fetchUtxo: (id: string) => Promise<UtxoById>
 
@@ -101,7 +118,7 @@ export interface Processor {
 
   fetchAllUtxos: () => Promise<IUTXO[]>
 
-  saveUtxo: (utxo: IUTXO) => void
+  saveUtxo: (utxo: IUTXO) => Promise<void>
 
   removeUtxo: (id: string) => Promise<IUTXO>
 }
@@ -149,9 +166,9 @@ export async function makeProcessor(
     },
 
     async fetchTxIdsByBlockHeight(
-      blockHeightMin: number,
-      blockHeightMax?: number
+      args: FetchTxIdsByBlockHeightOrRangeArgs
     ): Promise<string[]> {
+      const { blockHeightMin, blockHeightMax } = args
       return await fetchTxIdsByBlockHeight({
         tables: baselets.all,
         fromBlock: blockHeightMin,
@@ -160,18 +177,18 @@ export async function makeProcessor(
     },
 
     async insertTxIdByBlockHeight(
-      blockHeight: number,
-      txid: string
+      args: InsertTxIdByBlockHeightArgs
     ): Promise<void> {
+      const { blockHeight, txid } = args
       await baselets.tx(async tables => {
         await saveTxIdByBlockHeight({ tables, txid, blockHeight })
       })
     },
 
     async removeTxIdByBlockHeight(
-      blockHeight: number,
-      txid: string
+      args: RemoveTxIdByBlockHeightArgs
     ): Promise<void> {
+      const { blockHeight, txid } = args
       await baselets.tx(async tables => {
         await deleteTxIdByBlockHeight({ tables, txid, blockHeight })
       })
@@ -277,9 +294,9 @@ export async function makeProcessor(
     },
 
     async updateAddressByScriptPubkey(
-      scriptPubkey: string,
-      data: Partial<IAddress>
+      args: UpdatePartialAddressByScriptPubkeyArgs
     ): Promise<void> {
+      const { scriptPubkey, data } = args
       // Lock address tables
       await baselets.address(async tables => {
         await updateAddressByScriptPubkey({ tables, scriptPubkey, data })
@@ -375,10 +392,8 @@ export async function makeProcessor(
       })
     },
 
-    async updateTransaction(
-      txid: string,
-      data: Pick<IProcessorTransaction, 'blockHeight'>
-    ): Promise<void> {
+    async updateTransaction(args: UpdateTransactionArgs): Promise<void> {
+      const { txid, data } = args
       // Lock transaction tables
       await baselets.tx(async tables => {
         // Update transaction data
