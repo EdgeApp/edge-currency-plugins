@@ -128,6 +128,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       if (blockBook == null) continue
       await blockBook.disconnect()
     }
+    connections.clear()
+    serverStates.clear()
   }
 
   const reconnect = (): void => {

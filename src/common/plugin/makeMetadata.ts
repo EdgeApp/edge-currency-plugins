@@ -39,7 +39,7 @@ export const makeMetadata = async (
 
   emitter.on(
     EngineEvent.BLOCK_HEIGHT_CHANGED,
-    async (uri: string, height: number) => {
+    async (_uri: string, height: number) => {
       if (height > cache.lastSeenBlockHeight) {
         cache.lastSeenBlockHeight = height
         await setMetadata(memlet, cache)
@@ -56,7 +56,7 @@ export const makeMetadata = async (
     },
     clear: async () => {
       await memlet.delete(metadataPath)
-      cache = await fetchMetadata(memlet)
+      cache = await resetMetadata(memlet)
     }
   }
 }
@@ -66,13 +66,17 @@ const fetchMetadata = async (memlet: Memlet): Promise<LocalWalletMetadata> => {
     const dataStr = await memlet.getJson(metadataPath)
     return JSON.parse(dataStr)
   } catch {
-    const data: LocalWalletMetadata = {
-      balance: '0',
-      lastSeenBlockHeight: 0
-    }
-    await setMetadata(memlet, data)
-    return data
+    return await resetMetadata(memlet)
   }
+}
+
+const resetMetadata = async (memlet: Memlet): Promise<LocalWalletMetadata> => {
+  const data: LocalWalletMetadata = {
+    balance: '0',
+    lastSeenBlockHeight: 0
+  }
+  await memlet.setJson(metadataPath, JSON.stringify(data))
+  return data
 }
 
 const setMetadata = async (
