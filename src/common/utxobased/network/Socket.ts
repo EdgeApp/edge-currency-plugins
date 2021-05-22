@@ -57,13 +57,21 @@ interface WsMessage {
   startTime: number
 }
 
+interface Subscriptions {
+  [key: string]: WsSubscription
+}
+
+interface PendingMessages {
+  [key: string]: WsMessage
+}
+
 export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
-  const { emitter, log, queueSize = 5, walletId } = config
+  const { emitter, log, queueSize = 50, walletId } = config
   const version = ''
-  const subscriptions: Map<string, WsSubscription> = new Map()
+  const subscriptions: Subscriptions = {}
   let onQueueSpace = config.onQueueSpaceCB
-  let pendingMessages: Map<string, WsMessage> = new Map()
+  let pendingMessages: PendingMessages = {}
   let nextId = 0
   let lastKeepAlive = 0
   let connected = false
@@ -93,14 +101,14 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     connected = false
     socket = null
     cancelConnect = false
-    pendingMessages.forEach((message, _id) => {
+    for (const message of Object.values(pendingMessages)) {
       try {
         message.task.deferred.reject(err)
       } catch (e) {
         log.error(e.message)
       }
-    })
-    pendingMessages = new Map()
+    }
+    pendingMessages = {}
     try {
       emitter.emit(EngineEvent.CONNECTION_CLOSE, uri, err)
     } catch (e) {
@@ -120,9 +128,9 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     } catch (e) {
       handleError(e)
     }
-    pendingMessages.forEach((message, id) => {
+    for (const [id, message] of Object.entries(pendingMessages)) {
       transmitMessage(id, message)
-    })
+    }
 
     wakeUp()
     cancelConnect = false
@@ -141,7 +149,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const doWakeUp = async (): Promise<void> => {
     if (connected && version != null) {
-      while (pendingMessages.size < queueSize) {
+      while (Object.keys(pendingMessages).length < queueSize) {
         const task = await onQueueSpace?.(uri)
         if (task == null) break
         if (typeof task === 'boolean') {
@@ -161,7 +169,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         method: subscription.method,
         params: subscription.params ?? {}
       }
-      subscriptions.set(id, subscription)
+      subscriptions[id] = subscription
       socket.send(JSON.stringify(message))
     }
   }
@@ -171,7 +179,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const submitTask = (task: WsTask<any>): void => {
     const id = (nextId++).toString()
     const message = { task, startTime: Date.now() }
-    pendingMessages.set(id.toString(), message)
+    pendingMessages[id] = message
     transmitMessage(id, message)
   }
 
@@ -205,26 +213,27 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         .catch((e: Error) => handleError(e))
     }
 
-    pendingMessages.forEach((message, id) => {
+    for (const [id, message] of Object.entries(pendingMessages)) {
       if (message.startTime + timeout < now) {
         try {
           message.task.deferred.reject(new Error('Timeout'))
         } catch (e) {
           log.error(e.message)
         }
-        pendingMessages.delete(id)
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete pendingMessages[id]
       }
-    })
+    }
     setupTimer()
   }
 
   const setupTimer = (): void => {
     let nextWakeUp = lastKeepAlive + KEEP_ALIVE_MS
 
-    pendingMessages.forEach((message, _id) => {
+    for (const message of Object.values(pendingMessages)) {
       const to = message.startTime + timeout
       if (to < nextWakeUp) nextWakeUp = to
-    })
+    }
 
     const now = Date.now() - TIMER_SLACK
     const delay = nextWakeUp < now ? 0 : nextWakeUp - now
@@ -236,9 +245,9 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       const json = JSON.parse(messageJson)
       if (json.id != null) {
         const id: string = json.id.toString()
-        for (const cId of subscriptions.keys()) {
+        for (const cId of Object.keys(subscriptions)) {
           if (id === cId) {
-            const subscription = subscriptions.get(id)
+            const subscription = subscriptions[id]
             if (subscription == null) {
               throw new Error(`cannot find subscription for ${id}`)
             }
@@ -254,11 +263,12 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
             return
           }
         }
-        const message = pendingMessages.get(id)
+        const message = pendingMessages[id]
         if (message == null) {
           throw new Error(`Bad response id in ${messageJson}`)
         }
-        pendingMessages.delete(id)
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete pendingMessages[id]
         const { error } = json
         try {
           if (error != null) {
