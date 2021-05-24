@@ -1,5 +1,5 @@
 const QUEUE_JOBS_PER_RUN = 3
-const QUEUE_RUN_DELAY = 200
+const QUEUE_RUN_DELAY = 1000
 
 interface UpdateQueue {
   id: string
