@@ -23,24 +23,36 @@ describe('Processor', function () {
   })
 
   it('insert tx id by confirmation', async function () {
-    const noEntry = await processor.fetchTxIdsByBlockHeight(0)
+    const noEntry = await processor.fetchTxIdsByBlockHeight({
+      blockHeightMin: 0
+    })
     expect(noEntry).to.eql([])
-    await processor.removeTxIdByBlockHeight(0, 'test')
-    await processor.insertTxIdByBlockHeight(0, 'this')
-    await processor.insertTxIdByBlockHeight(0, 'that')
-    await processor.insertTxIdByBlockHeight(1, 'whatever')
+    await processor.removeTxIdByBlockHeight({ blockHeight: 0, txid: 'test' })
+    await processor.insertTxIdByBlockHeight({ blockHeight: 0, txid: 'this' })
+    await processor.insertTxIdByBlockHeight({ blockHeight: 0, txid: 'that' })
+    await processor.insertTxIdByBlockHeight({
+      blockHeight: 1,
+      txid: 'whatever'
+    })
 
-    let zeroConf = await processor.fetchTxIdsByBlockHeight(0)
+    let zeroConf = await processor.fetchTxIdsByBlockHeight({
+      blockHeightMin: 0
+    })
     zeroConf.should.include.members(['that', 'this'])
 
-    const oneConf = await processor.fetchTxIdsByBlockHeight(1)
+    const oneConf = await processor.fetchTxIdsByBlockHeight({
+      blockHeightMin: 1
+    })
     oneConf[0].should.equal('whatever')
 
-    const allConf = await processor.fetchTxIdsByBlockHeight(0, 1)
+    const allConf = await processor.fetchTxIdsByBlockHeight({
+      blockHeightMin: 0,
+      blockHeightMax: 1
+    })
     allConf.should.include.members(['that', 'this', 'whatever'])
 
-    await processor.removeTxIdByBlockHeight(0, 'this')
-    zeroConf = await processor.fetchTxIdsByBlockHeight(0)
+    await processor.removeTxIdByBlockHeight({ blockHeight: 0, txid: 'this' })
+    zeroConf = await processor.fetchTxIdsByBlockHeight({ blockHeightMin: 0 })
     zeroConf.should.include.members(['that'])
   })
 

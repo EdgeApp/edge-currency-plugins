@@ -11,6 +11,7 @@ import {
   TransactionTables,
   UTXOTables
 } from './makeBaselets'
+import { makeMutex } from './makeMutex'
 import {
   AddressByScriptPubkey,
   addressPathToPrefix,
@@ -30,6 +31,31 @@ const BASELET_DIR = 'tables'
 interface ProcessorConfig {
   disklet: Disklet
   emitter: EngineEmitter
+}
+
+interface UpdatePartialAddressByScriptPubkeyArgs {
+  scriptPubkey: string
+  data: Partial<IAddress>
+}
+
+interface FetchTxIdsByBlockHeightOrRangeArgs {
+  blockHeightMin: number
+  blockHeightMax?: number
+}
+
+interface InsertTxIdByBlockHeightArgs {
+  blockHeight: number
+  txid: string
+}
+
+interface RemoveTxIdByBlockHeightArgs {
+  blockHeight: number
+  txid: string
+}
+
+interface UpdateTransactionArgs {
+  txid: string
+  data: Pick<IProcessorTransaction, 'blockHeight'>
 }
 
 export interface Processor {
@@ -58,20 +84,18 @@ export interface Processor {
   saveAddress: (data: IAddress) => Promise<void>
 
   updateAddressByScriptPubkey: (
-    scriptPubkey: string,
-    data: Partial<IAddress>
+    args: UpdatePartialAddressByScriptPubkeyArgs
   ) => Promise<void>
 
   getNumTransactions: () => number
 
   fetchTxIdsByBlockHeight: (
-    blockHeightMin: number,
-    blockHeightMax?: number
+    args: FetchTxIdsByBlockHeightOrRangeArgs
   ) => Promise<string[]>
 
-  insertTxIdByBlockHeight: (blockHeight: number, data: string) => Promise<void>
+  insertTxIdByBlockHeight: (args: InsertTxIdByBlockHeightArgs) => Promise<void>
 
-  removeTxIdByBlockHeight: (blockHeight: number, txId: string) => Promise<void>
+  removeTxIdByBlockHeight: (args: RemoveTxIdByBlockHeightArgs) => Promise<void>
 
   fetchTransaction: (txId: string) => Promise<TxById>
 
@@ -83,17 +107,11 @@ export interface Processor {
     opts: EdgeGetTransactionsOptions
   ) => Promise<IProcessorTransaction[]>
 
-  saveTransaction: (
-    tx: IProcessorTransaction,
-    withQueue?: boolean
-  ) => Promise<void>
+  saveTransaction: (args: IProcessorTransaction) => Promise<void>
 
-  updateTransaction: (
-    txId: string,
-    data: Pick<IProcessorTransaction, 'blockHeight'>
-  ) => void
+  updateTransaction: (args: UpdateTransactionArgs) => Promise<void>
 
-  dropTransaction: (txId: string) => void
+  dropTransaction: (txId: string) => Promise<void>
 
   fetchUtxo: (id: string) => Promise<UtxoById>
 
@@ -101,7 +119,7 @@ export interface Processor {
 
   fetchAllUtxos: () => Promise<IUTXO[]>
 
-  saveUtxo: (utxo: IUTXO) => void
+  saveUtxo: (utxo: IUTXO) => Promise<void>
 
   removeUtxo: (id: string) => Promise<IUTXO>
 }
@@ -119,7 +137,9 @@ export async function makeProcessor(
   const disklet = navigateDisklet(config.disklet, BASELET_DIR)
   let baselets = await makeBaselets({ disklet })
 
-  return {
+  const mutex = makeMutex()
+
+  const processor: Processor = {
     async dumpData(): Promise<DumpDataReturn[]> {
       const allBases = Object.values(baselets.all)
       return await Promise.all(
@@ -149,9 +169,9 @@ export async function makeProcessor(
     },
 
     async fetchTxIdsByBlockHeight(
-      blockHeightMin: number,
-      blockHeightMax?: number
+      args: FetchTxIdsByBlockHeightOrRangeArgs
     ): Promise<string[]> {
+      const { blockHeightMin, blockHeightMax } = args
       return await fetchTxIdsByBlockHeight({
         tables: baselets.all,
         fromBlock: blockHeightMin,
@@ -160,18 +180,18 @@ export async function makeProcessor(
     },
 
     async insertTxIdByBlockHeight(
-      blockHeight: number,
-      txid: string
+      args: InsertTxIdByBlockHeightArgs
     ): Promise<void> {
+      const { blockHeight, txid } = args
       await baselets.tx(async tables => {
         await saveTxIdByBlockHeight({ tables, txid, blockHeight })
       })
     },
 
     async removeTxIdByBlockHeight(
-      blockHeight: number,
-      txid: string
+      args: RemoveTxIdByBlockHeightArgs
     ): Promise<void> {
+      const { blockHeight, txid } = args
       await baselets.tx(async tables => {
         await deleteTxIdByBlockHeight({ tables, txid, blockHeight })
       })
@@ -277,9 +297,9 @@ export async function makeProcessor(
     },
 
     async updateAddressByScriptPubkey(
-      scriptPubkey: string,
-      data: Partial<IAddress>
+      args: UpdatePartialAddressByScriptPubkeyArgs
     ): Promise<void> {
+      const { scriptPubkey, data } = args
       // Lock address tables
       await baselets.address(async tables => {
         await updateAddressByScriptPubkey({ tables, scriptPubkey, data })
@@ -375,10 +395,8 @@ export async function makeProcessor(
       })
     },
 
-    async updateTransaction(
-      txid: string,
-      data: Pick<IProcessorTransaction, 'blockHeight'>
-    ): Promise<void> {
+    async updateTransaction(args: UpdateTransactionArgs): Promise<void> {
+      const { txid, data } = args
       // Lock transaction tables
       await baselets.tx(async tables => {
         // Update transaction data
@@ -446,6 +464,117 @@ export async function makeProcessor(
       )
     }
   }
+
+  /* Decorate all processor methods with a mutexDecorator */
+  /* If a new method is added to the processor, decorate  */
+  /* it here as well                                      */
+
+  async function mutexDecorator<T, V>(
+    callback: (value: T) => Promise<V>
+  ): Promise<(value: T) => Promise<V>> {
+    return async (value: T) => await mutex(async () => await callback(value))
+  }
+
+  type Await<T> = T extends PromiseLike<infer U> ? U : T
+
+  processor.dumpData = await mutexDecorator<
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    void,
+    Await<ReturnType<typeof processor.dumpData>>
+  >(processor.dumpData)
+  processor.clearAll = await mutexDecorator<
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    void,
+    Await<ReturnType<typeof processor.clearAll>>
+  >(processor.clearAll)
+  processor.fetchScriptPubkeyByPath = await mutexDecorator<
+    Parameters<typeof processor.fetchScriptPubkeyByPath>[0],
+    Await<ReturnType<typeof processor.fetchScriptPubkeyByPath>>
+  >(processor.fetchScriptPubkeyByPath)
+  processor.fetchAddressByScriptPubkey = await mutexDecorator<
+    Parameters<typeof processor.fetchAddressByScriptPubkey>[0],
+    Await<ReturnType<typeof processor.fetchAddressByScriptPubkey>>
+  >(processor.fetchAddressByScriptPubkey)
+  processor.hasSPubKey = await mutexDecorator<
+    Parameters<typeof processor.hasSPubKey>[0],
+    Await<ReturnType<typeof processor.hasSPubKey>>
+  >(processor.hasSPubKey)
+  processor.fetchAddressesByPath = await mutexDecorator<
+    Parameters<typeof processor.fetchAddressesByPath>[0],
+    Await<ReturnType<typeof processor.fetchAddressesByPath>>
+  >(processor.fetchAddressesByPath)
+  processor.fetchScriptPubkeysByBalance = await mutexDecorator<
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    void,
+    Await<ReturnType<typeof processor.fetchScriptPubkeysByBalance>>
+  >(processor.fetchScriptPubkeysByBalance)
+  processor.saveAddress = await mutexDecorator<
+    Parameters<typeof processor.saveAddress>[0],
+    Await<ReturnType<typeof processor.saveAddress>>
+  >(processor.saveAddress)
+  processor.updateAddressByScriptPubkey = await mutexDecorator<
+    Parameters<typeof processor.updateAddressByScriptPubkey>[0],
+    Await<ReturnType<typeof processor.updateAddressByScriptPubkey>>
+  >(processor.updateAddressByScriptPubkey)
+  processor.fetchTxIdsByBlockHeight = await mutexDecorator<
+    Parameters<typeof processor.fetchTxIdsByBlockHeight>[0],
+    Await<ReturnType<typeof processor.fetchTxIdsByBlockHeight>>
+  >(processor.fetchTxIdsByBlockHeight)
+  processor.insertTxIdByBlockHeight = await mutexDecorator<
+    Parameters<typeof processor.insertTxIdByBlockHeight>[0],
+    Await<ReturnType<typeof processor.insertTxIdByBlockHeight>>
+  >(processor.insertTxIdByBlockHeight)
+  processor.removeTxIdByBlockHeight = await mutexDecorator<
+    Parameters<typeof processor.removeTxIdByBlockHeight>[0],
+    Await<ReturnType<typeof processor.removeTxIdByBlockHeight>>
+  >(processor.removeTxIdByBlockHeight)
+  processor.fetchTransaction = await mutexDecorator<
+    Parameters<typeof processor.fetchTransaction>[0],
+    Await<ReturnType<typeof processor.fetchTransaction>>
+  >(processor.fetchTransaction)
+  processor.fetchTransactionsByScriptPubkey = await mutexDecorator<
+    Parameters<typeof processor.fetchTransactionsByScriptPubkey>[0],
+    Await<ReturnType<typeof processor.fetchTransactionsByScriptPubkey>>
+  >(processor.fetchTransactionsByScriptPubkey)
+  processor.fetchTransactions = await mutexDecorator<
+    Parameters<typeof processor.fetchTransactions>[0],
+    Await<ReturnType<typeof processor.fetchTransactions>>
+  >(processor.fetchTransactions)
+  processor.saveTransaction = await mutexDecorator<
+    Parameters<typeof processor.saveTransaction>[0],
+    Await<ReturnType<typeof processor.saveTransaction>>
+  >(processor.saveTransaction)
+  processor.updateTransaction = await mutexDecorator<
+    Parameters<typeof processor.updateTransaction>[0],
+    Await<ReturnType<typeof processor.updateTransaction>>
+  >(processor.updateTransaction)
+  processor.dropTransaction = await mutexDecorator<
+    Parameters<typeof processor.dropTransaction>[0],
+    Await<ReturnType<typeof processor.dropTransaction>>
+  >(processor.dropTransaction)
+  processor.fetchUtxo = await mutexDecorator<
+    Parameters<typeof processor.fetchUtxo>[0],
+    Await<ReturnType<typeof processor.fetchUtxo>>
+  >(processor.fetchUtxo)
+  processor.fetchUtxosByScriptPubkey = await mutexDecorator<
+    Parameters<typeof processor.fetchUtxosByScriptPubkey>[0],
+    Await<ReturnType<typeof processor.fetchUtxosByScriptPubkey>>
+  >(processor.fetchUtxosByScriptPubkey)
+  processor.fetchAllUtxos = await mutexDecorator<
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    void,
+    Await<ReturnType<typeof processor.fetchAllUtxos>>
+  >(processor.fetchAllUtxos)
+  processor.saveUtxo = await mutexDecorator<
+    Parameters<typeof processor.saveUtxo>[0],
+    Await<ReturnType<typeof processor.saveUtxo>>
+  >(processor.saveUtxo)
+  processor.removeUtxo = await mutexDecorator<
+    Parameters<typeof processor.removeUtxo>[0],
+    Await<ReturnType<typeof processor.removeUtxo>>
+  >(processor.removeUtxo)
+
+  return processor
 }
 
 interface ProcessAndSaveAddressArgs {

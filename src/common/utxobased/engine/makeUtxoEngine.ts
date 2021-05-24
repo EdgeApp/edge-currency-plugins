@@ -343,7 +343,7 @@ export async function makeUtxoEngine(
     },
 
     async saveTx(tx: EdgeTransaction): Promise<void> {
-      return await processor.saveTransaction(fromEdgeTransaction(tx), false)
+      return await processor.saveTransaction(fromEdgeTransaction(tx))
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {

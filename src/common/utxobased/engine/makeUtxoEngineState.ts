@@ -176,7 +176,9 @@ export function makeUtxoEngineState(
   emitter.on(
     EngineEvent.BLOCK_HEIGHT_CHANGED,
     async (_uri: string, _blockHeight: number): Promise<void> => {
-      const txIds = await processor.fetchTxIdsByBlockHeight(0)
+      const txIds = await processor.fetchTxIdsByBlockHeight({
+        blockHeightMin: 0
+      })
       for (const txId of txIds) {
         taskCache.updateTransactionsCache.set(txId, { processing: false })
       }
@@ -650,9 +652,12 @@ const updateTransactions = (
       if (tx.blockHeight < 1) {
         return
       }
-      await processor.removeTxIdByBlockHeight(0, txId)
-      await processor.insertTxIdByBlockHeight(tx.blockHeight, txId)
-      await processor.updateTransaction(txId, tx)
+      await processor.removeTxIdByBlockHeight({ blockHeight: 0, txid: txId })
+      await processor.insertTxIdByBlockHeight({
+        blockHeight: tx.blockHeight,
+        txid: txId
+      })
+      await processor.updateTransaction({ txid: txId, data: tx })
     })
     .catch(() => {
       taskCache.updateTransactionsCache.set(txId, { processing: false })
@@ -684,9 +689,12 @@ const saveAddress = async (args: SaveAddressArgs): Promise<void> => {
     })
   } catch (err) {
     if (err.message === 'Address already exists.') {
-      await processor.updateAddressByScriptPubkey(scriptPubkey, {
-        path,
-        used
+      await processor.updateAddressByScriptPubkey({
+        scriptPubkey,
+        data: {
+          path,
+          used
+        }
       })
     } else {
       throw err
@@ -727,7 +735,7 @@ const getFormatAddressCount = async (
 
   const branches = getFormatSupportedBranches(format)
   for (const branch of branches) {
-    let branchCount = await processor.getNumAddressesFromPathPartition({
+    let branchCount = processor.getNumAddressesFromPathPartition({
       format,
       changeIndex: branch
     })
@@ -755,9 +763,7 @@ const findLastUsedIndex = async (
     format,
     changeIndex: branch
   }
-  const addressCount = await processor.getNumAddressesFromPathPartition(
-    partialPath
-  )
+  const addressCount = processor.getNumAddressesFromPathPartition(partialPath)
   // Start 1 index behind the assumed last used index
   let lastUsedIndex = Math.max(addressCount - currencyInfo.gapLimit - 1, 0)
 
@@ -792,7 +798,10 @@ const fetchAddressDataByPath = async (
     walletTools.getScriptPubkey(path).scriptPubkey
 
   const addressData = await processor.fetchAddressByScriptPubkey(scriptPubkey)
-  if (addressData == null) throw new Error('Address data unknown')
+  if (addressData == null) {
+    console.log('Address data unknown', scriptPubkey, path)
+    throw new Error('Address data unknown')
+  }
   return addressData
 }
 
@@ -867,8 +876,11 @@ const processAddressTransactions = async (
       // If address is used and previously not marked as used, mark as used.
       const used = txs > 0 || unconfirmedTxs > 0
       if (used && !(addressData.used ?? false) && page === 1) {
-        await processor.updateAddressByScriptPubkey(scriptPubkey, {
-          used
+        await processor.updateAddressByScriptPubkey({
+          scriptPubkey,
+          data: {
+            used
+          }
         })
         await setLookAhead({ ...args, ...path })
       }
@@ -1054,9 +1066,12 @@ const processUtxoTransactions = async (
       diff
     )
 
-    await processor.updateAddressByScriptPubkey(scriptPubkey, {
-      balance: newBalance,
-      used: true
+    await processor.updateAddressByScriptPubkey({
+      scriptPubkey,
+      data: {
+        balance: newBalance,
+        used: true
+      }
     })
     await setLookAhead({ ...args, ...args.path })
   }
