@@ -15,6 +15,7 @@ import {
   EngineCurrencyInfo,
   NetworkEnum
 } from '../../plugin/types'
+import { removeItem } from '../../plugin/utils'
 import { Processor } from '../db/makeProcessor'
 import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
@@ -481,8 +482,10 @@ export const pickNextTask = async (
           utxos: state.utxos,
           path: state.path
         })
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete processedUtxosCache[scriptPubkey]
+        taskCache.processedUtxosCache = removeItem(
+          processedUtxosCache,
+          scriptPubkey
+        )
         return true
       }
     }
@@ -504,8 +507,7 @@ export const pickNextTask = async (
         if (!serverStates.serverCanGetTx(uri, utxo.txid)) return
       }
       state.processing = true
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete rawUtxosCache[utxoString]
+      taskCache.rawUtxosCache = removeItem(rawUtxosCache, utxoString)
       const wsTask = await processRawUtxo({
         ...args,
         ...state,
@@ -525,8 +527,7 @@ export const pickNextTask = async (
     if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
       state.processing = true
 
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete utxosCache[address]
+      taskCache.utxosCache = removeItem(utxosCache, address)
 
       // Fetch and process address UTXOs
       const wsTask = await processAddressUtxos({
@@ -620,8 +621,10 @@ export const pickNextTask = async (
         serverStates.serverCanGetTx(uri, txId)
       ) {
         updateTransactionsCache[txId].processing = true
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete updateTransactionsCache[txId]
+        taskCache.updateTransactionsCache = removeItem(
+          updateTransactionsCache,
+          txId
+        )
         const updateTransactionTask = updateTransactions({ ...args, txId })
         // once resolved, add the txid to the server cache
         updateTransactionTask.deferred.promise
@@ -643,8 +646,7 @@ export const pickNextTask = async (
     if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
       state.processing = true
 
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete transactionsCache[address]
+      taskCache.transactionsCache = removeItem(transactionsCache, address)
 
       // Fetch and process address UTXOs
       const wsTask = await processAddressTransactions({

@@ -4,6 +4,7 @@ import { parse } from 'uri-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { PluginState } from '../../plugin/pluginState'
+import { removeItem } from '../../plugin/utils'
 import {
   BlockBook,
   INewTransactionResponse,
@@ -75,10 +76,9 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     log(`${uri} ** Connected **`)
   })
   emitter.on(EngineEvent.CONNECTION_CLOSE, (uri: string, error?: Error) => {
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-    delete connections[uri]
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-    delete serverStates[uri]
+    connections = removeItem(connections, uri)
+    serverStates = removeItem(serverStates, uri)
+
     const msg = error != null ? ` !! Connection ERROR !! ${error.message}` : ''
     log(`${uri} onClose ${msg}`)
     if (error != null) {

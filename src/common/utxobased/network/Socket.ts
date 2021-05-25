@@ -1,6 +1,7 @@
 import { EdgeLog } from 'edge-core-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import { removeItem } from '../../plugin/utils'
 import Deferred from './Deferred'
 import { setupWS } from './nodejsWS'
 import { pushUpdate, removeIdFromQueue } from './socketQueue'
@@ -220,8 +221,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         } catch (e) {
           log.error(e.message)
         }
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete pendingMessages[id]
+        pendingMessages = removeItem(pendingMessages, id)
       }
     }
     setupTimer()
@@ -267,8 +267,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         if (message == null) {
           throw new Error(`Bad response id in ${messageJson}`)
         }
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete pendingMessages[id]
+        pendingMessages = removeItem(pendingMessages, id)
         const { error } = json
         try {
           if (error != null) {
