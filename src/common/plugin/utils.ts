@@ -19,3 +19,15 @@ export const getFormatsForNetwork = (network: string): string[] => {
   }
   return []
 }
+
+interface GenericObject<T> {
+  [key: string]: T
+}
+
+export const removeItem = <T>(
+  obj: GenericObject<T>,
+  key: string
+): GenericObject<T> => {
+  const { [key]: _, ...rest } = obj
+  return rest
+}
