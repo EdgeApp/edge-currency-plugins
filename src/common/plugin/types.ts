@@ -32,6 +32,7 @@ export interface TxOptions {
   utxos?: IUTXO[]
   subtractFee?: boolean
   setRBF?: boolean
+  CPFP?: string
 }
 
 export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
