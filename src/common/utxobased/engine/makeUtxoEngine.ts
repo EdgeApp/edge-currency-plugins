@@ -253,7 +253,7 @@ export async function makeUtxoEngine(
       edgeSpendInfo: EdgeSpendInfo,
       options?: TxOptions
     ): Promise<EdgeTransaction> {
-      const targets: MakeTxTarget[] = []
+      let targets: MakeTxTarget[] = []
       const ourReceiveAddresses: string[] = []
       for (const target of edgeSpendInfo.spendTargets) {
         if (target.publicAddress == null || target.nativeAmount == null) {
@@ -301,6 +301,18 @@ export async function makeUtxoEngine(
             'transaction to be replaced found, but not its input utxos'
           )
         }
+      }
+      if (options?.CPFP != null) {
+        const childTx = await processor.fetchTransaction(options?.CPFP)
+        if (childTx == null) throw new Error('transaction not found')
+        const utxos: IUTXO[] = []
+        for (const txid of childTx.ourOuts) {
+          const output = await processor.fetchUtxo(txid)
+          if (output != null) utxos.push(output)
+        }
+        maxUtxo = utxos.reduce((a, b) => (bs.gt(a.value, b.value) ? a : b))
+        // cpfp just sends to change, no target addresses are required
+        targets = []
       }
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
