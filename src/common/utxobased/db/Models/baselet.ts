@@ -107,3 +107,10 @@ export const utxoIdsBySizeConfig: BaseletConfig<BaseType.RangeBase> = {
   type: BaseType.RangeBase,
   bucketSize: 100000
 }
+
+export type SpentUtxoById = IUTXO | undefined
+export const spentUtxoByIdConfig: BaseletConfig<BaseType.HashBase> = {
+  dbName: 'spentUtxoById',
+  type: BaseType.HashBase,
+  bucketSize: 6
+}

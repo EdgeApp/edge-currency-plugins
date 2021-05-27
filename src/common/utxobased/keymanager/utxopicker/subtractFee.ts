@@ -1,12 +1,9 @@
-import { Output, Result, Target, UTXO } from './types'
+import { Output, Result, UtxoPickerArgs } from './types'
 import * as utils from './utils'
 
-export function subtractFee(
-  utxos: UTXO[],
-  targets: Target[],
-  feeRate: number,
-  _changeScript: string
-): Result {
+export function subtractFee(args: UtxoPickerArgs): Result {
+  const { utxos, targets, feeRate } = args
+
   const outputs: Output[] = targets.map(target => ({
     ...target,
     script: Buffer.from(target.script, 'hex')

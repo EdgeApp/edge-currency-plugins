@@ -122,6 +122,12 @@ export interface Processor {
   saveUtxo: (utxo: IUTXO) => Promise<void>
 
   removeUtxo: (id: string) => Promise<IUTXO>
+
+  saveSpentUtxo: (utxo: IUTXO) => Promise<void>
+
+  removeSpentUtxo: (id: string) => Promise<void>
+
+  fetchSpentUtxo: (id: string) => Promise<UtxoById>
 }
 
 interface DumpDataReturn {
@@ -462,6 +468,19 @@ export async function makeProcessor(
       return await baselets.utxo(
         async tables => await deleteUtxo({ tables, id })
       )
+    },
+
+    async removeSpentUtxo(id: string): Promise<void> {
+      await baselets.all.spentUtxoById.delete('', [id])
+    },
+
+    async saveSpentUtxo(utxo: IUTXO): Promise<void> {
+      await baselets.all.spentUtxoById.insert('', utxo.id, utxo)
+    },
+
+    async fetchSpentUtxo(id: string): Promise<IUTXO> {
+      const [utxo] = await baselets.all.spentUtxoById.query('', [id])
+      return utxo
     }
   }
 
@@ -573,6 +592,18 @@ export async function makeProcessor(
     Parameters<typeof processor.removeUtxo>[0],
     Await<ReturnType<typeof processor.removeUtxo>>
   >(processor.removeUtxo)
+  processor.fetchSpentUtxo = await mutexDecorator<
+    Parameters<typeof processor.fetchSpentUtxo>[0],
+    Await<ReturnType<typeof processor.fetchSpentUtxo>>
+  >(processor.fetchSpentUtxo)
+  processor.saveSpentUtxo = await mutexDecorator<
+    Parameters<typeof processor.saveSpentUtxo>[0],
+    Await<ReturnType<typeof processor.saveSpentUtxo>>
+  >(processor.saveSpentUtxo)
+  processor.removeSpentUtxo = await mutexDecorator<
+    Parameters<typeof processor.removeSpentUtxo>[0],
+    Await<ReturnType<typeof processor.removeSpentUtxo>>
+  >(processor.removeSpentUtxo)
 
   return processor
 }

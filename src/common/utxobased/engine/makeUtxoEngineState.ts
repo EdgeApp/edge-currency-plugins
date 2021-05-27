@@ -284,7 +284,19 @@ export function makeUtxoEngineState(
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<string> {
-      return await serverStates.broadcastTx(transaction)
+      // put spent utxos into an interim data structure (saveSpentUtxo)
+      // these utxos are removed once the transaction confirms
+      const tx = await processor.fetchTransaction(transaction.txid)
+      if (tx != null) {
+        for (const inputs of tx.inputs) {
+          const utxo = await processor.fetchUtxo(
+            `${inputs.txId}_${inputs.outputIndex}`
+          )
+          if (utxo != null) await processor.saveSpentUtxo(utxo)
+        }
+      }
+      const txId = await serverStates.broadcastTx(transaction)
+      return txId
     },
     refillServers(): void {
       serverStates.refillServers()
@@ -683,6 +695,9 @@ const updateTransactions = (
       // check if tx is still not confirmed, if so, don't change anything
       if (tx.blockHeight < 1) {
         return
+      }
+      for (const input of tx.inputs) {
+        await processor.removeSpentUtxo(`${input.txId}_${input.outputIndex}`)
       }
       await processor.removeTxIdByBlockHeight({ blockHeight: 0, txid: txId })
       await processor.insertTxIdByBlockHeight({

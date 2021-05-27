@@ -23,6 +23,14 @@ export interface Target {
   value: number
 }
 
+export interface UtxoPickerArgs {
+  utxos: UTXO[]
+  useUtxos?: UTXO[]
+  targets: Target[]
+  feeRate: number
+  changeScript: string
+}
+
 export interface Result {
   inputs?: Input[]
   outputs?: Output[]

@@ -1,10 +1,11 @@
 import { Output, Result, UTXO, UtxoPickerArgs } from './types'
 import * as utils from './utils'
+// implementation very similar to accumulative strategy
 // add inputs until we reach or surpass the target value (or deplete)
 // worst-case: O(n)
 
-export function accumulative(args: UtxoPickerArgs): Result {
-  const { utxos, targets, feeRate, changeScript } = args
+export function forceUseUtxo(args: UtxoPickerArgs): Result {
+  const { utxos, useUtxos, targets, feeRate, changeScript } = args
 
   if (!isFinite(utils.uintOrNaN(feeRate))) {
     throw new Error('No rate provided')
@@ -15,9 +16,15 @@ export function accumulative(args: UtxoPickerArgs): Result {
     script: Buffer.from(target.script, 'hex')
   }))
 
-  let inValue = 0
-  const inputs: UTXO[] = []
+  const inputs: UTXO[] = useUtxos ?? []
+  let inValue = inputs.reduce((n, { value }) => n + value, 0)
   const targetValue = utils.sumOrNaN(targets)
+  const bytes = utils.transactionBytes(inputs, outputs)
+  const fee = bytes * feeRate
+  // if the new feeRate is already covered by teaking the change, return
+  if (inValue >= targetValue + fee) {
+    return utils.finalize(inputs, outputs, feeRate, changeScript)
+  }
 
   for (let i = 0; i < utxos.length; ++i) {
     const utxo = utxos[i]
@@ -36,7 +43,6 @@ export function accumulative(args: UtxoPickerArgs): Result {
     inValue += utxo.value
 
     const bytes = utils.transactionBytes(inputs, outputs)
-    console.log('tx byte size - accum', bytes)
     const fee = bytes * feeRate
 
     // go again?
