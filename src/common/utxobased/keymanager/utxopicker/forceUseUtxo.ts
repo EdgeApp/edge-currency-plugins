@@ -21,7 +21,7 @@ export function forceUseUtxo(args: UtxoPickerArgs): Result {
   const targetValue = utils.sumOrNaN(targets)
   const bytes = utils.transactionBytes(inputs, outputs)
   const fee = bytes * feeRate
-  // if the new feeRate is already covered by teaking the change, return
+  // if the new feeRate is already covered by lowering the change amount, return
   if (inValue >= targetValue + fee) {
     return utils.finalize(inputs, outputs, feeRate, changeScript)
   }

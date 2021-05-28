@@ -278,16 +278,14 @@ export async function makeUtxoEngine(
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
       const setRBF = options?.setRBF ?? false
-      const rbfTxid = options?.rbfTxid
+      const rbfTxid = edgeSpendInfo.rbfTxid
       let maxUtxo: undefined | IUTXO
+      let feeRate = parseInt(await fees.getRate(edgeSpendInfo))
       if (rbfTxid != null) {
         const rbfTx = await processor.fetchTransaction(rbfTxid)
         if (rbfTx == null) throw new Error('transaction not found')
-        const rbfFee = rbfTx?.fees
-        if (rbfFee == null)
-          throw new Error('could not get fee from replaceable transaction')
-        // double the fee used before
-        bs.mul(rbfFee, '2')
+        // double the fee used for the RBF transaction
+        feeRate *= 2
         const rbfInputs = rbfTx.inputs
         const maxInput = rbfInputs.reduce((a, b) =>
           bs.gt(a.amount, b.amount) ? a : b
@@ -298,12 +296,12 @@ export async function makeUtxoEngine(
           maxUtxo = await processor.fetchSpentUtxo(maxId)
         }
         if (maxUtxo == null) {
+          log.error('transaction to be replaced found, but not its input utxos')
           throw new Error(
             'transaction to be replaced found, but not its input utxos'
           )
         }
       }
-      const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
         options?.subtractFee != null ? options.subtractFee : false
