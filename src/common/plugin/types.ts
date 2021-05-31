@@ -31,6 +31,7 @@ export enum EngineCurrencyType {
 export interface TxOptions {
   utxos?: IUTXO[]
   subtractFee?: boolean
+  setRBF?: boolean
 }
 
 export interface EngineCurrencyInfo extends EdgeCurrencyInfo {

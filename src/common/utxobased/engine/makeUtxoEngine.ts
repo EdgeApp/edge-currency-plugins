@@ -24,7 +24,7 @@ import {
   fromEdgeTransaction,
   toEdgeTransaction
 } from '../db/Models/ProcessorTransaction'
-import { IProcessorTransaction } from '../db/types'
+import { IProcessorTransaction, IUTXO } from '../db/types'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { makeUtxoEngineState } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
@@ -277,17 +277,42 @@ export async function makeUtxoEngine(
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
-      const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+      const setRBF = options?.setRBF ?? false
+      const rbfTxid = edgeSpendInfo.rbfTxid
+      let maxUtxo: undefined | IUTXO
+      let feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+      if (rbfTxid != null) {
+        const rbfTx = await processor.fetchTransaction(rbfTxid)
+        if (rbfTx == null) throw new Error('transaction not found')
+        // double the fee used for the RBF transaction
+        feeRate *= 2
+        const rbfInputs = rbfTx.inputs
+        const maxInput = rbfInputs.reduce((a, b) =>
+          bs.gt(a.amount, b.amount) ? a : b
+        )
+        const maxId = `${maxInput.txId}_${maxInput.outputIndex}`
+        maxUtxo = await processor.fetchUtxo(maxId)
+        if (maxUtxo == null) {
+          maxUtxo = await processor.fetchSpentUtxo(maxId)
+        }
+        if (maxUtxo == null) {
+          log.error('transaction to be replaced found, but not its input utxos')
+          throw new Error(
+            'transaction to be replaced found, but not its input utxos'
+          )
+        }
+      }
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
         options?.subtractFee != null ? options.subtractFee : false
       const tx = await makeTx({
         utxos,
+        forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
         targets,
         feeRate,
         coin: currencyInfo.network,
         network,
-        rbf: false,
+        setRBF,
         freshChangeAddress,
         subtractFee
       })

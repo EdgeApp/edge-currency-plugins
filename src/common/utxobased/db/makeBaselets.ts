@@ -17,6 +17,7 @@ import {
   RANGE_KEY,
   scriptPubkeyByPathConfig,
   scriptPubkeysByBalanceConfig,
+  spentUtxoByIdConfig,
   txByIdConfig,
   txIdsByBlockHeightConfig,
   txsByDateConfig,
@@ -74,7 +75,7 @@ export interface Baselets {
   address: <E extends Executor<'address'>>(fn: E) => Promise<ReturnType<E>>
   tx: <E extends Executor<'tx'>>(fn: E) => Promise<ReturnType<E>>
   utxo: <E extends Executor<'utxo'>>(fn: E) => Promise<ReturnType<E>>
-  all: AddressTables & TransactionTables & UTXOTables
+  all: AddressTables & TransactionTables & UTXOTables & SpentUTXOTables
 }
 
 type Executor<DatabaseName extends keyof Databases> = (
@@ -107,6 +108,10 @@ export interface UTXOTables {
   utxoIdsBySize: RangeBase
 }
 
+interface SpentUTXOTables {
+  spentUtxoById: HashBase
+}
+
 export const makeBaselets = async (
   config: MakeBaseletsConfig
 ): Promise<Baselets> => {
@@ -125,6 +130,7 @@ export const makeBaselets = async (
     createOrOpen(config.disklet, txByIdConfig),
     createOrOpen(config.disklet, txsByScriptPubkeyConfig),
     createOrOpen(config.disklet, utxoByIdConfig),
+    createOrOpen(config.disklet, spentUtxoByIdConfig),
     createOrOpen(config.disklet, utxoIdsByScriptPubkeyConfig)
   ])
 
@@ -140,6 +146,7 @@ export const makeBaselets = async (
     txById,
     txsByScriptPubkey,
     utxoById,
+    spentUtxoById,
     utxoIdsByScriptPubkey
   ] = hashBases
 
@@ -163,6 +170,10 @@ export const makeBaselets = async (
     utxoIdsBySize
   }
 
+  const spentUtxoBases: SpentUTXOTables = {
+    spentUtxoById
+  }
+
   return {
     async address<E extends Executor<'address'>>(
       fn: E
@@ -181,7 +192,8 @@ export const makeBaselets = async (
     all: {
       ...addressBases,
       ...txBases,
-      ...utxoBases
+      ...utxoBases,
+      ...spentUtxoBases
     }
   }
 }
