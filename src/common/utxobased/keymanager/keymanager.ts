@@ -2,6 +2,7 @@
 import * as bitcoin from 'altcoin-js'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
+import { InsufficientFundsError } from 'edge-core-js'
 
 import { NetworkEnum } from '../../plugin/types'
 import { IUTXO } from '../db/types'
@@ -956,7 +957,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     changeScript
   })
   if (result.inputs == null || result.outputs == null) {
-    throw new Error('Make spend failed.')
+    throw new InsufficientFundsError(args.coin)
   }
 
   const psbt = new bitcoin.Psbt()
