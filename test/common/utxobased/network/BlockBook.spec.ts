@@ -161,7 +161,13 @@ describe('BlockBook', function () {
   }
 
   beforeEach(async () => {
-    blockBook = makeBlockBook({ emitter, log, walletId: '', onQueueSpaceCB })
+    blockBook = makeBlockBook({
+      emitter,
+      log,
+      wsAddress: 'wss://btc1.trezor.io',
+      walletId: '',
+      onQueueSpaceCB
+    })
     await blockBook.connect()
   })
 
