@@ -22,6 +22,7 @@ import {
   txIdsByBlockHeightConfig,
   txsByDateConfig,
   txsByScriptPubkeyConfig,
+  usedFlagByScriptPubkeyConfig,
   utxoByIdConfig,
   utxoIdsByScriptPubkeyConfig,
   utxoIdsBySizeConfig
@@ -93,6 +94,7 @@ export interface AddressTables {
   addressPathByMRU: CountBase
   scriptPubkeyByPath: CountBase
   scriptPubkeysByBalance: RangeBase
+  usedFlagByScriptPubkey: HashBase
 }
 
 export interface TransactionTables {
@@ -131,7 +133,8 @@ export const makeBaselets = async (
     createOrOpen(config.disklet, txsByScriptPubkeyConfig),
     createOrOpen(config.disklet, utxoByIdConfig),
     createOrOpen(config.disklet, spentUtxoByIdConfig),
-    createOrOpen(config.disklet, utxoIdsByScriptPubkeyConfig)
+    createOrOpen(config.disklet, utxoIdsByScriptPubkeyConfig),
+    createOrOpen(config.disklet, usedFlagByScriptPubkeyConfig)
   ])
 
   const [scriptPubkeyByPath, addressPathByMRU] = countBases
@@ -147,14 +150,16 @@ export const makeBaselets = async (
     txsByScriptPubkey,
     utxoById,
     spentUtxoById,
-    utxoIdsByScriptPubkey
+    utxoIdsByScriptPubkey,
+    usedFlagByScriptPubkey
   ] = hashBases
 
   const addressBases: AddressTables = {
     addressByScriptPubkey,
     addressPathByMRU,
     scriptPubkeyByPath,
-    scriptPubkeysByBalance
+    scriptPubkeysByBalance,
+    usedFlagByScriptPubkey
   }
 
   const txBases: TransactionTables = {
