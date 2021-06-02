@@ -128,6 +128,10 @@ export interface Processor {
   removeSpentUtxo: (id: string) => Promise<void>
 
   fetchSpentUtxo: (id: string) => Promise<UtxoById>
+
+  saveUsedAddress: (scriptPubkey: string) => Promise<void>
+
+  getUsedAddress: (scriptPubkey: string) => Promise<boolean>
 }
 
 interface DumpDataReturn {
@@ -162,6 +166,26 @@ export async function makeProcessor(
       await new Promise(resolve => setTimeout(resolve, 0))
       await disklet.delete('.')
       baselets = await makeBaselets({ disklet })
+    },
+
+    async saveUsedAddress(scriptPubkey: string): Promise<void> {
+      await baselets.all.usedFlagByScriptPubkey.insert('', scriptPubkey, true)
+      try {
+        await updateAddressByScriptPubkey({
+          tables: baselets.all,
+          scriptPubkey,
+          data: { used: true }
+        })
+      } catch (_err) {
+        console.log('just')
+      }
+    },
+
+    async getUsedAddress(scriptPubkey: string): Promise<boolean> {
+      const [used] = await baselets.all.usedFlagByScriptPubkey.query('', [
+        scriptPubkey
+      ])
+      return used
     },
 
     async fetchScriptPubkeyByPath(
@@ -1095,11 +1119,11 @@ const updateTx = async (args: UpdateTxArgs): Promise<IProcessorTransaction> => {
   }
 
   // Only update the date index if the existing tx date does not match the one given
-  if (data.date !== tx.date) {
+  if (data.date != null && data.date !== tx.date) {
     await tables.txsByDate.delete('', tx.date, tx.txid)
     await tables.txsByDate.insert('', {
       [RANGE_ID_KEY]: tx.txid,
-      [RANGE_KEY]: tx.date
+      [RANGE_KEY]: data.date
     })
   }
 

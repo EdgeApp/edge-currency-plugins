@@ -17,6 +17,13 @@ export const scriptPubkeyByPathConfig: BaseletConfig<BaseType.CountBase> = {
   bucketSize: 50
 }
 
+export type UsedFlagByScriptPubkey = boolean
+export const usedFlagByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
+  dbName: 'usedFlagByScriptPubkey',
+  type: BaseType.HashBase,
+  bucketSize: 50
+}
+
 export type AddressByScriptPubkey = IAddress | undefined
 export const addressByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
   dbName: 'addressByScriptPubkey',

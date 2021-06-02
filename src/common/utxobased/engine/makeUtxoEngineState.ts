@@ -274,10 +274,9 @@ export function makeUtxoEngineState(
 
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
       for (const addr of addresses) {
-        await saveAddress({
+        await markUsed({
           ...commonArgs,
-          scriptPubkey: walletTools.addressToScriptPubkey(addr),
-          used: true
+          scriptPubkey: walletTools.addressToScriptPubkey(addr)
         })
       }
       await run()
@@ -378,6 +377,12 @@ interface FormatArgs extends CommonArgs, ShortPath {}
 
 interface SetLookAheadArgs extends FormatArgs {}
 
+const markUsed = async (args: SaveAddressArgs): Promise<void> => {
+  const { scriptPubkey, processor } = args
+
+  await processor.saveUsedAddress(scriptPubkey)
+}
+
 const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
   const { format, branch, currencyInfo, walletTools, processor } = args
 
@@ -410,9 +415,16 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
     }
     const { address } = walletTools.getAddress(path)
     const scriptPubkey = walletTools.addressToScriptPubkey(address)
+
+    let used = false
+    try {
+      used = (await processor.getUsedAddress(scriptPubkey)) ?? false
+    } catch (err) {}
+
     await saveAddress({
       ...args,
       scriptPubkey,
+      used,
       path
     })
     addresses.add(address)
