@@ -207,7 +207,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         serverList.push(uri)
         continue
       }
-      const shortUrl = `${uri.replace('wss://', '').replace('/websocket', '')}:`
 
       serverStates[uri] = {
         subscribedBlocks: false,
@@ -228,7 +227,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           const taskMessage = `${task.method} params: ${JSON.stringify(
             task.params
           )}`
-          log(`${shortUrl} nextTask: ${taskMessage}`)
+          log(`${uri} nextTask: ${taskMessage}`)
         }
         return task
       }

@@ -174,18 +174,22 @@ export interface BlockBook {
 interface BlockBookConfig {
   socketEmitter: SocketEmitter
   engineEmitter: EngineEmitter
-  wsAddress?: string
+  wsAddress: string
   log: EdgeLog
   walletId: string
   onQueueSpaceCB: OnQueueSpaceCB
 }
 
-const baseUri = 'btc1.trezor.io'
-
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
-  const { socketEmitter, engineEmitter, log, onQueueSpaceCB, walletId } = config
-  const baseWSAddress = config.wsAddress ?? `wss://${baseUri}/websocket`
-  log(`makeBlockBook with uri ${baseWSAddress}`)
+  const {
+    wsAddress,
+    socketEmitter,
+    engineEmitter,
+    log,
+    onQueueSpaceCB,
+    walletId
+  } = config
+  log(`makeBlockBook with uri ${wsAddress}`)
 
   const instance: BlockBook = {
     isConnected: false,
@@ -201,7 +205,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     broadcastTx
   }
 
-  const socket = makeSocket(baseWSAddress, {
+  const socket = makeSocket(wsAddress, {
     healthCheck: ping,
     onQueueSpaceCB,
     log,
@@ -210,7 +214,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   })
 
   async function connect(): Promise<void> {
-    log(`connecting to blockbook socket with uri ${baseWSAddress}`)
+    log(`connecting to blockbook socket with uri ${wsAddress}`)
     if (instance.isConnected) return
 
     await socket.connect()
@@ -219,7 +223,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   async function disconnect(): Promise<void> {
     log(
-      `disconnecting from blockbook socket with uri ${baseWSAddress}, currently connected: ${instance.isConnected}`
+      `disconnecting from blockbook socket with uri ${wsAddress}, currently connected: ${instance.isConnected}`
     )
     if (!instance.isConnected) return
 
@@ -267,7 +271,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     const socketCb = async (value: INewBlockResponse): Promise<void> => {
       engineEmitter.emit(
         EngineEvent.BLOCK_HEIGHT_CHANGED,
-        baseWSAddress,
+        wsAddress,
         value.height
       )
     }
@@ -284,11 +288,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     deferredAddressSub: Deferred<unknown>
   ): void {
     const socketCb = async (value: INewTransactionResponse): Promise<void> => {
-      engineEmitter.emit(
-        EngineEvent.NEW_ADDRESS_TRANSACTION,
-        baseWSAddress,
-        value
-      )
+      engineEmitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, wsAddress, value)
     }
     socket.subscribe({
       ...subscribeAddressesMessage(addresses),
