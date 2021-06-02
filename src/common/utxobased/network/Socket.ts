@@ -69,6 +69,7 @@ interface PendingMessages {
 export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
   const { emitter, log, queueSize = 50, walletId } = config
+  log('makeSocket connects to', uri)
   const version = ''
   const subscriptions: Subscriptions = {}
   let onQueueSpace = config.onQueueSpaceCB
@@ -86,10 +87,11 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     if (connected && socket != null && socket.readyState === ReadyState.OPEN)
       disconnect()
     else cancelConnect = true
-    log('handled error!', e)
+    log.error('handled error!', e)
   }
 
   const disconnect = (): void => {
+    log('disconnecting from socket', uri)
     clearTimeout(timer)
     connected = false
     if (socket != null) socket.disconnect()
@@ -98,6 +100,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const onSocketClose = (): void => {
     const err = error ?? new Error('Socket close')
+    log(`onSocketClose due to ${err.message} with server ${uri}`)
     clearTimeout(timer)
     connected = false
     socket = null
@@ -118,6 +121,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const onSocketConnect = (): void => {
+    log(`onSocketConnect with server ${uri}`)
     if (cancelConnect) {
       if (socket != null) socket.disconnect()
       return
@@ -138,6 +142,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const wakeUp = (): void => {
+    log(`wakeUp socket with server ${uri}`)
     pushUpdate({
       id: walletId + '==' + uri,
       updateFunc: () => {
@@ -149,6 +154,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const doWakeUp = async (): Promise<void> => {
+    log(`doWakeUp socket with server ${uri}`)
     if (connected && version != null) {
       while (Object.keys(pendingMessages).length < queueSize) {
         const task = await onQueueSpace?.(uri)
@@ -203,8 +209,10 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const onTimer = (): void => {
+    log(`socket timer with server ${uri} expired, check if healthCheck needed`)
     const now = Date.now() - TIMER_SLACK
     if (lastKeepAlive + KEEP_ALIVE_MS < now) {
+      log(`submitting healthCheck to server ${uri}`)
       lastKeepAlive = now
       config
         .healthCheck()
@@ -228,6 +236,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const setupTimer = (): void => {
+    log(`setupTimer with server ${uri}`)
     let nextWakeUp = lastKeepAlive + KEEP_ALIVE_MS
 
     for (const message of Object.values(pendingMessages)) {
