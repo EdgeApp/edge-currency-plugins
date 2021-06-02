@@ -86,10 +86,13 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     if (connected && socket != null && socket.readyState === ReadyState.OPEN)
       disconnect()
     else cancelConnect = true
-    log('handled error!', e)
+    log.error('handled error!', e)
+    console.log('handled error!', e)
   }
 
   const disconnect = (): void => {
+    log.warn('socket disconnected')
+    console.log('socket disconnected')
     clearTimeout(timer)
     connected = false
     if (socket != null) socket.disconnect()
@@ -98,6 +101,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const onSocketClose = (): void => {
     const err = error ?? new Error('Socket close')
+    log.warn('onsocketclose', err)
+    console.log('onsocketclose', err)
     clearTimeout(timer)
     connected = false
     socket = null
@@ -114,16 +119,20 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       emitter.emit(EngineEvent.CONNECTION_CLOSE, uri, err)
     } catch (e) {
       log.error(e.message)
+      console.log(e)
     }
   }
 
   const onSocketConnect = (): void => {
+    console.log('onsocketconnect')
+    log('onsocketconnect')
     if (cancelConnect) {
       if (socket != null) socket.disconnect()
       return
     }
     connected = true
     lastKeepAlive = Date.now()
+    console.log('last keep alive:', lastKeepAlive)
     try {
       emitter.emit(EngineEvent.CONNECTION_OPEN, uri)
     } catch (e) {
@@ -138,6 +147,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const wakeUp = (): void => {
+    console.log('wakeUp')
     pushUpdate({
       id: walletId + '==' + uri,
       updateFunc: () => {
@@ -149,6 +159,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const doWakeUp = async (): Promise<void> => {
+    console.log('doWakeUp', Object.keys(pendingMessages).length, queueSize)
     if (connected && version != null) {
       while (Object.keys(pendingMessages).length < queueSize) {
         const task = await onQueueSpace?.(uri)
@@ -163,6 +174,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const subscribe = (subscription: WsSubscription): void => {
+    console.log('subscribe', JSON.stringify(subscription))
     if (socket != null && socket.readyState === ReadyState.OPEN && connected) {
       const id = subscription.method
       const message = {
@@ -178,6 +190,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   // add any exception, since the passed in template parameter needs to be re-assigned
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const submitTask = (task: WsTask<any>): void => {
+    console.log('submitTask', JSON.stringify(task))
     const id = (nextId++).toString()
     const message = { task, startTime: Date.now() }
     pendingMessages[id] = message
@@ -185,6 +198,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const transmitMessage = (id: string, pending: WsMessage): void => {
+    console.log('transmitMessage', id, JSON.stringify(pending))
     const now = Date.now()
     if (
       socket != null &&
@@ -204,6 +218,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const onTimer = (): void => {
     const now = Date.now() - TIMER_SLACK
+    console.log('onTimer', lastKeepAlive, now)
     if (lastKeepAlive + KEEP_ALIVE_MS < now) {
       lastKeepAlive = now
       config
@@ -229,6 +244,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const setupTimer = (): void => {
     let nextWakeUp = lastKeepAlive + KEEP_ALIVE_MS
+    console.log('setupTimer', lastKeepAlive, nextWakeUp)
 
     for (const message of Object.values(pendingMessages)) {
       const to = message.startTime + timeout
@@ -241,6 +257,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const onMessage = (messageJson: string): void => {
+    console.log('onMessage', messageJson)
     try {
       const json = JSON.parse(messageJson)
       if (json.id != null) {
