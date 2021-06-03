@@ -60,6 +60,7 @@ interface Connections {
 
 export function makeServerStates(config: ServerStateConfig): ServerStates {
   const { engineStarted, walletInfo, pluginState, emitter, log } = config
+  log('Making server states')
 
   let serverStates: ServerStateCache = {}
 
@@ -88,7 +89,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   })
   emitter.on(EngineEvent.CONNECTION_TIMER, (uri: string, queryDate: number) => {
     const queryTime = Date.now() - queryDate
-    log(`${uri} returned version in ${queryTime}ms`)
+    log(`${uri} returned healthCheck in ${queryTime}ms`)
     pluginState.serverScoreUp(uri, queryTime)
   })
   emitter.on(
@@ -110,6 +111,9 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   emitter.on(
     EngineEvent.NEW_ADDRESS_TRANSACTION,
     (uri: string, newTx: INewTransactionResponse) => {
+      log(
+        `${uri} received received new transaction with id ${newTx.tx.txid} to address ${newTx.address}`
+      )
       const serverState = serverStates[uri]
       if (serverState != null) {
         serverState.txids.add(newTx.tx.txid)
@@ -130,6 +134,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const stop = async (): Promise<void> => {
+    log(`stopping server states`)
     removeIdFromQueue(walletInfo.id)
     clearTimeout(reconnectTimer)
     for (const uri of Object.keys(connections)) {
@@ -144,6 +149,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   const reconnect = (): void => {
     if (engineStarted) {
       if (reconnectCounter < 5) reconnectCounter++
+      log(`attempting server reconnect number ${reconnectCounter}`)
       reconnectTimer = setTimeout(() => {
         clearTimeout(reconnectTimer)
         refillServers()
@@ -152,6 +158,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const refillServers = (): void => {
+    log(`refilling servers...`)
     pushUpdate({
       id: walletInfo.id,
       updateFunc: () => {
