@@ -2,6 +2,7 @@
 import * as bitcoin from 'altcoin-js'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
+import { InsufficientFundsError } from 'edge-core-js'
 
 import { NetworkEnum } from '../../plugin/types'
 import { IUTXO } from '../db/types'
@@ -14,7 +15,6 @@ import { cdsScriptTemplates } from './bitcoincashUtils/checkdatasig'
 import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
 import * as utxopicker from './utxopicker'
-import { Result as UTXOPickerResult } from './utxopicker'
 
 // in bitcoin these are bip44, bip49, bip84 xpub prefixes
 // other coins contain different formats which still need to be gathered.
@@ -197,10 +197,11 @@ export interface CreateTxReturn {
 
 export interface MakeTxArgs {
   network: NetworkEnum
+  forceUseUtxo: IUTXO[]
   utxos: IUTXO[]
   targets: MakeTxTarget[]
   feeRate: number
-  rbf: boolean
+  setRBF: boolean
   coin: string
   freshChangeAddress: string
   subtractFee?: boolean
@@ -211,7 +212,7 @@ export interface MakeTxTarget {
   value: number
 }
 
-interface MakeTxReturn extends Required<UTXOPickerResult> {
+interface MakeTxReturn extends Required<utxopicker.Result> {
   psbtBase64: string
 }
 
@@ -871,7 +872,7 @@ export function scriptPubkeyToElectrumScriptHash(scriptPubkey: string): string {
 
 export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   let sequence = 0xffffffff
-  if (args.rbf) {
+  if (args.setRBF) {
     sequence -= 2
   }
 
@@ -882,8 +883,17 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     sighashType = coin.sighash
   }
 
+  const useUtxos: utxopicker.UTXO[] = []
   const mappedUtxos: utxopicker.UTXO[] = []
-  for (const utxo of args.utxos) {
+
+  const mergedArray = [...args.utxos, ...args.forceUseUtxo]
+  const uniqueUtxos = [
+    ...mergedArray
+      .reduce((map, obj) => map.set(obj.id, obj), new Map())
+      .values()
+  ]
+
+  for (const utxo of uniqueUtxos) {
     // Cannot use a utxo without a script
     if (typeof utxo.script === 'undefined') continue
     const input: utxopicker.UTXO = {
@@ -907,7 +917,14 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
         input.redeemScript = Buffer.from(utxo.redeemScript, 'hex')
       }
     }
-    mappedUtxos.push(input)
+    let forceUsage = false
+    for (const forceUtxo of args.forceUseUtxo) {
+      if (forceUtxo.id === utxo.id) {
+        useUtxos.push(input)
+        forceUsage = true
+      }
+    }
+    if (!forceUsage) mappedUtxos.push(input)
   }
 
   const targets: utxopicker.Target[] = args.targets.map(target => {
@@ -926,13 +943,21 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     coin: coin.name,
     network: args.network
   })
-  const subtractFee = args.subtractFee ?? false
-  const utxopicking = subtractFee
-    ? utxopicker.subtractFee
-    : utxopicker.accumulative
-  const result = utxopicking(mappedUtxos, targets, args.feeRate, changeScript)
+  const utxopicking =
+    args.forceUseUtxo != null ?? false
+      ? utxopicker.forceUseUtxo
+      : args.subtractFee ?? false
+      ? utxopicker.subtractFee
+      : utxopicker.accumulative
+  const result = utxopicking({
+    utxos: mappedUtxos,
+    useUtxos,
+    targets,
+    feeRate: args.feeRate,
+    changeScript
+  })
   if (result.inputs == null || result.outputs == null) {
-    throw new Error('Make spend failed.')
+    throw new InsufficientFundsError(args.coin)
   }
 
   const psbt = new bitcoin.Psbt()

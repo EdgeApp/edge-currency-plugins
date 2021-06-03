@@ -181,6 +181,7 @@ interface BlockBookConfig {
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
   const { emitter, log, onQueueSpaceCB, walletId } = config
   const baseWSAddress = config.wsAddress
+  log(`makeBlockBook with uri ${baseWSAddress}`)
 
   const instance: BlockBook = {
     isConnected: false,
@@ -205,6 +206,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   })
 
   async function connect(): Promise<void> {
+    log(`connecting to blockbook socket with uri ${baseWSAddress}`)
     if (instance.isConnected) return
 
     await socket.connect()
@@ -212,6 +214,9 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   }
 
   async function disconnect(): Promise<void> {
+    log(
+      `disconnecting from blockbook socket with uri ${baseWSAddress}, currently connected: ${instance.isConnected}`
+    )
     if (!instance.isConnected) return
 
     socket.disconnect()
