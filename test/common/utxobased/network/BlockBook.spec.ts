@@ -164,7 +164,7 @@ describe('BlockBook', function () {
     blockBook = makeBlockBook({
       emitter,
       log,
-      wsAddress: 'wss://btc1.trezor.io',
+      wsAddress: 'wss://btc1.trezor.io/websocket',
       walletId: '',
       onQueueSpaceCB
     })
