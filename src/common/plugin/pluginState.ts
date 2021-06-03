@@ -96,10 +96,9 @@ export class PluginState extends ServerCache {
     )
     // Rename the bitcoin currencyCode to get the new version of the server list
     const fixedCode = FixCurrencyCode(currencyCode)
-    // TODO: Change the below line to blockbook once available
     this.infoServerUris = `${JSON.stringify(
       InfoServer
-    )}/electrumServers/${JSON.stringify(fixedCode)}`
+    )}/blockBookServers/${JSON.stringify(fixedCode)}`
     this.engines = []
     this.disklet = navigateDisklet(io.disklet, 'plugins/' + pluginId)
 
