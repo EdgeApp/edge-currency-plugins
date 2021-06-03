@@ -9,7 +9,8 @@ import { InnerSocket, InnerSocketCallbacks, ReadyState } from './types'
 import { setupBrowser } from './windowWS'
 
 const TIMER_SLACK = 500
-const KEEP_ALIVE_MS = 60000
+const KEEP_ALIVE_MS = 60000 // interval at which we keep the connection alive
+const WAKE_UP_MS = 5000 // interval at which we wakeUp and potentially onQueueSpace
 
 export type OnFailHandler = (error: Error) => void
 
@@ -76,6 +77,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   let pendingMessages: PendingMessages = {}
   let nextId = 0
   let lastKeepAlive = 0
+  let lastWakeUp = 0
   let connected = false
   let cancelConnect = false
   const timeout: number = 1000 * (config.timeout ?? 30)
@@ -155,6 +157,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const doWakeUp = async (): Promise<void> => {
     log(`doWakeUp socket with server ${uri}`)
+    lastWakeUp = Date.now()
     if (connected && version != null) {
       while (Object.keys(pendingMessages).length < queueSize) {
         const task = await onQueueSpace?.(uri)
@@ -232,12 +235,13 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         pendingMessages = removeItem(pendingMessages, id)
       }
     }
+    wakeUp()
     setupTimer()
   }
 
   const setupTimer = (): void => {
     log(`setupTimer with server ${uri}`)
-    let nextWakeUp = lastKeepAlive + KEEP_ALIVE_MS
+    let nextWakeUp = lastWakeUp + WAKE_UP_MS
 
     for (const message of Object.values(pendingMessages)) {
       const to = message.startTime + timeout

@@ -122,6 +122,16 @@ export interface Processor {
   saveUtxo: (utxo: IUTXO) => Promise<void>
 
   removeUtxo: (id: string) => Promise<IUTXO>
+
+  saveSpentUtxo: (utxo: IUTXO) => Promise<void>
+
+  removeSpentUtxo: (id: string) => Promise<void>
+
+  fetchSpentUtxo: (id: string) => Promise<UtxoById>
+
+  saveUsedAddress: (scriptPubkey: string) => Promise<void>
+
+  getUsedAddress: (scriptPubkey: string) => Promise<boolean>
 }
 
 interface DumpDataReturn {
@@ -156,6 +166,26 @@ export async function makeProcessor(
       await new Promise(resolve => setTimeout(resolve, 0))
       await disklet.delete('.')
       baselets = await makeBaselets({ disklet })
+    },
+
+    async saveUsedAddress(scriptPubkey: string): Promise<void> {
+      await baselets.all.usedFlagByScriptPubkey.insert('', scriptPubkey, true)
+      try {
+        await updateAddressByScriptPubkey({
+          tables: baselets.all,
+          scriptPubkey,
+          data: { used: true }
+        })
+      } catch (_err) {
+        console.log('just')
+      }
+    },
+
+    async getUsedAddress(scriptPubkey: string): Promise<boolean> {
+      const [used] = await baselets.all.usedFlagByScriptPubkey.query('', [
+        scriptPubkey
+      ])
+      return used
     },
 
     async fetchScriptPubkeyByPath(
@@ -462,6 +492,19 @@ export async function makeProcessor(
       return await baselets.utxo(
         async tables => await deleteUtxo({ tables, id })
       )
+    },
+
+    async removeSpentUtxo(id: string): Promise<void> {
+      await baselets.all.spentUtxoById.delete('', [id])
+    },
+
+    async saveSpentUtxo(utxo: IUTXO): Promise<void> {
+      await baselets.all.spentUtxoById.insert('', utxo.id, utxo)
+    },
+
+    async fetchSpentUtxo(id: string): Promise<IUTXO> {
+      const [utxo] = await baselets.all.spentUtxoById.query('', [id])
+      return utxo
     }
   }
 
@@ -573,6 +616,18 @@ export async function makeProcessor(
     Parameters<typeof processor.removeUtxo>[0],
     Await<ReturnType<typeof processor.removeUtxo>>
   >(processor.removeUtxo)
+  processor.fetchSpentUtxo = await mutexDecorator<
+    Parameters<typeof processor.fetchSpentUtxo>[0],
+    Await<ReturnType<typeof processor.fetchSpentUtxo>>
+  >(processor.fetchSpentUtxo)
+  processor.saveSpentUtxo = await mutexDecorator<
+    Parameters<typeof processor.saveSpentUtxo>[0],
+    Await<ReturnType<typeof processor.saveSpentUtxo>>
+  >(processor.saveSpentUtxo)
+  processor.removeSpentUtxo = await mutexDecorator<
+    Parameters<typeof processor.removeSpentUtxo>[0],
+    Await<ReturnType<typeof processor.removeSpentUtxo>>
+  >(processor.removeSpentUtxo)
 
   return processor
 }
@@ -1064,11 +1119,11 @@ const updateTx = async (args: UpdateTxArgs): Promise<IProcessorTransaction> => {
   }
 
   // Only update the date index if the existing tx date does not match the one given
-  if (data.date !== tx.date) {
+  if (data.date != null && data.date !== tx.date) {
     await tables.txsByDate.delete('', tx.date, tx.txid)
     await tables.txsByDate.insert('', {
       [RANGE_ID_KEY]: tx.txid,
-      [RANGE_KEY]: tx.date
+      [RANGE_KEY]: data.date
     })
   }
 

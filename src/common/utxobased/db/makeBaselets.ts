@@ -17,10 +17,12 @@ import {
   RANGE_KEY,
   scriptPubkeyByPathConfig,
   scriptPubkeysByBalanceConfig,
+  spentUtxoByIdConfig,
   txByIdConfig,
   txIdsByBlockHeightConfig,
   txsByDateConfig,
   txsByScriptPubkeyConfig,
+  usedFlagByScriptPubkeyConfig,
   utxoByIdConfig,
   utxoIdsByScriptPubkeyConfig,
   utxoIdsBySizeConfig
@@ -74,7 +76,7 @@ export interface Baselets {
   address: <E extends Executor<'address'>>(fn: E) => Promise<ReturnType<E>>
   tx: <E extends Executor<'tx'>>(fn: E) => Promise<ReturnType<E>>
   utxo: <E extends Executor<'utxo'>>(fn: E) => Promise<ReturnType<E>>
-  all: AddressTables & TransactionTables & UTXOTables
+  all: AddressTables & TransactionTables & UTXOTables & SpentUTXOTables
 }
 
 type Executor<DatabaseName extends keyof Databases> = (
@@ -92,6 +94,7 @@ export interface AddressTables {
   addressPathByMRU: CountBase
   scriptPubkeyByPath: CountBase
   scriptPubkeysByBalance: RangeBase
+  usedFlagByScriptPubkey: HashBase
 }
 
 export interface TransactionTables {
@@ -105,6 +108,10 @@ export interface UTXOTables {
   utxoById: HashBase
   utxoIdsByScriptPubkey: HashBase
   utxoIdsBySize: RangeBase
+}
+
+interface SpentUTXOTables {
+  spentUtxoById: HashBase
 }
 
 export const makeBaselets = async (
@@ -125,7 +132,9 @@ export const makeBaselets = async (
     createOrOpen(config.disklet, txByIdConfig),
     createOrOpen(config.disklet, txsByScriptPubkeyConfig),
     createOrOpen(config.disklet, utxoByIdConfig),
-    createOrOpen(config.disklet, utxoIdsByScriptPubkeyConfig)
+    createOrOpen(config.disklet, spentUtxoByIdConfig),
+    createOrOpen(config.disklet, utxoIdsByScriptPubkeyConfig),
+    createOrOpen(config.disklet, usedFlagByScriptPubkeyConfig)
   ])
 
   const [scriptPubkeyByPath, addressPathByMRU] = countBases
@@ -140,14 +149,17 @@ export const makeBaselets = async (
     txById,
     txsByScriptPubkey,
     utxoById,
-    utxoIdsByScriptPubkey
+    spentUtxoById,
+    utxoIdsByScriptPubkey,
+    usedFlagByScriptPubkey
   ] = hashBases
 
   const addressBases: AddressTables = {
     addressByScriptPubkey,
     addressPathByMRU,
     scriptPubkeyByPath,
-    scriptPubkeysByBalance
+    scriptPubkeysByBalance,
+    usedFlagByScriptPubkey
   }
 
   const txBases: TransactionTables = {
@@ -161,6 +173,10 @@ export const makeBaselets = async (
     utxoById,
     utxoIdsByScriptPubkey,
     utxoIdsBySize
+  }
+
+  const spentUtxoBases: SpentUTXOTables = {
+    spentUtxoById
   }
 
   return {
@@ -181,7 +197,8 @@ export const makeBaselets = async (
     all: {
       ...addressBases,
       ...txBases,
-      ...utxoBases
+      ...utxoBases,
+      ...spentUtxoBases
     }
   }
 }

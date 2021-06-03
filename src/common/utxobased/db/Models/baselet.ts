@@ -17,6 +17,13 @@ export const scriptPubkeyByPathConfig: BaseletConfig<BaseType.CountBase> = {
   bucketSize: 50
 }
 
+export type UsedFlagByScriptPubkey = boolean
+export const usedFlagByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
+  dbName: 'usedFlagByScriptPubkey',
+  type: BaseType.HashBase,
+  bucketSize: 50
+}
+
 export type AddressByScriptPubkey = IAddress | undefined
 export const addressByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
   dbName: 'addressByScriptPubkey',
@@ -106,4 +113,11 @@ export const utxoIdsBySizeConfig: BaseletConfig<BaseType.RangeBase> = {
   dbName: 'utxoIdsBySize',
   type: BaseType.RangeBase,
   bucketSize: 100000
+}
+
+export type SpentUtxoById = IUTXO | undefined
+export const spentUtxoByIdConfig: BaseletConfig<BaseType.HashBase> = {
+  dbName: 'spentUtxoById',
+  type: BaseType.HashBase,
+  bucketSize: 6
 }
