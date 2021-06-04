@@ -48,6 +48,9 @@ describe('fees', function () {
       await fees.start()
 
       testJson(fakeCurrencyInfo.simpleFeeSettings)
+
+      // be sure to stop after start, test will hang otherwise
+      fees.stop()
     })
   })
 })

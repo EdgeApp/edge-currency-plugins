@@ -18,7 +18,7 @@
     "fix": "npm run lint -- --fix",
     "prepare": "npm-run-all clean -p build.*",
     "start": "node -r sucrase/register src/index.ts",
-    "test": "mocha --exit -r sucrase/register 'test/**/*.spec.ts'",
+    "test": "mocha -r sucrase/register 'test/**/*.spec.ts'",
     "lint": "eslint ."
   },
   "husky": {
