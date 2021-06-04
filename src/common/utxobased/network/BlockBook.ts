@@ -13,6 +13,7 @@ import {
   transactionMessage
 } from './BlockBookAPI'
 import Deferred from './Deferred'
+import { SocketEmitter } from './MakeSocketEmitter'
 import { makeSocket, OnQueueSpaceCB } from './Socket'
 
 export interface ITransactionBroadcastResponse {
@@ -171,7 +172,8 @@ export interface BlockBook {
 }
 
 interface BlockBookConfig {
-  emitter: EngineEmitter
+  socketEmitter: SocketEmitter
+  engineEmitter: EngineEmitter
   wsAddress?: string
   log: EdgeLog
   walletId: string
@@ -181,7 +183,7 @@ interface BlockBookConfig {
 const baseUri = 'btc1.trezor.io'
 
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
-  const { emitter, log, onQueueSpaceCB, walletId } = config
+  const { socketEmitter, engineEmitter, log, onQueueSpaceCB, walletId } = config
   const baseWSAddress = config.wsAddress ?? `wss://${baseUri}/websocket`
   log(`makeBlockBook with uri ${baseWSAddress}`)
 
@@ -203,7 +205,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     healthCheck: ping,
     onQueueSpaceCB,
     log,
-    emitter,
+    emitter: socketEmitter,
     walletId
   })
 
@@ -263,7 +265,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     deferredBlockSub: Deferred<unknown>
   ): Promise<void> {
     const socketCb = async (value: INewBlockResponse): Promise<void> => {
-      emitter.emit(
+      engineEmitter.emit(
         EngineEvent.BLOCK_HEIGHT_CHANGED,
         baseWSAddress,
         value.height
@@ -282,7 +284,11 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     deferredAddressSub: Deferred<unknown>
   ): void {
     const socketCb = async (value: INewTransactionResponse): Promise<void> => {
-      emitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, baseWSAddress, value)
+      engineEmitter.emit(
+        EngineEvent.NEW_ADDRESS_TRANSACTION,
+        baseWSAddress,
+        value
+      )
     }
     socket.subscribe({
       ...subscribeAddressesMessage(addresses),

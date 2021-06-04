@@ -1,8 +1,8 @@
 import { EdgeLog } from 'edge-core-js'
 
-import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { removeItem } from '../../plugin/utils'
 import Deferred from './Deferred'
+import { SocketEmitter, SocketEvent } from './MakeSocketEmitter'
 import { setupWS } from './nodejsWS'
 import { pushUpdate, removeIdFromQueue } from './socketQueue'
 import { InnerSocket, InnerSocketCallbacks, ReadyState } from './types'
@@ -48,7 +48,7 @@ interface SocketConfig {
   queueSize?: number
   timeout?: number
   walletId: string
-  emitter: EngineEmitter
+  emitter: SocketEmitter
   log: EdgeLog
   healthCheck: () => Promise<Record<string, unknown>> // function for heartbeat, should submit task itself
   onQueueSpaceCB: OnQueueSpaceCB
@@ -116,7 +116,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     }
     pendingMessages = {}
     try {
-      emitter.emit(EngineEvent.CONNECTION_CLOSE, uri, err)
+      emitter.emit(SocketEvent.CONNECTION_CLOSE, uri, err)
     } catch (e) {
       log.error(e.message)
     }
@@ -131,7 +131,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     connected = true
     lastKeepAlive = Date.now()
     try {
-      emitter.emit(EngineEvent.CONNECTION_OPEN, uri)
+      emitter.emit(SocketEvent.CONNECTION_OPEN, uri)
     } catch (e) {
       handleError(e)
     }
@@ -220,7 +220,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       config
         .healthCheck()
         .then(() => {
-          emitter.emit(EngineEvent.CONNECTION_TIMER, uri, now)
+          emitter.emit(SocketEvent.CONNECTION_TIMER, uri, now)
         })
         .catch((e: Error) => handleError(e))
     }
