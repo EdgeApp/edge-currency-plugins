@@ -93,7 +93,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const disconnect = (): void => {
-    log('disconnecting from socket', uri)
+    log.warn('disconnecting from socket', uri)
     clearTimeout(timer)
     connected = false
     if (socket != null) socket.disconnect()
@@ -102,7 +102,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const onSocketClose = (): void => {
     const err = error ?? new Error('Socket close')
-    log(`onSocketClose due to ${err.message} with server ${uri}`)
+    log.warn(`onSocketClose due to ${err.message} with server ${uri}`)
     clearTimeout(timer)
     connected = false
     socket = null
@@ -242,7 +242,6 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const setupTimer = (): void => {
     log(`setupTimer with server ${uri}`)
     let nextWakeUp = lastWakeUp + WAKE_UP_MS
-
     for (const message of Object.values(pendingMessages)) {
       const to = message.startTime + timeout
       if (to < nextWakeUp) nextWakeUp = to
