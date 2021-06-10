@@ -11,6 +11,7 @@ import {
   makeBlockBook
 } from '../network/BlockBook'
 import Deferred from '../network/Deferred'
+import { SocketEmitter, SocketEvent } from '../network/MakeSocketEmitter'
 import { WsTask } from '../network/Socket'
 import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
 import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
@@ -25,7 +26,7 @@ interface ServerStateConfig {
   engineStarted: boolean
   walletInfo: EdgeWalletInfo
   pluginState: PluginState
-  emitter: EngineEmitter
+  engineEmitter: EngineEmitter
   log: EdgeLog
 }
 
@@ -59,7 +60,7 @@ interface Connections {
 }
 
 export function makeServerStates(config: ServerStateConfig): ServerStates {
-  const { engineStarted, walletInfo, pluginState, emitter, log } = config
+  const { engineStarted, walletInfo, pluginState, engineEmitter, log } = config
   log('Making server states')
 
   let serverStates: ServerStateCache = {}
@@ -70,29 +71,37 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   let reconnectTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
     return
   }, 0)
+  const socketEmitter = new SocketEmitter()
 
   // set server specific event emitters
-  emitter.on(EngineEvent.CONNECTION_OPEN, (uri: string) => {
+  socketEmitter.on(SocketEvent.CONNECTION_OPEN, (uri: string) => {
     reconnectCounter = 0
     log(`${uri} ** Connected **`)
   })
-  emitter.on(EngineEvent.CONNECTION_CLOSE, (uri: string, error?: Error) => {
-    connections = removeItem(connections, uri)
-    serverStates = removeItem(serverStates, uri)
+  socketEmitter.on(
+    SocketEvent.CONNECTION_CLOSE,
+    (uri: string, error?: Error) => {
+      connections = removeItem(connections, uri)
+      serverStates = removeItem(serverStates, uri)
 
-    const msg = error != null ? ` !! Connection ERROR !! ${error.message}` : ''
-    log(`${uri} onClose ${msg}`)
-    if (error != null) {
-      pluginState.serverScoreDown(uri)
+      const msg =
+        error != null ? ` !! Connection ERROR !! ${error.message}` : ''
+      log(`${uri} onClose ${msg}`)
+      if (error != null) {
+        pluginState.serverScoreDown(uri)
+      }
+      reconnect()
     }
-    reconnect()
-  })
-  emitter.on(EngineEvent.CONNECTION_TIMER, (uri: string, queryDate: number) => {
-    const queryTime = Date.now() - queryDate
-    log(`${uri} returned healthCheck in ${queryTime}ms`)
-    pluginState.serverScoreUp(uri, queryTime)
-  })
-  emitter.on(
+  )
+  socketEmitter.on(
+    SocketEvent.CONNECTION_TIMER,
+    (uri: string, queryDate: number) => {
+      const queryTime = Date.now() - queryDate
+      log(`${uri} returned healthCheck in ${queryTime}ms`)
+      pluginState.serverScoreUp(uri, queryTime)
+    }
+  )
+  engineEmitter.on(
     EngineEvent.BLOCK_HEIGHT_CHANGED,
     (uri: string, height: number) => {
       log(`${uri} returned height: ${height}`)
@@ -108,7 +117,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       }
     }
   )
-  emitter.on(
+  engineEmitter.on(
     EngineEvent.NEW_ADDRESS_TRANSACTION,
     (uri: string, newTx: INewTransactionResponse) => {
       log(
@@ -226,7 +235,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
       connections[uri] = makeBlockBook({
         wsAddress: uri,
-        emitter,
+        socketEmitter,
+        engineEmitter,
         log,
         onQueueSpaceCB,
         walletId: walletInfo.id

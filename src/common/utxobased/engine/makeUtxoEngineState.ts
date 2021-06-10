@@ -129,7 +129,7 @@ export function makeUtxoEngineState(
     engineStarted,
     walletInfo,
     pluginState,
-    emitter,
+    engineEmitter: emitter,
     log
   })
   const commonArgs: CommonArgs = {

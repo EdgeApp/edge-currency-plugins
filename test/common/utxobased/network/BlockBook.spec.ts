@@ -12,6 +12,10 @@ import {
   makeBlockBook
 } from '../../../../src/common/utxobased/network/BlockBook'
 import Deferred from '../../../../src/common/utxobased/network/Deferred'
+import {
+  SocketEmitter,
+  SocketEvent
+} from '../../../../src/common/utxobased/network/MakeSocketEmitter'
 import { WsTask } from '../../../../src/common/utxobased/network/Socket'
 
 chai.should()
@@ -20,7 +24,7 @@ describe('BlockBook notifications tests with dummy server', function () {
   let websocketServer: WS.Server
   let blockBook: BlockBook
   let websocketClient: WebSocket
-  let emitter: EngineEmitter
+  let engineEmitter: EngineEmitter
 
   beforeEach(async () => {
     websocketServer = new WS.Server({ port: 8080 })
@@ -52,7 +56,9 @@ describe('BlockBook notifications tests with dummy server', function () {
     websocketServer.on('error', error => {
       console.log(error)
     })
-    emitter = new EngineEmitter()
+    engineEmitter = new EngineEmitter()
+    const socketEmitter = new SocketEmitter()
+
     const log = (..._args: unknown[]): void => {
       return
     }
@@ -69,8 +75,14 @@ describe('BlockBook notifications tests with dummy server', function () {
       return
     }
 
+    let open = false
+    socketEmitter.on(SocketEvent.CONNECTION_OPEN, (_uri: string) => {
+      open = true
+    })
+
     blockBook = makeBlockBook({
-      emitter,
+      socketEmitter,
+      engineEmitter,
       log,
       walletId: '',
       onQueueSpaceCB,
@@ -78,6 +90,7 @@ describe('BlockBook notifications tests with dummy server', function () {
     })
     await blockBook.connect()
     blockBook.isConnected.should.be.true
+    open.should.be.true
   })
 
   afterEach(async () => {
@@ -90,7 +103,7 @@ describe('BlockBook notifications tests with dummy server', function () {
     let test = false
     test.should.be.false
 
-    emitter.on(
+    engineEmitter.on(
       EngineEvent.BLOCK_HEIGHT_CHANGED,
       (_uri: string, _blockHeight: number) => {
         test = true
@@ -114,7 +127,7 @@ describe('BlockBook notifications tests with dummy server', function () {
 
     test.should.be.false
 
-    emitter.on(
+    engineEmitter.on(
       EngineEvent.NEW_ADDRESS_TRANSACTION,
       (_uri: string, _newTx: INewTransactionResponse) => {
         test = true
@@ -142,7 +155,8 @@ describe('BlockBook', function () {
   this.timeout(10000)
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
-  const emitter = new EngineEmitter()
+  const engineEmitter = new EngineEmitter()
+  const socketEmitter = new SocketEmitter()
   const log = (..._args: unknown[]): void => {
     return
   }
@@ -161,7 +175,13 @@ describe('BlockBook', function () {
   }
 
   beforeEach(async () => {
-    blockBook = makeBlockBook({ emitter, log, walletId: '', onQueueSpaceCB })
+    blockBook = makeBlockBook({
+      socketEmitter,
+      engineEmitter,
+      log,
+      walletId: '',
+      onQueueSpaceCB
+    })
     await blockBook.connect()
   })
 

@@ -34,18 +34,7 @@ export declare interface EngineEmitter {
       newTx: INewTransactionResponse
     ) => boolean) &
     ((event: EngineEvent.ADDRESSES_CHECKED, progressRatio: number) => boolean) &
-    ((event: EngineEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => boolean) &
-    ((event: EngineEvent.CONNECTION_OPEN, uri: string) => void) &
-    ((
-      event: EngineEvent.CONNECTION_CLOSE,
-      uri: string,
-      error?: Error
-    ) => this) &
-    ((
-      event: EngineEvent.CONNECTION_TIMER,
-      uri: string,
-      queryTime: number
-    ) => this)
+    ((event: EngineEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => boolean)
 
   on: ((
     event: EngineEvent.TRANSACTIONS_CHANGED,
@@ -87,18 +76,6 @@ export declare interface EngineEmitter {
     ((
       event: EngineEvent.TXIDS_CHANGED,
       listener: (txids: EdgeTxidMap) => Promise<void> | void
-    ) => this) &
-    ((
-      event: EngineEvent.CONNECTION_OPEN,
-      listener: (uri: string) => void
-    ) => this) &
-    ((
-      event: EngineEvent.CONNECTION_CLOSE,
-      listener: (uri: string, error?: Error) => void
-    ) => this) &
-    ((
-      event: EngineEvent.CONNECTION_TIMER,
-      listener: (uri: string, queryTime: number) => void
     ) => this)
 }
 export class EngineEmitter extends EventEmitter {}
