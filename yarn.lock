@@ -2081,6 +2081,11 @@ cleaners@^0.3.11, cleaners@^0.3.9:
   resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.12.tgz#0e99ef2460a59ed87550a60bdfc441b1696ff9cb"
   integrity sha512-bK7IvvYyhfy30S3VKmWi/YVWp0MUH1pEYfdtbjCpQiIzy8gmP9GCXv6AVZENDHbpcRHqMnZONs3ieyJMh3zvVw==
 
+cleaners@^0.3.9:
+  version "0.3.9"
+  resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.9.tgz#e9d2b7ebbbf62c0ae9f7bf1f1cf0aa5544acb3fa"
+  integrity sha512-DAddE949KDyTFcb6LdVpEd4BBHa55wNfm63tE0AYT2hDZyg0IR6lwOqjPhP/6GwF1z9FWeKqjw20T27/UHjM+Q==
+
 cli-cursor@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/cli-cursor/-/cli-cursor-2.1.0.tgz#b35dac376479facc3e94747d41d0d0f5238ffcb5"
