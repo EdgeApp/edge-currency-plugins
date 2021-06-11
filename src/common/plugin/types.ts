@@ -1,3 +1,4 @@
+import { asNumber, asObject, asString } from 'cleaners'
 import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
@@ -83,3 +84,8 @@ export interface LocalWalletMetadata {
   balance: string
   lastSeenBlockHeight: number
 }
+
+export const asLocalWalletMetadataCleaner = asObject({
+  balance: asString,
+  lastSeenBlockHeight: asNumber
+})
