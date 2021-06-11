@@ -4,7 +4,7 @@ import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
-import { ServerCache, ServerInfo } from './serverCache'
+import { asServerInfoCleaner, ServerCache, ServerInfo } from './serverCache'
 
 const InfoServer = 'https://info1.edge.app/v1'
 const FixCurrencyCode = (currencyCode: string): string => {
@@ -110,9 +110,7 @@ export class PluginState extends ServerCache {
     try {
       const serverCacheText = await this.disklet.getText('serverCache.json')
       const serverCacheJson = JSON.parse(serverCacheText)
-      // TODO: Validate JSON
-
-      this.serverCacheJson = serverCacheJson
+      this.serverCacheJson = asServerInfoCleaner(serverCacheJson)
     } catch (e) {
       this.log(
         `${this.pluginId}: Failed to load server cache: ${JSON.stringify(e)}`
