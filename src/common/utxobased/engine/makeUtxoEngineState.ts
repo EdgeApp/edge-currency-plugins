@@ -23,13 +23,15 @@ import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import {
   IAccountDetailsBasic,
   IAccountUTXO,
-  INewTransactionResponse,
-  ITransaction,
   ITransactionDetailsPaginationResponse
 } from '../network/BlockBook'
 import {
   addressMessage,
   addressUtxosMessage,
+  asAddressUtxos,
+  asITransaction,
+  INewTransactionResponse,
+  ITransaction,
   transactionMessage
 } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
@@ -755,6 +757,7 @@ const updateTransactions = (
     })
   return {
     ...transactionMessage(txId),
+    cleaner: asITransaction,
     deferred: deferredITransaction
   }
 }
@@ -1041,6 +1044,7 @@ const processAddressUtxos = async (
     })
   return {
     ...addressUtxosMessage(address),
+    cleaner: asAddressUtxos,
     deferred: deferredIAccountUTXOs
   }
 }
