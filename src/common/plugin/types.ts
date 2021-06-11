@@ -61,10 +61,26 @@ export interface FeeRates {
   highFee: string
 }
 
+export const asFeeRatesCleaner = asObject({
+  lowFee: asString,
+  standardFeeLow: asString,
+  standardFeeHigh: asString,
+  highFee: asString
+})
+
 export interface SimpleFeeSettings extends FeeRates {
   standardFeeLowAmount: string
   standardFeeHighAmount: string
 }
+
+export const asSimpleFeeSettingsCleaner = asObject({
+  standardFeeLowAmount: asString,
+  standardFeeHighAmount: asString,
+  lowFee: asString,
+  standardFeeLow: asString,
+  standardFeeHigh: asString,
+  highFee: asString
+})
 
 export interface EngineConfig {
   network: NetworkEnum

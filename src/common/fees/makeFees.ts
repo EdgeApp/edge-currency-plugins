@@ -4,7 +4,12 @@ import { EdgeIo, EdgeLog, EdgeSpendInfo, EdgeSpendTarget } from 'edge-core-js'
 import { makeMemlet, Memlet } from 'memlet'
 
 import { FEES_PATH, INFO_SERVER_URI } from '../constants'
-import { EngineCurrencyInfo, SimpleFeeSettings } from '../plugin/types'
+import {
+  asFeeRatesCleaner,
+  asSimpleFeeSettingsCleaner,
+  EngineCurrencyInfo,
+  SimpleFeeSettings
+} from '../plugin/types'
 import { calcMinerFeePerByte } from './calcMinerFeePerByte'
 import { processEarnComFees } from './processEarnComFees'
 import { processInfoServerFees } from './processInfoServerFees'
@@ -31,7 +36,9 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
   const { disklet, currencyInfo, ...common } = config
 
   const memlet = makeMemlet(disklet)
-  const fees: SimpleFeeSettings = await fetchCachedFees(memlet, currencyInfo)
+  const fees: SimpleFeeSettings = asSimpleFeeSettingsCleaner(
+    await fetchCachedFees(memlet, currencyInfo)
+  )
   // The last time the fees were updated
   let timestamp = 0
   let vendorIntervalId: NodeJS.Timeout
@@ -155,7 +162,7 @@ const fetchFeesFromVendor = async (
       processor: processEarnComFees
     })
     if (earnComFees != null) {
-      return earnComFees
+      return asFeeRatesCleaner(earnComFees)
     }
   }
 
@@ -166,7 +173,7 @@ const fetchFeesFromVendor = async (
       processor: processMempoolSpaceFees
     })
     if (mempoolFees != null) {
-      return mempoolFees
+      return asFeeRatesCleaner(mempoolFees)
     }
   }
 
