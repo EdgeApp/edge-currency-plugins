@@ -30,6 +30,8 @@ import {
 import {
   addressMessage,
   addressUtxosMessage,
+  asAddressUtxosCleaner,
+  asITransactionCleaner,
   transactionMessage
 } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
@@ -743,6 +745,7 @@ const updateTransactions = (
     })
   return {
     ...transactionMessage(txId),
+    cleaner: asITransactionCleaner,
     deferred: deferredITransaction
   }
 }
@@ -1030,6 +1033,7 @@ const processAddressUtxos = async (
     })
   return {
     ...addressUtxosMessage(address),
+    cleaner: asAddressUtxosCleaner,
     deferred: deferredIAccountUTXOs
   }
 }
