@@ -1,5 +1,6 @@
 import { clearMemletCache } from 'baselet'
 import * as bs from 'biggystring'
+import { asArray, asBoolean, asOptional, asString } from 'cleaners'
 import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeGetTransactionsOptions } from 'edge-core-js'
 
@@ -24,7 +25,14 @@ import {
   TxsByScriptPubkey,
   UtxoById
 } from './Models/baselet'
-import { IAddress, IProcessorTransaction, IUTXO } from './types'
+import {
+  asIAddressCleaner,
+  asIProcessorTransactionCleaner,
+  asIUTXOCleaner,
+  IAddress,
+  IProcessorTransaction,
+  IUTXO
+} from './types'
 
 const BASELET_DIR = 'tables'
 
@@ -182,20 +190,22 @@ export async function makeProcessor(
     },
 
     async getUsedAddress(scriptPubkey: string): Promise<boolean> {
+      const cleaner = asBoolean
       const [used] = await baselets.all.usedFlagByScriptPubkey.query('', [
         scriptPubkey
       ])
-      return used
+      return cleaner(used)
     },
 
     async fetchScriptPubkeyByPath(
       path: AddressPath
     ): Promise<ScriptPubkeyByPath> {
+      const cleaner = asOptional(asString)
       const [scriptPubkey] = await baselets.all.scriptPubkeyByPath.query(
         addressPathToPrefix(path),
         path.addressIndex
       )
-      return scriptPubkey
+      return cleaner(scriptPubkey)
     },
 
     async fetchTxIdsByBlockHeight(
@@ -266,10 +276,9 @@ export async function makeProcessor(
       // Fetch all script pubkeys for the given branch specified by the path
       const startIndex = 0
       const endIndex = scriptPubkeyByPath.length(partition) - 1
-      const scriptPubkeys = await scriptPubkeyByPath.query(
-        partition,
-        startIndex,
-        endIndex
+      const cleaner = asArray(asString)
+      const scriptPubkeys = cleaner(
+        await scriptPubkeyByPath.query(partition, startIndex, endIndex)
       )
 
       // Return address data for the script pubkeys
@@ -393,7 +402,9 @@ export async function makeProcessor(
         const txs = await Promise.all(
           txData.map(
             async ({ [RANGE_ID_KEY]: txId }) =>
-              await baselets.all.txById.query('', [txId]).then(([tx]) => tx)
+              await baselets.all.txById
+                .query('', [txId])
+                .then(([tx]) => asIProcessorTransactionCleaner(tx))
           )
         )
         // Make sure only existing transactions are returned
@@ -444,7 +455,9 @@ export async function makeProcessor(
     async fetchUtxo(id: string): Promise<IUTXO> {
       // Fetch UTXO data
       const [utxo] = await baselets.all.utxoById.query('', [id])
-      return utxo
+      // cleaners can't do enums, so clean to string instead
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return asIUTXOCleaner(utxo) as any
     },
 
     async fetchUtxosByScriptPubkey(scriptPubkey: string): Promise<IUTXO[]> {
@@ -461,7 +474,9 @@ export async function makeProcessor(
         }
 
         // Fetch all UTXOs from IDs
-        return await utxoById.query('', ids)
+        // cleaner cannot handle enums, so use any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return asIUTXOCleaner(await utxoById.query('', ids)) as any
       })
     },
 
@@ -477,7 +492,8 @@ export async function makeProcessor(
       const ids = result.map(({ [RANGE_ID_KEY]: id }) => id)
 
       // Return all UTXO data
-      return utxoById.query('', ids)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return asIUTXOCleaner(await utxoById.query('', ids)) as any
     },
 
     async saveUtxo(utxo: IUTXO): Promise<void> {
@@ -504,7 +520,8 @@ export async function makeProcessor(
 
     async fetchSpentUtxo(id: string): Promise<IUTXO> {
       const [utxo] = await baselets.all.spentUtxoById.query('', [id])
-      return utxo
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return asIUTXOCleaner(utxo) as any
     }
   }
 
@@ -656,9 +673,10 @@ const saveAddress = async (args: ProcessAndSaveAddressArgs): Promise<void> => {
   const { tables, data } = args
 
   // Make sure that the address does not already exists
-  const [addressData] = await tables.addressByScriptPubkey.query('', [
-    data.scriptPubkey
-  ])
+  const cleaner = asArray(asOptional(asIAddressCleaner))
+  const [addressData] = cleaner(
+    await tables.addressByScriptPubkey.query('', [data.scriptPubkey])
+  )
   if (addressData != null) {
     throw new Error('Address already exists.')
   }
@@ -793,7 +811,12 @@ const fetchAddressesByScriptPubkeys = async (
 
   // Short circuit query to the database
   if (scriptPubkeys.length === 0) return []
-  return await tables.addressByScriptPubkey.query('', scriptPubkeys)
+  const cleaner = asArray(asOptional(asIAddressCleaner))
+  return cleaner(
+    await tables.addressByScriptPubkey.query('', scriptPubkeys)
+    // allow any for cleaned string literal type
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) as any
 }
 
 interface SaveTxByScriptPubkeyArgs {
@@ -896,9 +919,12 @@ const updateAddressByScriptPubkey = async (
   const { tables, scriptPubkey, data } = args
 
   // Make sure there is an address already saved for the given script pubkey
-  const [address]: Array<
-    IAddress | undefined
-  > = await tables.addressByScriptPubkey.query('', [scriptPubkey])
+  const cleaner = asArray(asOptional(asIAddressCleaner))
+  const [address]: Array<IAddress | undefined> = cleaner(
+    await tables.addressByScriptPubkey.query('', [scriptPubkey])
+    // allow any for the cleaner, since we cannot clean literal types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) as any
   if (address == null) {
     throw new Error('Cannot update address that does not exist')
   }
@@ -1005,7 +1031,8 @@ const fetchTx = async (args: FetchTxArgs): Promise<TxById> => {
   const { tables, txid } = args
 
   const [data] = await tables.txById.query('', [txid])
-  return data
+  const cleaner = asOptional(asIProcessorTransactionCleaner)
+  return cleaner(data)
 }
 
 interface SaveTxArgs {
@@ -1225,13 +1252,14 @@ const fetchTxIdsByBlockHeight = async (
 
   // Fetch transaction IDs
   const result = await tables.txIdsByBlockHeight.query('', fromBlock, toBlock)
+  const cleaner = asString
 
   return (
     result
       // RangeBase returns values with lowest value first
       .reverse()
       // Return array of just the IDs
-      .map(({ [RANGE_ID_KEY]: id }) => id)
+      .map(({ [RANGE_ID_KEY]: id }) => cleaner(id))
   )
 }
 
@@ -1312,9 +1340,10 @@ const saveUtxo = async (args: SaveUtxoArgs): Promise<void> => {
   }
 
   // Create index for script pubkey
-  const [utxoIds] = await tables.utxoIdsByScriptPubkey.query('', [
-    utxo.scriptPubkey
-  ])
+  const cleaner = asArray(asOptional(asString))
+  const [utxoIds] = cleaner(
+    await tables.utxoIdsByScriptPubkey.query('', [utxo.scriptPubkey])
+  )
   const set = new Set(utxoIds)
   set.add(utxo.id)
   await tables.utxoIdsByScriptPubkey.insert(
@@ -1338,7 +1367,10 @@ const deleteUtxo = async (args: DeleteUtxoArgs): Promise<IUTXO> => {
   const { tables, id } = args
 
   // Fetch the UTXO data
-  const [utxo] = await tables.utxoById.query('', [id])
+  const cleaner = asArray(asOptional(asIUTXOCleaner))
+  // cleaner cannot handle UTXO enum
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [utxo] = cleaner(await tables.utxoById.query('', [id])) as any
   const { scriptPubkey, value } = utxo
 
   // Delete UTXO data
