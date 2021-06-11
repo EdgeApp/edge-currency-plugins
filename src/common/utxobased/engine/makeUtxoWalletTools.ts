@@ -32,7 +32,7 @@ export interface WalletToolsConfig {
 
 export interface BitcoinWalletToolsConfig extends WalletToolsConfig {
   keys: UtxoKeyFormat & { bitcoinKey: string }
-  coin: 'bitcoin'
+  coin: string // for example bitcoin
 }
 
 export interface UTXOPluginWalletTools {

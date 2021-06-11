@@ -61,7 +61,7 @@ export function makeCurrencyTools(
           publicKey = utxoUtils.deriveXpubsFromKeys({
             keys: walletInfo.keys,
             coin: currencyInfo.network,
-            network: NetworkEnum.Mainnet
+            network: currencyInfo.networkType ?? NetworkEnum.Mainnet
           })
       }
       walletInfo.keys[key] = publicKey
@@ -95,7 +95,7 @@ export function makeCurrencyTools(
           const parsedPath = utxoUtils.parsePathname({
             pathname: uriObj.pathname,
             coin: currencyInfo.network,
-            network: NetworkEnum.Mainnet
+            network: currencyInfo.networkType ?? NetworkEnum.Mainnet
           })
           if (parsedPath == null) throw new Error('InvalidUriError')
 
