@@ -1,7 +1,7 @@
 import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js/types'
 import { EventEmitter } from 'events'
 
-import { INewTransactionResponse } from '../utxobased/network/BlockBook'
+import { INewTransactionResponse } from '../utxobased/network/BlockBookAPI'
 
 export declare interface EngineEmitter {
   emit: ((
