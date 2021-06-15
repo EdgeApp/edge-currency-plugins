@@ -5,7 +5,6 @@ import { makeMemlet, Memlet } from 'memlet'
 
 import { FEES_PATH, INFO_SERVER_URI } from '../constants'
 import {
-  asFeeRatesCleaner,
   asSimpleFeeSettingsCleaner,
   EngineCurrencyInfo,
   SimpleFeeSettings
@@ -28,17 +27,16 @@ interface Common {
 export interface Fees {
   start: () => Promise<void>
   stop: () => void
-  getRate: (edgeSpendInfo: EdgeSpendInfo) => Promise<string>
-  fees: SimpleFeeSettings
+  getRate: (edgeSpendInfo: EdgeSpendInfo) => Promise<undefined | string>
+  fees: SimpleFeeSettings | undefined
 }
 
 export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
   const { disklet, currencyInfo, ...common } = config
 
   const memlet = makeMemlet(disklet)
-  const fees: SimpleFeeSettings = asSimpleFeeSettingsCleaner(
-    await fetchCachedFees(memlet, currencyInfo)
-  )
+  const fees = await fetchCachedFees(memlet, currencyInfo)
+
   // The last time the fees were updated
   let timestamp = 0
   let vendorIntervalId: NodeJS.Timeout
@@ -54,6 +52,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
     Object.assign(fees, vendorFees ?? {})
     timestamp = Date.now()
 
+    if (fees == null) return
     await cacheFees(memlet, fees)
   }
 
@@ -77,7 +76,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       clearInterval(vendorIntervalId)
     },
 
-    async getRate(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
+    async getRate(edgeSpendInfo: EdgeSpendInfo): Promise<undefined | string> {
       const {
         spendTargets,
         networkFeeOption,
@@ -92,6 +91,8 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
         return bs.toFixed(rate, 0, 0)
       }
 
+      if (fees == null) return
+
       const rate = calcMinerFeePerByte(
         sumSpendTargets(spendTargets),
         fees,
@@ -101,7 +102,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       return rate
     },
 
-    get fees() {
+    get fees(): SimpleFeeSettings | undefined {
       return fees
     }
   }
@@ -110,11 +111,17 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
 const fetchCachedFees = async (
   memlet: Memlet,
   currencyInfo: EngineCurrencyInfo
-): Promise<SimpleFeeSettings> =>
-  await memlet
+): Promise<undefined | SimpleFeeSettings> => {
+  const data = await memlet
     .getJson(FEES_PATH)
     // Return the simple fees settings from currency info by default
     .catch(() => currencyInfo.simpleFeeSettings)
+  try {
+    return asSimpleFeeSettingsCleaner(data)
+  } catch (_) {
+    return
+  }
+}
 
 const cacheFees = async (
   memlet: Memlet,
@@ -162,7 +169,7 @@ const fetchFeesFromVendor = async (
       processor: processEarnComFees
     })
     if (earnComFees != null) {
-      return asFeeRatesCleaner(earnComFees)
+      return earnComFees
     }
   }
 
@@ -173,7 +180,7 @@ const fetchFeesFromVendor = async (
       processor: processMempoolSpaceFees
     })
     if (mempoolFees != null) {
-      return asFeeRatesCleaner(mempoolFees)
+      return mempoolFees
     }
   }
 
