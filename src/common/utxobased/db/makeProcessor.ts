@@ -190,22 +190,24 @@ export async function makeProcessor(
     },
 
     async getUsedAddress(scriptPubkey: string): Promise<boolean> {
-      const cleaner = asBoolean
-      const [used] = await baselets.all.usedFlagByScriptPubkey.query('', [
-        scriptPubkey
-      ])
-      return cleaner(used)
+      const cleaner = asArray(asBoolean)
+      const [used] = cleaner(
+        await baselets.all.usedFlagByScriptPubkey.query('', [scriptPubkey])
+      )
+      return used
     },
 
     async fetchScriptPubkeyByPath(
       path: AddressPath
     ): Promise<ScriptPubkeyByPath> {
-      const cleaner = asOptional(asString)
-      const [scriptPubkey] = await baselets.all.scriptPubkeyByPath.query(
-        addressPathToPrefix(path),
-        path.addressIndex
+      const cleaner = asArray(asOptional(asString))
+      const [scriptPubkey] = cleaner(
+        await baselets.all.scriptPubkeyByPath.query(
+          addressPathToPrefix(path),
+          path.addressIndex
+        )
       )
-      return cleaner(scriptPubkey)
+      return scriptPubkey
     },
 
     async fetchTxIdsByBlockHeight(
@@ -454,10 +456,11 @@ export async function makeProcessor(
 
     async fetchUtxo(id: string): Promise<IUTXO> {
       // Fetch UTXO data
-      const [utxo] = await baselets.all.utxoById.query('', [id])
+      const cleaner = asArray(asIUTXOCleaner)
+      const [utxo] = cleaner(await baselets.all.utxoById.query('', [id]))
       // cleaners can't do enums, so clean to string instead
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return asIUTXOCleaner(utxo) as any
+      return utxo as any
     },
 
     async fetchUtxosByScriptPubkey(scriptPubkey: string): Promise<IUTXO[]> {
@@ -519,9 +522,10 @@ export async function makeProcessor(
     },
 
     async fetchSpentUtxo(id: string): Promise<IUTXO> {
-      const [utxo] = await baselets.all.spentUtxoById.query('', [id])
+      const cleaner = asArray(asIUTXOCleaner)
+      const [utxo] = cleaner(await baselets.all.spentUtxoById.query('', [id]))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return asIUTXOCleaner(utxo) as any
+      return utxo as any
     }
   }
 
@@ -1030,9 +1034,9 @@ interface FetchTxArgs {
 const fetchTx = async (args: FetchTxArgs): Promise<TxById> => {
   const { tables, txid } = args
 
-  const [data] = await tables.txById.query('', [txid])
-  const cleaner = asOptional(asIProcessorTransactionCleaner)
-  return cleaner(data)
+  const cleaner = asArray(asOptional(asIProcessorTransactionCleaner))
+  const [data] = cleaner(await tables.txById.query('', [txid]))
+  return data
 }
 
 interface SaveTxArgs {
