@@ -76,9 +76,9 @@ export const makeMetadata = async (
 const fetchMetadata = async (memlet: Memlet): Promise<LocalWalletMetadata> => {
   try {
     const dataStr = await memlet.getJson(metadataPath)
-    return JSON.parse(dataStr)
+    return asLocalWalletMetadataCleaner(JSON.parse(dataStr))
   } catch {
-    return asLocalWalletMetadataCleaner(await resetMetadata(memlet))
+    return await resetMetadata(memlet)
   }
 }
 
