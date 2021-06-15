@@ -179,6 +179,7 @@ describe('BlockBook', function () {
       socketEmitter,
       engineEmitter,
       log,
+      wsAddress: 'wss://btc1.trezor.io/websocket',
       walletId: '',
       onQueueSpaceCB
     })

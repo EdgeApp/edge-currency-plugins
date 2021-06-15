@@ -27,7 +27,7 @@ interface JsonObject {
 
 export interface CurrencySettings {
   customFeeSettings: string[]
-  electrumServers: string[]
+  blockBookServers: string[]
   disableFetchingServers?: boolean
 }
 
@@ -90,7 +90,7 @@ export class PluginState extends ServerCache {
   }: PluginStateSettings) {
     super(log)
     this.io = io
-    this.defaultServers = ['wss://btc1.trezor.io/websocket']
+    this.defaultServers = defaultSettings.blockBookServers
     this.disableFetchingServers = !!(
       defaultSettings.disableFetchingServers ?? false
     )
@@ -98,7 +98,7 @@ export class PluginState extends ServerCache {
     const fixedCode = FixCurrencyCode(currencyCode)
     this.infoServerUris = `${JSON.stringify(
       InfoServer
-    )}/electrumServers/${JSON.stringify(fixedCode)}`
+    )}/blockBookServers/${JSON.stringify(fixedCode)}`
     this.engines = []
     this.disklet = navigateDisklet(io.disklet, 'plugins/' + pluginId)
 
@@ -198,12 +198,12 @@ export class PluginState extends ServerCache {
   }
 
   async updateServers(settings: JsonObject): Promise<void> {
-    const { electrumServers, disableFetchingServers } = settings
+    const { blockBookServers, disableFetchingServers } = settings
     if (typeof disableFetchingServers === 'boolean') {
       this.disableFetchingServers = disableFetchingServers
     }
-    if (Array.isArray(electrumServers)) {
-      this.defaultServers = electrumServers
+    if (Array.isArray(blockBookServers)) {
+      this.defaultServers = blockBookServers
     }
     const engines = []
     const disconnects = []
