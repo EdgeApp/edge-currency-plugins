@@ -41,6 +41,7 @@ export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
   coinType: number
   currencyType: EngineCurrencyType
   network: string // The offical network in lower case - Needs to match the Bitcoin Lib Network Type
+  networkType?: NetworkEnum
   uriPrefix?: string
   gapLimit: number
   defaultFee: number

@@ -1,10 +1,12 @@
 import { EdgeCorePluginOptions, EdgeCorePlugins } from 'edge-core-js'
 
 import { makeCurrencyPlugin } from './common/plugin/makeCurrencyPlugin'
-import { info } from './common/utxobased/info/bitcoin'
+import { all } from './common/utxobased/info/all'
 
-const plugin: EdgeCorePlugins = {
-  [info.pluginId]: (options: EdgeCorePluginOptions) =>
+const plugin: EdgeCorePlugins = {}
+
+for (const info of all) {
+  plugin[info.pluginId] = (options: EdgeCorePluginOptions) =>
     makeCurrencyPlugin(options, info)
 }
 

@@ -71,7 +71,7 @@ export function makeCurrencyPlugin(
         engineOptions.callbacks.onTxidsChanged
       )
 
-      const network = NetworkEnum.Mainnet
+      const network = currencyInfo.networkType ?? NetworkEnum.Mainnet
 
       const engineConfig: EngineConfig = {
         network,
