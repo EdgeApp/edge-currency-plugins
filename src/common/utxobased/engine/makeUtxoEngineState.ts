@@ -943,6 +943,7 @@ const processAddressTransactions = async (
 
       // If address is used and previously not marked as used, mark as used.
       const used = txs > 0 || unconfirmedTxs > 0
+
       if (used && !(addressData.used ?? false) && page === 1) {
         await processor.updateAddressByScriptPubkey({
           scriptPubkey,
@@ -967,6 +968,13 @@ const processAddressTransactions = async (
           page: page + 1
         }
       } else {
+        await processor.updateAddressByScriptPubkey({
+          scriptPubkey,
+          data: {
+            networkQueryVal: serverStates.getBlockHeight(uri)
+          }
+        })
+
         // Callback for when an address has been fully processed
         args.onAddressChecked()
 

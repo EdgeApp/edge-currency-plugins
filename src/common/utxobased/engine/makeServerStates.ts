@@ -18,6 +18,7 @@ import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
 
 interface ServerState {
   subscribedBlocks: boolean
+  blockHeight: number
   txids: Set<string>
   addresses: Set<string>
 }
@@ -50,6 +51,7 @@ export interface ServerStates {
     deferredAddressSub: Deferred<unknown>
   ) => void
   watchBlocks: (uri: string, deferredBlockSub: Deferred<unknown>) => void
+  getBlockHeight: (uri: string) => number
 }
 
 interface ServerStateCache {
@@ -110,7 +112,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         serverStates[uri] = {
           subscribedBlocks: true,
           txids: new Set(),
-          addresses: new Set()
+          addresses: new Set(),
+          blockHeight: 0
         }
       } else if (!serverState.subscribedBlocks) {
         serverState.subscribedBlocks = true
@@ -127,6 +130,13 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       if (serverState != null) {
         serverState.txids.add(newTx.tx.txid)
       }
+    }
+  )
+  engineEmitter.on(
+    EngineEvent.BLOCK_HEIGHT_CHANGED,
+    (uri: string, blockHeight: number) => {
+      log(`${uri} block height changed to ${blockHeight}`)
+      serverStates[uri].blockHeight = blockHeight
     }
   )
 
@@ -211,7 +221,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       serverStates[uri] = {
         subscribedBlocks: false,
         txids: new Set(),
-        addresses: new Set()
+        addresses: new Set(),
+        blockHeight: 0
       }
 
       const onQueueSpaceCB = async (): Promise<
@@ -247,7 +258,10 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         .connect()
         .then(async () => {
           const queryTime = Date.now()
-          await blockBook.fetchInfo()
+          serverStates[uri].blockHeight = (
+            await blockBook.fetchInfo()
+          ).bestHeight
+          log('height:', serverStates[uri].blockHeight)
           pluginState.serverScoreUp(uri, Date.now() - queryTime)
         })
         .catch(e => {
@@ -353,6 +367,10 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     blockbook.watchBlocks(deferredBlockSub)
   }
 
+  const getBlockHeight = (uri: string): number => {
+    return serverStates[uri].blockHeight
+  }
+
   refillServers()
 
   return {
@@ -367,6 +385,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     setServerList,
     broadcastTx,
     watchAddresses,
-    watchBlocks
+    watchBlocks,
+    getBlockHeight
   }
 }
