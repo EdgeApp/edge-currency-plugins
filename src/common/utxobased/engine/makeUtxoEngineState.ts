@@ -365,7 +365,7 @@ interface ProcessedUtxoCache {
   [key: string]: {
     processing: boolean
     full: boolean
-    utxos: Set<IUTXO>
+    utxos: IUTXO[]
     path: ShortPath
   }
 }
@@ -406,13 +406,13 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
 
     let lastUsed = await getLastUsed()
     let addressCount = getAddressCount()
-    const addresses = new Set<string>()
+    const addressMap: { [address: string]: true } = {}
 
     if (Object.keys(args.taskCache.addressSubscribeCache).length === 0) {
       for (let addressIndex = 0; addressIndex <= addressCount; addressIndex++) {
-        addresses.add(
+        addressMap[
           walletTools.getAddress({ ...partialPath, addressIndex }).address
-        )
+        ] = true
       }
     }
 
@@ -425,12 +425,16 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
 
       await saveAddress({ scriptPubkey, path, ...args })
-      addresses.add(address)
+
+      if (addressMap[address] == null) addressMap[address] = true
 
       lastUsed = await getLastUsed()
       addressCount = getAddressCount()
     }
-    addToAddressSubscribeCache(args, addresses, { format, branch })
+    addToAddressSubscribeCache(args, Object.keys(addressMap), {
+      format,
+      branch
+    })
   } finally {
     lock.release()
   }
@@ -438,7 +442,7 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
 
 const addToAddressSubscribeCache = (
   args: CommonArgs,
-  addresses: Set<string>,
+  addresses: string[],
   path: ShortPath
 ): void => {
   addresses.forEach(address => {
@@ -517,11 +521,12 @@ export const pickNextTask = async (
   const serverState = serverStates.getServerState(uri)
   if (serverState == null) return
 
-  // Loop processed utxos, these are just database ops, triggers setLookAhead
+  // Loop processed utxos, these are just database ops, triggers setLookAhead if new utxos are added
   if (Object.keys(processedUtxosCache).length > 0) {
     for (const scriptPubkey of Object.keys(processedUtxosCache)) {
       // Only process when all utxos for a specific address have been gathered
       const state = processedUtxosCache[scriptPubkey]
+      if (state == null) return true
       if (!state.processing && state.full) {
         state.processing = true
         await processUtxoTransactions({
@@ -1036,7 +1041,7 @@ const processAddressUtxos = async (
 
 interface ProcessUtxoTransactionArgs extends CommonArgs {
   scriptPubkey: string
-  utxos: Set<IUTXO>
+  utxos: IUTXO[]
   path: ShortPath
 }
 
@@ -1055,7 +1060,7 @@ const processUtxoTransactions = async (
   await processor.removeUtxos(currentUtxoIds)
 
   let newBalance = '0'
-  for (const utxo of Array.from(utxos)) {
+  for (const utxo of utxos) {
     newBalance = bs.add(utxo.value, newBalance)
     await processor.saveUtxo(utxo)
   }
@@ -1205,12 +1210,21 @@ const addToProcessedUtxosCache = (
   utxo: IUTXO
 ): void => {
   const processedUtxos = processedUtxosCache[scriptPubkey] ?? {
-    utxos: new Set(),
-    processing: false,
+    utxos: [],
+    processing: true,
     path,
     full: false
   }
-  processedUtxos.utxos.add(utxo)
+  const found = processedUtxos.utxos.some(
+    processedUtxo => processedUtxo.id === utxo.id
+  )
+
+  if (found) return
+
+  // ensure that no object inconsistencies are introduced if another task is already processing
+  processedUtxos.processing = true
+  processedUtxos.utxos.push(utxo)
+  processedUtxos.full = processedUtxos.utxos.length >= requiredCount
+  processedUtxos.processing = false
   processedUtxosCache[scriptPubkey] = processedUtxos
-  processedUtxos.full = processedUtxos.utxos.size >= requiredCount
 }
