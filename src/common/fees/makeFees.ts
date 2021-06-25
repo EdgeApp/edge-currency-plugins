@@ -1,4 +1,5 @@
 import * as bs from 'biggystring'
+import { asMaybe } from 'cleaners'
 import { Disklet } from 'disklet'
 import { EdgeIo, EdgeLog, EdgeSpendInfo, EdgeSpendTarget } from 'edge-core-js'
 import { makeMemlet, Memlet } from 'memlet'
@@ -112,15 +113,13 @@ const fetchCachedFees = async (
   memlet: Memlet,
   currencyInfo: EngineCurrencyInfo
 ): Promise<undefined | SimpleFeeSettings> => {
-  const data = await memlet
-    .getJson(FEES_PATH)
-    // Return the simple fees settings from currency info by default
-    .catch(() => currencyInfo.simpleFeeSettings)
-  try {
-    return asSimpleFeeSettingsCleaner(data)
-  } catch (_) {
-    return
-  }
+  const cleaner = asMaybe(asSimpleFeeSettingsCleaner)
+  return cleaner(
+    await memlet
+      .getJson(FEES_PATH)
+      // Return the simple fees settings from currency info by default
+      .catch(() => currencyInfo.simpleFeeSettings)
+  )
 }
 
 const cacheFees = async (
