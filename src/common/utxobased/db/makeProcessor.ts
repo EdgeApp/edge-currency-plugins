@@ -1256,14 +1256,13 @@ const fetchTxIdsByBlockHeight = async (
 
   // Fetch transaction IDs
   const result = await tables.txIdsByBlockHeight.query('', fromBlock, toBlock)
-  const cleaner = asString
 
   return (
     result
       // RangeBase returns values with lowest value first
       .reverse()
       // Return array of just the IDs
-      .map(({ [RANGE_ID_KEY]: id }) => cleaner(id))
+      .map(({ [RANGE_ID_KEY]: id }) => asString(id))
   )
 }
 
