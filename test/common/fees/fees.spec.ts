@@ -41,7 +41,8 @@ describe('fees', function () {
       })
 
       // make typescript happy with this typecheck
-      if (fees.fees == null) fail()
+      if (fees.fees == null)
+        fail('internal fee object should not be null after makeFees')
 
       fees.fees.should.eql(fakeCurrencyInfo.simpleFeeSettings)
 
