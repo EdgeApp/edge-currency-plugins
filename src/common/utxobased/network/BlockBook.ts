@@ -22,19 +22,15 @@ import {
 import Deferred from './Deferred'
 import { makeSocket, OnQueueSpaceCB } from './Socket'
 
-export interface ITransactionBroadcastResponse {
-  result: string // txid
-}
+export type ITransactionBroadcastResponse = ReturnType<
+  typeof asITransactionBroadcastResponseCleaner
+>
 
-export interface INewTransactionResponse {
-  address: string
-  tx: ITransaction
-}
+export type INewTransactionResponse = ReturnType<
+  typeof asINewTransactionResponseCleaner
+>
 
-export interface INewBlockResponse {
-  height: number
-  hash: string
-}
+export type INewBlockResponse = ReturnType<typeof asINewBlockResponseCleaner>
 
 export interface IAccountDetailsBasic {
   address: string
@@ -72,29 +68,7 @@ interface IAccountOpts {
   perPage?: number
 }
 
-export interface ITransaction {
-  txid: string
-  hex: string
-  blockHeight: number
-  confirmations: number
-  blockTime: number
-  fees: string
-  vin: Array<{
-    txid: string
-    sequence: number
-    n: number
-    addresses: string[]
-    isAddress: boolean
-    value: string
-    hex?: string
-  }>
-  vout: Array<{
-    n: number
-    value: string
-    addresses: string[]
-    hex?: string
-  }>
-}
+export type ITransaction = ReturnType<typeof asITransactionCleaner>
 
 interface IUTXO {
   txid: string
@@ -110,22 +84,7 @@ export interface IAccountUTXO extends IUTXO {
   path?: string
 }
 
-export interface IServerInfoVersion {
-  version: string
-  subversion: string
-}
-
-export interface IServerInfo {
-  name: string
-  shortcut: string
-  decimals: number
-  version: string
-  bestHeight: number
-  bestHash: string
-  block0Hash: string
-  testnet: boolean
-  backend?: IServerInfoVersion
-}
+export type IServerInfo = ReturnType<typeof asIServerInfoCleaner>
 
 export type WatchAddressesCB = (
   response: INewTransactionResponse
