@@ -103,10 +103,9 @@ export interface EngineOptions extends EdgeCurrencyEngineOptions {
   emitter: EngineEmitter
 }
 
-export interface LocalWalletMetadata {
-  balance: string
-  lastSeenBlockHeight: number
-}
+export type LocalWalletMetadata = ReturnType<
+  typeof asLocalWalletMetadataCleaner
+>
 
 export const asLocalWalletMetadataCleaner = asObject({
   balance: asString,
