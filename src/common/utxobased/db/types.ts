@@ -53,7 +53,7 @@ export const asIUTXOCleaner = asObject({
   value: asString,
   scriptPubkey: asString,
   script: asString,
-  redeeemScript: asOptional(asString),
+  redeemScript: asOptional(asString),
   scriptType: asScriptTypeEnum,
   blockHeight: asNumber
 })
