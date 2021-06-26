@@ -11,45 +11,39 @@ import {
   asString
 } from 'cleaners'
 
-import { AddressPath } from '../../plugin/types'
+import { asAddressPath } from '../../plugin/types'
 import { ScriptTypeEnum } from '../keymanager/keymanager'
 
-export interface IAddress {
-  scriptPubkey: string
-  networkQueryVal: number
-  path?: AddressPath
-  lastQuery: number
-  lastTouched: number
-  used: boolean
-  balance: string
-}
+export type IAddress = ReturnType<typeof asIAddressCleaner>
 
 export const asIAddressCleaner = asObject({
   scriptPubkey: asString,
   networkQueryVal: asNumber,
-  path: asOptional(
-    asObject({
-      format: asString,
-      changeIndex: asNumber,
-      addressIndex: asNumber
-    })
-  ),
+  path: asOptional(asAddressPath),
   lastQuery: asNumber,
   lastTouched: asNumber,
   used: asBoolean,
   balance: asString
 })
 
-export interface IUTXO {
-  id: string
-  txid: string
-  vout: number
-  value: string
-  scriptPubkey: string
-  script: string
-  redeemScript?: string
-  scriptType: ScriptTypeEnum
-  blockHeight: number
+export type IUTXO = ReturnType<typeof asIUTXOCleaner>
+
+interface EnumObject {
+  [enumValue: string]: string
+}
+
+function getEnumValues(e: EnumObject): string[] {
+  return Object.keys(e).map(i => e[i])
+}
+
+const asScriptTypeEnum = (value: unknown): ScriptTypeEnum => {
+  const valueString = asString(value)
+  const values = getEnumValues(ScriptTypeEnum)
+  const [scriptType] = values.filter(elem => valueString === elem)
+  if (scriptType == null) {
+    throw new TypeError('Expected a script type enum')
+  }
+  return ScriptTypeEnum[scriptType as keyof typeof ScriptTypeEnum]
 }
 
 export const asIUTXOCleaner = asObject({
@@ -58,33 +52,15 @@ export const asIUTXOCleaner = asObject({
   vout: asNumber,
   value: asString,
   scriptPubkey: asString,
+  script: asString,
   redeeemScript: asOptional(asString),
-  scriptType: asString,
+  scriptType: asScriptTypeEnum,
   blockHeight: asNumber
 })
 
-export interface IProcessorTransaction {
-  txid: string
-  hex: string
-  blockHeight: number
-  date: number
-  fees: string
-  inputs: ITransactionInput[]
-  outputs: ITransactionOutput[]
-  ourIns: string[]
-  ourOuts: string[]
-  ourAmount: string
-}
-
-export interface ITransactionOutput {
-  amount: string
-  scriptPubkey: string
-}
-
-export interface ITransactionInput extends ITransactionOutput {
-  txId: string
-  outputIndex: number
-}
+export type IProcessorTransaction = ReturnType<
+  typeof asIProcessorTransactionCleaner
+>
 
 export const asIProcessorTransactionCleaner = asObject({
   txid: asString,

@@ -458,9 +458,7 @@ export async function makeProcessor(
       // Fetch UTXO data
       const cleaner = asArray(asIUTXOCleaner)
       const [utxo] = cleaner(await baselets.all.utxoById.query('', [id]))
-      // cleaners can't do enums, so clean to string instead
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return utxo as any
+      return utxo
     },
 
     async fetchUtxosByScriptPubkey(scriptPubkey: string): Promise<IUTXO[]> {
@@ -477,9 +475,8 @@ export async function makeProcessor(
         }
 
         // Fetch all UTXOs from IDs
-        // cleaner cannot handle enums, so use any
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return asIUTXOCleaner(await utxoById.query('', ids)) as any
+        const cleaner = asArray(asIUTXOCleaner)
+        return cleaner(await utxoById.query('', ids))
       })
     },
 
@@ -495,8 +492,8 @@ export async function makeProcessor(
       const ids = result.map(({ [RANGE_ID_KEY]: id }) => id)
 
       // Return all UTXO data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return asIUTXOCleaner(await utxoById.query('', ids)) as any
+      const cleaner = asArray(asIUTXOCleaner)
+      return cleaner(await utxoById.query('', ids))
     },
 
     async saveUtxo(utxo: IUTXO): Promise<void> {
@@ -524,8 +521,7 @@ export async function makeProcessor(
     async fetchSpentUtxo(id: string): Promise<IUTXO> {
       const cleaner = asArray(asIUTXOCleaner)
       const [utxo] = cleaner(await baselets.all.spentUtxoById.query('', [id]))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return utxo as any
+      return utxo
     }
   }
 
@@ -816,11 +812,7 @@ const fetchAddressesByScriptPubkeys = async (
   // Short circuit query to the database
   if (scriptPubkeys.length === 0) return []
   const cleaner = asArray(asOptional(asIAddressCleaner))
-  return cleaner(
-    await tables.addressByScriptPubkey.query('', scriptPubkeys)
-    // allow any for cleaned string literal type
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ) as any
+  return cleaner(await tables.addressByScriptPubkey.query('', scriptPubkeys))
 }
 
 interface SaveTxByScriptPubkeyArgs {
@@ -926,9 +918,7 @@ const updateAddressByScriptPubkey = async (
   const cleaner = asArray(asOptional(asIAddressCleaner))
   const [address]: Array<IAddress | undefined> = cleaner(
     await tables.addressByScriptPubkey.query('', [scriptPubkey])
-    // allow any for the cleaner, since we cannot clean literal types
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ) as any
+  )
   if (address == null) {
     throw new Error('Cannot update address that does not exist')
   }
@@ -1343,7 +1333,7 @@ const saveUtxo = async (args: SaveUtxoArgs): Promise<void> => {
   }
 
   // Create index for script pubkey
-  const cleaner = asArray(asOptional(asString))
+  const cleaner = asArray(asOptional(asArray(asString)))
   const [utxoIds] = cleaner(
     await tables.utxoIdsByScriptPubkey.query('', [utxo.scriptPubkey])
   )
@@ -1371,9 +1361,8 @@ const deleteUtxo = async (args: DeleteUtxoArgs): Promise<IUTXO> => {
 
   // Fetch the UTXO data
   const cleaner = asArray(asOptional(asIUTXOCleaner))
-  // cleaner cannot handle UTXO enum
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [utxo] = cleaner(await tables.utxoById.query('', [id])) as any
+  const [utxo] = cleaner(await tables.utxoById.query('', [id]))
+  if (utxo == null) throw new Error(`utxo ${id} not found for deletion`)
   const { scriptPubkey, value } = utxo
 
   // Delete UTXO data
