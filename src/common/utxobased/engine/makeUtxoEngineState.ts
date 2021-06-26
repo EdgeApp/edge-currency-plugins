@@ -1236,6 +1236,10 @@ const processRawUtxo = async (
     case BIP43PurposeTypeEnum.WrappedSegwit:
       scriptType = ScriptTypeEnum.p2wpkhp2sh
       script = address.scriptPubkey
+      if (address.path == null)
+        throw new Error(
+          `address ${address.scriptPubkey} does not have a derivation path`
+        )
       redeemScript = walletTools.getScriptPubkey(address.path).redeemScript
 
       break
