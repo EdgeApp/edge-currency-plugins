@@ -123,11 +123,7 @@ export interface Processor {
 
   removeUtxo: (id: string) => Promise<IUTXO>
 
-  saveSpentUtxo: (utxo: IUTXO) => Promise<void>
-
-  removeSpentUtxo: (id: string) => Promise<void>
-
-  fetchSpentUtxo: (id: string) => Promise<UtxoById>
+  updateUtxo: (utxo: IUTXO) => Promise<void>
 
   saveUsedAddress: (scriptPubkey: string) => Promise<void>
 
@@ -494,17 +490,10 @@ export async function makeProcessor(
       )
     },
 
-    async removeSpentUtxo(id: string): Promise<void> {
-      await baselets.all.spentUtxoById.delete('', [id])
-    },
-
-    async saveSpentUtxo(utxo: IUTXO): Promise<void> {
-      await baselets.all.spentUtxoById.insert('', utxo.id, utxo)
-    },
-
-    async fetchSpentUtxo(id: string): Promise<IUTXO> {
-      const [utxo] = await baselets.all.spentUtxoById.query('', [id])
-      return utxo
+    async updateUtxo(utxo: IUTXO): Promise<void> {
+      return await baselets.utxo(
+        async tables => await updateUtxo({ tables, utxo })
+      )
     }
   }
 
@@ -616,18 +605,10 @@ export async function makeProcessor(
     Parameters<typeof processor.removeUtxo>[0],
     Await<ReturnType<typeof processor.removeUtxo>>
   >(processor.removeUtxo)
-  processor.fetchSpentUtxo = await mutexDecorator<
-    Parameters<typeof processor.fetchSpentUtxo>[0],
-    Await<ReturnType<typeof processor.fetchSpentUtxo>>
-  >(processor.fetchSpentUtxo)
-  processor.saveSpentUtxo = await mutexDecorator<
-    Parameters<typeof processor.saveSpentUtxo>[0],
-    Await<ReturnType<typeof processor.saveSpentUtxo>>
-  >(processor.saveSpentUtxo)
-  processor.removeSpentUtxo = await mutexDecorator<
-    Parameters<typeof processor.removeSpentUtxo>[0],
-    Await<ReturnType<typeof processor.removeSpentUtxo>>
-  >(processor.removeSpentUtxo)
+  processor.updateUtxo = await mutexDecorator<
+    Parameters<typeof processor.updateUtxo>[0],
+    Await<ReturnType<typeof processor.updateUtxo>>
+  >(processor.updateUtxo)
   processor.getUsedAddress = await mutexDecorator<
     Parameters<typeof processor.getUsedAddress>[0],
     Await<ReturnType<typeof processor.getUsedAddress>>
@@ -1352,4 +1333,21 @@ const deleteUtxo = async (args: DeleteUtxoArgs): Promise<IUTXO> => {
 
   // Return the deleted UTXO
   return utxo
+}
+
+interface UpdateUtxoArgs {
+  tables: UTXOTables
+  utxo: IUTXO
+}
+
+const updateUtxo = async (args: UpdateUtxoArgs): Promise<void> => {
+  const { tables, utxo } = args
+  const [findUtxo]: Array<IUTXO | undefined> = await tables.utxoById.query('', [
+    utxo.id
+  ])
+  if (findUtxo == null) {
+    throw new Error('Cannot update address that does not exist')
+  }
+
+  await tables.utxoById.insert('', utxo.id, utxo)
 }

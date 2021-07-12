@@ -295,7 +295,10 @@ export function makeUtxoEngineState(
           const utxo = await processor.fetchUtxo(
             `${inputs.txId}_${inputs.outputIndex}`
           )
-          if (utxo != null) await processor.saveSpentUtxo(utxo)
+          if (utxo != null) {
+            utxo.spent = true
+            await processor.updateUtxo(utxo)
+          }
         }
       }
       const txId = await serverStates.broadcastTx(transaction)
@@ -717,7 +720,7 @@ const updateTransactions = (
         return
       }
       for (const input of tx.inputs) {
-        await processor.removeSpentUtxo(`${input.txId}_${input.outputIndex}`)
+        await processor.removeUtxo(`${input.txId}_${input.outputIndex}`)
       }
       await processor.removeTxIdByBlockHeight({ blockHeight: 0, txid: txId })
       await processor.insertTxIdByBlockHeight({
@@ -1186,7 +1189,8 @@ const processRawUtxo = async (
         script,
         redeemScript,
         scriptType,
-        blockHeight: utxo.height ?? -1
+        blockHeight: utxo.height ?? -1,
+        spent: false
       }
     )
 
