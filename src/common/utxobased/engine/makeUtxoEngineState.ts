@@ -1109,20 +1109,16 @@ const processUtxoTransactions = async (
 
   const currentUtxos = await processor.fetchUtxosByScriptPubkey(scriptPubkey)
   let oldBalance = '0'
-  const deletePromises: Array<Promise<IUTXO>> = []
   for (const utxo of currentUtxos) {
     oldBalance = bs.add(utxo.value, oldBalance)
-    deletePromises.push(processor.removeUtxo(utxo.id))
+    await processor.removeUtxo(utxo.id)
   }
-  await Promise.all(deletePromises)
 
   let newBalance = '0'
-  const addPromises: Array<Promise<void>> = []
   for (const utxo of Array.from(utxos)) {
     newBalance = bs.add(utxo.value, newBalance)
-    addPromises.push(processor.saveUtxo(utxo))
+    await processor.saveUtxo(utxo)
   }
-  await Promise.all(addPromises)
 
   const diff = bs.sub(newBalance, oldBalance)
   if (diff !== '0') {
