@@ -297,9 +297,6 @@ export async function makeUtxoEngine(
         const maxId = `${maxInput.txId}_${maxInput.outputIndex}`
         maxUtxo = await processor.fetchUtxo(maxId)
         if (maxUtxo == null) {
-          maxUtxo = await processor.fetchSpentUtxo(maxId)
-        }
-        if (maxUtxo == null) {
           log.error('transaction to be replaced found, but not its input utxos')
           throw new Error(
             'transaction to be replaced found, but not its input utxos'

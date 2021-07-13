@@ -26,6 +26,7 @@ export interface IUTXO {
   redeemScript?: string
   scriptType: ScriptTypeEnum
   blockHeight: number
+  spent: boolean
 }
 
 export interface IProcessorTransaction {
