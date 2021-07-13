@@ -148,8 +148,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     pushUpdate({
       id: walletId + '==' + uri,
       updateFunc: () => {
-        doWakeUp().catch(() => {
-          throw new Error('wake up')
+        doWakeUp().catch(err => {
+          throw new Error(`wake up error from: ${err.message}`)
         })
       }
     })
