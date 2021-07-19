@@ -886,10 +886,16 @@ const internalGetFreshAddress = async (
 ): Promise<GetFreshAddressReturn> => {
   const { format, branch, walletTools, processor } = args
 
+  const numAddresses = processor.getNumAddressesFromPathPartition({
+    format,
+    changeIndex: branch
+  })
+
   const path: AddressPath = {
     format,
     changeIndex: branch,
-    addressIndex: (await findLastUsedIndex(args)) + 1
+    // while syncing, we may hit negative numbers when only subtracting. Use the address at /0 in that case.
+    addressIndex: Math.max(numAddresses - args.currencyInfo.gapLimit, 0)
   }
   const scriptPubkey =
     (await processor.fetchScriptPubkeyByPath(path)) ??
