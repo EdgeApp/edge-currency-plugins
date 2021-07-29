@@ -71,7 +71,7 @@ export const asIProcessorTransactionCleaner = asObject({
   inputs: asArray(
     asObject({
       txId: asString,
-      outputIndex: asNumber,
+      outputIndex: asOptional(asNumber),
       amount: asString,
       scriptPubkey: asString
     })

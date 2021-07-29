@@ -90,6 +90,7 @@ export const asITransactionCleaner = asObject({
     asObject({
       txid: asString,
       sequence: asNumber,
+      vout: asOptional(asNumber),
       n: asNumber,
       addresses: asArray(asString),
       isAddress: asBoolean,
