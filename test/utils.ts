@@ -65,8 +65,8 @@ export const makeFakeIo = (config?: FakeIoConfig): EdgeIo => {
     console: null,
     disklet: config?.disklet ?? makeMemoryDisklet(),
     fetch: makeFakeFetch(),
-    random(_bytes: number): Uint8Array {
-      return new Uint8Array()
+    random(bytes: number): Uint8Array {
+      return new Uint8Array([...Array(bytes).keys()])
     },
     async scrypt(
       _data: Uint8Array,

@@ -7,10 +7,12 @@
     "key": [39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150, 52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238],
     "xpub": "xpub69FqMgncSEcrs989ejBWTBBcDNFDqkwEd7y53pVeXm8368TNfb9jCd2ne3ccpx9vvgBdpv79Edc69i2Q69kXtrdmLcQM8seffnCXzwzvWa6",
     "invalid key name": {
+      "id": "dummy",
       "type": "wallet:bitcoin",
       "keys": { "bitcoinKeyz" :"12345678abcd" }
     },
     "invalid wallet type": {
+      "id": "dummy",
       "type": "shitcoin",
       "keys": { "bitcoinKeyz" :"12345678abcd" }
     },
@@ -130,10 +132,10 @@
       }]
     },
     "getSplittableTypes": {
-      "bip32": ["wallet:bitcoincash", "wallet:bitcoingold"],
-      "bip44": ["wallet:bitcoincash", "wallet:bitcoingold"],
-      "bip49": ["wallet:bitcoingold"],
-      "bip84": ["wallet:bitcoingold"]
+      "bip32": ["wallet:bitcoincash"],
+      "bip44": ["wallet:bitcoincash"],
+      "bip49": [],
+      "bip84": []
     }
   },
   {
@@ -144,6 +146,7 @@
     "key": [39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150, 52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238],
     "xpub": "xpub6CUgpZYSditAHLGHepYbZzskB16AQx69mnD5iUVjd7pdWjP67ZzMNCw8n8Sg2xidi2pVAd35rbeYjxSr5CMUfEGgggFr8Z4bwm1n8YpV8Rn",
     "invalid key name": {
+      "id": "dummy",
       "type": "wallet:litecoin",
       "keys": {
         "litecoinKeyz" :"12345678abcd",
@@ -151,6 +154,7 @@
       }
     },
     "invalid wallet type": {
+      "id": "dummy",
       "type": "shitcoin",
       "keys": { "litecoinKeyz" :"12345678abcd" }
     },
@@ -308,6 +312,7 @@
     "key": [39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150, 52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238],
     "xpub": "xpub6C7zQbq278xkqpJGb4Ewp9KSmJSdiqwYV45NCRDBLmgU9ighAuSsiDAicWm38ZXRUcYLnMEkH88tLF5ssfUMX3MtvrsgCmHYnmv2jHfev6z",
     "invalid key name": {
+      "id": "dummy",
       "type": "wallet:bitcoincash",
       "keys": {
         "bitcoincashKeyz" :"12345678abcd",
@@ -315,6 +320,7 @@
       }
     },
     "invalid wallet type": {
+      "id": "dummy",
       "type": "shitcoin",
       "keys": { "bitcoincashKeyz" :"12345678abcd" }
     },
@@ -459,6 +465,7 @@
     "key": [39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150, 52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238],
     "xpub": "xpub6C7zQbq278xkqpJGb4Ewp9KSmJSdiqwYV45NCRDBLmgU9ighAuSsiDAicWm38ZXRUcYLnMEkH88tLF5ssfUMX3MtvrsgCmHYnmv2jHfev6z",
     "invalid key name": {
+      "id": "dummy",
       "type": "wallet:bitcoinsv",
       "keys": {
         "bitcoincashKeyz" :"12345678abcd",
@@ -466,6 +473,7 @@
       }
     },
     "invalid wallet type": {
+      "id": "dummy",
       "type": "shitcoin",
       "keys": { "bitcoincashKeyz" :"12345678abcd" }
     },
@@ -573,6 +581,7 @@
     "key": [39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150, 52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238],
     "xpub": "xpub6CnGSFBso9rc7NwJxH7TAk27uThysAfy7AtFZpZeMYonpyFrYVXPWzp1gpZGKmtFC4LV2Gmeui3q1d419WRah4NNH7Et1T3o61JgmPH5iwJ",
     "invalid key name": {
+      "id": "dummy",
       "type": "wallet:zcoin",
       "keys": {
         "zcoinKeyz" :"12345678abcd",
@@ -580,6 +589,7 @@
       }
     },
     "invalid wallet type": {
+      "id": "dummy",
       "type": "shitcoin",
       "keys": { "zcoinKeyz" :"12345678abcd" }
     },
@@ -689,6 +699,7 @@
     "key": [39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150, 52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238],
     "xpub": "xpub6ChzKkhP5f8rrRaqY1QSwU8sw4b22F4hxv1AMRgzASGbdi2JQP6fbembwEWqYkeCcwWBNq9Mva77czMtb3SnVXN7tgjWTRAX43cxbeXhnHN",
     "invalid key name": {
+      "id": "dummy",
       "type": "wallet:feathercoin",
       "keys": {
         "feathercoinKeyz" :"12345678abcd",
@@ -696,6 +707,7 @@
       }
     },
     "invalid wallet type": {
+      "id": "dummy",
       "type": "shitcoin",
       "keys": { "feathercoinKeyz" :"12345678abcd" }
     },
