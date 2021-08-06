@@ -10,7 +10,7 @@ export const info: EngineCurrencyInfo = {
   network: 'bitcoin',
   pluginId: 'bitcointestnet',
   walletType: 'wallet:bitcointestnet',
-  currencyCode: 'TESTBTC',
+  currencyCode: 'TBTC',
   displayName: 'Bitcoin Testnet',
   networkType: NetworkEnum.Testnet,
   gapLimit: 25,
@@ -28,8 +28,8 @@ export const info: EngineCurrencyInfo = {
     standardFeeHighAmount: '8670000'
   },
   denominations: [
-    { name: 'TESTBTC', multiplier: '100000000', symbol: '₿' },
-    { name: 'mTESTBTC', multiplier: '100000', symbol: 'm₿' },
+    { name: 'TBTC', multiplier: '100000000', symbol: '₿' },
+    { name: 'mTBTC', multiplier: '100000', symbol: 'm₿' },
     { name: 'bits', multiplier: '100', symbol: 'ƀ' },
     { name: 'sats', multiplier: '1', symbol: 's' }
   ],
@@ -37,7 +37,7 @@ export const info: EngineCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    electrumServers: [
+    blockBookServers: [
       'wss://tbtc1.trezor.io/websocket',
       'wss://tbtc2.trezor.io/websocket'
     ],
