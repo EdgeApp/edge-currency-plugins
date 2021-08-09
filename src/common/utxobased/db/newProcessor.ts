@@ -5,7 +5,7 @@ import { EdgeGetTransactionsOptions } from 'edge-core-js'
 import { AddressPath } from '../../plugin/types'
 import { IAddress, IProcessorTransaction, IUTXO } from './types'
 
-/* UTXO table interfaces */
+/* Transation table interfaces */
 
 interface UpdateTransactionArgs {
   txid: string
@@ -18,6 +18,8 @@ interface FetchTransactionArgs extends EdgeGetTransactionsOptions {
   txId?: string
 }
 
+/* Address table interfaces */
+
 interface UpdateAddressArgs {
   scriptPubkey: string
   data: Partial<IAddress>
@@ -26,6 +28,14 @@ interface UpdateAddressArgs {
 interface FetchAddressArgs {
   path?: Omit<AddressPath, 'addressIndex'> | AddressPath
   scriptPubkey?: string
+}
+
+/* Block height table interfaces */
+
+interface BlockHeightArgs {
+  height: number
+  blockHash: string
+  thresholdBlocks: number
 }
 
 export interface Processor {
@@ -95,4 +105,18 @@ export interface Processor {
   // update to set the path or the used flag
   updateAddress: (args: UpdateAddressArgs) => Promise<void>
   fetchAddresses: (args: FetchAddressArgs) => Promise<IAddress[]>
+
+  /* Block processing
+  *******************
+  Uses the following tables:
+  ==========================
+  blockHashByBlockHeight: main table
+  ----------------------------------
+  Used to store block height / block hash pairs. Saved until a certain threshold
+  is reached */
+
+  // insert a new block height / block hash pair. Evicts pairs further back in
+  // history than the threshold blocks
+  insertBlockHash: (args: BlockHeightArgs) => Promise<void>
+  fetchBlockHash: (height: number) => Promise<string[]>
 }
