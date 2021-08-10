@@ -7,6 +7,7 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
+  EdgeEncodeUri,
   JsonObject
 } from 'edge-core-js'
 
@@ -127,14 +128,19 @@ for (const fixture of fixtures) {
   describe(`parseUri for Wallet type ${WALLET_TYPE}`, function () {
     Object.entries(fixture.parseUri).forEach(entry => {
       const [test, content] = entry
+      if (content == null) {
+        assert(false)
+        return
+      }
+
       it(test, async function () {
-        const promise = tools.parseUri(content[0])
+        const promise = tools.parseUri(content[0] as string)
 
         if (test.includes('invalid')) {
           return await promise.should.be.rejected
         } else {
           const parsedUri = await promise
-          const expectedParsedUri = content[1]
+          const expectedParsedUri = content[1] as EdgeEncodeUri
           assert.deepEqual(parsedUri, expectedParsedUri)
         }
       })
@@ -144,14 +150,18 @@ for (const fixture of fixtures) {
   describe(`encodeUri for Wallet type ${WALLET_TYPE}`, function () {
     Object.entries(fixture.encodeUri).forEach(entry => {
       const [test, content] = entry
+      if (content == null) {
+        assert(false)
+        return
+      }
       it(test, async function () {
-        const promise = tools.encodeUri(content[0])
+        const promise = tools.encodeUri(content[0] as EdgeEncodeUri)
 
         if (test.includes('invalid')) {
           return await promise.should.be.rejected
         } else {
-          const encodedUri = await tools.encodeUri(content[0])
-          const expectedEncodeUri = content[1]
+          const encodedUri = await tools.encodeUri(content[0] as EdgeEncodeUri)
+          const expectedEncodeUri = content[1] as string
           assert.equal(encodedUri, expectedEncodeUri)
         }
       })
