@@ -38,7 +38,7 @@ export type LastUsedByFormatPath = number | undefined
 export const lastUsedByFormatPathConfig: BaseletConfig<BaseType.HashBase> = {
   dbName: 'lastUsedByFormatPath',
   type: BaseType.HashBase,
-  bucketSize: 8
+  bucketSize: 3
 }
 
 // deprectated
