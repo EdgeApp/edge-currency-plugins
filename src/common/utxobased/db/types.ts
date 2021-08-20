@@ -45,6 +45,7 @@ export interface IProcessorTransaction {
 export interface ITransactionOutput {
   amount: string
   scriptPubkey: string
+  n: number
 }
 
 export interface ITransactionInput extends ITransactionOutput {
