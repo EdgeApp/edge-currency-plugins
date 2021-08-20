@@ -76,6 +76,7 @@ export interface ITransaction {
   vin: Array<{
     txid: string
     vout: number
+    n: number
     value: string
     addresses: string[]
     hex?: string
