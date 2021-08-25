@@ -1,10 +1,14 @@
 // We have AddressTables, TransactionTables and UTXOTables
 
-import { Disklet } from 'disklet'
+import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeGetTransactionsOptions } from 'edge-core-js'
+import { clearMemletCache } from 'memlet'
 
 import { AddressPath } from '../../plugin/types'
+import { makeBaselets } from './makeBaselets'
 import { IAddress, IProcessorTransaction, IUTXO } from './types'
+
+const BASELET_DIR = 'tables'
 
 interface ProcessorConfig {
   disklet: Disklet
@@ -117,11 +121,18 @@ export interface NewProcessor {
 }
 
 export async function makeNewProcessor(
-  _config: ProcessorConfig
+  config: ProcessorConfig
 ): Promise<NewProcessor> {
+  const disklet = navigateDisklet(config.disklet, BASELET_DIR)
+  let baselets = await makeBaselets({ disklet })
+
   const processor: NewProcessor = {
     async clearAll(): Promise<void> {
-      //
+      await clearMemletCache()
+      // why is this delay needed?
+      await new Promise(resolve => setTimeout(resolve, 0))
+      await disklet.delete('.')
+      baselets = await makeBaselets({ disklet })
     },
 
     async saveUtxo(_utxo: IUTXO): Promise<void> {
@@ -172,12 +183,26 @@ export async function makeNewProcessor(
       return []
     },
 
-    async saveBlockHash(_args: BlockHeightArgs): Promise<void> {
-      return
+    async saveBlockHash(args: BlockHeightArgs): Promise<void> {
+      const { height, blockHash, thresholdBlocks } = args
+      return await baselets.block(async tables => {
+        if (height - thresholdBlocks > 0)
+          await tables.blockHashByBlockHeight.delete('', [
+            (height - thresholdBlocks).toString()
+          ])
+        await tables.blockHashByBlockHeight.insert(
+          '',
+          height.toString(),
+          blockHash
+        )
+      })
     },
 
-    async fetchBlockHash(_height: number): Promise<string[]> {
-      return []
+    async fetchBlockHash(height: number): Promise<string[]> {
+      return await baselets.block(
+        async tables =>
+          await tables.blockHashByBlockHeight.query('', [height.toString()])
+      )
     }
   }
   return processor
