@@ -80,7 +80,7 @@ export interface NewProcessor {
   and discover used addresses
   txIdsByBlockHeight: index from block height to txid, used to change
   confirmation height for unconfirmed transactions
-  txsByDate: index from date to txid, used for EdgeGetTransactionsOptions
+  txIdsByDate: index from date to txid, used for EdgeGetTransactionsOptions
   querying
   ------------------------------- 
   Used to store transactions. Needs to be updated for confirmation
@@ -101,7 +101,7 @@ export interface NewProcessor {
   ===============================
   addressByScriptPubkey: main table
   scriptPubkeyByPath: index from path to script pubkey
-  lastUsedByFormatPath: index from path to last used derivation index
+  lastUsedByFormatPath: index from path to last used address derivation index
   ------------------------------- 
   Used to store script pubkeys / addresses. Needs to be updated for 'used' flag
   and path */
@@ -109,7 +109,7 @@ export interface NewProcessor {
   insertAddress: (args: IAddress) => Promise<void>
   // used to calculate total number of addresses
   numAddressesByFormatPath: (path: Omit<AddressPath, 'addressIndex'>) => number
-  // get the last used address for a specific format
+  // get the last used address index for a specific format
   lastUsedScriptPubkeyByFormatPath: (
     path: Omit<AddressPath, 'addressIndex'>
   ) => Promise<string>
