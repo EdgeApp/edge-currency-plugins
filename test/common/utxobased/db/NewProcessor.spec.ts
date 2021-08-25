@@ -7,7 +7,8 @@ import {
   makeNewProcessor,
   NewProcessor
 } from '../../../../src/common/utxobased/db/newProcessor'
-import { IAddress } from '../../../../src/common/utxobased/db/types'
+import { IAddress, IUTXO } from '../../../../src/common/utxobased/db/types'
+import { ScriptTypeEnum } from '../../../../src/common/utxobased/keymanager/keymanager'
 
 chai.should()
 
@@ -212,5 +213,212 @@ describe('Processor address tests', () => {
     expect(processorAddress4.lastQuery).to.eqls(1)
     expect(processorAddress4.lastTouched).to.eqls(1)
     expect(processorAddress4.balance).to.eqls('0')
+  })
+})
+
+chai.should()
+
+describe('Processor utxo tests', () => {
+  it('insert utxo to baselets', async () => {
+    const { processor } = await makeFixtures()
+
+    // Insert a utxo
+    const utxo1: IUTXO = {
+      id: 'utxo000001',
+      txid: 'transaction1',
+      vout: 0,
+      value: '',
+      scriptPubkey: 'scriptPubkey1',
+      script: '',
+      scriptType: ScriptTypeEnum.p2pk,
+      blockHeight: 0,
+      spent: false
+    }
+    await processor.saveUtxo(utxo1)
+    // Fetch all
+    await processor.fetchUtxos([]).then(utxos => {
+      expect(utxos).to.eqls([utxo1])
+    })
+    // Fetch one
+    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+      expect(utxos).to.eqls([utxo1])
+    })
+
+    // Insert a second utxo
+    const utxo2: IUTXO = {
+      id: 'utxo000002',
+      txid: 'transaction2',
+      vout: 0,
+      value: '',
+      scriptPubkey: 'scriptPubkey2',
+      script: '',
+      scriptType: ScriptTypeEnum.p2pk,
+      blockHeight: 0,
+      spent: false
+    }
+    await processor.saveUtxo(utxo2)
+    // Fetch all
+    await processor.fetchUtxos([]).then(utxos => {
+      expect(utxos).to.eqls([utxo1, utxo2])
+    })
+    // Fetch two
+    await processor.fetchUtxos(['utxo000001', 'utxo000002']).then(utxos => {
+      expect(utxos).to.eqls([utxo1, utxo2])
+    })
+  })
+
+  it('update utxo in baselets', async () => {
+    const { processor } = await makeFixtures()
+
+    // Insert a utxo
+    const utxoOriginal: IUTXO = {
+      id: 'utxo000001',
+      txid: 'transaction1',
+      vout: 0,
+      value: 'aaa111',
+      scriptPubkey: 'scriptPubkey1',
+      script: '',
+      scriptType: ScriptTypeEnum.p2pk,
+      blockHeight: 0,
+      spent: false
+    }
+    await processor.saveUtxo(utxoOriginal)
+    // Fetch all
+    await processor.fetchUtxos([]).then(utxos => {
+      expect(utxos).to.eqls([utxoOriginal])
+    })
+    // Fetch one
+    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+      expect(utxos).to.eqls([utxoOriginal])
+    })
+
+    // Insert a second utxo
+    const utxoUpdated: IUTXO = {
+      id: 'utxo000001',
+      txid: 'transaction1',
+      vout: 0,
+      value: 'bbb222',
+      scriptPubkey: 'scriptPubkey2',
+      script: '',
+      scriptType: ScriptTypeEnum.p2pk,
+      blockHeight: 0,
+      spent: false
+    }
+    await processor.saveUtxo(utxoUpdated)
+    // Fetch all
+    await processor.fetchUtxos([]).then(utxos => {
+      expect(utxos).to.eqls([utxoUpdated])
+    })
+    // Fetch one
+    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+      expect(utxos).to.eqls([utxoUpdated])
+    })
+  })
+
+  it('remove utxo in baselets', async () => {
+    const { processor } = await makeFixtures()
+
+    // Insert a utxo
+    const utxo: IUTXO = {
+      id: 'utxo000001',
+      txid: 'transaction1',
+      vout: 0,
+      value: 'aaa111',
+      scriptPubkey: 'scriptPubkey1',
+      script: '',
+      scriptType: ScriptTypeEnum.p2pk,
+      blockHeight: 0,
+      spent: false
+    }
+    await processor.saveUtxo(utxo)
+    // Fetch all
+    await processor.fetchUtxos([]).then(utxos => {
+      expect(utxos).to.eqls([utxo])
+    })
+    // Fetch all
+    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+      expect(utxos).to.eqls([utxo])
+    })
+
+    // Remove utxo
+    await processor.removeUtxos(['utxo000001'])
+    // Fetch all
+    await processor.fetchUtxos([]).then(utxos => {
+      expect(utxos).to.eqls([])
+    })
+    // Fetch all
+    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+      expect(utxos).to.eqls([undefined])
+    })
+  })
+
+  it('query all utxos in baselets', async () => {
+    const { processor } = await makeFixtures()
+
+    // Insert a utxo
+    const utxos: IUTXO[] = [
+      {
+        id: 'utxo000001',
+        txid: 'transaction1',
+        vout: 0,
+        value: 'aaa111',
+        scriptPubkey: 'scriptPubkey1',
+        script: '',
+        scriptType: ScriptTypeEnum.p2pk,
+        blockHeight: 0,
+        spent: false
+      },
+      {
+        id: 'utxo000002',
+        txid: 'transaction1',
+        vout: 0,
+        value: 'bbb222',
+        scriptPubkey: 'scriptPubkey1',
+        script: '',
+        scriptType: ScriptTypeEnum.p2pk,
+        blockHeight: 0,
+        spent: false
+      },
+      {
+        id: 'utxo000003',
+        txid: 'transaction1',
+        vout: 0,
+        value: 'ccc333',
+        scriptPubkey: 'scriptPubkey1',
+        script: '',
+        scriptType: ScriptTypeEnum.p2pk,
+        blockHeight: 0,
+        spent: false
+      },
+      {
+        id: 'utxo000004',
+        txid: 'transaction1',
+        vout: 0,
+        value: 'ddd444',
+        scriptPubkey: 'scriptPubkey1',
+        script: '',
+        scriptType: ScriptTypeEnum.p2pk,
+        blockHeight: 0,
+        spent: false
+      },
+      {
+        id: 'utxo000005',
+        txid: 'transaction1',
+        vout: 0,
+        value: 'eee555',
+        scriptPubkey: 'scriptPubkey1',
+        script: '',
+        scriptType: ScriptTypeEnum.p2pk,
+        blockHeight: 0,
+        spent: false
+      }
+    ]
+    for (const utxo of utxos) {
+      await processor.saveUtxo(utxo)
+    }
+    // Fetch all
+    await processor.fetchUtxos([]).then(utxos => {
+      expect(utxos).to.eqls(utxos)
+    })
   })
 })
