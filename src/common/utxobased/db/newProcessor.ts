@@ -37,8 +37,14 @@ interface BlockHeightArgs {
   thresholdBlocks: number
 }
 
+interface DumpDataReturn {
+  databaseName: string
+  data: unknown
+}
+
 export interface NewProcessor {
   clearAll: () => Promise<void>
+  dumpData: () => Promise<DumpDataReturn[]>
 
   /* UTXO processing
   **********************
@@ -127,6 +133,16 @@ export async function makeNewProcessor(
       await new Promise(resolve => setTimeout(resolve, 0))
       await disklet.delete('.')
       baselets = await makeBaselets({ disklet })
+    },
+
+    async dumpData(): Promise<DumpDataReturn[]> {
+      const allBases = Object.values(baselets.all)
+      return await Promise.all(
+        allBases.map(async base => ({
+          databaseName: base.databaseName,
+          data: (await base.dumpData('')) as unknown
+        }))
+      )
     },
 
     async saveUtxo(_utxo: IUTXO): Promise<void> {
