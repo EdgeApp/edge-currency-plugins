@@ -45,6 +45,7 @@ export interface IProcessorTransaction {
 export interface ITransactionOutput {
   amount: string
   scriptPubkey: string
+  n: number
 }
 
 export interface ITransactionInput extends ITransactionOutput {
@@ -56,6 +57,10 @@ export interface BaseletConfig<T extends BaseType> {
   dbName: string
   type: T
   bucketSize: number
+  range?: {
+    id: string
+    key: string
+  }
 }
 
 export type Baselet = HashBase | CountBase | RangeBase
