@@ -32,7 +32,7 @@ interface ProcessorConfig {
 
 interface InsertTransactionArgs {
   tx: IProcessorTransaction
-  scriptPubkey: string
+  scriptPubkey?: string
 }
 
 interface UpdateTransactionArgs {
@@ -229,23 +229,25 @@ export async function makeNewProcessor(
         // Use the existing transaction if it does exist.
         const transaction = processorTx ?? tx
 
-        // Mark the used inputs with the provided script pubkey
-        for (const input of transaction.inputs) {
-          if (input.scriptPubkey === scriptPubkey) {
-            if (!transaction.ourIns.includes(input.n.toString())) {
-              transaction.ourIns.push(input.n.toString())
+        if (scriptPubkey != null) {
+          // Mark the used inputs with the provided script pubkey
+          for (const input of transaction.inputs) {
+            if (input.scriptPubkey === scriptPubkey) {
+              if (!transaction.ourIns.includes(input.n.toString())) {
+                transaction.ourIns.push(input.n.toString())
+              }
             }
           }
-        }
-        for (const output of transaction.outputs) {
-          if (output.scriptPubkey === scriptPubkey) {
-            if (!transaction.ourOuts.includes(output.n.toString())) {
-              transaction.ourOuts.push(output.n.toString())
+          for (const output of transaction.outputs) {
+            if (output.scriptPubkey === scriptPubkey) {
+              if (!transaction.ourOuts.includes(output.n.toString())) {
+                transaction.ourOuts.push(output.n.toString())
+              }
             }
           }
-        }
 
-        transaction.ourAmount = calculateTxAmount(transaction)
+          transaction.ourAmount = calculateTxAmount(transaction)
+        }
 
         // Save tx by blockheight
         const txIdsByTransactionBlockHeight = await (
