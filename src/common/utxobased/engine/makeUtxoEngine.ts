@@ -19,14 +19,14 @@ import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
 import { getMnemonic } from '../../plugin/utils'
-import { makeProcessor } from '../db/makeProcessor'
 import {
   fromEdgeTransaction,
   toEdgeTransaction
 } from '../db/Models/ProcessorTransaction'
+import { makeNewProcessor as makeProcessor } from '../db/newProcessor'
 import { IProcessorTransaction, IUTXO } from '../db/types'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
-import { makeUtxoEngineState } from './makeUtxoEngineState'
+import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import { UTXOTxOtherParams } from './types'
@@ -78,8 +78,7 @@ export async function makeUtxoEngine(
     log
   })
   const processor = await makeProcessor({
-    disklet: walletLocalDisklet,
-    emitter
+    disklet: walletLocalDisklet
   })
   const state = makeUtxoEngineState({
     ...config,
@@ -87,20 +86,6 @@ export async function makeUtxoEngine(
     processor,
     pluginState
   })
-
-  emitter.on(
-    EngineEvent.PROCESSOR_TRANSACTION_CHANGED,
-    async (tx: IProcessorTransaction) => {
-      emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
-        await toEdgeTransaction({
-          tx,
-          currencyCode: currencyInfo.currencyCode,
-          walletTools,
-          processor
-        })
-      ])
-    }
-  )
 
   const fns: EdgeCurrencyEngine = {
     async startEngine(): Promise<void> {
@@ -210,7 +195,7 @@ export async function makeUtxoEngine(
     },
 
     getNumTransactions(_opts: EdgeCurrencyCodeOptions): number {
-      return processor.getNumTransactions()
+      return processor.numTransactions()
     },
 
     async getPaymentProtocolInfo(
@@ -229,9 +214,9 @@ export async function makeUtxoEngine(
     },
 
     async getTransactions(
-      opts: EdgeGetTransactionsOptions
+      options: EdgeGetTransactionsOptions
     ): Promise<EdgeTransaction[]> {
-      const txs = await processor.fetchTransactions(opts)
+      const txs = await processor.fetchTransactions({ options })
       return await Promise.all(
         txs.map(
           async (tx: IProcessorTransaction) =>
@@ -247,10 +232,8 @@ export async function makeUtxoEngine(
 
     async isAddressUsed(address: string): Promise<boolean> {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
-      const addressData = await processor.fetchAddressByScriptPubkey(
-        scriptPubkey
-      )
-      return addressData?.used === true
+      const addressData = await processor.fetchAddresses(scriptPubkey)
+      return addressData?.used
     },
 
     async makeSpend(
@@ -267,7 +250,7 @@ export async function makeUtxoEngine(
         const scriptPubkey = walletTools.addressToScriptPubkey(
           target.publicAddress
         )
-        if (await processor.hasSPubKey(scriptPubkey)) {
+        if (processor.fetchAddresses(scriptPubkey) != null) {
           ourReceiveAddresses.push(target.publicAddress)
         }
 
@@ -280,13 +263,14 @@ export async function makeUtxoEngine(
       const freshAddress = await state.getFreshAddress(1)
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
-      const utxos = options?.utxos ?? (await processor.fetchAllUtxos())
+      const utxos =
+        options?.utxos ?? (await processor.fetchUtxos({ utxoIds: [] }))
       const setRBF = options?.setRBF ?? false
       const rbfTxid = edgeSpendInfo.rbfTxid
       let maxUtxo: undefined | IUTXO
       let feeRate = parseInt(await fees.getRate(edgeSpendInfo))
       if (rbfTxid != null) {
-        const rbfTx = await processor.fetchTransaction(rbfTxid)
+        const [rbfTx] = await processor.fetchTransactions({ txId: rbfTxid })
         if (rbfTx == null) throw new Error('transaction not found')
         // double the fee used for the RBF transaction
         feeRate *= 2
@@ -295,7 +279,7 @@ export async function makeUtxoEngine(
           bs.gt(a.amount, b.amount) ? a : b
         )
         const maxId = `${maxInput.txId}_${maxInput.outputIndex}`
-        maxUtxo = await processor.fetchUtxo(maxId)
+        maxUtxo = (await processor.fetchUtxos({ utxoIds: [maxId] }))[0]
         if (maxUtxo == null) {
           log.error('transaction to be replaced found, but not its input utxos')
           throw new Error(
@@ -304,11 +288,13 @@ export async function makeUtxoEngine(
         }
       }
       if (options?.CPFP != null) {
-        const childTx = await processor.fetchTransaction(options?.CPFP)
+        const [childTx] = await processor.fetchTransactions({
+          txId: options?.CPFP
+        })
         if (childTx == null) throw new Error('transaction not found')
         const utxos: IUTXO[] = []
         for (const txid of childTx.ourOuts) {
-          const output = await processor.fetchUtxo(txid)
+          const [output] = await processor.fetchUtxos({ utxoIds: [txid] })
           if (output != null) utxos.push(output)
         }
         maxUtxo = utxos.reduce((a, b) => (bs.gt(a.value, b.value) ? a : b))
@@ -336,8 +322,8 @@ export async function makeUtxoEngine(
       let nativeAmount = '0'
       for (const output of tx.outputs) {
         const scriptPubkey = output.script.toString('hex')
-        const own = await processor.hasSPubKey(scriptPubkey)
-        if (!own) {
+        const own = await processor.fetchAddresses(scriptPubkey)
+        if (own != null) {
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
         }
       }
@@ -380,8 +366,16 @@ export async function makeUtxoEngine(
       await state.start()
     },
 
-    async saveTx(tx: EdgeTransaction): Promise<void> {
-      return await processor.saveTransaction(fromEdgeTransaction(tx))
+    async saveTx(edgeTx: EdgeTransaction): Promise<void> {
+      const tx = fromEdgeTransaction(edgeTx)
+      await transactionChanged({
+        tx,
+        currencyInfo,
+        emitter,
+        walletTools,
+        processor
+      })
+      return await processor.saveTransaction({ tx })
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
@@ -404,12 +398,12 @@ export async function makeUtxoEngine(
             ? hash.reverse().toString('hex')
             : hash
 
-          const utxo = await processor.fetchUtxo(`${txid}_${index}`)
+          const [utxo] = await processor.fetchUtxos({
+            utxoIds: [`${txid}_${index}`]
+          })
           if (utxo == null) throw new Error('Invalid UTXO')
 
-          const address = await processor.fetchAddressByScriptPubkey(
-            utxo.scriptPubkey
-          )
+          const address = await processor.fetchAddresses(utxo.scriptPubkey)
           if (address?.path == null) throw new Error('Invalid script pubkey')
 
           return walletTools.getPrivateKey({ path: address.path, xprivKeys })
@@ -471,7 +465,7 @@ export async function makeUtxoEngine(
         if (ratio === 1) {
           await tmpState.stop()
 
-          const utxos = await processor.fetchAllUtxos()
+          const utxos = await processor.fetchUtxos({ utxoIds: [] })
           if (utxos === null || utxos.length < 1) {
             throw new Error('Private key has no funds')
           }

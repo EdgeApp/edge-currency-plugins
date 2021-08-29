@@ -1,7 +1,7 @@
 import { EdgeTransaction } from 'edge-core-js'
 
 import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
-import { Processor } from '../makeProcessor'
+import { NewProcessor as Processor } from '../newProcessor'
 import { IProcessorTransaction } from '../types'
 
 export const fromEdgeTransaction = (
@@ -34,7 +34,7 @@ export const toEdgeTransaction = async (
   const ourReceiveAddresses: string[] = []
   for (const out of tx.ourOuts) {
     const { scriptPubkey } = tx.outputs[parseInt(out)]
-    const address = await processor.fetchAddressByScriptPubkey(scriptPubkey)
+    const address = await processor.fetchAddresses(scriptPubkey)
     if (address?.path != null) {
       const { address: addrStr } = walletTools.scriptPubkeyToAddress({
         scriptPubkey,
