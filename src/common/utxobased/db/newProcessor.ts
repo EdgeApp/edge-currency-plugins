@@ -145,16 +145,28 @@ export async function makeNewProcessor(
       )
     },
 
-    async saveUtxo(_utxo: IUTXO): Promise<void> {
-      return
+    async saveUtxo(utxo: IUTXO): Promise<void> {
+      return await baselets.utxo(async tables => {
+        await tables.utxoById.insert('', utxo.id, utxo)
+      })
     },
 
-    async removeUtxos(_utxoIds: string[]): Promise<void> {
-      return
+    async removeUtxos(utxoIds: string[]): Promise<void> {
+      return await baselets.utxo(async tables => {
+        await tables.utxoById.delete('', utxoIds)
+      })
     },
 
-    async fetchUtxos(_utxoIds: string[]): Promise<IUTXO[]> {
-      return []
+    async fetchUtxos(utxoIds: string[]): Promise<IUTXO[]> {
+      return await baselets.utxo(async tables => {
+        // Return all UTXOs if no UTXO ids are specified
+        if (utxoIds.length === 0) {
+          const dump = await tables.utxoById.dumpData('')
+          return Object.values(dump.data)
+        }
+
+        return await tables.utxoById.query('', utxoIds)
+      })
     },
 
     async saveTransaction(_args: SaveTransactionArgs): Promise<void> {
