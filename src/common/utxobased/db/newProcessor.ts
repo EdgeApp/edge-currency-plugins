@@ -6,6 +6,7 @@ import { clearMemletCache } from 'memlet'
 
 import { AddressPath } from '../../plugin/types'
 import { makeBaselets } from './makeBaselets'
+import { addressPathToPrefix } from './Models/baselet'
 import { IAddress, IProcessorTransaction, IUTXO } from './types'
 
 const BASELET_DIR = 'tables'
@@ -26,13 +27,6 @@ interface FetchTransactionArgs {
   blockHeightMax?: number
   txId?: string
   options?: EdgeGetTransactionsOptions
-}
-
-/* Address table interfaces */
-
-interface FetchAddressArgs {
-  path?: Omit<AddressPath, 'addressIndex'> | AddressPath
-  scriptPubkey?: string
 }
 
 /* Block height table interfaces */
@@ -100,10 +94,10 @@ export interface NewProcessor {
   // used to calculate total number of addresses
   numAddressesByFormatPath: (path: Omit<AddressPath, 'addressIndex'>) => number
   // get the last used address index for a specific format
-  lastUsedScriptPubkeyByFormatPath: (
+  lastUsedIndexByFormatPath: (
     path: Omit<AddressPath, 'addressIndex'>
-  ) => Promise<string>
-  fetchAddresses: (args: FetchAddressArgs) => Promise<IAddress[]>
+  ) => Promise<number>
+  fetchAddresses: (args: AddressPath | string) => Promise<IAddress>
 
   /* Block processing
   *******************
@@ -165,22 +159,159 @@ export async function makeNewProcessor(
       return []
     },
 
-    async saveAddress(_args: IAddress): Promise<void> {
-      return
+    async saveAddress(address: IAddress): Promise<void> {
+      await baselets.address(async tables => {
+        const [
+          existingAddress
+        ]: IAddress[] = await tables.addressByScriptPubkey.query('', [
+          address.scriptPubkey
+        ])
+
+        // save to the path index if available
+        if (address.path != null) {
+          // check if the path already exists with a different script pubkey
+          const [scriptPubkey] = await tables.scriptPubkeyByPath.query(
+            addressPathToPrefix(address.path),
+            address.path.addressIndex
+          )
+          if (scriptPubkey != null && scriptPubkey !== address.scriptPubkey)
+            throw new Error(
+              'Attempted to save address with an existing path, but different script pubkey'
+            )
+
+          await tables.scriptPubkeyByPath.insert(
+            addressPathToPrefix(address.path),
+            address.path.addressIndex,
+            address.scriptPubkey
+          )
+
+          // check if this address is used and if so, whether it has a higher last used index
+          if (address.used || existingAddress?.used) {
+            let [lastUsed] = await tables.lastUsedByFormatPath.query('', [
+              addressPathToPrefix(address.path)
+            ])
+            if (lastUsed == null) lastUsed = -1
+
+            if (lastUsed < address.path.addressIndex) {
+              await tables.lastUsedByFormatPath.insert(
+                '',
+                addressPathToPrefix(address.path),
+                address.path.addressIndex
+              )
+            }
+          }
+        }
+
+        if (existingAddress != null) {
+          // Only update the networkQueryVal if one was given and is greater than the existing value
+          if (address.networkQueryVal > existingAddress.networkQueryVal) {
+            existingAddress.networkQueryVal = address.networkQueryVal
+          }
+
+          // Only update the lastQuery value if one was given and is greater than the existing value
+          if (address.lastQuery > existingAddress.lastQuery) {
+            existingAddress.lastQuery = address.lastQuery
+          }
+
+          // Only update the lastTouched value if one was given and is greater than the existing value
+          if (address.lastTouched > existingAddress.lastTouched) {
+            existingAddress.lastTouched = address.lastTouched
+          }
+
+          // Only update the balance field if one was given and does not equal the existing value
+          if (address.balance !== existingAddress.balance) {
+            existingAddress.balance = address.balance
+          }
+
+          // Only update the path field if one was given and currently does not have one
+          // NOTE: Addresses can be stored in the db without a path due to the `EdgeCurrencyEngine.addGapLimitAddresses` function
+          //  Once an address path is known, it should never be updated
+          if (address.path != null && existingAddress.path == null) {
+            existingAddress.path = address.path
+            await tables.scriptPubkeyByPath.insert(
+              addressPathToPrefix(address.path),
+              address.path.addressIndex,
+              address.scriptPubkey
+            )
+          }
+
+          // Only update the used flag if one was given and is true
+          if (address.used && !existingAddress.used) {
+            existingAddress.used = true
+          }
+
+          // check if the lastUsed changed by the update
+          if (existingAddress.path != null && existingAddress.used) {
+            let [lastUsed] = await tables.lastUsedByFormatPath.query('', [
+              addressPathToPrefix(existingAddress.path)
+            ])
+            if (lastUsed == null) lastUsed = -1
+
+            if (lastUsed < existingAddress.path.addressIndex) {
+              await tables.lastUsedByFormatPath.insert(
+                '',
+                addressPathToPrefix(existingAddress.path),
+                existingAddress.path.addressIndex
+              )
+            }
+          }
+          await tables.addressByScriptPubkey.insert(
+            '',
+            existingAddress.scriptPubkey,
+            existingAddress
+          )
+          return
+        }
+        await tables.addressByScriptPubkey.insert(
+          '',
+          address.scriptPubkey,
+          address
+        )
+      })
     },
 
-    numAddressesByFormatPath(_path: Omit<AddressPath, 'addressIndex'>): number {
-      return 0
+    numAddressesByFormatPath(path: Omit<AddressPath, 'addressIndex'>): number {
+      return baselets.all.scriptPubkeyByPath.length(addressPathToPrefix(path))
     },
 
-    async lastUsedScriptPubkeyByFormatPath(
-      _path: Omit<AddressPath, 'addressIndex'>
-    ): Promise<string> {
-      return ''
+    async lastUsedIndexByFormatPath(
+      path: Omit<AddressPath, 'addressIndex'>
+    ): Promise<number> {
+      const [addressIndex] = await baselets.address(async tables => {
+        return await tables.lastUsedByFormatPath.query('', [
+          addressPathToPrefix(path)
+        ])
+      })
+      return addressIndex
     },
 
-    async fetchAddresses(_args: FetchAddressArgs): Promise<IAddress[]> {
-      return []
+    async fetchAddresses(
+      fetchAddressArg: AddressPath | string
+    ): Promise<IAddress> {
+      return await baselets.address(async tables => {
+        if (typeof fetchAddressArg === 'string') {
+          // if it is a string, it is a scriptPubkey
+          const scriptPubkey = fetchAddressArg
+          const [address] = await tables.addressByScriptPubkey.query('', [
+            scriptPubkey
+          ])
+          return address
+        }
+
+        // since it is not a string, it has to be an AddressPath
+        const path = fetchAddressArg
+        // fetch addresses by provided path
+        const [scriptPubkeyFromPath] = await tables.scriptPubkeyByPath.query(
+          addressPathToPrefix(path),
+          path.addressIndex
+        )
+
+        const [address] = await tables.addressByScriptPubkey.query('', [
+          scriptPubkeyFromPath
+        ])
+
+        return address
+      })
     },
 
     async saveBlockHash(args: BlockHeightArgs): Promise<void> {
