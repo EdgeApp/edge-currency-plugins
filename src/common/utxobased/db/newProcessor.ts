@@ -1,13 +1,25 @@
-// We have AddressTables, TransactionTables and UTXOTables
-
+import { clearMemletCache } from 'baselet'
+import * as bs from 'biggystring'
 import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeGetTransactionsOptions } from 'edge-core-js'
-import { clearMemletCache } from 'memlet'
 
 import { AddressPath } from '../../plugin/types'
 import { makeBaselets } from './makeBaselets'
-import { addressPathToPrefix } from './Models/baselet'
-import { IAddress, IProcessorTransaction, IUTXO } from './types'
+import {
+  addressPathToPrefix,
+  RANGE_ID_KEY,
+  RANGE_KEY,
+  TxIdsByDate,
+  txIdsByDateRangeId,
+  txIdsByDateRangeKey
+} from './Models/baselet'
+import {
+  IAddress,
+  IProcessorTransaction,
+  ITransactionInput,
+  ITransactionOutput,
+  IUTXO
+} from './types'
 
 const BASELET_DIR = 'tables'
 
@@ -126,6 +138,35 @@ export async function makeNewProcessor(
   const disklet = navigateDisklet(config.disklet, BASELET_DIR)
   let baselets = await makeBaselets({ disklet })
 
+  /**
+   * Calculates the transaction value supplied (negative) or received (positive). In order to calculate
+   * a value, the `ourIns` and `ourOuts` of the object must be populated with indices.
+   * @param tx {IProcessorTransaction} A transaction object with `ourIns` and `ourOuts` populated
+   */
+  const calculateTxAmount = (tx: IProcessorTransaction): string => {
+    interface TxIndexMap {
+      [index: string]: ITransactionInput | ITransactionOutput
+    }
+    let ourAmount = '0'
+    let txIndexMap: TxIndexMap = {}
+    for (const input of tx.inputs) {
+      txIndexMap[input.n.toString()] = input
+    }
+    for (const i of tx.ourIns) {
+      const input = txIndexMap[i]
+      ourAmount = bs.sub(ourAmount, input.amount)
+    }
+    txIndexMap = {}
+    for (const output of tx.outputs) {
+      txIndexMap[output.n.toString()] = output
+    }
+    for (const i of tx.ourOuts) {
+      const output = txIndexMap[i]
+      ourAmount = bs.add(ourAmount, output.amount)
+    }
+    return ourAmount
+  }
+
   const processor: NewProcessor = {
     async clearAll(): Promise<void> {
       await clearMemletCache()
@@ -169,12 +210,78 @@ export async function makeNewProcessor(
       })
     },
 
-    async saveTransaction(_args: SaveTransactionArgs): Promise<void> {
-      return
+    async saveTransaction(args: SaveTransactionArgs): Promise<void> {
+      const { scriptPubkey, tx } = args
+      return await baselets.tx(async tables => {
+        // Check if the transaction already exists
+        const processorTx:
+          | IProcessorTransaction
+          | undefined = await tables.txById
+          .query('', [tx.txid])
+          .then(transactions => transactions[0])
+          .catch(_ => undefined)
+        if (processorTx == null) {
+          await tables.txIdsByDate.insert('', {
+            [txIdsByDateRangeId]: tx.txid,
+            [txIdsByDateRangeKey]: tx.date
+          })
+        }
+        // Use the existing transaction if it does exist.
+        const transaction = processorTx ?? tx
+
+        // Mark the used inputs with the provided script pubkey
+        if (scriptPubkey != null) {
+          for (const input of transaction.inputs) {
+            if (input.scriptPubkey === scriptPubkey) {
+              if (!transaction.ourIns.includes(input.n.toString())) {
+                transaction.ourIns.push(input.n.toString())
+              }
+            }
+          }
+          for (const output of transaction.outputs) {
+            if (output.scriptPubkey === scriptPubkey) {
+              if (!transaction.ourOuts.includes(output.n.toString())) {
+                transaction.ourOuts.push(output.n.toString())
+              }
+            }
+          }
+          transaction.ourAmount = calculateTxAmount(transaction)
+        }
+
+        if (transaction.blockHeight !== tx.blockHeight) {
+          // the transaction already exists, so delete it and re-insert at a different blockHeight
+          await tables.txIdsByBlockHeight.delete(
+            '',
+            transaction.blockHeight,
+            transaction.txid
+          )
+          transaction.blockHeight = tx.blockHeight
+          await tables.txIdsByBlockHeight.insert('', {
+            [RANGE_ID_KEY]: transaction.txid,
+            [RANGE_KEY]: transaction.blockHeight
+          })
+        } else {
+          // Save tx by blockheight
+          const txIdsByTransactionBlockHeight = await (
+            await tables.txIdsByBlockHeight.query('', transaction.blockHeight)
+          )
+            .reverse()
+            .map(({ [RANGE_ID_KEY]: id }) => id)
+          if (!txIdsByTransactionBlockHeight.includes(transaction.txid)) {
+            await tables.txIdsByBlockHeight.insert('', {
+              [RANGE_ID_KEY]: transaction.txid,
+              [RANGE_KEY]: transaction.blockHeight
+            })
+          }
+        }
+
+        // Save transaction
+        await tables.txById.insert('', transaction.txid, transaction)
+      })
     },
 
     numTransactions(): number {
-      return 0
+      return baselets.all.txIdsByDate.size('')
     },
 
     async removeTransaction(_txId: string): Promise<void> {
@@ -182,9 +289,72 @@ export async function makeNewProcessor(
     },
 
     async fetchTransactions(
-      _args: FetchTransactionArgs
+      args: FetchTransactionArgs
     ): Promise<IProcessorTransaction[]> {
-      return []
+      const { blockHeightMax, txId, options } = args
+      let { blockHeight } = args
+      const txs: IProcessorTransaction[] = []
+      await baselets.tx(async tables => {
+        // Fetch transactions by id
+        if (txId != null) {
+          const txById: IProcessorTransaction[] = await tables.txById.query(
+            '',
+            [txId]
+          )
+          txs.push(...txById)
+        }
+        // Fetch transactions by min block height
+        if (blockHeightMax != null && blockHeight == null) blockHeight = 0
+        if (blockHeight != null) {
+          const txIdsByMinBlockHeight = await (
+            await tables.txIdsByBlockHeight.query(
+              '',
+              blockHeight,
+              blockHeightMax
+            )
+          )
+            .reverse()
+            .map(({ [RANGE_ID_KEY]: id }) => id)
+
+          const txsById: IProcessorTransaction[] = await tables.txById.query(
+            '',
+            txIdsByMinBlockHeight
+          )
+          txs.push(...txsById)
+        }
+        if (options != null) {
+          const {
+            startEntries,
+            startIndex,
+            startDate = new Date(0),
+            endDate = new Date()
+          } = options
+
+          // Fetch transaction IDs ordered by date
+          let txData: TxIdsByDate
+          if (startEntries != null && startIndex != null) {
+            txData = await tables.txIdsByDate.queryByCount(
+              '',
+              startEntries,
+              startIndex
+            )
+          } else {
+            txData = await tables.txIdsByDate.query(
+              '',
+              startDate.getTime(),
+              endDate.getTime()
+            )
+          }
+          const txIdsByOptions = await txData
+            .reverse()
+            .map(({ [txIdsByDateRangeId]: id }) => id)
+
+          const txsByOptions = await tables.txById.query('', txIdsByOptions)
+          // Make sure only existing transactions are included
+          txs.push(...txsByOptions.filter(tx => tx != null))
+        }
+      })
+      return txs
     },
 
     async saveAddress(address: IAddress): Promise<void> {

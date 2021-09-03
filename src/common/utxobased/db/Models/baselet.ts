@@ -120,8 +120,8 @@ export const txIdsByDateConfig: BaseletConfig<BaseType.RangeBase> = {
   type: BaseType.RangeBase,
   bucketSize: 30 * 24 * 60 * 60 * 1000,
   range: {
-    id: txIdsByDateRangeKey,
-    key: txIdsByDateRangeId
+    id: txIdsByDateRangeId,
+    key: txIdsByDateRangeKey
   }
 }
 
