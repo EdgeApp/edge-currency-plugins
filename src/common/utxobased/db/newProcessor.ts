@@ -41,6 +41,11 @@ interface FetchTransactionArgs {
   options?: EdgeGetTransactionsOptions
 }
 
+interface FetchUtxosArgs {
+  utxoIds?: string[]
+  scriptPubkey?: string
+}
+
 /* Block height table interfaces */
 
 interface BlockHeightArgs {
@@ -73,7 +78,7 @@ export interface NewProcessor {
   removeUtxos: (utxoIds: string[]) => Promise<void>
   // fetch either all UTXOs if the array is empty or as selected from an array
   // of UTXO ids
-  fetchUtxos: (utxoIds: string[]) => Promise<IUTXO[]>
+  fetchUtxos: (args: FetchUtxosArgs) => Promise<IUTXO[]>
 
   /* Transaction processing
   **********************
@@ -188,18 +193,43 @@ export async function makeNewProcessor(
 
     async saveUtxo(utxo: IUTXO): Promise<void> {
       return await baselets.utxo(async tables => {
+        await tables.utxoIdsByScriptPubkey.insert(
+          '',
+          utxo.scriptPubkey,
+          utxo.id
+        )
+
         await tables.utxoById.insert('', utxo.id, utxo)
       })
     },
 
     async removeUtxos(utxoIds: string[]): Promise<void> {
       return await baselets.utxo(async tables => {
+        const utxos = await tables.utxoById.query('', utxoIds)
+        await tables.utxoIdsByScriptPubkey.delete(
+          '',
+          utxos.map(utxo => (utxo != null ? utxo.scriptPubkey : undefined))
+        )
         await tables.utxoById.delete('', utxoIds)
       })
     },
 
-    async fetchUtxos(utxoIds: string[]): Promise<IUTXO[]> {
+    async fetchUtxos(args): Promise<IUTXO[]> {
+      const { scriptPubkey, utxoIds = [] } = args
       return await baselets.utxo(async tables => {
+        if (scriptPubkey != null) {
+          const utxoIdsByScriptPubkey = (
+            await tables.utxoIdsByScriptPubkey.query('', [scriptPubkey])
+          ).filter(utxoId => utxoId != null)
+
+          utxoIds.push(...utxoIdsByScriptPubkey)
+
+          // Return undefined as the UTXO if no utxoIds are found by scriptPubkey
+          if (utxoIds.length === 0) {
+            return [undefined]
+          }
+        }
+
         // Return all UTXOs if no UTXO ids are specified
         if (utxoIds.length === 0) {
           const dump = await tables.utxoById.dumpData('')
