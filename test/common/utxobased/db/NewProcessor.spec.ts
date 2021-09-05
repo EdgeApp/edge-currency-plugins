@@ -250,11 +250,11 @@ describe('Processor utxo tests', () => {
     }
     await processor.saveUtxo(utxo1)
     // Fetch all
-    await processor.fetchUtxos([]).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: [] }).then(utxos => {
       expect(utxos).to.eqls([utxo1])
     })
     // Fetch one
-    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: ['utxo000001'] }).then(utxos => {
       expect(utxos).to.eqls([utxo1])
     })
 
@@ -272,13 +272,27 @@ describe('Processor utxo tests', () => {
     }
     await processor.saveUtxo(utxo2)
     // Fetch all
-    await processor.fetchUtxos([]).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: [] }).then(utxos => {
       expect(utxos).to.eqls([utxo1, utxo2])
     })
     // Fetch two
-    await processor.fetchUtxos(['utxo000001', 'utxo000002']).then(utxos => {
-      expect(utxos).to.eqls([utxo1, utxo2])
-    })
+    await processor
+      .fetchUtxos({ utxoIds: ['utxo000001', 'utxo000002'] })
+      .then(utxos => {
+        expect(utxos).to.eqls([utxo1, utxo2])
+      })
+
+    // Fetch by scriptPubkey
+    await processor
+      .fetchUtxos({ scriptPubkey: utxo1.scriptPubkey })
+      .then(utxos => {
+        expect(utxos).to.eqls([utxo1])
+      })
+    await processor
+      .fetchUtxos({ scriptPubkey: utxo2.scriptPubkey })
+      .then(utxos => {
+        expect(utxos).to.eqls([utxo2])
+      })
   })
 
   it('update utxo in baselets', async () => {
@@ -298,11 +312,11 @@ describe('Processor utxo tests', () => {
     }
     await processor.saveUtxo(utxoOriginal)
     // Fetch all
-    await processor.fetchUtxos([]).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: [] }).then(utxos => {
       expect(utxos).to.eqls([utxoOriginal])
     })
     // Fetch one
-    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: ['utxo000001'] }).then(utxos => {
       expect(utxos).to.eqls([utxoOriginal])
     })
 
@@ -320,11 +334,11 @@ describe('Processor utxo tests', () => {
     }
     await processor.saveUtxo(utxoUpdated)
     // Fetch all
-    await processor.fetchUtxos([]).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: [] }).then(utxos => {
       expect(utxos).to.eqls([utxoUpdated])
     })
     // Fetch one
-    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: ['utxo000001'] }).then(utxos => {
       expect(utxos).to.eqls([utxoUpdated])
     })
   })
@@ -346,24 +360,36 @@ describe('Processor utxo tests', () => {
     }
     await processor.saveUtxo(utxo)
     // Fetch all
-    await processor.fetchUtxos([]).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: [] }).then(utxos => {
       expect(utxos).to.eqls([utxo])
     })
     // Fetch all
-    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: ['utxo000001'] }).then(utxos => {
       expect(utxos).to.eqls([utxo])
     })
+    // Fetch by scriptPubkey
+    await processor
+      .fetchUtxos({ scriptPubkey: utxo.scriptPubkey })
+      .then(utxos => {
+        expect(utxos).to.eqls([utxo])
+      })
 
     // Remove utxo
     await processor.removeUtxos(['utxo000001'])
     // Fetch all
-    await processor.fetchUtxos([]).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: [] }).then(utxos => {
       expect(utxos).to.eqls([])
     })
-    // Fetch all
-    await processor.fetchUtxos(['utxo000001']).then(utxos => {
+    // Fetch one
+    await processor.fetchUtxos({ utxoIds: ['utxo000001'] }).then(utxos => {
       expect(utxos).to.eqls([undefined])
     })
+    // Fetch by scriptPubkey
+    await processor
+      .fetchUtxos({ scriptPubkey: utxo.scriptPubkey })
+      .then(utxos => {
+        expect(utxos).to.eqls([undefined])
+      })
   })
 
   it('query all utxos in baselets', async () => {
@@ -387,7 +413,7 @@ describe('Processor utxo tests', () => {
         txid: 'transaction1',
         vout: 0,
         value: 'bbb222',
-        scriptPubkey: 'scriptPubkey1',
+        scriptPubkey: 'scriptPubkey2',
         script: '',
         scriptType: ScriptTypeEnum.p2pk,
         blockHeight: 0,
@@ -398,7 +424,7 @@ describe('Processor utxo tests', () => {
         txid: 'transaction1',
         vout: 0,
         value: 'ccc333',
-        scriptPubkey: 'scriptPubkey1',
+        scriptPubkey: 'scriptPubkey3',
         script: '',
         scriptType: ScriptTypeEnum.p2pk,
         blockHeight: 0,
@@ -409,7 +435,7 @@ describe('Processor utxo tests', () => {
         txid: 'transaction1',
         vout: 0,
         value: 'ddd444',
-        scriptPubkey: 'scriptPubkey1',
+        scriptPubkey: 'scriptPubkey4',
         script: '',
         scriptType: ScriptTypeEnum.p2pk,
         blockHeight: 0,
@@ -420,7 +446,7 @@ describe('Processor utxo tests', () => {
         txid: 'transaction1',
         vout: 0,
         value: 'eee555',
-        scriptPubkey: 'scriptPubkey1',
+        scriptPubkey: 'scriptPubkey5',
         script: '',
         scriptType: ScriptTypeEnum.p2pk,
         blockHeight: 0,
@@ -431,9 +457,18 @@ describe('Processor utxo tests', () => {
       await processor.saveUtxo(utxo)
     }
     // Fetch all
-    await processor.fetchUtxos([]).then(utxos => {
+    await processor.fetchUtxos({ utxoIds: [] }).then(utxos => {
       expect(utxos).to.eqls(utxos)
     })
+
+    for (const utxo of utxos) {
+      // Fetch by scriptPubkey
+      await processor
+        .fetchUtxos({ scriptPubkey: utxo.scriptPubkey })
+        .then(utxos => {
+          expect(utxos).to.eqls([utxo])
+        })
+    }
   })
 })
 describe('Processor transactions tests', () => {
