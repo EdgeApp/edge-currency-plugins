@@ -1,7 +1,6 @@
 import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
 import { EventEmitter } from 'events'
 
-import { IProcessorTransaction } from '../utxobased/db/types'
 import { INewTransactionResponse } from '../utxobased/network/BlockBook'
 
 export declare interface EngineEmitter {
@@ -9,10 +8,6 @@ export declare interface EngineEmitter {
     event: EngineEvent.TRANSACTIONS_CHANGED,
     transactions: EdgeTransaction[]
   ) => boolean) &
-    ((
-      event: EngineEvent.PROCESSOR_TRANSACTION_CHANGED,
-      transaction: IProcessorTransaction
-    ) => boolean) &
     ((
       event: EngineEvent.ADDRESS_BALANCE_CHANGED,
       currencyCode: string,
@@ -40,10 +35,6 @@ export declare interface EngineEmitter {
     event: EngineEvent.TRANSACTIONS_CHANGED,
     listener: (transactions: EdgeTransaction[]) => Promise<void> | void
   ) => this) &
-    ((
-      event: EngineEvent.PROCESSOR_TRANSACTION_CHANGED,
-      listener: (transaction: IProcessorTransaction) => Promise<void> | void
-    ) => this) &
     ((
       event: EngineEvent.ADDRESS_BALANCE_CHANGED,
       listener: (
@@ -82,7 +73,6 @@ export class EngineEmitter extends EventEmitter {}
 
 export enum EngineEvent {
   TRANSACTIONS_CHANGED = 'transactions:changed',
-  PROCESSOR_TRANSACTION_CHANGED = 'processor:transactions:changed',
   WALLET_BALANCE_CHANGED = 'wallet:balance:changed',
   ADDRESS_BALANCE_CHANGED = 'address:balance:changed',
   BLOCK_HEIGHT_CHANGED = 'block:height:changed',

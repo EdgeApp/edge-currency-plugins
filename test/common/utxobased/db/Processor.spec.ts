@@ -3,7 +3,6 @@ import { expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { makeMemoryDisklet } from 'disklet'
 
-import { EngineEmitter } from '../../../../src/common/plugin/makeEngineEmitter'
 import {
   makeProcessor,
   Processor
@@ -15,11 +14,10 @@ chai.use(chaiAsPromised)
 describe('Processor', function () {
   const storage = {}
   const disklet = makeMemoryDisklet(storage)
-  const emitter = new EngineEmitter()
   let processor: Processor
 
   beforeEach(async () => {
-    processor = await makeProcessor({ disklet, emitter })
+    processor = await makeProcessor({ disklet })
   })
 
   it('insert tx id by confirmation', async function () {
