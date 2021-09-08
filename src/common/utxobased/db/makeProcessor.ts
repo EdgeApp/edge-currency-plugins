@@ -119,7 +119,7 @@ export interface Processor {
   // get the last used address index for a specific format
   lastUsedIndexByFormatPath: (
     path: Omit<AddressPath, 'addressIndex'>
-  ) => Promise<number>
+  ) => Promise<number | undefined>
   fetchAddresses: (args: AddressPath | string) => Promise<IAddress>
 
   /* Block processing
@@ -504,7 +504,7 @@ export async function makeProcessor(
 
     async lastUsedIndexByFormatPath(
       path: Omit<AddressPath, 'addressIndex'>
-    ): Promise<number> {
+    ): Promise<number | undefined> {
       const [addressIndex] = await baselets.address(async tables => {
         return await tables.lastUsedByFormatPath.query('', [
           addressPathToPrefix(path)
