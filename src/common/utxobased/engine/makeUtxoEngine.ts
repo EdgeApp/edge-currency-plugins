@@ -19,11 +19,11 @@ import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
 import { getMnemonic } from '../../plugin/utils'
+import { makeProcessor } from '../db/makeProcessor'
 import {
   fromEdgeTransaction,
   toEdgeTransaction
 } from '../db/Models/ProcessorTransaction'
-import { makeNewProcessor as makeProcessor } from '../db/newProcessor'
 import { IProcessorTransaction, IUTXO } from '../db/types'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'

@@ -1,7 +1,7 @@
 import { EdgeTransaction } from 'edge-core-js'
 
 import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
-import { NewProcessor as Processor } from '../newProcessor'
+import { Processor } from '../makeProcessor'
 import { IProcessorTransaction } from '../types'
 
 export const fromEdgeTransaction = (
