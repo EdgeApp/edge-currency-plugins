@@ -1,3 +1,4 @@
+import { Mutex } from 'async-mutex'
 import {
   BaseType,
   createCountBase,
@@ -233,17 +234,21 @@ export const makeBaselets = async (
     blockHashByBlockHeight
   }
 
+  const addressMutex = new Mutex()
+  const txMutex = new Mutex()
+  const utxoMutex = new Mutex()
+
   return {
     async address(fn): Promise<ReturnType<typeof fn>> {
-      return await fn(addressBases)
+      return await addressMutex.runExclusive(async () => await fn(addressBases))
     },
 
     async tx(fn): Promise<ReturnType<typeof fn>> {
-      return await fn(txBases)
+      return await txMutex.runExclusive(async () => await fn(txBases))
     },
 
     async utxo(fn): Promise<ReturnType<typeof fn>> {
-      return await fn(utxoBases)
+      return await utxoMutex.runExclusive(async () => await fn(utxoBases))
     },
 
     async block(fn): Promise<ReturnType<typeof fn>> {
