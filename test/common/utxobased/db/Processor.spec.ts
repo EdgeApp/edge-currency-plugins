@@ -4,9 +4,9 @@ import { expect } from 'chai'
 import { makeMemoryDisklet } from 'disklet'
 
 import {
-  makeNewProcessor,
-  NewProcessor
-} from '../../../../src/common/utxobased/db/newProcessor'
+  makeProcessor,
+  Processor
+} from '../../../../src/common/utxobased/db/makeProcessor'
 import {
   IAddress,
   IProcessorTransaction,
@@ -21,14 +21,14 @@ chai.should()
 interface Fixtures {
   assertNumAddressesWithPaths: (expectedNum: number) => void
   assertLastUsedByFormatPath: (toBe: number | undefined) => Promise<void>
-  assertNumTransactions: (expectedNum: number, processor: NewProcessor) => void
-  processor: NewProcessor
+  assertNumTransactions: (expectedNum: number, processor: Processor) => void
+  processor: Processor
 }
 
 const makeFixtures = async (): Promise<Fixtures> => {
   const storage = {}
   const disklet = makeMemoryDisklet(storage)
-  const processor = await makeNewProcessor({ disklet })
+  const processor = await makeProcessor({ disklet })
 
   return {
     assertNumAddressesWithPaths: expectedNum => {
@@ -49,7 +49,7 @@ const makeFixtures = async (): Promise<Fixtures> => {
 
     assertNumTransactions: (
       expectedNum: number,
-      processor: NewProcessor
+      processor: Processor
     ): void => {
       const num = processor.numTransactions()
       expect(num).eql(expectedNum)
@@ -474,7 +474,7 @@ describe('Processor utxo tests', () => {
 describe('Processor transactions tests', () => {
   function assertNumTransactions(
     expectedNum: number,
-    processor: NewProcessor
+    processor: Processor
   ): void {
     const num = processor.numTransactions()
     expect(num).eql(expectedNum)
@@ -484,14 +484,14 @@ describe('Processor transactions tests', () => {
     const storage = {}
     const disklet = makeMemoryDisklet(storage)
 
-    const processor = await makeNewProcessor({ disklet })
+    const processor = await makeProcessor({ disklet })
     assertNumTransactions(0, processor)
   })
 
   it('insert a transaction to transaction baselets', async () => {
     const storage = {}
     const disklet = makeMemoryDisklet(storage)
-    const processor = await makeNewProcessor({ disklet })
+    const processor = await makeProcessor({ disklet })
 
     const input1: ITransactionInput = {
       txId: 'random',
@@ -582,7 +582,7 @@ describe('Processor transactions tests', () => {
   it('insert multiple transactions to baselets', async () => {
     const storage = {}
     const disklet = makeMemoryDisklet(storage)
-    const processor = await makeNewProcessor({ disklet })
+    const processor = await makeProcessor({ disklet })
 
     const input1: ITransactionInput = {
       txId: 'random',
@@ -689,7 +689,7 @@ describe('Processor transactions tests', () => {
   it('update transaction blockheight in transaction baselets', async () => {
     const storage = {}
     const disklet = makeMemoryDisklet(storage)
-    const processor = await makeNewProcessor({ disklet })
+    const processor = await makeProcessor({ disklet })
 
     const input1: ITransactionInput = {
       txId: 'random',

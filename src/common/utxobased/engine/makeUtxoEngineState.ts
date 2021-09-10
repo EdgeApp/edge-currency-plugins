@@ -16,8 +16,8 @@ import {
   NetworkEnum
 } from '../../plugin/types'
 import { removeItem } from '../../plugin/utils'
+import { Processor } from '../db/makeProcessor'
 import { toEdgeTransaction } from '../db/Models/ProcessorTransaction'
-import { NewProcessor as Processor } from '../db/newProcessor'
 import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import {

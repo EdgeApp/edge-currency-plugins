@@ -59,7 +59,7 @@ interface DumpDataReturn {
   data: unknown
 }
 
-export interface NewProcessor {
+export interface Processor {
   clearAll: () => Promise<void>
   dumpData: () => Promise<DumpDataReturn[]>
 
@@ -137,9 +137,9 @@ export interface NewProcessor {
   fetchBlockHash: (height: number) => Promise<string[]>
 }
 
-export async function makeNewProcessor(
+export async function makeProcessor(
   config: ProcessorConfig
-): Promise<NewProcessor> {
+): Promise<Processor> {
   const disklet = navigateDisklet(config.disklet, BASELET_DIR)
   let baselets = await makeBaselets({ disklet })
 
@@ -172,7 +172,7 @@ export async function makeNewProcessor(
     return ourAmount
   }
 
-  const processor: NewProcessor = {
+  const processor: Processor = {
     async clearAll(): Promise<void> {
       await clearMemletCache()
       // why is this delay needed?
