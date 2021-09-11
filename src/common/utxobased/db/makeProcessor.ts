@@ -120,7 +120,7 @@ export interface Processor {
   lastUsedIndexByFormatPath: (
     path: Omit<AddressPath, 'addressIndex'>
   ) => Promise<number | undefined>
-  fetchAddresses: (args: AddressPath | string) => Promise<IAddress | undefined>
+  fetchAddress: (args: AddressPath | string) => Promise<IAddress | undefined>
 
   /* Block processing
   *******************
@@ -247,9 +247,9 @@ export async function makeProcessor(
         const processorTx:
           | IProcessorTransaction
           | undefined = await tables.txById
-            .query('', [tx.txid])
-            .then(transactions => transactions[0])
-            .catch(_ => undefined)
+          .query('', [tx.txid])
+          .then(transactions => transactions[0])
+          .catch(_ => undefined)
         if (processorTx == null) {
           await tables.txIdsByDate.insert('', {
             [txIdsByDateRangeId]: tx.txid,
@@ -513,7 +513,7 @@ export async function makeProcessor(
       return addressIndex
     },
 
-    async fetchAddresses(
+    async fetchAddress(
       fetchAddressArg: AddressPath | string
     ): Promise<IAddress | undefined> {
       return await baselets.address(async tables => {
