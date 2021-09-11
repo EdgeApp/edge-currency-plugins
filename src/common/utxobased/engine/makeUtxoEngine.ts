@@ -233,7 +233,8 @@ export async function makeUtxoEngine(
     async isAddressUsed(address: string): Promise<boolean> {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddresses(scriptPubkey)
-      return addressData?.used
+      if (addressData == null) return false
+      return addressData.used
     },
 
     async makeSpend(

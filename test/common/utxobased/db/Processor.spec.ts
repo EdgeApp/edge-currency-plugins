@@ -22,6 +22,7 @@ interface Fixtures {
   assertNumAddressesWithPaths: (expectedNum: number) => void
   assertLastUsedByFormatPath: (toBe: number | undefined) => Promise<void>
   assertNumTransactions: (expectedNum: number, processor: Processor) => void
+  assertProcessorObjectNotUndefined: <T>(object: T | undefined) => T
   processor: Processor
 }
 
@@ -55,6 +56,12 @@ const makeFixtures = async (): Promise<Fixtures> => {
       expect(num).eql(expectedNum)
     },
 
+    assertProcessorObjectNotUndefined: <T>(object: T | undefined): T => {
+      if (object == null)
+        throw new Error(`unable to retrieve from the processor`)
+      return object
+    },
+
     processor
   }
 }
@@ -63,17 +70,28 @@ describe('Processor address tests', () => {
   it('empty address baselets', async () => {
     const {
       assertNumAddressesWithPaths,
-      assertLastUsedByFormatPath
+      assertLastUsedByFormatPath,
+      processor
     } = await makeFixtures()
 
     assertNumAddressesWithPaths(0)
     await assertLastUsedByFormatPath(undefined)
+
+    expect(await processor.fetchAddresses('doesnotexist')).to.be.undefined
+    expect(
+      await processor.fetchAddresses({
+        format: 'bip44',
+        changeIndex: 0,
+        addressIndex: 0
+      })
+    ).to.be.undefined
   })
 
   it('insert address to baselets', async () => {
     const {
       assertNumAddressesWithPaths,
       assertLastUsedByFormatPath,
+      assertProcessorObjectNotUndefined,
       processor
     } = await makeFixtures()
 
@@ -90,8 +108,8 @@ describe('Processor address tests', () => {
     // Assertions
     assertNumAddressesWithPaths(0)
     await assertLastUsedByFormatPath(undefined)
-    const processorAddress1 = await processor.fetchAddresses(
-      'testscriptpubkey1'
+    const processorAddress1 = assertProcessorObjectNotUndefined(
+      await processor.fetchAddresses(address1.scriptPubkey)
     )
     expect(processorAddress1.scriptPubkey).to.eqls(address1.scriptPubkey)
 
@@ -109,8 +127,8 @@ describe('Processor address tests', () => {
     // Assertions
     assertNumAddressesWithPaths(1)
     await assertLastUsedByFormatPath(undefined)
-    const processorAddress2 = await processor.fetchAddresses(
-      'testscriptpubkey2'
+    const processorAddress2 = assertProcessorObjectNotUndefined(
+      await processor.fetchAddresses(address2.scriptPubkey)
     )
     expect(processorAddress2.scriptPubkey).to.eqls(address2.scriptPubkey)
 
@@ -132,7 +150,7 @@ describe('Processor address tests', () => {
     // Assertions
     assertNumAddressesWithPaths(1)
     const processorAddress3 = await processor.fetchAddresses(
-      'testscriptpubkey3'
+      address3.scriptPubkey
     )
     expect(processorAddress3).to.be.undefined
 
@@ -149,17 +167,28 @@ describe('Processor address tests', () => {
     await processor.saveAddress(address4)
     // Assertions
     assertNumAddressesWithPaths(2)
-    const processorAddress4 = await processor.fetchAddresses(
-      'testscriptpubkey3'
+    const processorAddress4 = assertProcessorObjectNotUndefined(
+      await processor.fetchAddresses(address4.scriptPubkey)
     )
     expect(processorAddress4.scriptPubkey).to.eqls(address4.scriptPubkey)
     await assertLastUsedByFormatPath(1)
+
+    // check behavior of not found addresses in populated baselets:
+    expect(await processor.fetchAddresses('doesnotexist')).to.be.undefined
+    expect(
+      await processor.fetchAddresses({
+        format: 'bip32',
+        changeIndex: 0,
+        addressIndex: 0
+      })
+    ).to.be.undefined
   })
 
   it('update address in baselets', async () => {
     const {
       assertNumAddressesWithPaths,
       assertLastUsedByFormatPath,
+      assertProcessorObjectNotUndefined,
       processor
     } = await makeFixtures()
 
@@ -176,8 +205,8 @@ describe('Processor address tests', () => {
     // Assertions
     assertNumAddressesWithPaths(0)
     await assertLastUsedByFormatPath(undefined)
-    const processorAddress1 = await processor.fetchAddresses(
-      'testscriptpubkey1'
+    const processorAddress1 = assertProcessorObjectNotUndefined(
+      await processor.fetchAddresses(address.scriptPubkey)
     )
     expect(processorAddress1.scriptPubkey).to.eqls(address.scriptPubkey)
 
@@ -194,20 +223,20 @@ describe('Processor address tests', () => {
     // Assertions
     assertNumAddressesWithPaths(1)
     await assertLastUsedByFormatPath(undefined)
-    const processorAddress2 = await processor.fetchAddresses(
-      'testscriptpubkey1'
+    const processorAddress2 = assertProcessorObjectNotUndefined(
+      await processor.fetchAddresses(address.scriptPubkey)
     )
-    expect(processorAddress2.scriptPubkey).to.eqls('testscriptpubkey1')
+    expect(processorAddress2.scriptPubkey).to.eqls(address.scriptPubkey)
 
     // Update the used flag of an existing address with a path
     address = { ...address, used: true }
     await processor.saveAddress(address)
     // Assertions
     assertNumAddressesWithPaths(1)
-    const processorAddress3 = await processor.fetchAddresses(
-      'testscriptpubkey1'
+    const processorAddress3 = assertProcessorObjectNotUndefined(
+      await processor.fetchAddresses(address.scriptPubkey)
     )
-    expect(processorAddress3.scriptPubkey).to.eqls('testscriptpubkey1')
+    expect(processorAddress3.scriptPubkey).to.eqls(address.scriptPubkey)
     await assertLastUsedByFormatPath(0)
 
     // Update various address fields of an existing address with a path
@@ -221,10 +250,10 @@ describe('Processor address tests', () => {
     await processor.saveAddress(address)
     // Assertions
     assertNumAddressesWithPaths(1)
-    const processorAddress4 = await processor.fetchAddresses(
-      'testscriptpubkey1'
+    const processorAddress4 = assertProcessorObjectNotUndefined(
+      await processor.fetchAddresses(address.scriptPubkey)
     )
-    expect(processorAddress4.scriptPubkey).to.eqls('testscriptpubkey1')
+    expect(processorAddress4.scriptPubkey).to.eqls(address.scriptPubkey)
     expect(processorAddress4.networkQueryVal).to.eqls(1)
     expect(processorAddress4.lastQuery).to.eqls(1)
     expect(processorAddress4.lastTouched).to.eqls(1)
