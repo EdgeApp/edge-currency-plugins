@@ -120,7 +120,7 @@ export interface Processor {
   lastUsedIndexByFormatPath: (
     path: Omit<AddressPath, 'addressIndex'>
   ) => Promise<number | undefined>
-  fetchAddresses: (args: AddressPath | string) => Promise<IAddress | undefined>
+  fetchAddress: (args: AddressPath | string) => Promise<IAddress | undefined>
 
   /* Block processing
   *******************
@@ -513,7 +513,7 @@ export async function makeProcessor(
       return addressIndex
     },
 
-    async fetchAddresses(
+    async fetchAddress(
       fetchAddressArg: AddressPath | string
     ): Promise<IAddress | undefined> {
       return await baselets.address(async tables => {

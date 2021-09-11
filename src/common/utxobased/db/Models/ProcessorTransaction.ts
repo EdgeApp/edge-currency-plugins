@@ -34,7 +34,7 @@ export const toEdgeTransaction = async (
   const ourReceiveAddresses: string[] = []
   for (const out of tx.ourOuts) {
     const { scriptPubkey } = tx.outputs[parseInt(out)]
-    const address = await processor.fetchAddresses(scriptPubkey)
+    const address = await processor.fetchAddress(scriptPubkey)
     if (address?.path != null) {
       const { address: addrStr } = walletTools.scriptPubkeyToAddress({
         scriptPubkey,

@@ -232,7 +232,7 @@ export async function makeUtxoEngine(
 
     async isAddressUsed(address: string): Promise<boolean> {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
-      const addressData = await processor.fetchAddresses(scriptPubkey)
+      const addressData = await processor.fetchAddress(scriptPubkey)
       if (addressData == null) return false
       return addressData.used
     },
@@ -251,7 +251,7 @@ export async function makeUtxoEngine(
         const scriptPubkey = walletTools.addressToScriptPubkey(
           target.publicAddress
         )
-        if (processor.fetchAddresses(scriptPubkey) != null) {
+        if (processor.fetchAddress(scriptPubkey) != null) {
           ourReceiveAddresses.push(target.publicAddress)
         }
 
@@ -323,7 +323,7 @@ export async function makeUtxoEngine(
       let nativeAmount = '0'
       for (const output of tx.outputs) {
         const scriptPubkey = output.script.toString('hex')
-        const own = await processor.fetchAddresses(scriptPubkey)
+        const own = await processor.fetchAddress(scriptPubkey)
         if (own != null) {
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
         }
@@ -404,7 +404,7 @@ export async function makeUtxoEngine(
           })
           if (utxo == null) throw new Error('Invalid UTXO')
 
-          const address = await processor.fetchAddresses(utxo.scriptPubkey)
+          const address = await processor.fetchAddress(utxo.scriptPubkey)
           if (address?.path == null) throw new Error('Invalid script pubkey')
 
           return walletTools.getPrivateKey({ path: address.path, xprivKeys })
