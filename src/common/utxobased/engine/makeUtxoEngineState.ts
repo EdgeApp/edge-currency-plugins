@@ -400,7 +400,7 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
     }
 
     const getLastUsed = async (): Promise<number> =>
-      await processor.lastUsedIndexByFormatPath({ ...partialPath })
+      (await processor.lastUsedIndexByFormatPath({ ...partialPath })) ?? -1
     const getAddressCount = (): number =>
       processor.numAddressesByFormatPath(partialPath)
 
@@ -416,7 +416,7 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
       }
     }
 
-    while (lastUsed + currencyInfo.gapLimit > addressCount) {
+    while (lastUsed + currencyInfo.gapLimit >= addressCount) {
       const path: AddressPath = {
         ...partialPath,
         addressIndex: addressCount
