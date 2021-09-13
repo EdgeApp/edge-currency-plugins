@@ -13,6 +13,7 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 
+import { filterUndefined } from '../../../util/filterUndefined'
 import { FEES_DISKLET_PATH } from '../../constants'
 import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
@@ -216,7 +217,9 @@ export async function makeUtxoEngine(
     async getTransactions(
       options: EdgeGetTransactionsOptions
     ): Promise<EdgeTransaction[]> {
-      const txs = await processor.fetchTransactions({ options })
+      const txs = filterUndefined(
+        await processor.fetchTransactions({ options })
+      )
       return await Promise.all(
         txs.map(
           async (tx: IProcessorTransaction) =>
@@ -233,8 +236,7 @@ export async function makeUtxoEngine(
     async isAddressUsed(address: string): Promise<boolean> {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddress(scriptPubkey)
-      if (addressData == null) return false
-      return addressData.used
+      return addressData?.used ?? false
     },
 
     async makeSpend(
@@ -265,7 +267,8 @@ export async function makeUtxoEngine(
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const utxos =
-        options?.utxos ?? (await processor.fetchUtxos({ utxoIds: [] }))
+        options?.utxos ??
+        ((await processor.fetchUtxos({ utxoIds: [] })) as IUTXO[])
       const setRBF = options?.setRBF ?? false
       const rbfTxid = edgeSpendInfo.rbfTxid
       let maxUtxo: undefined | IUTXO
@@ -466,7 +469,7 @@ export async function makeUtxoEngine(
         if (ratio === 1) {
           await tmpState.stop()
 
-          const utxos = await processor.fetchUtxos({ utxoIds: [] })
+          const utxos = (await processor.fetchUtxos({ utxoIds: [] })) as IUTXO[]
           if (utxos === null || utxos.length < 1) {
             throw new Error('Private key has no funds')
           }
