@@ -1621,10 +1621,9 @@ base@^0.11.1:
     mixin-deep "^1.2.0"
     pascalcase "^0.1.1"
 
-baselet@^0.1.0:
+"baselet@https://github.com/EdgeApp/baselet.git#sam/empty-queries-fix":
   version "0.1.0"
-  resolved "https://registry.yarnpkg.com/baselet/-/baselet-0.1.0.tgz#b89fc0222c78c99ed37189bd83c4e38cbdbd5fdc"
-  integrity sha512-bNMSXI7yEXw1KxgQ+p0d1svXMNQ8mFupGBZLHAeXOjtW+tbmBiN4rhGVtqRdcRvBnSM7nqQYODWPrSzyBMvjJQ==
+  resolved "https://github.com/EdgeApp/baselet.git#5be05f12c53274b26ddf7e62b20e6170c41cd536"
   dependencies:
     disklet "^0.4.5"
     memlet "^0.0.3"
