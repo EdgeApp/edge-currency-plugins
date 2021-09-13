@@ -5,14 +5,7 @@ import { EdgeGetTransactionsOptions } from 'edge-core-js'
 
 import { AddressPath } from '../../plugin/types'
 import { makeBaselets } from './makeBaselets'
-import {
-  addressPathToPrefix,
-  RANGE_ID_KEY,
-  RANGE_KEY,
-  TxIdsByDate,
-  txIdsByDateRangeId,
-  txIdsByDateRangeKey
-} from './Models/baselet'
+import { addressPathToPrefix, TxIdByDate } from './Models/baselet'
 import {
   IAddress,
   IProcessorTransaction,
@@ -78,7 +71,7 @@ export interface Processor {
   removeUtxos: (utxoIds: string[]) => Promise<void>
   // fetch either all UTXOs if the array is empty or as selected from an array
   // of UTXO ids
-  fetchUtxos: (args: FetchUtxosArgs) => Promise<IUTXO[]>
+  fetchUtxos: (args: FetchUtxosArgs) => Promise<Array<IUTXO | undefined>>
 
   /* Transaction processing
   **********************
@@ -100,7 +93,7 @@ export interface Processor {
   removeTransaction: (txId: string) => Promise<void>
   fetchTransactions: (
     args: FetchTransactionArgs
-  ) => Promise<IProcessorTransaction[]>
+  ) => Promise<Array<IProcessorTransaction | undefined>>
 
   /* Address processing
   *********************
@@ -119,8 +112,8 @@ export interface Processor {
   // get the last used address index for a specific format
   lastUsedIndexByFormatPath: (
     path: Omit<AddressPath, 'addressIndex'>
-  ) => Promise<number | undefined>
-  fetchAddresses: (args: AddressPath | string) => Promise<IAddress>
+  ) => Promise<number>
+  fetchAddresses: (args: AddressPath | string) => Promise<IAddress | undefined>
 
   /* Block processing
   *******************
@@ -134,7 +127,7 @@ export interface Processor {
   // insert a new block height / block hash pair. Evicts pairs further back in
   // history than the threshold blocks
   saveBlockHash: (args: BlockHeightArgs) => Promise<void>
-  fetchBlockHash: (height: number) => Promise<string[]>
+  fetchBlockHash: (height: number) => Promise<Array<string | undefined>>
 }
 
 export async function makeProcessor(
@@ -193,11 +186,17 @@ export async function makeProcessor(
 
     async saveUtxo(utxo: IUTXO): Promise<void> {
       return await baselets.utxo(async tables => {
-        await tables.utxoIdsByScriptPubkey.insert(
-          '',
-          utxo.scriptPubkey,
-          utxo.id
-        )
+        const [utxoIds = []] = await tables.utxoIdsByScriptPubkey.query('', [
+          utxo.scriptPubkey
+        ])
+        if (!utxoIds.includes(utxo.id)) {
+          utxoIds.push(utxo.id)
+          await tables.utxoIdsByScriptPubkey.insert(
+            '',
+            utxo.scriptPubkey,
+            utxoIds
+          )
+        }
 
         await tables.utxoById.insert('', utxo.id, utxo)
       })
@@ -205,35 +204,63 @@ export async function makeProcessor(
 
     async removeUtxos(utxoIds: string[]): Promise<void> {
       return await baselets.utxo(async tables => {
-        const utxos = await tables.utxoById.query('', utxoIds)
-        await tables.utxoIdsByScriptPubkey.delete(
-          '',
-          utxos.map(utxo => (utxo != null ? utxo.scriptPubkey : undefined))
-        )
+        // To remove utxo from utxoIdsByScriptPubkey table:
+        // 1. Create a map of scriptPubkeys to utxoIds
+        // 2. Use the map to remove utxoIds from the utxoIdsByScriptPubkey table
+        const utxos = (await tables.utxoById.query('', utxoIds)).filter(
+          utxo => utxo != null
+        ) as IUTXO[]
+        const utxoIdsMap: { [scriptPubkey: string]: string[] } = {}
+        for (const utxo of utxos) {
+          utxoIdsMap[utxo.scriptPubkey] = [
+            ...(utxoIdsMap[utxo.scriptPubkey] ?? []),
+            utxo.id
+          ]
+        }
+        for (const scriptPubkey of Object.keys(utxoIdsMap)) {
+          const utxoIdsToRemove = utxoIdsMap[scriptPubkey]
+          const [utxoIds = []] = await tables.utxoIdsByScriptPubkey.query('', [
+            scriptPubkey
+          ])
+
+          for (const utxoIdToRemove of utxoIdsToRemove) {
+            utxoIds.splice(utxoIds.indexOf(utxoIdToRemove), 1)
+          }
+
+          // Update utxoIds for entry in table, otherwise delete entry
+          if (utxoIds.length > 0) {
+            await tables.utxoIdsByScriptPubkey.insert('', scriptPubkey, utxoIds)
+          } else {
+            await tables.utxoIdsByScriptPubkey.delete('', [scriptPubkey])
+          }
+        }
+
+        // Remove utxo utxoById table
         await tables.utxoById.delete('', utxoIds)
       })
     },
 
-    async fetchUtxos(args): Promise<IUTXO[]> {
+    async fetchUtxos(args): Promise<Array<IUTXO | undefined>> {
       const { scriptPubkey, utxoIds = [] } = args
       return await baselets.utxo(async tables => {
         if (scriptPubkey != null) {
-          const utxoIdsByScriptPubkey = (
-            await tables.utxoIdsByScriptPubkey.query('', [scriptPubkey])
-          ).filter(utxoId => utxoId != null)
+          const [
+            utxoIdsByScriptPubkey
+          ] = await tables.utxoIdsByScriptPubkey.query('', [scriptPubkey])
 
-          utxoIds.push(...utxoIdsByScriptPubkey)
+          if (utxoIdsByScriptPubkey != null)
+            utxoIds.push(...utxoIdsByScriptPubkey)
 
-          // Return undefined as the UTXO if no utxoIds are found by scriptPubkey
+          // Exit early if no utxoIds are found by scriptPubkey
           if (utxoIds.length === 0) {
-            return [undefined]
+            return []
           }
         }
 
         // Return all UTXOs if no UTXO ids are specified
         if (utxoIds.length === 0) {
-          const dump = await tables.utxoById.dumpData('')
-          return Object.values(dump.data)
+          const { data } = await tables.utxoById.dumpData('')
+          return Object.values(data[''])
         }
 
         return await tables.utxoById.query('', utxoIds)
@@ -244,16 +271,14 @@ export async function makeProcessor(
       const { scriptPubkey, tx } = args
       return await baselets.tx(async tables => {
         // Check if the transaction already exists
-        const processorTx:
-          | IProcessorTransaction
-          | undefined = await tables.txById
+        const processorTx = await tables.txById
           .query('', [tx.txid])
           .then(transactions => transactions[0])
           .catch(_ => undefined)
         if (processorTx == null) {
           await tables.txIdsByDate.insert('', {
-            [txIdsByDateRangeId]: tx.txid,
-            [txIdsByDateRangeKey]: tx.date
+            txid: tx.txid,
+            date: tx.date
           })
         }
         // Use the existing transaction if it does exist.
@@ -287,8 +312,8 @@ export async function makeProcessor(
           )
           transaction.blockHeight = tx.blockHeight
           await tables.txIdsByBlockHeight.insert('', {
-            [RANGE_ID_KEY]: transaction.txid,
-            [RANGE_KEY]: transaction.blockHeight
+            txid: transaction.txid,
+            blockHeight: transaction.blockHeight
           })
         } else {
           // Save tx by blockheight
@@ -296,11 +321,11 @@ export async function makeProcessor(
             await tables.txIdsByBlockHeight.query('', transaction.blockHeight)
           )
             .reverse()
-            .map(({ [RANGE_ID_KEY]: id }) => id)
+            .map(({ txid: id }) => id)
           if (!txIdsByTransactionBlockHeight.includes(transaction.txid)) {
             await tables.txIdsByBlockHeight.insert('', {
-              [RANGE_ID_KEY]: transaction.txid,
-              [RANGE_KEY]: transaction.blockHeight
+              txid: transaction.txid,
+              blockHeight: transaction.blockHeight
             })
           }
         }
@@ -320,17 +345,14 @@ export async function makeProcessor(
 
     async fetchTransactions(
       args: FetchTransactionArgs
-    ): Promise<IProcessorTransaction[]> {
+    ): Promise<Array<IProcessorTransaction | undefined>> {
       const { blockHeightMax, txId, options } = args
       let { blockHeight } = args
-      const txs: IProcessorTransaction[] = []
+      const txs: Array<IProcessorTransaction | undefined> = []
       await baselets.tx(async tables => {
         // Fetch transactions by id
         if (txId != null) {
-          const txById: IProcessorTransaction[] = await tables.txById.query(
-            '',
-            [txId]
-          )
+          const txById = await tables.txById.query('', [txId])
           txs.push(...txById)
         }
         // Fetch transactions by min block height
@@ -344,12 +366,9 @@ export async function makeProcessor(
             )
           )
             .reverse()
-            .map(({ [RANGE_ID_KEY]: id }) => id)
+            .map(({ txid: id }) => id)
 
-          const txsById: IProcessorTransaction[] = await tables.txById.query(
-            '',
-            txIdsByMinBlockHeight
-          )
+          const txsById = await tables.txById.query('', txIdsByMinBlockHeight)
           txs.push(...txsById)
         }
         if (options != null) {
@@ -361,7 +380,7 @@ export async function makeProcessor(
           } = options
 
           // Fetch transaction IDs ordered by date
-          let txData: TxIdsByDate
+          let txData: TxIdByDate[]
           if (startEntries != null && startIndex != null) {
             txData = await tables.txIdsByDate.queryByCount(
               '',
@@ -377,7 +396,7 @@ export async function makeProcessor(
           }
           const txIdsByOptions = await txData
             .reverse()
-            .map(({ [txIdsByDateRangeId]: id }) => id)
+            .map(({ txid: id }) => id)
 
           const txsByOptions = await tables.txById.query('', txIdsByOptions)
           // Make sure only existing transactions are included
@@ -389,9 +408,7 @@ export async function makeProcessor(
 
     async saveAddress(address: IAddress): Promise<void> {
       await baselets.address(async tables => {
-        const [
-          existingAddress
-        ]: IAddress[] = await tables.addressByScriptPubkey.query('', [
+        const [existingAddress] = await tables.addressByScriptPubkey.query('', [
           address.scriptPubkey
         ])
 
@@ -414,7 +431,7 @@ export async function makeProcessor(
           )
 
           // check if this address is used and if so, whether it has a higher last used index
-          if (address.used || existingAddress?.used) {
+          if (address.used || (existingAddress?.used ?? false)) {
             let [lastUsed] = await tables.lastUsedByFormatPath.query('', [
               addressPathToPrefix(address.path)
             ])
@@ -504,18 +521,18 @@ export async function makeProcessor(
 
     async lastUsedIndexByFormatPath(
       path: Omit<AddressPath, 'addressIndex'>
-    ): Promise<number | undefined> {
+    ): Promise<number> {
       const [addressIndex] = await baselets.address(async tables => {
         return await tables.lastUsedByFormatPath.query('', [
           addressPathToPrefix(path)
         ])
       })
-      return addressIndex
+      return addressIndex ?? -1
     },
 
     async fetchAddresses(
       fetchAddressArg: AddressPath | string
-    ): Promise<IAddress> {
+    ): Promise<IAddress | undefined> {
       return await baselets.address(async tables => {
         if (typeof fetchAddressArg === 'string') {
           // if it is a string, it is a scriptPubkey
@@ -557,7 +574,7 @@ export async function makeProcessor(
       })
     },
 
-    async fetchBlockHash(height: number): Promise<string[]> {
+    async fetchBlockHash(height: number): Promise<Array<string | undefined>> {
       return await baselets.block(
         async tables =>
           await tables.blockHashByBlockHeight.query('', [height.toString()])

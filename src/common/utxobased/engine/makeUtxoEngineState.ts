@@ -184,6 +184,7 @@ export function makeUtxoEngineState(
         blockHeight: 0
       })
       for (const tx of txs) {
+        if (tx == null) continue
         taskCache.updateTransactionsCache[tx.txid] = { processing: false }
       }
     }
@@ -1049,6 +1050,10 @@ const processUtxoTransactions = async (
   const currentUtxoIds: string[] = []
   let oldBalance = '0'
   for (const utxo of currentUtxos) {
+    if (utxo == null)
+      throw new Error(
+        'Unexpected undefined utxo when processing unspent transactions'
+      )
     oldBalance = bs.add(utxo.value, oldBalance)
     currentUtxoIds.push(utxo.txid)
   }

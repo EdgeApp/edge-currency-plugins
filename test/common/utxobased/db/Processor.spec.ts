@@ -67,7 +67,7 @@ describe('Processor address tests', () => {
     } = await makeFixtures()
 
     assertNumAddressesWithPaths(0)
-    await assertLastUsedByFormatPath(undefined)
+    await assertLastUsedByFormatPath(-1)
   })
 
   it('insert address to baselets', async () => {
@@ -89,11 +89,11 @@ describe('Processor address tests', () => {
     await processor.saveAddress(address1)
     // Assertions
     assertNumAddressesWithPaths(0)
-    await assertLastUsedByFormatPath(undefined)
+    await assertLastUsedByFormatPath(-1)
     const processorAddress1 = await processor.fetchAddresses(
       'testscriptpubkey1'
     )
-    expect(processorAddress1.scriptPubkey).to.eqls(address1.scriptPubkey)
+    expect(processorAddress1?.scriptPubkey).to.eqls(address1.scriptPubkey)
 
     // Insert an unused address with a path
     const address2: IAddress = {
@@ -108,11 +108,11 @@ describe('Processor address tests', () => {
     await processor.saveAddress(address2)
     // Assertions
     assertNumAddressesWithPaths(1)
-    await assertLastUsedByFormatPath(undefined)
+    await assertLastUsedByFormatPath(-1)
     const processorAddress2 = await processor.fetchAddresses(
       'testscriptpubkey2'
     )
-    expect(processorAddress2.scriptPubkey).to.eqls(address2.scriptPubkey)
+    expect(processorAddress2?.scriptPubkey).to.eqls(address2.scriptPubkey)
 
     // Insert a used address with a conflicting path
     const address3: IAddress = {
@@ -152,7 +152,7 @@ describe('Processor address tests', () => {
     const processorAddress4 = await processor.fetchAddresses(
       'testscriptpubkey3'
     )
-    expect(processorAddress4.scriptPubkey).to.eqls(address4.scriptPubkey)
+    expect(processorAddress4?.scriptPubkey).to.eqls(address4.scriptPubkey)
     await assertLastUsedByFormatPath(1)
   })
 
@@ -175,11 +175,11 @@ describe('Processor address tests', () => {
     await processor.saveAddress(address)
     // Assertions
     assertNumAddressesWithPaths(0)
-    await assertLastUsedByFormatPath(undefined)
+    await assertLastUsedByFormatPath(-1)
     const processorAddress1 = await processor.fetchAddresses(
       'testscriptpubkey1'
     )
-    expect(processorAddress1.scriptPubkey).to.eqls(address.scriptPubkey)
+    expect(processorAddress1?.scriptPubkey).to.eqls(address.scriptPubkey)
 
     // Update the address with a path
     address = {
@@ -193,11 +193,11 @@ describe('Processor address tests', () => {
     await processor.saveAddress(address)
     // Assertions
     assertNumAddressesWithPaths(1)
-    await assertLastUsedByFormatPath(undefined)
+    await assertLastUsedByFormatPath(-1)
     const processorAddress2 = await processor.fetchAddresses(
       'testscriptpubkey1'
     )
-    expect(processorAddress2.scriptPubkey).to.eqls('testscriptpubkey1')
+    expect(processorAddress2?.scriptPubkey).to.eqls('testscriptpubkey1')
 
     // Update the used flag of an existing address with a path
     address = { ...address, used: true }
@@ -207,7 +207,7 @@ describe('Processor address tests', () => {
     const processorAddress3 = await processor.fetchAddresses(
       'testscriptpubkey1'
     )
-    expect(processorAddress3.scriptPubkey).to.eqls('testscriptpubkey1')
+    expect(processorAddress3?.scriptPubkey).to.eqls('testscriptpubkey1')
     await assertLastUsedByFormatPath(0)
 
     // Update various address fields of an existing address with a path
@@ -224,11 +224,11 @@ describe('Processor address tests', () => {
     const processorAddress4 = await processor.fetchAddresses(
       'testscriptpubkey1'
     )
-    expect(processorAddress4.scriptPubkey).to.eqls('testscriptpubkey1')
-    expect(processorAddress4.networkQueryVal).to.eqls(1)
-    expect(processorAddress4.lastQuery).to.eqls(1)
-    expect(processorAddress4.lastTouched).to.eqls(1)
-    expect(processorAddress4.balance).to.eqls('0')
+    expect(processorAddress4?.scriptPubkey).to.eqls('testscriptpubkey1')
+    expect(processorAddress4?.networkQueryVal).to.eqls(1)
+    expect(processorAddress4?.lastQuery).to.eqls(1)
+    expect(processorAddress4?.lastTouched).to.eqls(1)
+    expect(processorAddress4?.balance).to.eqls('0')
   })
 })
 
@@ -388,7 +388,7 @@ describe('Processor utxo tests', () => {
     await processor
       .fetchUtxos({ scriptPubkey: utxo.scriptPubkey })
       .then(utxos => {
-        expect(utxos).to.eqls([undefined])
+        expect(utxos).to.eqls([])
       })
   })
 
@@ -530,12 +530,12 @@ describe('Processor transactions tests', () => {
 
     assertNumTransactions(1, processor)
     const [tx1] = await processor.fetchTransactions({ txId: transaction1.txid })
-    expect(tx1.ourOuts[0]).to.eqls('0')
-    expect(tx1.ourAmount).to.eqls('1')
+    expect(tx1?.ourOuts[0]).to.eqls('0')
+    expect(tx1?.ourAmount).to.eqls('1')
     const [txByBlockHeight1] = await processor.fetchTransactions({
       blockHeight: 1
     })
-    expect(txByBlockHeight1.blockHeight).to.eqls(1)
+    expect(txByBlockHeight1?.blockHeight).to.eqls(1)
 
     // insert the same transaction, but with a script pubkey referencing an input
     await processor.saveTransaction({
@@ -544,9 +544,9 @@ describe('Processor transactions tests', () => {
     })
 
     const [tx2] = await processor.fetchTransactions({ txId: transaction1.txid })
-    expect(tx2.ourOuts[0]).to.eqls('0')
-    expect(tx2.ourIns[0]).to.eqls('0')
-    expect(tx2.ourAmount).to.eqls('0')
+    expect(tx2?.ourOuts[0]).to.eqls('0')
+    expect(tx2?.ourIns[0]).to.eqls('0')
+    expect(tx2?.ourAmount).to.eqls('0')
 
     // insert the same transaction, but with a script pubkey referencing another output
     await processor.saveTransaction({
@@ -555,9 +555,9 @@ describe('Processor transactions tests', () => {
     })
 
     const [tx3] = await processor.fetchTransactions({ txId: transaction1.txid })
-    expect(tx3.ourOuts[1]).to.eqls('1')
-    expect(tx3.ourIns[0]).to.eqls('0')
-    expect(tx3.ourAmount).to.eqls('1')
+    expect(tx3?.ourOuts[1]).to.eqls('1')
+    expect(tx3?.ourIns[0]).to.eqls('0')
+    expect(tx3?.ourAmount).to.eqls('1')
 
     const [tx4] = await processor.fetchTransactions({ options: {} })
     expect(tx4).not.to.be.undefined
@@ -638,13 +638,13 @@ describe('Processor transactions tests', () => {
 
     assertNumTransactions(2, processor)
     const [tx1] = await processor.fetchTransactions({ txId: transaction1.txid })
-    expect(tx1.ourOuts[0]).to.eqls('0')
-    expect(tx1.ourAmount).to.eqls('1')
+    expect(tx1?.ourOuts[0]).to.eqls('0')
+    expect(tx1?.ourAmount).to.eqls('1')
     const txsByBlockHeight = await processor.fetchTransactions({
       blockHeight: 1
     })
-    expect(txsByBlockHeight[0].blockHeight).to.eqls(1)
-    expect(txsByBlockHeight[1].blockHeight).to.eqls(1)
+    expect(txsByBlockHeight[0]?.blockHeight).to.eqls(1)
+    expect(txsByBlockHeight[1]?.blockHeight).to.eqls(1)
 
     await processor.saveTransaction({
       tx: transaction1,
@@ -652,9 +652,9 @@ describe('Processor transactions tests', () => {
     })
 
     const [tx2] = await processor.fetchTransactions({ txId: transaction1.txid })
-    expect(tx2.ourOuts[0]).to.eqls('0')
-    expect(tx2.ourIns[0]).to.eqls('0')
-    expect(tx2.ourAmount).to.eqls('0')
+    expect(tx2?.ourOuts[0]).to.eqls('0')
+    expect(tx2?.ourIns[0]).to.eqls('0')
+    expect(tx2?.ourAmount).to.eqls('0')
 
     await processor.saveTransaction({
       tx: transaction1,
@@ -662,9 +662,9 @@ describe('Processor transactions tests', () => {
     })
 
     const [tx3] = await processor.fetchTransactions({ txId: transaction1.txid })
-    expect(tx3.ourOuts[1]).to.eqls('1')
-    expect(tx3.ourIns[0]).to.eqls('0')
-    expect(tx3.ourAmount).to.eqls('1')
+    expect(tx3?.ourOuts[1]).to.eqls('1')
+    expect(tx3?.ourIns[0]).to.eqls('0')
+    expect(tx3?.ourAmount).to.eqls('1')
 
     const [tx4] = await processor.fetchTransactions({ options: {} })
     expect(tx4).not.to.be.undefined
@@ -760,8 +760,8 @@ describe('Processor transactions tests', () => {
       blockHeight: 1
     })
     expect(txsByBlockHeight.length).to.be.eqls(2)
-    expect(txsByBlockHeight[0].blockHeight).to.eqls(1)
-    expect(txsByBlockHeight[1].blockHeight).to.eqls(1)
+    expect(txsByBlockHeight[0]?.blockHeight).to.eqls(1)
+    expect(txsByBlockHeight[1]?.blockHeight).to.eqls(1)
 
     await processor.saveTransaction({ tx: transaction2updated })
 
@@ -770,7 +770,7 @@ describe('Processor transactions tests', () => {
       blockHeight: 1
     })
     expect(txsByBlockHeight1.length).to.be.eqls(1)
-    expect(txsByBlockHeight1[0].blockHeight).to.eqls(1)
+    expect(txsByBlockHeight1[0]?.blockHeight).to.eqls(1)
 
     // should return between (including) a range of block heights
     const txsByBlockHeight2 = await processor.fetchTransactions({
@@ -784,6 +784,6 @@ describe('Processor transactions tests', () => {
       blockHeightMax: 10
     })
     expect(txsByBlockHeight3.length).to.be.equals(2)
-    expect(txsByBlockHeight3[0].blockHeight).to.be.equals(10)
+    expect(txsByBlockHeight3[0]?.blockHeight).to.be.equals(10)
   })
 })
