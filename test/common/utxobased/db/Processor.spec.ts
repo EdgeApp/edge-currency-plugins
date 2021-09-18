@@ -98,7 +98,7 @@ describe('Processor address tests', () => {
     // Insert an unused address without a path
     const address1: IAddress = {
       scriptPubkey: 'testscriptpubkey1',
-      networkQueryVal: 0,
+      lastQueriedBlockHeight: 0,
       lastQuery: 0,
       lastTouched: 0,
       used: false,
@@ -116,7 +116,7 @@ describe('Processor address tests', () => {
     // Insert an unused address with a path
     const address2: IAddress = {
       scriptPubkey: 'testscriptpubkey2',
-      networkQueryVal: 0,
+      lastQueriedBlockHeight: 0,
       lastQuery: 0,
       path: { format: 'bip44', changeIndex: 0, addressIndex: 0 },
       lastTouched: 0,
@@ -135,7 +135,7 @@ describe('Processor address tests', () => {
     // Insert a used address with a conflicting path
     const address3: IAddress = {
       scriptPubkey: 'testscriptpubkey3',
-      networkQueryVal: 0,
+      lastQueriedBlockHeight: 0,
       lastQuery: 0,
       path: { format: 'bip44', changeIndex: 0, addressIndex: 0 },
       lastTouched: 0,
@@ -157,7 +157,7 @@ describe('Processor address tests', () => {
     // Insert a used address with a path
     const address4: IAddress = {
       scriptPubkey: 'testscriptpubkey3',
-      networkQueryVal: 0,
+      lastQueriedBlockHeight: 0,
       lastQuery: 0,
       path: { format: 'bip44', changeIndex: 0, addressIndex: 1 },
       lastTouched: 0,
@@ -195,7 +195,7 @@ describe('Processor address tests', () => {
     // Insert an unused address without a path
     let address: IAddress = {
       scriptPubkey: 'testscriptpubkey1',
-      networkQueryVal: 0,
+      lastQueriedBlockHeight: 0,
       lastQuery: 0,
       lastTouched: 0,
       used: false,
@@ -242,7 +242,7 @@ describe('Processor address tests', () => {
     // Update various address fields of an existing address with a path
     address = {
       ...address,
-      networkQueryVal: 1,
+      lastQueriedBlockHeight: 1,
       lastQuery: 1,
       lastTouched: 1,
       balance: '0'
@@ -254,7 +254,7 @@ describe('Processor address tests', () => {
       await processor.fetchAddress(address.scriptPubkey)
     )
     expect(processorAddress4.scriptPubkey).to.eqls(address.scriptPubkey)
-    expect(processorAddress4.networkQueryVal).to.eqls(1)
+    expect(processorAddress4.lastQueriedBlockHeight).to.eqls(1)
     expect(processorAddress4.lastQuery).to.eqls(1)
     expect(processorAddress4.lastTouched).to.eqls(1)
     expect(processorAddress4.balance).to.eqls('0')

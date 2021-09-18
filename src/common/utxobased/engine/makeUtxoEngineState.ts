@@ -207,6 +207,7 @@ export function makeUtxoEngineState(
           response.address,
           path.format,
           path.branch,
+          0,
           taskCache.transactionsCache
         ).catch(() => {
           throw new Error('failed to add to transaction cache')
@@ -284,7 +285,7 @@ export function makeUtxoEngineState(
         await processor.saveAddress({
           scriptPubkey,
           used: true,
-          networkQueryVal: 0,
+          lastQueriedBlockHeight: 0,
           lastQuery: 0,
           lastTouched: 0,
           balance: '0'
@@ -385,7 +386,7 @@ interface AddressTransactionCache {
     processing: boolean
     path: ShortPath
     page: number
-    networkQueryVal: number
+    blockHeight: number
   }
 }
 
@@ -458,13 +459,19 @@ const addToTransactionCache = async (
   address: string,
   format: CurrencyFormat,
   branch: number,
+  blockHeight: number,
   transactions: AddressTransactionCache
 ): Promise<void> => {
   const { walletTools, processor } = args
-  // Fetch the networkQueryVal from the database
+  // Fetch the blockHeight for the address from the database
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
-  const { networkQueryVal = 0 } =
-    (await processor.fetchAddress(scriptPubkey)) ?? {}
+
+  if (blockHeight === 0) {
+    const { lastQueriedBlockHeight = 0 } =
+      (await processor.fetchAddress(scriptPubkey)) ?? {}
+    blockHeight = lastQueriedBlockHeight
+  }
+
   transactions[address] = {
     processing: false,
     path: {
@@ -472,7 +479,7 @@ const addToTransactionCache = async (
       branch
     },
     page: 1, // Page starts on 1
-    networkQueryVal
+    blockHeight
   }
 }
 
@@ -602,6 +609,7 @@ export const pickNextTask = async (
     Object.keys(addressSubscribeCache).length > 0 &&
     !taskCache.addressWatching
   ) {
+    const blockHeight = serverStates.getBlockHeight(uri)
     // Loop each address that needs to be subscribed
     for (const address of Object.keys(addressSubscribeCache)) {
       const state = addressSubscribeCache[address]
@@ -620,6 +628,7 @@ export const pickNextTask = async (
           address,
           path.format,
           path.branch,
+          blockHeight,
           transactionsCache
         )
       }
@@ -763,7 +772,7 @@ const saveAddress = async (args: SaveAddressArgs): Promise<void> => {
     scriptPubkey,
     path,
     used,
-    networkQueryVal: 0,
+    lastQueriedBlockHeight: 0,
     lastQuery: 0,
     lastTouched: 0,
     balance: '0'
@@ -852,22 +861,22 @@ const internalGetFreshAddress = async (
 interface ProcessAddressTxsArgs extends CommonArgs {
   processing: boolean
   page: number
-  networkQueryVal: number
+  blockHeight: number
   path: ShortPath
   address: string
   uri: string
 }
 
-type addressResponse = IAccountDetailsBasic &
+type AddressResponse = IAccountDetailsBasic &
   ITransactionDetailsPaginationResponse
 
 const processAddressTransactions = async (
   args: ProcessAddressTxsArgs
-): Promise<WsTask<addressResponse>> => {
+): Promise<WsTask<AddressResponse>> => {
   const {
     address,
     page = 1,
-    networkQueryVal,
+    blockHeight,
     processor,
     walletTools,
     path,
@@ -884,15 +893,14 @@ const processAddressTransactions = async (
   }
 
   const queryTime = Date.now()
-  const deferredAddressResponse = new Deferred<addressResponse>()
+  const deferredAddressResponse = new Deferred<AddressResponse>()
   deferredAddressResponse.promise
-    .then(async (value: addressResponse) => {
+    .then(async (value: AddressResponse) => {
       serverStates.serverScoreUp(uri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
       // If address is used and previously not marked as used, mark as used.
       const used = txs > 0 || unconfirmedTxs > 0
-      const blockHeight = serverStates.getBlockHeight(uri)
 
       if (!addressData.used && used && page === 1) {
         addressData.used = true
@@ -910,12 +918,12 @@ const processAddressTransactions = async (
         // Add the address back to the cache, incrementing the page
         transactionsCache[address] = {
           path,
-          networkQueryVal,
           processing: false,
+          blockHeight,
           page: page + 1
         }
       } else {
-        addressData.networkQueryVal = blockHeight
+        addressData.lastQueriedBlockHeight = blockHeight
         await processor.saveAddress(addressData)
         // Callback for when an address has been fully processed
         args.onAddressChecked()
@@ -927,15 +935,15 @@ const processAddressTransactions = async (
       args.processing = false
       transactionsCache[address] = {
         path,
-        networkQueryVal,
         processing: args.processing,
+        blockHeight,
         page
       }
     })
   return {
     ...addressMessage(address, {
       details: 'txs',
-      from: networkQueryVal,
+      from: addressData.lastQueriedBlockHeight,
       perPage: BLOCKBOOK_TXS_PER_PAGE,
       page
     }),

@@ -431,9 +431,13 @@ export async function makeProcessor(
         }
 
         if (existingAddress != null) {
-          // Only update the networkQueryVal if one was given and is greater than the existing value
-          if (address.networkQueryVal > existingAddress.networkQueryVal) {
-            existingAddress.networkQueryVal = address.networkQueryVal
+          // Only update the lastQueriedBlockHeight on the address if one was given and is greater than the existing value
+          if (
+            address.lastQueriedBlockHeight >
+            existingAddress.lastQueriedBlockHeight
+          ) {
+            existingAddress.lastQueriedBlockHeight =
+              address.lastQueriedBlockHeight
           }
 
           // Only update the lastQuery value if one was given and is greater than the existing value
