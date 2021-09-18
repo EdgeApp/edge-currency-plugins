@@ -204,6 +204,7 @@ export function makeUtxoEngineState(
           response.address,
           path.format,
           path.branch,
+          0,
           taskCache.transactionsCache
         ).catch(() => {
           throw new Error('failed to add to transaction cache')
@@ -382,6 +383,7 @@ interface AddressTransactionCache {
     processing: boolean
     path: ShortPath
     page: number
+    blockHeight: number
     networkQueryVal: number
   }
 }
@@ -455,6 +457,7 @@ const addToTransactionCache = async (
   address: string,
   format: CurrencyFormat,
   branch: number,
+  blockHeight: number,
   transactions: AddressTransactionCache
 ): Promise<void> => {
   const { walletTools, processor } = args
@@ -462,6 +465,9 @@ const addToTransactionCache = async (
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const { networkQueryVal = 0 } =
     (await processor.fetchAddresses(scriptPubkey)) ?? {}
+  if (blockHeight === 0) {
+    blockHeight = networkQueryVal
+  }
   transactions[address] = {
     processing: false,
     path: {
@@ -469,6 +475,7 @@ const addToTransactionCache = async (
       branch
     },
     page: 1, // Page starts on 1
+    blockHeight,
     networkQueryVal
   }
 }
@@ -599,6 +606,7 @@ export const pickNextTask = async (
     Object.keys(addressSubscribeCache).length > 0 &&
     !taskCache.addressWatching
   ) {
+    const blockHeight = serverStates.getBlockHeight(uri)
     // Loop each address that needs to be subscribed
     for (const address of Object.keys(addressSubscribeCache)) {
       const state = addressSubscribeCache[address]
@@ -617,6 +625,7 @@ export const pickNextTask = async (
           address,
           path.format,
           path.branch,
+          blockHeight,
           transactionsCache
         )
       }
@@ -850,6 +859,7 @@ interface ProcessAddressTxsArgs extends CommonArgs {
   processing: boolean
   page: number
   networkQueryVal: number
+  blockHeight: number
   path: ShortPath
   address: string
   uri: string
@@ -865,6 +875,7 @@ const processAddressTransactions = async (
     address,
     page = 1,
     networkQueryVal,
+    blockHeight,
     processor,
     walletTools,
     path,
@@ -889,7 +900,6 @@ const processAddressTransactions = async (
 
       // If address is used and previously not marked as used, mark as used.
       const used = txs > 0 || unconfirmedTxs > 0
-      const blockHeight = serverStates.getBlockHeight(uri)
 
       if (!addressData.used && used && page === 1) {
         addressData.used = true
@@ -909,6 +919,7 @@ const processAddressTransactions = async (
           path,
           networkQueryVal,
           processing: false,
+          blockHeight,
           page: page + 1
         }
       } else {
@@ -926,6 +937,7 @@ const processAddressTransactions = async (
         path,
         networkQueryVal,
         processing: args.processing,
+        blockHeight,
         page
       }
     })
