@@ -111,7 +111,7 @@ export async function makeUtxoEngine(
       return metadata.lastSeenBlockHeight
     },
 
-    async addCustomToken(_token: EdgeTokenInfo): Promise<unknown> {
+    async addCustomToken(_token: EdgeTokenInfo): Promise<void> {
       return await Promise.resolve(undefined)
     },
 
@@ -148,7 +148,7 @@ export async function makeUtxoEngine(
       await pluginState.updateServers(userSettings)
     },
 
-    async disableTokens(_tokens: string[]): Promise<unknown> {
+    async disableTokens(_tokens: string[]): Promise<void> {
       return await Promise.resolve(undefined)
     },
 
@@ -168,7 +168,7 @@ export async function makeUtxoEngine(
       }
     },
 
-    async enableTokens(_tokens: string[]): Promise<unknown> {
+    async enableTokens(_tokens: string[]): Promise<void> {
       return await Promise.resolve(undefined)
     },
 

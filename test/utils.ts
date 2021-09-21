@@ -47,6 +47,12 @@ export const makeFakeLog = (): EdgeLog => {
   const fakeLog = (): void => {
     return
   }
+  fakeLog.breadcrumb = () => {
+    return
+  }
+  fakeLog.crash = () => {
+    return
+  }
   fakeLog.warn = () => {
     return
   }

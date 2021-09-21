@@ -17,6 +17,7 @@ import {
   SocketEvent
 } from '../../../../src/common/utxobased/network/MakeSocketEmitter'
 import { WsTask } from '../../../../src/common/utxobased/network/Socket'
+import { makeFakeLog } from '../../../utils'
 
 chai.should()
 
@@ -59,15 +60,7 @@ describe('BlockBook notifications tests with dummy server', function () {
     engineEmitter = new EngineEmitter()
     const socketEmitter = new SocketEmitter()
 
-    const log = (..._args: unknown[]): void => {
-      return
-    }
-    log.warn = (..._args: unknown[]): void => {
-      return
-    }
-    log.error = (..._args: unknown[]): void => {
-      return
-    }
+    const log = makeFakeLog()
 
     const onQueueSpaceCB = async (
       _uri: string
@@ -157,15 +150,7 @@ describe('BlockBook', function () {
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
   const engineEmitter = new EngineEmitter()
   const socketEmitter = new SocketEmitter()
-  const log = (..._args: unknown[]): void => {
-    return
-  }
-  log.warn = (..._args: unknown[]): void => {
-    return
-  }
-  log.error = (..._args: unknown[]): void => {
-    return
-  }
+  const log = makeFakeLog()
   let blockBook: BlockBook
 
   const onQueueSpaceCB = async (
