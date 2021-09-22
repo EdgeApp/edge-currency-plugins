@@ -11,7 +11,7 @@ import {
   EdgeTokenInfo,
   EdgeTransaction,
   JsonObject
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 
 import { FEES_DISKLET_PATH } from '../../constants'
 import { makeFees } from '../../fees/makeFees'

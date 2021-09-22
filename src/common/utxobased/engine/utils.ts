@@ -1,5 +1,5 @@
 import { Disklet } from 'disklet'
-import { EdgeParsedUri } from 'edge-core-js'
+import { EdgeParsedUri } from 'edge-core-js/types'
 
 import { CurrencyFormat, NetworkEnum } from '../../plugin/types'
 import * as pluginUtils from '../../plugin/utils'

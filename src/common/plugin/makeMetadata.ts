@@ -1,6 +1,6 @@
 import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
-import { EdgeLog } from 'edge-core-js'
+import { EdgeLog } from 'edge-core-js/types'
 import { makeMemlet, Memlet } from 'memlet'
 
 import AwaitLock from '../utxobased/engine/await-lock'
