@@ -9,7 +9,7 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo,
   JsonObject
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 import * as uri from 'uri-js'
 import urlParse from 'url-parse'
 

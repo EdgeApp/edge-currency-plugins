@@ -1,10 +1,11 @@
-import { EdgeCorePluginOptions, EdgeCurrencyPlugin } from 'edge-core-js'
 import {
+  EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeWalletInfo
-} from 'edge-core-js/lib/types/types'
+} from 'edge-core-js/types'
 
 import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
 import { makeCurrencyTools } from './makeCurrencyTools'

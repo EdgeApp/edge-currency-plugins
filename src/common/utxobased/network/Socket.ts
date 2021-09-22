@@ -1,4 +1,4 @@
-import { EdgeLog } from 'edge-core-js'
+import { EdgeLog } from 'edge-core-js/types'
 
 import { removeItem } from '../../plugin/utils'
 import Deferred from './Deferred'

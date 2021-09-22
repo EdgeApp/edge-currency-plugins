@@ -5,7 +5,7 @@ import {
   EdgeLog,
   EdgeTransaction,
   EdgeWalletInfo
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {

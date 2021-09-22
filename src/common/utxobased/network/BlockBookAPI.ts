@@ -1,4 +1,4 @@
-import { EdgeTransaction } from 'edge-core-js'
+import { EdgeTransaction } from 'edge-core-js/types'
 
 export interface PartialTask {
   method: string

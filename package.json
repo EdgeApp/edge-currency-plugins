@@ -16,6 +16,7 @@
     "build.types": "tsc",
     "clean": "rimraf lib",
     "fix": "npm run lint -- --fix",
+    "precommit": "lint-staged && tsc",
     "prepare": "npm-run-all clean -p build.*",
     "start": "node -r sucrase/register src/index.ts",
     "test": "mocha -r sucrase/register 'test/**/*.spec.ts'",
@@ -23,7 +24,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged"
+      "pre-commit": "npm run precommit"
     }
   },
   "lint-staged": {
@@ -77,7 +78,7 @@
     "bs58grscheck": "^2.1.2",
     "bs58smartcheck": "^2.0.4",
     "disklet": "^0.4.5",
-    "edge-core-js": "^0.17.27-alpha.1",
+    "edge-core-js": "^0.18.9",
     "memlet": "^0.0.4",
     "uri-js": "^4.4.0",
     "url-parse": "^1.5.2",

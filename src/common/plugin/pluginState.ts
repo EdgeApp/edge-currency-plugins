@@ -1,7 +1,7 @@
 // Typescript translation from original code in edge-currency-bitcoin
 
 import { Disklet, navigateDisklet } from 'disklet'
-import { EdgeIo, EdgeLog } from 'edge-core-js'
+import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
 import { ServerCache, ServerInfo } from './serverCache'

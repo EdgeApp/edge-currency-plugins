@@ -2,7 +2,7 @@ import {
   EdgeFetchFunction,
   EdgePaymentProtocolInfo,
   EdgeSpendTarget
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 import parse from 'url-parse'
 
 interface BitPayOutput {

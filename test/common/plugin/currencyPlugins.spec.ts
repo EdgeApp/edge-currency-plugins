@@ -9,7 +9,7 @@ import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
   JsonObject
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 
 import fixtures from '../../../fixtures/currencyPlugins.json'
 import plugin from '../../../src/btc'

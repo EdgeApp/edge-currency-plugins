@@ -5,7 +5,7 @@ import {
   EdgeFetchOptions,
   EdgeIo,
   EdgeLog
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 
 import {
   EngineCurrencyInfo,
@@ -45,6 +45,12 @@ export const makeFakeCurrencyInfo = (
 
 export const makeFakeLog = (): EdgeLog => {
   const fakeLog = (): void => {
+    return
+  }
+  fakeLog.breadcrumb = () => {
+    return
+  }
+  fakeLog.crash = () => {
     return
   }
   fakeLog.warn = () => {

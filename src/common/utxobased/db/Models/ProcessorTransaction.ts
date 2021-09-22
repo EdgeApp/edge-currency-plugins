@@ -1,4 +1,4 @@
-import { EdgeTransaction } from 'edge-core-js'
+import { EdgeTransaction } from 'edge-core-js/types'
 
 import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
 import { Processor } from '../makeProcessor'

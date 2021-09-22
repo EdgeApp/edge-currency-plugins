@@ -1,4 +1,4 @@
-import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js'
+import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js/types'
 import { EventEmitter } from 'events'
 
 import { INewTransactionResponse } from '../utxobased/network/BlockBook'
