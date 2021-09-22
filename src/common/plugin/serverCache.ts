@@ -1,6 +1,6 @@
 // Typescript translation from original code in edge-currency-bitcoin
 
-import { EdgeLog } from 'edge-core-js'
+import { EdgeLog } from 'edge-core-js/types'
 
 export interface ServerInfo {
   serverUrl: string

@@ -2,7 +2,7 @@
 import * as bitcoin from 'altcoin-js'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
-import { InsufficientFundsError } from 'edge-core-js'
+import { InsufficientFundsError } from 'edge-core-js/types'
 
 import { NetworkEnum } from '../../plugin/types'
 import { IUTXO } from '../db/types'

@@ -1,4 +1,4 @@
-import { EdgeSpendInfo } from 'edge-core-js'
+import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { Input } from '../keymanager/utxopicker/types'
 

@@ -1,6 +1,11 @@
 import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
-import { EdgeIo, EdgeLog, EdgeSpendInfo, EdgeSpendTarget } from 'edge-core-js'
+import {
+  EdgeIo,
+  EdgeLog,
+  EdgeSpendInfo,
+  EdgeSpendTarget
+} from 'edge-core-js/types'
 import { makeMemlet, Memlet } from 'memlet'
 
 import { FEES_PATH, INFO_SERVER_URI } from '../constants'

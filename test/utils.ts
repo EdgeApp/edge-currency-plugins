@@ -5,7 +5,7 @@ import {
   EdgeFetchOptions,
   EdgeIo,
   EdgeLog
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 
 import {
   EngineCurrencyInfo,

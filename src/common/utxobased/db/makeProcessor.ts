@@ -1,7 +1,7 @@
 import { clearMemletCache } from 'baselet'
 import * as bs from 'biggystring'
 import { Disklet, navigateDisklet } from 'disklet'
-import { EdgeGetTransactionsOptions } from 'edge-core-js'
+import { EdgeGetTransactionsOptions } from 'edge-core-js/types'
 
 import { AddressPath } from '../../plugin/types'
 import { makeBaselets } from './makeBaselets'

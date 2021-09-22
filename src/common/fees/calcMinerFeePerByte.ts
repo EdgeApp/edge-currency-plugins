@@ -1,5 +1,5 @@
 import * as bs from 'biggystring'
-import { EdgeSpendInfo } from 'edge-core-js'
+import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { SimpleFeeSettings } from '../plugin/types'
 
