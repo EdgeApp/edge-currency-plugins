@@ -1,5 +1,6 @@
 import { IMAGE_SERVER_URL } from '../../constants'
 import { EngineCurrencyInfo, EngineCurrencyType } from '../../plugin/types'
+import { BCHScriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 export const info: EngineCurrencyInfo = {
   currencyType: EngineCurrencyType.UTXO,
@@ -51,5 +52,7 @@ export const info: EngineCurrencyInfo = {
 
   // Images:
   symbolImage: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
+
+  scriptTemplates: BCHScriptTemplates
 }
