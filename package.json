@@ -16,6 +16,7 @@
     "build.types": "tsc",
     "clean": "rimraf lib",
     "fix": "npm run lint -- --fix",
+    "precommit": "lint-staged && tsc",
     "prepare": "npm-run-all clean -p build.*",
     "start": "node -r sucrase/register src/index.ts",
     "test": "mocha -r sucrase/register 'test/**/*.spec.ts'",
@@ -23,7 +24,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged"
+      "pre-commit": "npm run precommit"
     }
   },
   "lint-staged": {
