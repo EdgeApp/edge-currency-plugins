@@ -118,6 +118,9 @@ export function makeUtxoEngineState(
     })
     const percent = processedCount / totalCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
+      log(
+        `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${totalCount}`
+      )
       processedPercent = percent
       emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
     }
