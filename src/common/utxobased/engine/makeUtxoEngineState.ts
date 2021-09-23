@@ -118,6 +118,9 @@ export function makeUtxoEngineState(
     })
     const percent = processedCount / totalCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
+      log(
+        `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${totalCount}`
+      )
       processedPercent = percent
       emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
     }
@@ -461,7 +464,7 @@ const addToTransactionCache = async (
   // Fetch the networkQueryVal from the database
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const { networkQueryVal = 0 } =
-    (await processor.fetchAddresses(scriptPubkey)) ?? {}
+    (await processor.fetchAddress(scriptPubkey)) ?? {}
   transactions[address] = {
     processing: false,
     path: {
@@ -835,7 +838,7 @@ const internalGetFreshAddress = async (
     addressIndex: Math.max(numAddresses - args.currencyInfo.gapLimit, 0)
   }
   const { scriptPubkey } =
-    (await processor.fetchAddresses(path)) ??
+    (await processor.fetchAddress(path)) ??
     (await walletTools.getScriptPubkey(path))
   if (scriptPubkey == null) {
     throw new Error('Unknown address path')
@@ -875,7 +878,7 @@ const processAddressTransactions = async (
   const transactionsCache = taskCache.transactionsCache
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
-  const addressData = await processor.fetchAddresses(scriptPubkey)
+  const addressData = await processor.fetchAddress(scriptPubkey)
   if (addressData == null) {
     throw new Error(`could not find address with script pubkey ${scriptPubkey}`)
   }
@@ -1007,7 +1010,7 @@ const processAddressUtxos = async (
     .then(async (utxos: IAccountUTXO[]) => {
       serverStates.serverScoreUp(uri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
-      const addressData = await processor.fetchAddresses(scriptPubkey)
+      const addressData = await processor.fetchAddress(scriptPubkey)
       if (addressData == null || addressData.path == null) {
         return
       }
@@ -1070,7 +1073,7 @@ const processUtxoTransactions = async (
     )
 
     // Update balances for address that have this scriptPubkey
-    const address = await processor.fetchAddresses(scriptPubkey)
+    const address = await processor.fetchAddress(scriptPubkey)
 
     if (address == null) {
       throw new Error('address not found when processing UTXO transactions')

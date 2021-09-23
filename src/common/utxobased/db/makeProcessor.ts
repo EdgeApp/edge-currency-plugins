@@ -120,7 +120,7 @@ export interface Processor {
   lastUsedIndexByFormatPath: (
     path: Omit<AddressPath, 'addressIndex'>
   ) => Promise<number | undefined>
-  fetchAddresses: (args: AddressPath | string) => Promise<IAddress>
+  fetchAddress: (args: AddressPath | string) => Promise<IAddress | undefined>
 
   /* Block processing
   *******************
@@ -513,9 +513,9 @@ export async function makeProcessor(
       return addressIndex
     },
 
-    async fetchAddresses(
+    async fetchAddress(
       fetchAddressArg: AddressPath | string
-    ): Promise<IAddress> {
+    ): Promise<IAddress | undefined> {
       return await baselets.address(async tables => {
         if (typeof fetchAddressArg === 'string') {
           // if it is a string, it is a scriptPubkey
@@ -533,6 +533,9 @@ export async function makeProcessor(
           addressPathToPrefix(path),
           path.addressIndex
         )
+
+        // return if the address by path was not found
+        if (scriptPubkeyFromPath == null) return
 
         const [address] = await tables.addressByScriptPubkey.query('', [
           scriptPubkeyFromPath
