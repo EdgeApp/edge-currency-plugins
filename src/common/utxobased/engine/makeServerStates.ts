@@ -1,5 +1,4 @@
-import { EdgeLog, EdgeWalletInfo } from 'edge-core-js'
-import { EdgeTransaction } from 'edge-core-js/lib/types/types'
+import { EdgeLog, EdgeTransaction, EdgeWalletInfo } from 'edge-core-js/types'
 import { parse } from 'uri-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'

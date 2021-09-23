@@ -2,7 +2,7 @@ import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { Disklet, makeMemoryDisklet } from 'disklet'
 import { MemoryStorage } from 'disklet/lib/src/backends/memory'
-import { EdgeLog } from 'edge-core-js'
+import { EdgeLog } from 'edge-core-js/types'
 
 import {
   EngineEmitter,

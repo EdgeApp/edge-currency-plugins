@@ -4,7 +4,7 @@ import {
   EdgeCurrencyTools,
   EdgeIo,
   EdgeWalletInfo
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 
 import { IUTXO } from '../utxobased/db/types'
 import { EngineEmitter } from './makeEngineEmitter'
