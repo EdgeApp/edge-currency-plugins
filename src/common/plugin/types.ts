@@ -55,17 +55,20 @@ export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
 
 export type CustomFeeSetting = 'satPerByte'
 
-export interface FeeRates {
-  lowFee: string
-  standardFeeLow: string
-  standardFeeHigh: string
-  highFee: string
-}
+export type FeeRates = ReturnType<typeof asFeeRates>
+export const asFeeRates = asObject({
+  lowFee: asString,
+  standardFeeLow: asString,
+  standardFeeHigh: asString,
+  highFee: asString
+})
 
-export interface SimpleFeeSettings extends FeeRates {
-  standardFeeLowAmount: string
-  standardFeeHighAmount: string
-}
+export type SimpleFeeSettings = ReturnType<typeof asSimpleFeeSettings>
+export const asSimpleFeeSettings = asObject({
+  ...asFeeRates.shape,
+  standardFeeLowAmount: asString,
+  standardFeeHighAmount: asString
+})
 
 export interface EngineConfig {
   network: NetworkEnum
