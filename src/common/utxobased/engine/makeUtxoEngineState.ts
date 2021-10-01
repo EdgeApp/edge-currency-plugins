@@ -1,4 +1,4 @@
-import bs from 'biggystring'
+import { add, sub } from 'biggystring'
 import {
   EdgeFreshAddress,
   EdgeIo,
@@ -1060,18 +1060,18 @@ const processUtxoTransactions = async (
   const currentUtxoIds: string[] = []
   let oldBalance = '0'
   for (const utxo of currentUtxos) {
-    oldBalance = bs.add(utxo.value, oldBalance)
+    oldBalance = add(utxo.value, oldBalance)
     currentUtxoIds.push(utxo.txid)
   }
   await processor.removeUtxos(currentUtxoIds)
 
   let newBalance = '0'
   for (const utxo of Array.from(utxos)) {
-    newBalance = bs.add(utxo.value, newBalance)
+    newBalance = add(utxo.value, newBalance)
     await processor.saveUtxo(utxo)
   }
 
-  const diff = bs.sub(newBalance, oldBalance)
+  const diff = sub(newBalance, oldBalance)
   if (diff !== '0') {
     log('balance changed:', { scriptPubkey, diff })
     emitter.emit(
