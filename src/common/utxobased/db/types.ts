@@ -1,8 +1,3 @@
-import { BaseType } from 'baselet'
-import { CountBase } from 'baselet/src/CountBase'
-import { HashBase } from 'baselet/src/HashBase'
-import { RangeBase } from 'baselet/src/RangeBase'
-
 import { AddressPath } from '../../plugin/types'
 import { ScriptTypeEnum } from '../keymanager/keymanager'
 
@@ -52,15 +47,3 @@ export interface ITransactionInput extends ITransactionOutput {
   txId: string
   outputIndex: number
 }
-
-export interface BaseletConfig<T extends BaseType> {
-  dbName: string
-  type: T
-  bucketSize: number
-  range?: {
-    id: string
-    key: string
-  }
-}
-
-export type Baselet = HashBase | CountBase | RangeBase

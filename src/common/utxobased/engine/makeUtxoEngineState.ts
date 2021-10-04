@@ -187,6 +187,7 @@ export function makeUtxoEngineState(
         blockHeight: 0
       })
       for (const tx of txs) {
+        if (tx == null) continue
         taskCache.updateTransactionsCache[tx.txid] = { processing: false }
       }
     }
@@ -403,12 +404,10 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
       changeIndex: branch
     }
 
-    const getLastUsed = async (): Promise<number> =>
-      (await processor.lastUsedIndexByFormatPath({ ...partialPath })) ?? -1
     const getAddressCount = (): number =>
       processor.numAddressesByFormatPath(partialPath)
 
-    let lastUsed = await getLastUsed()
+    let lastUsed = await processor.lastUsedIndexByFormatPath({ ...partialPath })
     let addressCount = getAddressCount()
     const addresses = new Set<string>()
 
@@ -431,7 +430,9 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
       await saveAddress({ scriptPubkey, path, ...args })
       addresses.add(address)
 
-      lastUsed = await getLastUsed()
+      lastUsed = await processor.lastUsedIndexByFormatPath({
+        ...partialPath
+      })
       addressCount = getAddressCount()
     }
     addToAddressSubscribeCache(args, addresses, { format, branch })
@@ -1060,6 +1061,10 @@ const processUtxoTransactions = async (
   const currentUtxoIds: string[] = []
   let oldBalance = '0'
   for (const utxo of currentUtxos) {
+    if (utxo == null)
+      throw new Error(
+        'Unexpected undefined utxo when processing unspent transactions'
+      )
     oldBalance = add(utxo.value, oldBalance)
     currentUtxoIds.push(utxo.txid)
   }
