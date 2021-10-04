@@ -1,3 +1,4 @@
+import { asNumber, asObject, asString } from 'cleaners'
 import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
@@ -54,17 +55,26 @@ export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
 
 export type CustomFeeSetting = 'satPerByte'
 
-export interface FeeRates {
-  lowFee: string
-  standardFeeLow: string
-  standardFeeHigh: string
-  highFee: string
-}
+export type FeeRates = ReturnType<typeof asFeeRates>
+export const asFeeRates = asObject({
+  lowFee: asString,
+  standardFeeLow: asString,
+  standardFeeHigh: asString,
+  highFee: asString
+})
 
 export interface SimpleFeeSettings extends FeeRates {
   standardFeeLowAmount: string
   standardFeeHighAmount: string
 }
+export const asSimpleFeeSettings = asObject({
+  standardFeeLowAmount: asString,
+  standardFeeHighAmount: asString,
+  lowFee: asString,
+  standardFeeLow: asString,
+  standardFeeHigh: asString,
+  highFee: asString
+})
 
 export interface EngineConfig {
   network: NetworkEnum
@@ -80,7 +90,8 @@ export interface EngineOptions extends EdgeCurrencyEngineOptions {
   emitter: EngineEmitter
 }
 
-export interface LocalWalletMetadata {
-  balance: string
-  lastSeenBlockHeight: number
-}
+export type LocalWalletMetadata = ReturnType<typeof asLocalWalletMetadata>
+export const asLocalWalletMetadata = asObject({
+  balance: asString,
+  lastSeenBlockHeight: asNumber
+})

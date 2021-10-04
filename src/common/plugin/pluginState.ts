@@ -1,11 +1,12 @@
 // Typescript translation from original code in edge-currency-bitcoin
 
+import { asObject } from 'cleaners'
 import { navigateDisklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet, Memlet } from 'memlet'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
-import { ServerCache, ServerInfo } from './serverCache'
+import { asServerInfo, ServerCache, ServerInfo } from './serverCache'
 
 const InfoServer = 'https://info1.edge.app/v1'
 const FixCurrencyCode = (currencyCode: string): string => {
@@ -109,7 +110,9 @@ export class PluginState extends ServerCache {
 
   async load(): Promise<PluginState> {
     try {
-      this.serverCacheJson = await this.memlet.getJson('serverCache.json')
+      const serverCacheText = await this.memlet.getJson('serverCache.json')
+      const cleaner = asObject(asServerInfo)
+      this.serverCacheJson = cleaner(JSON.parse(serverCacheText))
     } catch (e) {
       this.log(
         `${this.pluginId}: Failed to load server cache: ${JSON.stringify(e)}`
