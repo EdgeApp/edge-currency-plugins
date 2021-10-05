@@ -232,7 +232,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         } catch (e) {
           log.error(e.message)
         }
-        pendingMessages = removeItem(pendingMessages, id)
+        removeItem(pendingMessages, id)
       }
     }
     wakeUp()
@@ -279,7 +279,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         if (message == null) {
           throw new Error(`Bad response id in ${messageJson}`)
         }
-        pendingMessages = removeItem(pendingMessages, id)
+        removeItem(pendingMessages, id)
         const { error } = json
         try {
           if (error != null) {
