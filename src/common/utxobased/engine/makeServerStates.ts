@@ -253,15 +253,25 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
       const blockBook = connections[uri]
       if (blockBook == null) continue
+
+      // Initialize blockbook connection for server
       blockBook
         .connect()
         .then(async () => {
-          const queryTime = Date.now()
-          serverStates[uri].blockHeight = (
-            await blockBook.fetchInfo()
-          ).bestHeight
-          log('height:', serverStates[uri].blockHeight)
-          pluginState.serverScoreUp(uri, Date.now() - queryTime)
+          // Fetch block height from blockbook server
+          const startTime = Date.now()
+          const { bestHeight: blockHeight } = await blockBook.fetchInfo()
+          log('height:', blockHeight)
+
+          // Update server state
+          serverStates[uri].blockHeight = blockHeight
+
+          // Emit initial BLOCK_HEIGHT_CHANGED event
+          engineEmitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, uri, blockHeight)
+
+          // Increment server score using response time
+          const responseTime = Date.now() - startTime
+          pluginState.serverScoreUp(uri, responseTime)
         })
         .catch(e => {
           log.error(`${JSON.stringify(e.message)}`)
