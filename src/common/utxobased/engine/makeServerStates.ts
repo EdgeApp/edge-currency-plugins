@@ -79,8 +79,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   socketEmitter.on(
     SocketEvent.CONNECTION_CLOSE,
     (uri: string, error?: Error) => {
-      connections = removeItem(connections, uri)
-      serverStates = removeItem(serverStates, uri)
+      removeItem(connections, uri)
+      removeItem(serverStates, uri)
 
       const msg =
         error != null ? ` !! Connection ERROR !! ${error.message}` : ''

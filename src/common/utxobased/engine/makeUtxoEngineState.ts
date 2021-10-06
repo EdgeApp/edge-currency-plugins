@@ -543,10 +543,7 @@ export const pickNextTask = async (
           utxos: state.utxos,
           path: state.path
         })
-        taskCache.processedUtxosCache = removeItem(
-          processedUtxosCache,
-          scriptPubkey
-        )
+        removeItem(processedUtxosCache, scriptPubkey)
         return true
       }
     }
@@ -568,7 +565,7 @@ export const pickNextTask = async (
         if (!serverStates.serverCanGetTx(uri, utxo.txid)) return
       }
       state.processing = true
-      taskCache.rawUtxosCache = removeItem(rawUtxosCache, utxoString)
+      removeItem(rawUtxosCache, utxoString)
       const wsTask = await processRawUtxo({
         ...args,
         ...state,
@@ -588,7 +585,7 @@ export const pickNextTask = async (
     if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
       state.processing = true
 
-      taskCache.utxosCache = removeItem(utxosCache, address)
+      removeItem(utxosCache, address)
 
       // Fetch and process address UTXOs
       const wsTask = await processAddressUtxos({
@@ -684,10 +681,7 @@ export const pickNextTask = async (
         serverStates.serverCanGetTx(uri, txId)
       ) {
         updateTransactionsCache[txId].processing = true
-        taskCache.updateTransactionsCache = removeItem(
-          updateTransactionsCache,
-          txId
-        )
+        removeItem(updateTransactionsCache, txId)
         const updateTransactionTask = updateTransactions({ ...args, txId })
         // once resolved, add the txid to the server cache
         updateTransactionTask.deferred.promise
@@ -709,7 +703,7 @@ export const pickNextTask = async (
     if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
       state.processing = true
 
-      taskCache.transactionsCache = removeItem(transactionsCache, address)
+      removeItem(transactionsCache, address)
 
       // Fetch and process address UTXOs
       const wsTask = await processAddressTransactions({
