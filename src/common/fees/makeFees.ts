@@ -16,7 +16,6 @@ import {
   SimpleFeeSettings
 } from '../plugin/types'
 import { calcMinerFeePerByte } from './calcMinerFeePerByte'
-import { processEarnComFees } from './processEarnComFees'
 import { processInfoServerFees } from './processInfoServerFees'
 import { processMempoolSpaceFees } from './processMempoolSpaceFees'
 
@@ -52,7 +51,6 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
 
     const vendorFees = await fetchFeesFromVendor({
       ...common,
-      earnComFeeInfoServer: currencyInfo.earnComFeeInfoServer,
       mempoolSpaceFeeInfoServer: currencyInfo.mempoolSpaceFeeInfoServer
     })
     Object.assign(fees, vendorFees ?? {})
@@ -154,24 +152,12 @@ const fetchFees = async <T>(args: FetchFeesArgs<T>): Promise<T | null> => {
 }
 
 interface FetchFeesFromVendorArgs extends Common {
-  earnComFeeInfoServer?: string
   mempoolSpaceFeeInfoServer?: string
 }
 
 const fetchFeesFromVendor = async (
   args: FetchFeesFromVendorArgs
 ): Promise<Partial<SimpleFeeSettings>> => {
-  if (args.earnComFeeInfoServer != null) {
-    const earnComFees = await fetchFees({
-      ...args,
-      uri: args.earnComFeeInfoServer,
-      processor: processEarnComFees
-    })
-    if (earnComFees != null) {
-      return earnComFees
-    }
-  }
-
   if (args.mempoolSpaceFeeInfoServer != null) {
     const mempoolFees = await fetchFees({
       ...args,

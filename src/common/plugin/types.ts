@@ -47,7 +47,6 @@ export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
   gapLimit: number
   defaultFee: number
   feeUpdateInterval: number
-  earnComFeeInfoServer?: string
   mempoolSpaceFeeInfoServer?: string
   customFeeSettings: CustomFeeSetting[]
   simpleFeeSettings: SimpleFeeSettings
