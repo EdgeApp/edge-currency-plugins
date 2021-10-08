@@ -1151,7 +1151,6 @@ const processRawUtxo = async (
       }
     )
 
-  let tx: IProcessorTransaction | undefined
   switch (currencyFormatToPurposeType(format)) {
     case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
@@ -1159,35 +1158,36 @@ const processRawUtxo = async (
 
       // Legacy UTXOs need the previous transaction hex as the script
       // If we do not currently have it, add it to the queue to fetch it
-      // tx = (await processor.fetchTransactions({ txId: utxo.txid }))[0]
-      ;[tx] = await processor.fetchTransactions({ txId: utxo.txid })
-      if (tx == null) {
-        const queryTime = Date.now()
-        const deferredITransaction = new Deferred<ITransaction>()
-        deferredITransaction.promise
-          .then((rawTx: ITransaction) => {
-            serverStates.serverScoreUp(uri, Date.now() - queryTime)
-            const processedTx = processRawTx({ ...args, tx: rawTx })
-            script = processedTx.hex
-            // Only after we have successfully fetched the tx, set our script and call done
-            done()
-          })
-          .catch(e => {
-            // If something went wrong, add the UTXO back to the queue
-            log('error in processed utxos cache, re-adding utxo to cache:', e)
-            rawUtxosCache[JSON.stringify(utxo)] = {
-              processing: false,
-              path,
-              address,
-              requiredCount
-            }
-          })
-        return {
-          ...transactionMessage(utxo.txid),
-          deferred: deferredITransaction
+      {
+        const [tx] = await processor.fetchTransactions({ txId: utxo.txid })
+        if (tx == null) {
+          const queryTime = Date.now()
+          const deferredITransaction = new Deferred<ITransaction>()
+          deferredITransaction.promise
+            .then((rawTx: ITransaction) => {
+              serverStates.serverScoreUp(uri, Date.now() - queryTime)
+              const processedTx = processRawTx({ ...args, tx: rawTx })
+              script = processedTx.hex
+              // Only after we have successfully fetched the tx, set our script and call done
+              done()
+            })
+            .catch(e => {
+              // If something went wrong, add the UTXO back to the queue
+              log('error in processed utxos cache, re-adding utxo to cache:', e)
+              rawUtxosCache[JSON.stringify(utxo)] = {
+                processing: false,
+                path,
+                address,
+                requiredCount
+              }
+            })
+          return {
+            ...transactionMessage(utxo.txid),
+            deferred: deferredITransaction
+          }
+        } else {
+          script = tx.hex
         }
-      } else {
-        script = tx.hex
       }
 
       break
