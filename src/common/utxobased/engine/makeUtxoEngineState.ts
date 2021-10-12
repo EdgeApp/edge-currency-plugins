@@ -546,6 +546,22 @@ export const pickNextTask = async (
   const serverState = serverStates.getServerState(uri)
   if (serverState == null) return
 
+  // subscribe all servers to new blocks
+  if (!serverState.subscribedBlocks) {
+    serverState.subscribedBlocks = true
+    const queryTime = Date.now()
+    const deferredBlockSub = new Deferred<unknown>()
+    deferredBlockSub.promise
+      .then(() => {
+        serverStates.serverScoreUp(uri, Date.now() - queryTime)
+      })
+      .catch(() => {
+        serverState.subscribedBlocks = false
+      })
+    serverStates.watchBlocks(uri, deferredBlockSub)
+    return true
+  }
+
   // Loop processed utxos, these are just database ops, triggers setLookAhead
   if (Object.keys(processedUtxosCache).length > 0) {
     for (const scriptPubkey of Object.keys(processedUtxosCache)) {
@@ -670,22 +686,6 @@ export const pickNextTask = async (
       Array.from(Object.keys(addressSubscribeCache)),
       deferredAddressSub
     )
-    return true
-  }
-
-  // subscribe all servers to new blocks
-  if (!serverState.subscribedBlocks) {
-    serverState.subscribedBlocks = true
-    const queryTime = Date.now()
-    const deferredBlockSub = new Deferred<unknown>()
-    deferredBlockSub.promise
-      .then(() => {
-        serverStates.serverScoreUp(uri, Date.now() - queryTime)
-      })
-      .catch(() => {
-        serverState.subscribedBlocks = false
-      })
-    serverStates.watchBlocks(uri, deferredBlockSub)
     return true
   }
 
