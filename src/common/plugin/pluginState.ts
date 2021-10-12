@@ -7,19 +7,7 @@ import { makeMemlet, Memlet } from 'memlet'
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
 import { ServerCache, ServerInfo } from './serverCache'
 
-const InfoServer = 'https://info1.edge.app/v1'
-const FixCurrencyCode = (currencyCode: string): string => {
-  switch (currencyCode) {
-    case 'BTC':
-      return 'BC1'
-    case 'DGB':
-      return 'DGB1'
-    case 'FIRO':
-      return 'XZC'
-    default:
-      return currencyCode
-  }
-}
+const InfoServerUrl = 'https://info1.edge.app/v1/blockBook/'
 
 /** A JSON object (as opposed to an array or primitive). */
 interface JsonObject {
@@ -74,7 +62,7 @@ export class PluginState extends ServerCache {
   io: EdgeIo
   disableFetchingServers: boolean
   defaultServers: string[]
-  infoServerUris: string
+  currencyCode: string
 
   engines: UtxoEngineState[]
   memlet: Memlet
@@ -95,11 +83,7 @@ export class PluginState extends ServerCache {
     this.disableFetchingServers = !!(
       defaultSettings.disableFetchingServers ?? false
     )
-    // Rename the bitcoin currencyCode to get the new version of the server list
-    const fixedCode = FixCurrencyCode(currencyCode)
-    this.infoServerUris = `${JSON.stringify(
-      InfoServer
-    )}/blockBookServers/${JSON.stringify(fixedCode)}`
+    this.currencyCode = currencyCode
     this.engines = []
     this.memlet = makeMemlet(navigateDisklet(io.disklet, 'plugins/' + pluginId))
 
@@ -165,22 +149,29 @@ export class PluginState extends ServerCache {
     const { io } = this
     let serverList = this.defaultServers
     if (!this.disableFetchingServers) {
-      try {
-        this.log(`${this.pluginId} - GET ${this.infoServerUris}`)
-        const result = await io.fetch(this.infoServerUris)
-        if (!result.ok) {
+      this.log(`${this.pluginId} - GET ${InfoServerUrl}`)
+      const serverListResponse = await io
+        .fetch(InfoServerUrl)
+        .then(async response => {
+          if (!response.ok) {
+            this.log(
+              `${this.pluginId} - Fetching ${InfoServerUrl} failed with ${response.status}`
+            )
+            return
+          }
+          return await response.json()
+        })
+        .catch(err => {
           this.log(
-            `${this.pluginId} - Fetching ${this.infoServerUris} failed with ${result.status}`
+            `${this.pluginId} - Fetching ${InfoServerUrl} failed: ${err.message}`
           )
-        } else {
-          serverList = await result.json()
-        }
-      } catch (e) {
-        this.log(e)
-      }
-    }
-    if (!Array.isArray(serverList)) {
-      serverList = this.defaultServers
+        })
+      const remoteServerList: string[] = serverListResponse[this.currencyCode]
+
+      serverList =
+        remoteServerList.map(
+          url => url.replace('https', 'wss') + '/websocket'
+        ) ?? this.defaultServers
     }
     this.serverCacheLoad(this.serverCacheJson, serverList)
     await this.saveServerCache()
