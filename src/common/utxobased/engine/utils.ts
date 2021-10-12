@@ -1,8 +1,10 @@
+import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
 import { EdgeParsedUri } from 'edge-core-js/types'
 
 import { CurrencyFormat, NetworkEnum } from '../../plugin/types'
 import * as pluginUtils from '../../plugin/utils'
+import { IUTXO } from '../db/types'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -265,3 +267,6 @@ export const parsePathname = (args: {
 
   return edgeParsedUri
 }
+
+export const sumUtxos = (utxos: IUTXO[]): string =>
+  utxos.reduce((sum, { value }) => bs.add(sum, value), '0')

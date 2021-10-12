@@ -10,6 +10,7 @@ import {
   EdgeSpendInfo,
   EdgeTokenInfo,
   EdgeTransaction,
+  InsufficientFundsError,
   JsonObject
 } from 'edge-core-js/types'
 
@@ -34,7 +35,8 @@ import {
   fetchOrDeriveXprivFromKeys,
   getWalletFormat,
   getWalletSupportedFormats,
-  getXpubs
+  getXpubs,
+  sumUtxos
 } from './utils'
 
 export async function makeUtxoEngine(
@@ -241,6 +243,22 @@ export async function makeUtxoEngine(
       edgeSpendInfo: EdgeSpendInfo,
       options?: TxOptions
     ): Promise<EdgeTransaction> {
+      const { spendTargets } = edgeSpendInfo
+      if (options?.CPFP == null && spendTargets.length < 1) {
+        throw new Error('Need to provide Spend Targets')
+      }
+      // Calculate the total amount to send
+      const totalAmountToSend = spendTargets.reduce(
+        (sum, { nativeAmount }) => bs.add(sum, nativeAmount ?? '0'),
+        '0'
+      )
+      const utxos =
+        options?.utxos ?? (await processor.fetchUtxos({ utxoIds: [] }))
+
+      if (bs.gt(totalAmountToSend, `${sumUtxos(utxos)}`)) {
+        throw new InsufficientFundsError(currencyInfo.currencyCode)
+      }
+
       let targets: MakeTxTarget[] = []
       const ourReceiveAddresses: string[] = []
       for (const target of edgeSpendInfo.spendTargets) {
@@ -260,12 +278,13 @@ export async function makeUtxoEngine(
           value: parseInt(target.nativeAmount)
         })
       }
+      if (targets.length < 1) {
+        throw new Error('Need to provide Spend Targets')
+      }
 
       const freshAddress = await state.getFreshAddress(1)
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
-      const utxos =
-        options?.utxos ?? (await processor.fetchUtxos({ utxoIds: [] }))
       const setRBF = options?.setRBF ?? false
       const rbfTxid = edgeSpendInfo.rbfTxid
       let maxUtxo: undefined | IUTXO
