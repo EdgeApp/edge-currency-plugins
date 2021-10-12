@@ -7,7 +7,7 @@ export const info: EngineCurrencyInfo = {
   coinType: 1,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   forks: ['bitcoincash', 'bitcoingold'],
-  network: 'bitcoin',
+  network: 'bitcointestnet',
   pluginId: 'bitcointestnet',
   walletType: 'wallet:bitcointestnet',
   currencyCode: 'TESTBTC',
@@ -37,7 +37,7 @@ export const info: EngineCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    electrumServers: [
+    blockBookServers: [
       'wss://tbtc1.trezor.io/websocket',
       'wss://tbtc2.trezor.io/websocket'
     ],
