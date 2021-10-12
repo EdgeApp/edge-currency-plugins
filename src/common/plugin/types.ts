@@ -7,6 +7,7 @@ import {
 } from 'edge-core-js/types'
 
 import { IUTXO } from '../utxobased/db/types'
+import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
 import { EngineEmitter } from './makeEngineEmitter'
 import { PluginState } from './pluginState'
 
@@ -50,6 +51,7 @@ export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
   mempoolSpaceFeeInfoServer?: string
   customFeeSettings: CustomFeeSetting[]
   simpleFeeSettings: SimpleFeeSettings
+  scriptTemplates?: ScriptTemplates
 }
 
 export type CustomFeeSetting = 'satPerByte'

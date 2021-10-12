@@ -261,22 +261,40 @@ export async function makeUtxoEngine(
 
       let targets: MakeTxTarget[] = []
       const ourReceiveAddresses: string[] = []
-      for (const target of edgeSpendInfo.spendTargets) {
+      for (const target of spendTargets) {
         if (target.publicAddress == null || target.nativeAmount == null) {
           throw new Error('Invalid spend target')
         }
 
-        const scriptPubkey = walletTools.addressToScriptPubkey(
-          target.publicAddress
-        )
-        if (processor.fetchAddress(scriptPubkey) != null) {
-          ourReceiveAddresses.push(target.publicAddress)
-        }
+        // if script exists construct address from script
+        if (target.otherParams?.script != null) {
+          const { script } = target.otherParams
+          if (script.type === 'replayProtection') {
+            // construct a replay protection p2sh address
+            const { publicAddress } = await state.deriveScriptAddress(
+              script.type
+            )
+            targets.push({
+              address: publicAddress,
+              value: parseInt(target.nativeAmount)
+            })
+          }
+        } else {
+          const scriptPubkey = walletTools.addressToScriptPubkey(
+            target.publicAddress
+          )
+          if (processor.fetchAddress(scriptPubkey) != null) {
+            ourReceiveAddresses.push(target.publicAddress)
+          }
 
-        targets.push({
-          address: target.publicAddress,
-          value: parseInt(target.nativeAmount)
-        })
+          targets.push({
+            address: target.publicAddress,
+            value: parseInt(target.nativeAmount)
+          })
+        }
+      }
+      if (targets.length < 1) {
+        throw new Error('Need to provide Spend Targets')
       }
       if (targets.length < 1) {
         throw new Error('Need to provide Spend Targets')
