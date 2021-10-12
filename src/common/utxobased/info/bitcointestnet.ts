@@ -37,7 +37,7 @@ export const info: EngineCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    electrumServers: [
+    blockBookServers: [
       'wss://tbtc1.trezor.io/websocket',
       'wss://tbtc2.trezor.io/websocket'
     ],
