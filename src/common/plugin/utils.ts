@@ -24,10 +24,7 @@ interface GenericObject<T> {
   [key: string]: T
 }
 
-export const removeItem = <T>(
-  obj: GenericObject<T>,
-  key: string
-): GenericObject<T> => {
-  const { [key]: _, ...rest } = obj
-  return rest
+export const removeItem = <T>(obj: GenericObject<T>, key: string): void => {
+  // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+  delete obj[key]
 }
