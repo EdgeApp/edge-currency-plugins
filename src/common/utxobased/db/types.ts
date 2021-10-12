@@ -8,7 +8,6 @@ import { ScriptTypeEnum } from '../keymanager/keymanager'
 
 export interface IAddress {
   scriptPubkey: string
-  redeemScript?: string
   lastQueriedBlockHeight: number
   path?: AddressPath
   lastQuery: number
