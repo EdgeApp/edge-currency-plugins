@@ -4,6 +4,7 @@ import { Bitcoin } from './coins/bitcoin'
 import { BitcoinCash } from './coins/bitcoincash'
 import { Bitcoingold } from './coins/bitcoingold'
 import { BitcoinSV } from './coins/bitcoinsv'
+import { BitcoinTestnet } from './coins/bitcointestnet'
 import { Dash } from './coins/dash'
 import { Decred } from './coins/decred'
 import { Digibyte } from './coins/digibyte'
@@ -23,6 +24,7 @@ import { Zcoin } from './coins/zcoin'
 export const coinClasses: Coin[] = [
   new Litecoin(),
   new Bitcoin(),
+  new BitcoinTestnet(),
   new BitcoinCash(),
   new BitcoinSV(),
   new Badcoin(),
@@ -45,10 +47,8 @@ export const coinClasses: Coin[] = [
 ]
 
 export function getCoinFromString(coinName: string): Coin {
-  const selectedCoin: Coin | undefined = coinClasses.find(
-    coin => coin.name === coinName
-  )
-  if (typeof selectedCoin === 'undefined') {
+  const selectedCoin = coinClasses.find(coin => coin.name === coinName)
+  if (selectedCoin == null) {
     throw new Error('Could not find coin ' + coinName)
   }
   return selectedCoin

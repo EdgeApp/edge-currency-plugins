@@ -7,7 +7,7 @@ export const info: EngineCurrencyInfo = {
   coinType: 1,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   forks: ['bitcoincash', 'bitcoingold'],
-  network: 'bitcoin',
+  network: 'bitcointestnet',
   pluginId: 'bitcointestnet',
   walletType: 'wallet:bitcointestnet',
   currencyCode: 'TESTBTC',
