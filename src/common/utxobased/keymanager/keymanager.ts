@@ -6,12 +6,12 @@ import { InsufficientFundsError } from 'edge-core-js/types'
 
 import { NetworkEnum } from '../../plugin/types'
 import { IUTXO } from '../db/types'
-import { ScriptTemplate } from '../info/scriptTemplates/types'
 import {
   cashAddressToHash,
   CashaddrTypeEnum,
   hashToCashAddress
 } from './bitcoincashUtils/cashAddress'
+import { cdsScriptTemplates } from './bitcoincashUtils/checkdatasig'
 import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
 import * as utxopicker from './utxopicker'
@@ -141,14 +141,11 @@ export interface ScriptPubkeyToScriptHashArgs {
 
 export interface ScriptPubkeyToP2SHArgs {
   scriptPubkey: string
-  coin?: string
-  network?: NetworkEnum
 }
 
 export interface ScriptPubkeyToP2SHReturn {
   scriptPubkey: string
   redeemScript: string
-  address?: string
 }
 
 interface ScriptHashToScriptPubkeyArgs {
@@ -487,13 +484,12 @@ export function xprivToXPub(args: XPrivToXPubArgs): string {
   return bip32FromBase58Func(args.xpriv, network).neutered().toBase58()
 }
 
-export function derivationLevelScriptHash(
-  scriptTemplate: ScriptTemplate
-): number {
-  // currently returns the derivation for an empty script template
+export function derivationLevelScriptHash(): number {
+  // currently returns the derivation for an empty script template for a bitcoin cash
+  // replay protection script (without key material)
   let hash = '0000'
   hash = bitcoin.crypto
-    .hash160(Buffer.from(scriptTemplate(''), 'hex'))
+    .hash160(Buffer.from(cdsScriptTemplates.replayProtection(''), 'hex'))
     .slice(0, 4)
     .toString('hex')
   return parseInt(hash, 16)
@@ -762,18 +758,9 @@ export function scriptPubkeyToScriptHash(
 export function scriptPubkeyToP2SH(
   args: ScriptPubkeyToP2SHArgs
 ): ScriptPubkeyToP2SHReturn {
-  const { scriptPubkey, coin, network } = args
-  let bip32Network
-  if (coin != null && network != null) {
-    bip32Network = bip32NetworkFromCoin({
-      coinString: coin,
-      networkType: network
-    })
-  }
   const p2sh = bitcoin.payments.p2sh({
-    network: bip32Network,
     redeem: {
-      output: Buffer.from(scriptPubkey, 'hex')
+      output: Buffer.from(args.scriptPubkey, 'hex')
     }
   })
   if (
@@ -785,8 +772,7 @@ export function scriptPubkeyToP2SH(
   }
   return {
     scriptPubkey: p2sh.output.toString('hex'),
-    redeemScript: p2sh.redeem.output.toString('hex'),
-    address: p2sh.address
+    redeemScript: p2sh.redeem.output.toString('hex')
   }
 }
 

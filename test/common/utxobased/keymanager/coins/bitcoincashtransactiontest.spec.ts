@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
 import { NetworkEnum } from '../../../../../src/common/plugin/types'
-import { BCHScriptTemplates } from '../../../../../src/common/utxobased/info/scriptTemplates/bitcoincashScriptTemplates'
+import { cdsScriptTemplates } from '../../../../../src/common/utxobased/keymanager/bitcoincashUtils/checkdatasig'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -106,7 +106,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
     scriptType: ScriptTypeEnum.p2pkh
   }).scriptPubkey
   const info = scriptPubkeyToP2SH({
-    scriptPubkey: BCHScriptTemplates.replayProtection(
+    scriptPubkey: cdsScriptTemplates.replayProtection(
       privateKeyToPubkey(privateKey)
     )
   })

@@ -1,11 +1,9 @@
 import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
-import { ScriptTemplate } from '../info/scriptTemplates/types'
 import {
   addressToScriptPubkey,
   privateKeyToPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
-  scriptPubkeyToP2SH,
   wifToPrivateKey,
   xprivToPrivateKey,
   xpubToPubkey
@@ -49,8 +47,6 @@ export interface UTXOPluginWalletTools {
   scriptPubkeyToAddress: (args: ScriptPubkeyToAddressArgs) => AddressReturn
 
   getPrivateKey: (args: GetPrivateKeyArgs) => string
-
-  getScriptAddress: (args: GetScriptAddressArgs) => GetScriptAddressReturn
 }
 
 interface ScriptPubkeyReturn {
@@ -68,20 +64,9 @@ interface GetPrivateKeyArgs {
   xprivKeys: CurrencyFormatKeys
 }
 
-interface GetScriptAddressArgs {
-  path: AddressPath
-  scriptTemplate: ScriptTemplate
-}
-
 interface AddressReturn {
   address: string
   legacyAddress: string
-}
-
-interface GetScriptAddressReturn {
-  address: string
-  scriptPubkey: string
-  redeemScript: string
 }
 
 export function makeUtxoWalletTools(
@@ -182,22 +167,6 @@ export function makeUtxoWalletTools(
         bip44ChangeIndex: path.changeIndex,
         bip44AddressIndex: path.addressIndex
       })
-    },
-
-    getScriptAddress(args: GetScriptAddressArgs): GetScriptAddressReturn {
-      const { path, scriptTemplate } = args
-      // get the replay protection script from the templates and wrap it in p2sh
-      const publicKey = fns.getPubkey(path)
-      const script = scriptTemplate(publicKey)
-      const { address, scriptPubkey, redeemScript } = scriptPubkeyToP2SH({
-        coin,
-        network,
-        scriptPubkey: script
-      })
-      if (address == null) {
-        throw new Error('Failed to derive address for script')
-      }
-      return { address, scriptPubkey, redeemScript }
     }
   }
 
