@@ -6,7 +6,7 @@ import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet, Memlet } from 'memlet'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
-import { asServerInfo, ServerCache, ServerInfo } from './serverCache'
+import { asServerInfoCache, ServerCache, ServerInfoCache } from './serverCache'
 
 const InfoServerUrl = 'https://info1.edge.app/v1/blockBook/'
 
@@ -68,7 +68,7 @@ export class PluginState extends ServerCache {
   engines: UtxoEngineState[]
   memlet: Memlet
 
-  serverCacheJson: { [serverUrl: string]: ServerInfo }
+  serverCacheJson: ServerInfoCache
   pluginId: string
 
   constructor({
@@ -94,9 +94,9 @@ export class PluginState extends ServerCache {
 
   async load(): Promise<PluginState> {
     try {
-      const serverCacheText = await this.memlet.getJson('serverCache.json')
-      const cleaner = asObject(asServerInfo)
-      this.serverCacheJson = cleaner(JSON.parse(serverCacheText))
+      this.serverCacheJson = asServerInfoCache(
+        await this.memlet.getJson('serverCache.json')
+      )
     } catch (e) {
       this.log(
         `${this.pluginId}: Failed to load server cache: ${JSON.stringify(e)}`
