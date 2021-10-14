@@ -18,7 +18,12 @@ import {
 import { removeItem } from '../../plugin/utils'
 import { Processor } from '../db/makeProcessor'
 import { toEdgeTransaction } from '../db/Models/ProcessorTransaction'
-import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
+import {
+  IAddress,
+  IProcessorTransaction,
+  IUTXO,
+  makeIAddress
+} from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import {
   IAccountDetailsBasic,
@@ -427,7 +432,8 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
       const { address } = walletTools.getAddress(path)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
 
-      await saveAddress({ scriptPubkey, path, ...args })
+      await processor.saveAddress(makeIAddress({ scriptPubkey, path }))
+
       addresses.add(address)
 
       lastUsed = await processor.lastUsedIndexByFormatPath({
@@ -752,26 +758,6 @@ const updateTransactions = (
     ...transactionMessage(txId),
     deferred: deferredITransaction
   }
-}
-
-interface SaveAddressArgs extends CommonArgs {
-  scriptPubkey: string
-  path?: AddressPath
-  used?: boolean
-}
-
-const saveAddress = async (args: SaveAddressArgs): Promise<void> => {
-  const { scriptPubkey, path, used = false, processor } = args
-
-  await processor.saveAddress({
-    scriptPubkey,
-    path,
-    used,
-    lastQueriedBlockHeight: 0,
-    lastQuery: 0,
-    lastTouched: 0,
-    balance: '0'
-  })
 }
 
 interface GetTotalAddressCountArgs {
