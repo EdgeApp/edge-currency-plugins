@@ -285,14 +285,12 @@ export function makeUtxoEngineState(
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
       const promises = addresses.map(async address => {
         const scriptPubkey = walletTools.addressToScriptPubkey(address)
-        await processor.saveAddress({
-          scriptPubkey,
-          used: true,
-          lastQueriedBlockHeight: 0,
-          lastQuery: 0,
-          lastTouched: 0,
-          balance: '0'
-        })
+        await processor.saveAddress(
+          makeIAddress({
+            scriptPubkey,
+            used: true
+          })
+        )
       })
       await Promise.all(promises)
       await run()
