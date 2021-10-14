@@ -177,12 +177,7 @@ export function makeUtxoEngineState(
     for (const format of formatsToProcess) {
       const branches = getFormatSupportedBranches(format)
       for (const branch of branches) {
-        const args: SetLookAheadArgs = {
-          ...commonArgs,
-          format,
-          branch
-        }
-        await setLookAhead(args)
+        await setLookAhead(commonArgs, { format, branch })
       }
     }
   }
@@ -220,7 +215,7 @@ export function makeUtxoEngineState(
         ).catch(() => {
           throw new Error('failed to add to transaction cache')
         })
-        setLookAhead({ ...commonArgs, ...path }).catch(e => {
+        setLookAhead(commonArgs, path).catch(e => {
           log(e)
         })
       }
@@ -400,14 +395,15 @@ interface AddressTransactionCache {
 
 interface FormatArgs extends CommonArgs, ShortPath {}
 
-interface SetLookAheadArgs extends FormatArgs {}
-
-const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
-  const { lock, format, branch, currencyInfo, walletTools, processor } = args
+const setLookAhead = async (
+  common: CommonArgs,
+  shortPath: ShortPath
+): Promise<void> => {
+  const { currencyInfo, lock, processor, taskCache, walletTools } = common
   const addressesToSubscribe = new Set<string>()
   const formatPath: Omit<AddressPath, 'addressIndex'> = {
-    format: format,
-    changeIndex: branch
+    format: shortPath.format,
+    changeIndex: shortPath.branch
   }
 
   // Wait for the lock to be released before continuing invocation.
@@ -422,7 +418,7 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
 
     // Initialize the addressSubscribeCache with the existing addresses already
     // processed by the processor. This happens only once; when the cache is empty.
-    if (Object.keys(args.taskCache.addressSubscribeCache).length === 0) {
+    if (Object.keys(taskCache.addressSubscribeCache).length === 0) {
       // If the processor has not processed any addresses then the loop
       // condition will only iterate once when totalAddressCount is 0 for the
       // first address in the derivation path.
@@ -462,7 +458,7 @@ const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
-    addToAddressSubscribeCache(args, addressesToSubscribe, { format, branch })
+    addToAddressSubscribeCache(common, addressesToSubscribe, shortPath)
   } finally {
     lock.release()
   }
@@ -908,7 +904,7 @@ const processAddressTransactions = async (
       if (!addressData.used && used && page === 1) {
         addressData.used = true
         await processor.saveAddress(addressData)
-        await setLookAhead({ ...args, ...path })
+        await setLookAhead(args, path)
       }
 
       for (const rawTx of transactions) {
@@ -931,7 +927,7 @@ const processAddressTransactions = async (
         // Callback for when an address has been fully processed
         args.onAddressChecked()
 
-        await setLookAhead({ ...args, ...path })
+        await setLookAhead(args, path)
       }
     })
     .catch(() => {
@@ -1101,7 +1097,7 @@ const processUtxoTransactions = async (
       used: true
     })
   }
-  setLookAhead({ ...args, ...args.path }).catch(err => {
+  setLookAhead(args, args.path).catch(err => {
     log.error(err)
     throw err
   })
