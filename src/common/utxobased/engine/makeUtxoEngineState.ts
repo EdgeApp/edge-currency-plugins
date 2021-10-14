@@ -404,46 +404,65 @@ interface SetLookAheadArgs extends FormatArgs {}
 
 const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
   const { lock, format, branch, currencyInfo, walletTools, processor } = args
+  const addressesToSubscribe = new Set<string>()
+  const formatPath: Omit<AddressPath, 'addressIndex'> = {
+    format: format,
+    changeIndex: branch
+  }
+
+  // Wait for the lock to be released before continuing invocation.
+  // This is to ensure that setLockAhead is not called while the lock is held.
   await lock.acquireAsync()
+
   try {
-    const partialPath: Omit<AddressPath, 'addressIndex'> = {
-      format,
-      changeIndex: branch
-    }
+    let totalAddressCount = processor.numAddressesByFormatPath(formatPath)
+    let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
+      ...formatPath
+    })
 
-    const getAddressCount = (): number =>
-      processor.numAddressesByFormatPath(partialPath)
-
-    let lastUsed = await processor.lastUsedIndexByFormatPath({ ...partialPath })
-    let addressCount = getAddressCount()
-    const addresses = new Set<string>()
-
+    // Initialize the addressSubscribeCache with the existing addresses already
+    // processed by the processor. This happens only once; when the cache is empty.
     if (Object.keys(args.taskCache.addressSubscribeCache).length === 0) {
-      for (let addressIndex = 0; addressIndex <= addressCount; addressIndex++) {
-        addresses.add(
-          walletTools.getAddress({ ...partialPath, addressIndex }).address
+      // If the processor has not processed any addresses then the loop
+      // condition will only iterate once when totalAddressCount is 0 for the
+      // first address in the derivation path.
+      for (
+        let addressIndex = 0;
+        addressIndex <= totalAddressCount;
+        addressIndex++
+      ) {
+        addressesToSubscribe.add(
+          walletTools.getAddress({ ...formatPath, addressIndex }).address
         )
       }
     }
 
-    while (lastUsed + currencyInfo.gapLimit >= addressCount) {
+    // Loop until the total address count meets or exceeds the lookahead count
+    while (totalAddressCount < lastUsedIndex + currencyInfo.gapLimit) {
       const path: AddressPath = {
-        ...partialPath,
-        addressIndex: addressCount
+        ...formatPath,
+        addressIndex: totalAddressCount
       }
       const { address } = walletTools.getAddress(path)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
 
+      // Make a new IAddress and save it
       await processor.saveAddress(makeIAddress({ scriptPubkey, path }))
 
-      addresses.add(address)
-
-      lastUsed = await processor.lastUsedIndexByFormatPath({
-        ...partialPath
+      // Update the last used index now that the address is added to the processor
+      lastUsedIndex = await processor.lastUsedIndexByFormatPath({
+        ...formatPath
       })
-      addressCount = getAddressCount()
+
+      // Update the total address count
+      totalAddressCount = processor.numAddressesByFormatPath(formatPath)
+
+      // Add the displayAddress to the set of addresses to subscribe to after loop
+      addressesToSubscribe.add(address)
     }
-    addToAddressSubscribeCache(args, addresses, { format, branch })
+
+    // Add all the addresses to the subscribe cache for registering subscriptions later
+    addToAddressSubscribeCache(args, addressesToSubscribe, { format, branch })
   } finally {
     lock.release()
   }
