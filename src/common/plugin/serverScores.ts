@@ -18,30 +18,27 @@ const MAX_SCORE = 500
 const MIN_SCORE = -100
 const DROPPED_SERVER_SCORE = -100
 const RE_ADDED_SERVER_SCORE = -10
-let lastScoreUpTime_: number = Date.now()
 
-export class ServerCache {
-  servers_: ServerInfoCache = {}
-  serverCacheDirty = false
-  cacheLastSave_ = 0
+export class ServerScores {
+  scoresLastLoaded: number
   log: EdgeLog
+  lastScoreUpTime: number
 
   constructor(log: EdgeLog) {
     this.log = log
-    this.clearServerCache()
-  }
-
-  dirtyServerCache(_url: string): void {
-    this.serverCacheDirty = true
+    this.scoresLastLoaded = Date.now()
+    this.lastScoreUpTime = Date.now()
   }
 
   /**
-   * Loads the server cache with new and old servers
+   * Loads the server scores with new and old servers, mutates the passed in list of servers
    * @param oldServers: Map of ServerInfo objects by serverUrl. This should come from disk
    * @param newServers: Array<string> of new servers downloaded from the info server
    */
-  serverCacheLoad(
-    oldServers: ServerInfoCache,
+  serverScoresLoad(
+    servers: ServerInfoCache,
+    oldServers: { [serverUrl: string]: ServerInfo },
+    dirtyServerCacheCB: (serverUrl: string) => void,
     newServers: string[] = []
   ): void {
     //
@@ -60,7 +57,7 @@ export class ServerCache {
     }
 
     //
-    // If there is a cached server (oldServers) that is not on the newServers array, then set it's score to -1
+    // If there is a known server (oldServers) that is not on the newServers array, then set it's score to -1
     // to reduce chances of using it.
     //
     for (const serverUrl in oldServers) {
@@ -84,7 +81,7 @@ export class ServerCache {
         }
       }
 
-      if (this.cacheLastSave_ === 0) {
+      if (this.scoresLastLoaded === 0) {
         serverScore = Math.min(serverScore, MAX_SCORE - 100)
       }
 
@@ -94,23 +91,21 @@ export class ServerCache {
       }
 
       oldServer.serverScore = serverScore
-      this.servers_[serverUrl] = oldServer
-      this.dirtyServerCache(serverUrl)
+      servers[serverUrl] = oldServer
+      dirtyServerCacheCB(serverUrl)
     }
   }
 
-  clearServerCache(): void {
-    this.servers_ = {}
-    this.serverCacheDirty = false
-    this.cacheLastSave_ = Date.now()
-    lastScoreUpTime_ = Date.now()
+  clearServerScoreTimes(): void {
+    this.scoresLastLoaded = Date.now()
+    this.lastScoreUpTime = Date.now()
   }
 
-  printServerCache(): void {
-    this.log('**** printServerCache ****')
+  printServers(servers: ServerInfoCache): void {
+    this.log('**** printServers ****')
     const serverInfos: ServerInfo[] = []
-    for (const s in this.servers_) {
-      serverInfos.push(this.servers_[s])
+    for (const s in servers) {
+      serverInfos.push(servers[s])
     }
     // Sort by score
     serverInfos.sort((a: ServerInfo, b: ServerInfo) => {
@@ -122,58 +117,75 @@ export class ServerCache {
       const response = s.responseTime.toString()
       const numResponse = s.numResponseTimes.toString()
       const url = s.serverUrl
-      this.log(`ServerCache ${score} ${response}ms ${numResponse} ${url}`)
+      this.log(`ServerInfo ${score} ${response}ms ${numResponse} ${url}`)
     }
     this.log('**************************')
   }
 
   serverScoreUp(
+    servers: ServerInfoCache,
     serverUrl: string,
     responseTimeMilliseconds: number,
+    dirtyServerCacheCB: (serverUrl: string) => void,
     changeScore = 1
   ): void {
-    const serverInfo: ServerInfo = this.servers_[serverUrl]
+    const serverInfo: ServerInfo = servers[serverUrl]
 
     serverInfo.serverScore += changeScore
     if (serverInfo.serverScore > MAX_SCORE) {
       serverInfo.serverScore = MAX_SCORE
     }
-    lastScoreUpTime_ = Date.now()
+    this.lastScoreUpTime = Date.now()
 
     if (responseTimeMilliseconds !== 0) {
-      this.setResponseTime(serverUrl, responseTimeMilliseconds)
+      this.setResponseTime(
+        servers,
+        serverUrl,
+        responseTimeMilliseconds,
+        dirtyServerCacheCB
+      )
     }
 
     this.log(
       `${serverUrl}: score UP to ${serverInfo.serverScore} ${responseTimeMilliseconds}ms`
     )
-    this.dirtyServerCache(serverUrl)
+    dirtyServerCacheCB(serverUrl)
   }
 
-  serverScoreDown(serverUrl: string, changeScore = 10): void {
+  serverScoreDown(
+    servers: ServerInfoCache,
+    serverUrl: string,
+    dirtyServerCacheCB: (serverUrl: string) => void,
+    changeScore = 10
+  ): void {
     const currentTime = Date.now()
-    if (currentTime - lastScoreUpTime_ > 60000) {
+    if (currentTime - this.lastScoreUpTime > 60000) {
       // It has been over 1 minute since we got an up-vote for any server.
       // Assume the network is down and don't penalize anyone for now
       this.log(`${serverUrl}: score DOWN cancelled`)
       return
     }
-    const serverInfo: ServerInfo = this.servers_[serverUrl]
+    const serverInfo: ServerInfo = servers[serverUrl]
     serverInfo.serverScore -= changeScore
     if (serverInfo.serverScore < MIN_SCORE) {
       serverInfo.serverScore = MIN_SCORE
     }
 
     if (serverInfo.numResponseTimes === 0) {
-      this.setResponseTime(serverUrl, 9999)
+      this.setResponseTime(servers, serverUrl, 9999, dirtyServerCacheCB)
     }
 
     this.log(`${serverUrl}: score DOWN to ${serverInfo.serverScore}`)
-    this.dirtyServerCache(serverUrl)
+    dirtyServerCacheCB(serverUrl)
   }
 
-  setResponseTime(serverUrl: string, responseTimeMilliseconds: number): void {
-    const serverInfo: ServerInfo = this.servers_[serverUrl]
+  setResponseTime(
+    servers: ServerInfoCache,
+    serverUrl: string,
+    responseTimeMilliseconds: number,
+    dirtyServerCacheCB: (serverUrl: string) => void
+  ): void {
+    const serverInfo: ServerInfo = servers[serverUrl]
     serverInfo.numResponseTimes++
 
     const oldTime = serverInfo.responseTime
@@ -189,24 +201,25 @@ export class ServerCache {
       }
     }
     serverInfo.responseTime = newTime
-    this.dirtyServerCache(serverUrl)
+    dirtyServerCacheCB(serverUrl)
   }
 
   getServers(
+    servers: ServerInfoCache,
     numServersWanted: number,
     includePatterns: string[] = []
   ): string[] {
-    if (this.servers_ == null || Object.keys(this.servers_).length === 0) {
+    if (servers == null || Object.keys(servers).length === 0) {
       return []
     }
 
     let serverInfos: ServerInfo[] = []
     let newServerInfos: ServerInfo[] = []
     //
-    // Find new servers and cache them away
+    // Find new servers from the passed in servers
     //
-    for (const s in this.servers_) {
-      const server = this.servers_[s]
+    for (const s in servers) {
+      const server = servers[s]
       serverInfos.push(server)
       if (
         server.responseTime === RESPONSE_TIME_UNINITIALIZED &&
@@ -221,7 +234,7 @@ export class ServerCache {
     if (includePatterns.length > 0) {
       const filter = (server: ServerInfo): boolean => {
         for (const pattern of includePatterns) {
-          // make sure that the server URL starts with 'wss'
+          // make sure that the server URL starts with the required pattern
           if (server.serverUrl.indexOf(pattern) === 0) return true
         }
         return false
@@ -273,12 +286,12 @@ export class ServerCache {
     })
     topServerInfos = topServerInfos.concat(serverInfos.slice(serverEnd))
 
-    const servers = []
+    const selectedServers = []
     let numServers = 0
     let numNewServers = 0
     for (const serverInfo of topServerInfos) {
       numServers++
-      servers.push(serverInfo.serverUrl)
+      selectedServers.push(serverInfo.serverUrl)
       if (
         serverInfo.responseTime === RESPONSE_TIME_UNINITIALIZED &&
         serverInfo.serverScore === 0
@@ -301,7 +314,7 @@ export class ServerCache {
     // servers a try.
     if (numNewServers === 0) {
       for (const serverInfo of newServerInfos) {
-        servers.unshift(serverInfo.serverUrl)
+        selectedServers.unshift(serverInfo.serverUrl)
         numServers++
         if (numServers >= numServersWanted) {
           break
@@ -309,6 +322,6 @@ export class ServerCache {
       }
     }
 
-    return servers
+    return selectedServers
   }
 }

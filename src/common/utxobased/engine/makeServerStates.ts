@@ -185,7 +185,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   const doRefillServers = (): void => {
     const includePatterns = ['wss:']
     if (serverList.length === 0) {
-      serverList = pluginState.getServers(NEW_CONNECTIONS, includePatterns)
+      serverList = pluginState.getLocalServers(NEW_CONNECTIONS, includePatterns)
     }
     log(`refillServers: Top ${NEW_CONNECTIONS} servers:`, serverList)
     let chanceToBePicked = 1.25

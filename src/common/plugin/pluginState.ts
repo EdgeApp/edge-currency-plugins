@@ -6,7 +6,12 @@ import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet, Memlet } from 'memlet'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
-import { asServerInfoCache, ServerCache, ServerInfoCache } from './serverCache'
+import {
+  asServerInfoCache,
+  ServerInfoCache,
+  Servers,
+  ServerScores
+} from './serverScores'
 
 const serverListInfoUrl = 'https://info1.edge.app/v1/blockBook/'
 const asWebsocketUrl = (raw: unknown): string => {
@@ -38,7 +43,7 @@ export interface PluginStateSettings {
   log: EdgeLog
 }
 
-export class PluginState extends ServerCache {
+export class PluginState {
   // On-disk server information:
   // serverCache: ServerCache
 
@@ -58,7 +63,7 @@ export class PluginState extends ServerCache {
 
   dumpData(): JsonObject {
     return {
-      'pluginState.servers_': this.servers_
+      'pluginState.servers_': this.servers
     }
   }
 
@@ -66,15 +71,19 @@ export class PluginState extends ServerCache {
   // Private stuff
   // ------------------------------------------------------------------------
   io: EdgeIo
+  log: EdgeLog
   disableFetchingServers: boolean
   defaultServers: string[]
   currencyCode: string
+  serverCacheDirty: boolean
+  servers: Servers
 
   engines: UtxoEngineState[]
   memlet: Memlet
 
   serverCacheJson: ServerInfoCache
   pluginId: string
+  serverScores: ServerScores
 
   constructor({
     io,
@@ -83,7 +92,7 @@ export class PluginState extends ServerCache {
     pluginId,
     log
   }: PluginStateSettings) {
-    super(log)
+    this.log = log
     this.io = io
     this.defaultServers = defaultSettings.blockBookServers
     this.disableFetchingServers = !!(
@@ -95,6 +104,10 @@ export class PluginState extends ServerCache {
 
     this.pluginId = pluginId
     this.serverCacheJson = {}
+    this.serverCacheDirty = false
+    this.servers = {}
+
+    this.serverScores = new ServerScores(log)
   }
 
   async load(): Promise<PluginState> {
@@ -116,8 +129,22 @@ export class PluginState extends ServerCache {
     return this
   }
 
+  serverScoreDown(uri: string): void {
+    this.serverScores.serverScoreDown(this.servers, uri, this.dirtyServerCache)
+  }
+
+  serverScoreUp(uri: string, score: number): void {
+    this.serverScores.serverScoreUp(
+      this.servers,
+      uri,
+      score,
+      this.dirtyServerCache
+    )
+  }
+
   async clearCache(): Promise<void> {
-    this.clearServerCache()
+    this.serverScores.clearServerScoreTimes()
+    this.servers = {}
     this.serverCacheDirty = true
     await this.saveServerCache()
     await this.refreshServers()
@@ -126,14 +153,12 @@ export class PluginState extends ServerCache {
   async saveServerCache(): Promise<void> {
     // this.printServerCache()
     if (this.serverCacheDirty) {
-      try {
-        await this.memlet.setJson('serverCache.json', this.servers_)
-        this.serverCacheDirty = false
-        this.cacheLastSave_ = Date.now()
-        this.log(`${this.pluginId} - Saved server cache`)
-      } catch (e) {
+      await this.memlet.setJson('serverCache.json', this.servers).catch(e => {
         this.log(`${this.pluginId} - ${JSON.stringify(e.toString())}`)
-      }
+      })
+      this.serverCacheDirty = false
+      this.serverScores.scoresLastLoaded = Date.now()
+      this.log(`${this.pluginId} - Saved server cache`)
     }
   }
 
@@ -153,6 +178,17 @@ export class PluginState extends ServerCache {
     }
   }
 
+  getLocalServers(
+    numServersWanted: number,
+    includePatterns: string[] = []
+  ): string[] {
+    return this.serverScores.getServers(
+      this.servers,
+      numServersWanted,
+      includePatterns
+    )
+  }
+
   async fetchServers(): Promise<string[] | null> {
     const { io } = this
 
@@ -169,7 +205,7 @@ export class PluginState extends ServerCache {
         )
       } catch (err) {
         this.log(
-          `${this.pluginId} - Fetching ${serverListInfoUrl} failed: ${err.message}`
+          `${this.pluginId} - Fetching ${serverListInfoUrl} failed: ${err}`
         )
       }
       return {}
@@ -186,7 +222,12 @@ export class PluginState extends ServerCache {
     if (!this.disableFetchingServers)
       serverList = (await this.fetchServers()) ?? this.defaultServers
 
-    this.serverCacheLoad(this.serverCacheJson, serverList)
+    this.serverScores.serverScoresLoad(
+      this.servers,
+      this.serverCacheJson,
+      this.dirtyServerCache,
+      serverList
+    )
     await this.saveServerCache()
 
     // Tell the engines about the new servers:
@@ -211,7 +252,7 @@ export class PluginState extends ServerCache {
       disconnects.push(engine.stop())
     }
     await Promise.all(disconnects)
-    this.clearServerCache()
+    this.serverScores.clearServerScoreTimes()
     this.serverCacheJson = {}
     this.serverCacheDirty = true
     await this.saveServerCache()
