@@ -1,6 +1,5 @@
 {
   "extends": [
-    "plugin:@typescript-eslint/recommended",
     "standard-kit/prettier",
     "standard-kit/prettier/typescript",
     "standard-kit/prettier/node"
@@ -9,8 +8,7 @@
     "project": "tsconfig.json"
   },
   "plugins": [
-    "simple-import-sort",
-    "@typescript-eslint"
+    "simple-import-sort"
   ],
   "rules": {
     "@typescript-eslint/no-unused-vars": ["error", {
