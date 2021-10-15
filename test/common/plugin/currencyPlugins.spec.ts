@@ -12,7 +12,7 @@ import {
 } from 'edge-core-js/types'
 
 import fixtures from '../../../fixtures/currencyPlugins.json'
-import plugin from '../../../src/btc'
+import plugin from '../../../src/index'
 import { makeFakeIo, makeFakeLog } from '../../utils'
 
 chai.should()
