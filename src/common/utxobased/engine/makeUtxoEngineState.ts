@@ -919,10 +919,11 @@ const processAddressTransactions = async (
       } else {
         addressData.lastQueriedBlockHeight = blockHeight
         await processor.saveAddress(addressData)
-        // Callback for when an address has been fully processed
-        args.onAddressChecked()
 
         await setLookAhead({ ...args, ...path })
+
+        // Callback for when an address has been fully processed
+        args.onAddressChecked()
       }
     })
     .catch(() => {
