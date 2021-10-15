@@ -12,7 +12,7 @@ import { makeMemlet, Memlet } from 'memlet'
 import { FEES_PATH, INFO_SERVER_URI } from '../constants'
 import {
   asSimpleFeeSettings,
-  EngineCurrencyInfo,
+  PluginInfo,
   SimpleFeeSettings
 } from '../plugin/types'
 import { calcMinerFeePerByte } from './calcMinerFeePerByte'
@@ -21,7 +21,7 @@ import { processMempoolSpaceFees } from './processMempoolSpaceFees'
 
 interface MakeFeesConfig extends Common {
   disklet: Disklet
-  currencyInfo: EngineCurrencyInfo
+  pluginInfo: PluginInfo
 }
 
 interface Common {
@@ -37,21 +37,24 @@ export interface Fees {
 }
 
 export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
-  const { disklet, currencyInfo, ...common } = config
+  const { disklet, pluginInfo, ...common } = config
+  const { currencyInfo, engineInfo } = pluginInfo
 
   const memlet = makeMemlet(disklet)
-  const fees = await fetchCachedFees(memlet, currencyInfo.simpleFeeSettings)
-
+  const fees: SimpleFeeSettings = await fetchCachedFees(
+    memlet,
+    engineInfo.simpleFeeSettings
+  )
   // The last time the fees were updated
   let timestamp = 0
   let vendorIntervalId: NodeJS.Timeout
 
   const updateVendorFees = async (): Promise<void> => {
-    if (Date.now() - timestamp <= currencyInfo.feeUpdateInterval) return
+    if (Date.now() - timestamp <= engineInfo.feeUpdateInterval) return
 
     const vendorFees = await fetchFeesFromVendor({
       ...common,
-      mempoolSpaceFeeInfoServer: currencyInfo.mempoolSpaceFeeInfoServer
+      mempoolSpaceFeeInfoServer: engineInfo.mempoolSpaceFeeInfoServer
     })
     Object.assign(fees, vendorFees ?? {})
     timestamp = Date.now()
@@ -71,7 +74,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       vendorIntervalId = setInterval(
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         updateVendorFees,
-        currencyInfo.feeUpdateInterval
+        engineInfo.feeUpdateInterval
       )
     },
 
@@ -98,7 +101,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
         sumSpendTargets(spendTargets),
         fees,
         networkFeeOption,
-        customNetworkFee[currencyInfo.customFeeSettings[0]]
+        customNetworkFee[engineInfo.customFeeSettings[0]]
       )
       return rate
     },

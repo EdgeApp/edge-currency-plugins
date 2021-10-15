@@ -36,7 +36,12 @@ export interface TxOptions {
   CPFP?: string
 }
 
-export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
+export interface PluginInfo {
+  currencyInfo: EdgeCurrencyInfo
+  engineInfo: EngineInfo
+}
+
+export interface EngineInfo {
   formats?: CurrencyFormat[]
   forks?: string[]
   coinType: number
@@ -72,7 +77,7 @@ export const asSimpleFeeSettings = asObject({
 export interface EngineConfig {
   network: NetworkEnum
   walletInfo: EdgeWalletInfo
-  currencyInfo: EngineCurrencyInfo
+  pluginInfo: PluginInfo
   currencyTools: EdgeCurrencyTools
   options: EngineOptions
   io: EdgeIo

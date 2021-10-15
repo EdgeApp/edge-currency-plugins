@@ -12,8 +12,8 @@ import {
   AddressPath,
   CurrencyFormat,
   EngineConfig,
-  EngineCurrencyInfo,
-  NetworkEnum
+  NetworkEnum,
+  PluginInfo
 } from '../../plugin/types'
 import { removeItem } from '../../plugin/utils'
 import { Processor } from '../db/makeProcessor'
@@ -84,7 +84,7 @@ export function makeUtxoEngineState(
 ): UtxoEngineState {
   const {
     network,
-    currencyInfo,
+    pluginInfo,
     walletInfo,
     walletTools,
     options: { emitter, log },
@@ -146,7 +146,7 @@ export function makeUtxoEngineState(
   const commonArgs: CommonArgs = {
     engineStarted,
     network,
-    currencyInfo,
+    pluginInfo,
     walletInfo,
     walletTools,
     processor,
@@ -366,7 +366,7 @@ export function makeUtxoEngineState(
 interface CommonArgs {
   engineStarted: boolean
   network: NetworkEnum
-  currencyInfo: EngineCurrencyInfo
+  pluginInfo: PluginInfo
   walletInfo: EdgeWalletInfo
   walletTools: UTXOPluginWalletTools
   processor: Processor
@@ -431,7 +431,13 @@ interface AddressTransactionCache {
 interface FormatArgs extends CommonArgs, ShortPath {}
 
 const setLookAhead = async (common: CommonArgs): Promise<void> => {
-  const { currencyInfo, lock, processor, walletInfo, walletTools } = common
+  const {
+    pluginInfo: { engineInfo },
+    lock,
+    processor,
+    walletInfo,
+    walletTools
+  } = common
 
   // Wait for the lock to be released before continuing invocation.
   // This is to ensure that setLockAhead is not called while the lock is held.
@@ -461,7 +467,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
     })
 
     // Loop until the total address count equals the lookahead count
-    let lookAheadIndex = lastUsedIndex + currencyInfo.gapLimit
+    let lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
     let nextAddressIndex = totalAddressCount
     while (nextAddressIndex <= lookAheadIndex) {
       const path: AddressPath = {
@@ -481,7 +487,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
       lastUsedIndex = await processor.lastUsedIndexByFormatPath({
         ...formatPath
       })
-      lookAheadIndex = lastUsedIndex + currencyInfo.gapLimit
+      lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
       nextAddressIndex = processor.numAddressesByFormatPath(formatPath)
     }
 
@@ -537,14 +543,20 @@ interface TransactionChangedArgs {
   tx: IProcessorTransaction
   emitter: EngineEmitter
   walletTools: UTXOPluginWalletTools
-  currencyInfo: EngineCurrencyInfo
+  pluginInfo: PluginInfo
   processor: Processor
 }
 
 export const transactionChanged = async (
   args: TransactionChangedArgs
 ): Promise<void> => {
-  const { emitter, walletTools, processor, currencyInfo, tx } = args
+  const {
+    emitter,
+    walletTools,
+    processor,
+    pluginInfo: { currencyInfo },
+    tx
+  } = args
   emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
     await toEdgeTransaction({
       tx,
@@ -845,7 +857,10 @@ const internalGetFreshAddress = async (
     format,
     changeIndex: branch,
     // while syncing, we may hit negative numbers when only subtracting. Use the address at /0 in that case.
-    addressIndex: Math.max(numAddresses - args.currencyInfo.gapLimit, 0)
+    addressIndex: Math.max(
+      numAddresses - args.pluginInfo.engineInfo.gapLimit,
+      0
+    )
   }
   const { scriptPubkey } =
     (await processor.fetchAddress(path)) ??
@@ -958,7 +973,10 @@ interface ProcessRawTxArgs extends CommonArgs {
 }
 
 const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
-  const { tx, currencyInfo } = args
+  const {
+    tx,
+    pluginInfo: { engineInfo }
+  } = args
   return {
     txid: tx.txid,
     hex: tx.hex,
@@ -972,7 +990,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
       n: input.n,
       scriptPubkey: validScriptPubkeyFromAddress({
         address: input.addresses[0],
-        coin: currencyInfo.network,
+        coin: engineInfo.network,
         network: args.network
       }),
       amount: input.value
@@ -983,7 +1001,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
         output.hex ??
         validScriptPubkeyFromAddress({
           address: output.addresses[0],
-          coin: currencyInfo.network,
+          coin: engineInfo.network,
           network: args.network
         }),
       amount: output.value
@@ -1057,7 +1075,14 @@ interface ProcessUtxoTransactionArgs extends CommonArgs {
 const processUtxoTransactions = async (
   args: ProcessUtxoTransactionArgs
 ): Promise<void> => {
-  const { utxos, processor, scriptPubkey, log, emitter, currencyInfo } = args
+  const {
+    utxos,
+    processor,
+    scriptPubkey,
+    log,
+    emitter,
+    pluginInfo: { currencyInfo }
+  } = args
 
   const currentUtxos = await processor.fetchUtxos({ scriptPubkey })
   const currentUtxoIds: string[] = []

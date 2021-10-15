@@ -1,5 +1,5 @@
 import { UtxoKeyFormat } from '../utxobased/engine/makeUtxoWalletTools'
-import { all as networks } from '../utxobased/info/all'
+import { all as plugins } from '../utxobased/info/all'
 
 export const getMnemonicKey = ({ coin }: { coin: string }): string =>
   `${coin}Key`
@@ -14,8 +14,9 @@ export const getMnemonic = (args: {
 }
 
 export const getFormatsForNetwork = (network: string): string[] => {
-  for (const coin of networks) {
-    if (coin.network === network) return coin.formats ?? []
+  for (const plugin of plugins) {
+    if (plugin.engineInfo.network === network)
+      return plugin.engineInfo.formats ?? []
   }
   return []
 }

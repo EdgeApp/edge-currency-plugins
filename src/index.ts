@@ -6,7 +6,7 @@ import { all } from './common/utxobased/info/all'
 const plugins: EdgeCorePlugins = {}
 
 for (const info of all) {
-  plugins[info.pluginId] = (options: EdgeCorePluginOptions) =>
+  plugins[info.currencyInfo.pluginId] = (options: EdgeCorePluginOptions) =>
     makeCurrencyPlugin(options, info)
 }
 
