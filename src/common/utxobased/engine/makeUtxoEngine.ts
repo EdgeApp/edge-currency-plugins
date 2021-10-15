@@ -45,17 +45,18 @@ export async function makeUtxoEngine(
 ): Promise<EdgeCurrencyEngine> {
   const {
     network,
-    currencyInfo,
+    pluginInfo,
     walletInfo,
     options: { walletLocalDisklet, walletLocalEncryptedDisklet, emitter, log },
     io,
     pluginState
   } = config
+  const { currencyInfo, engineInfo } = pluginInfo
 
   const walletFormat = getWalletFormat(walletInfo)
   if (
-    currencyInfo.formats == null ||
-    !currencyInfo.formats.includes(walletFormat)
+    engineInfo.formats == null ||
+    !engineInfo.formats.includes(walletFormat)
   ) {
     const message = `Wallet format is not supported: ${walletFormat}`
     log.error(message)
@@ -64,13 +65,13 @@ export async function makeUtxoEngine(
 
   const walletTools = makeUtxoWalletTools({
     keys: walletInfo.keys,
-    coin: currencyInfo.network,
+    coin: engineInfo.network,
     network
   })
 
   const fees = await makeFees({
     disklet: navigateDisklet(walletLocalDisklet, FEES_DISKLET_PATH),
-    currencyInfo,
+    pluginInfo,
     io,
     log: config.options.log
   })
@@ -94,7 +95,7 @@ export async function makeUtxoEngine(
     async startEngine(): Promise<void> {
       emitter.emit(
         EngineEvent.WALLET_BALANCE_CHANGED,
-        config.currencyInfo.currencyCode,
+        currencyInfo.currencyCode,
         metadata.balance
       )
       await fees.start()
@@ -176,13 +177,13 @@ export async function makeUtxoEngine(
     },
 
     getDisplayPrivateSeed(): string | null {
-      return getMnemonic({ keys: walletInfo.keys, coin: currencyInfo.network })
+      return getMnemonic({ keys: walletInfo.keys, coin: engineInfo.network })
     },
 
     getDisplayPublicSeed(): string | null {
       const xpubs = getXpubs({
         keys: walletInfo.keys,
-        coin: currencyInfo.network
+        coin: engineInfo.network
       })
       return Object.values(xpubs).join('\n')
     },
@@ -332,7 +333,7 @@ export async function makeUtxoEngine(
         forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
         targets,
         feeRate,
-        coin: currencyInfo.network,
+        coin: engineInfo.network,
         network,
         setRBF,
         freshChangeAddress,
@@ -393,7 +394,7 @@ export async function makeUtxoEngine(
       const tx = fromEdgeTransaction(edgeTx)
       await transactionChanged({
         tx,
-        currencyInfo,
+        pluginInfo,
         emitter,
         walletTools,
         processor
@@ -411,7 +412,7 @@ export async function makeUtxoEngine(
       const xprivKeys = await fetchOrDeriveXprivFromKeys({
         keys: walletInfo.keys,
         walletLocalEncryptedDisklet,
-        coin: currencyInfo.network,
+        coin: engineInfo.network,
         network
       })
 
@@ -434,7 +435,7 @@ export async function makeUtxoEngine(
       )
       const signedTx = await signTx({
         psbtBase64: psbt.base64,
-        coin: currencyInfo.network,
+        coin: engineInfo.network,
         privateKeys
       })
       transaction.txid = signedTx.id
@@ -480,7 +481,7 @@ export async function makeUtxoEngine(
       const tmpProcessor = await makeProcessor(tmpConfig)
       const tmpWalletTools = makeUtxoWalletTools({
         keys: { wifKeys: privateKeys },
-        coin: currencyInfo.network,
+        coin: engineInfo.network,
         network
       })
 
@@ -511,10 +512,13 @@ export async function makeUtxoEngine(
           ...config.options,
           emitter: tmpEmitter
         },
-        currencyInfo: {
-          ...config.currencyInfo,
-          // hack to not overflow the wallet tools private key array
-          gapLimit: privateKeys.length + 1
+        pluginInfo: {
+          ...pluginInfo,
+          engineInfo: {
+            ...engineInfo,
+            // hack to not overflow the wallet tools private key array
+            gapLimit: privateKeys.length + 1
+          }
         },
         walletTools: tmpWalletTools,
         processor: tmpProcessor,

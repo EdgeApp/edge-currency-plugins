@@ -8,7 +8,7 @@ const plugin = (options: EdgeCorePluginOptions): EdgeCurrencyPlugin =>
 
 if (typeof window !== 'undefined') {
   window.addEdgeCorePlugins?.({
-    [info.pluginId]: plugin
+    [info.currencyInfo.pluginId]: plugin
   })
 }
 

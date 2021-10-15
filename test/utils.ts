@@ -7,39 +7,40 @@ import {
   EdgeLog
 } from 'edge-core-js/types'
 
-import {
-  EngineCurrencyInfo,
-  EngineCurrencyType
-} from '../src/common/plugin/types'
+import { EngineCurrencyType, PluginInfo } from '../src/common/plugin/types'
 
-export const makeFakeCurrencyInfo = (
+export const makeFakePluginInfo = (
   currencyType = EngineCurrencyType.UTXO
-): EngineCurrencyInfo => {
+): PluginInfo => {
   return {
-    addressExplorer: '',
-    coinType: 0,
-    currencyCode: '',
-    currencyType,
-    customFeeSettings: [],
-    defaultFee: 0,
-    defaultSettings: {},
-    denominations: [],
-    displayName: '',
-    feeUpdateInterval: 0,
-    gapLimit: 0,
-    metaTokens: [],
-    network: '',
-    pluginId: '',
-    simpleFeeSettings: {
-      highFee: '1',
-      lowFee: '2',
-      standardFeeHigh: '3',
-      standardFeeHighAmount: '4',
-      standardFeeLow: '5',
-      standardFeeLowAmount: '6'
+    currencyInfo: {
+      addressExplorer: '',
+      currencyCode: '',
+      defaultSettings: {},
+      denominations: [],
+      displayName: '',
+      metaTokens: [],
+      pluginId: '',
+      transactionExplorer: '',
+      walletType: ''
     },
-    transactionExplorer: '',
-    walletType: ''
+    engineInfo: {
+      coinType: 0,
+      currencyType,
+      customFeeSettings: [],
+      defaultFee: 0,
+      feeUpdateInterval: 0,
+      gapLimit: 0,
+      network: '',
+      simpleFeeSettings: {
+        highFee: '1',
+        lowFee: '2',
+        standardFeeHigh: '3',
+        standardFeeHighAmount: '4',
+        standardFeeLow: '5',
+        standardFeeLowAmount: '6'
+      }
+    }
   }
 }
 
