@@ -15,15 +15,16 @@
     "README.md"
   ],
   "scripts": {
-    "build.lib": "sucrase -q -t typescript,imports -d ./lib ./src",
-    "build.types": "tsc",
     "clean": "rimraf lib",
-    "fix": "npm run lint -- --fix",
+    "fix": "eslint . --fix",
+    "lib": "sucrase -q -t typescript,imports -d ./lib ./src",
+    "lint": "eslint .",
     "precommit": "lint-staged && tsc",
-    "prepare": "npm-run-all clean -p build.*",
+    "prepare": "npm-run-all clean -p lib types",
     "start": "node -r sucrase/register src/index.ts",
     "test": "mocha -r sucrase/register 'test/**/*.spec.ts'",
-    "lint": "eslint ."
+    "types": "tsc",
+    "verify": "npm-run-all lint types"
   },
   "husky": {
     "hooks": {
