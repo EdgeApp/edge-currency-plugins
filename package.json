@@ -6,6 +6,9 @@
   "repository": "https://github.app/EdgeApp/edge-currency-plugins",
   "license": "MIT",
   "author": "Airbitz, Inc.",
+  "browser": {
+    "ws": false
+  },
   "files": [
     "lib/*",
     "package.json",
@@ -29,6 +32,27 @@
   },
   "lint-staged": {
     "*.{js,ts}": "eslint"
+  },
+  "dependencies": {
+    "altcoin-js": "git://github.com/EdgeApp/altcoin-js.git#master",
+    "async-mutex": "^0.2.6",
+    "baselet": "^0.1.0",
+    "biggystring": "^4.0.0",
+    "bip32": "^2.0.5",
+    "bip32grs": "^2.0.5",
+    "bip39": "^3.0.2",
+    "blake-hash": "^2.0.0",
+    "bn.js": "^5.1.2",
+    "bs58grscheck": "^2.1.2",
+    "bs58smartcheck": "^2.0.4",
+    "disklet": "^0.4.5",
+    "edge-core-js": "^0.18.9",
+    "memlet": "^0.0.4",
+    "uri-js": "^4.4.0",
+    "url-parse": "^1.5.2",
+    "wif-smart": "^2.0.0",
+    "wifgrs": "^2.0.6",
+    "ws": "^7.3.1"
   },
   "devDependencies": {
     "@types/bn.js": "^4.11.6",
@@ -64,29 +88,5 @@
     "ts-node": "^9.0.0",
     "ts-sinon": "^2.0.1",
     "typescript": "^4.1.2"
-  },
-  "dependencies": {
-    "altcoin-js": "git://github.com/EdgeApp/altcoin-js.git#master",
-    "async-mutex": "^0.2.6",
-    "baselet": "^0.1.0",
-    "biggystring": "^4.0.0",
-    "bip32": "^2.0.5",
-    "bip32grs": "^2.0.5",
-    "bip39": "^3.0.2",
-    "blake-hash": "^2.0.0",
-    "bn.js": "^5.1.2",
-    "bs58grscheck": "^2.1.2",
-    "bs58smartcheck": "^2.0.4",
-    "disklet": "^0.4.5",
-    "edge-core-js": "^0.18.9",
-    "memlet": "^0.0.4",
-    "uri-js": "^4.4.0",
-    "url-parse": "^1.5.2",
-    "wif-smart": "^2.0.0",
-    "wifgrs": "^2.0.6",
-    "ws": "^7.3.1"
-  },
-  "browser": {
-    "ws": false
   }
 }
