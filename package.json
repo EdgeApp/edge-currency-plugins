@@ -6,9 +6,6 @@
   "repository": "https://github.app/EdgeApp/edge-currency-plugins",
   "license": "MIT",
   "author": "Airbitz, Inc.",
-  "browser": {
-    "ws": false
-  },
   "exports": {
     ".": {
       "import": "./lib/index.mjs",
@@ -45,6 +42,9 @@
   },
   "main": "./lib/index.js",
   "module": "./lib/edge-currency-plugins.js",
+  "browser": {
+    "ws": false
+  },
   "types": "./lib/index.d.ts",
   "files": [
     "lib/*",
