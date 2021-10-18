@@ -13,6 +13,34 @@
     ".": {
       "import": "./lib/index.mjs",
       "require": "./lib/index.js"
+    },
+    "./btc": {
+      "import": "./lib/btc.mjs",
+      "require": "./lib/btc.js"
+    },
+    "./bch": {
+      "import": "./lib/bch.mjs",
+      "require": "./lib/bch.js"
+    },
+    "./bsv": {
+      "import": "./lib/bsv.mjs",
+      "require": "./lib/bsv.js"
+    },
+    "./tbtc": {
+      "import": "./lib/tbtc.mjs",
+      "require": "./lib/tbtc.js"
+    },
+    "./ftc": {
+      "import": "./lib/ftc.mjs",
+      "require": "./lib/ftc.js"
+    },
+    "./ltc": {
+      "import": "./lib/ltc.mjs",
+      "require": "./lib/ltc.js"
+    },
+    "./firo": {
+      "import": "./lib/firo.mjs",
+      "require": "./lib/firo.js"
     }
   },
   "main": "./lib/index.js",

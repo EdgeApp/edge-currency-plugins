@@ -3,15 +3,15 @@ import { EdgeCorePluginOptions, EdgeCorePlugins } from 'edge-core-js/types'
 import { makeCurrencyPlugin } from './common/plugin/makeCurrencyPlugin'
 import { all } from './common/utxobased/info/all'
 
-const plugin: EdgeCorePlugins = {}
+const plugins: EdgeCorePlugins = {}
 
 for (const info of all) {
-  plugin[info.pluginId] = (options: EdgeCorePluginOptions) =>
+  plugins[info.pluginId] = (options: EdgeCorePluginOptions) =>
     makeCurrencyPlugin(options, info)
 }
 
 if (typeof window !== 'undefined') {
-  window.addEdgeCorePlugins?.(plugin)
+  window.addEdgeCorePlugins?.(plugins)
 }
 
-export default plugin
+export default plugins
