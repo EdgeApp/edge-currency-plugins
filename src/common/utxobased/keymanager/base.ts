@@ -1,6 +1,6 @@
 'use strict'
 
-import * as base58 from 'bs58'
+import base58 from 'bs58'
 import { Buffer } from 'buffer'
 
 interface Base58BaseReturn {

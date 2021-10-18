@@ -12,7 +12,7 @@ import {
 } from 'edge-core-js/types'
 
 import fixtures from '../../../fixtures/currencyPlugins.json'
-import plugin from '../../../src/btc'
+import plugins from '../../../src/index'
 import { makeFakeIo, makeFakeLog } from '../../utils'
 
 chai.should()
@@ -36,7 +36,7 @@ for (const fixture of fixtures) {
     pluginDisklet: makeMemoryDisklet()
   }
 
-  const factory = plugin[fixture.pluginId]
+  const factory = plugins[fixture.pluginId]
   if (typeof factory !== 'function') throw new TypeError('Bad Plugin')
   const corePlugin: EdgeCorePlugin = factory(pluginOpts)
   const testPlugin: EdgeCurrencyPlugin = corePlugin as any
