@@ -40,7 +40,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
   const { disklet, currencyInfo, ...common } = config
 
   const memlet = makeMemlet(disklet)
-  const fees = await fetchCachedFees(memlet, currencyInfo)
+  const fees = await fetchCachedFees(memlet, currencyInfo.simpleFeeSettings)
 
   // The last time the fees were updated
   let timestamp = 0
@@ -111,12 +111,11 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
 
 const fetchCachedFees = async (
   memlet: Memlet,
-  currencyInfo: EngineCurrencyInfo
+  fallback: SimpleFeeSettings
 ): Promise<SimpleFeeSettings> => {
   return asMaybe(
     asSimpleFeeSettings,
-    // Return the simple fees settings from currency info by default
-    currencyInfo.simpleFeeSettings
+    fallback
   )(await memlet.getJson(FEES_PATH).catch(() => undefined))
 }
 
