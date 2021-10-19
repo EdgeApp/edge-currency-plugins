@@ -113,10 +113,9 @@ const fetchCachedFees = async (
   memlet: Memlet,
   fallback: SimpleFeeSettings
 ): Promise<SimpleFeeSettings> => {
-  return asMaybe(
-    asSimpleFeeSettings,
-    fallback
-  )(await memlet.getJson(FEES_PATH).catch(() => undefined))
+  const data = await memlet.getJson(FEES_PATH).catch(() => undefined)
+  const feeSettings = asMaybe(asSimpleFeeSettings, fallback)(data)
+  return feeSettings
 }
 
 const cacheFees = async (
