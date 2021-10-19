@@ -1,14 +1,26 @@
 // Typescript translation from original code in edge-currency-bitcoin
 
-import { asObject } from 'cleaners'
+import {
+  asArray,
+  asEither,
+  asMaybe,
+  asNull,
+  asObject,
+  asString
+} from 'cleaners'
 import { navigateDisklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet, Memlet } from 'memlet'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
-import { asServerInfo, ServerCache, ServerInfo } from './serverCache'
+import { asServerInfoCache, ServerCache, ServerInfoCache } from './serverCache'
 
-const InfoServerUrl = 'https://info1.edge.app/v1/blockBook/'
+const serverListInfoUrl = 'https://info1.edge.app/v1/blockBook/'
+const asWebsocketUrl = (raw: unknown): string => {
+  const url = new URL(asString(raw))
+  return `wss://${url.host}/websocket`
+}
+const asServerListInfo = asObject(asEither(asArray(asWebsocketUrl), asNull))
 
 /** A JSON object (as opposed to an array or primitive). */
 interface JsonObject {
@@ -68,7 +80,7 @@ export class PluginState extends ServerCache {
   engines: UtxoEngineState[]
   memlet: Memlet
 
-  serverCacheJson: { [serverUrl: string]: ServerInfo }
+  serverCacheJson: ServerInfoCache
   pluginId: string
 
   constructor({
@@ -94,9 +106,9 @@ export class PluginState extends ServerCache {
 
   async load(): Promise<PluginState> {
     try {
-      const serverCacheText = await this.memlet.getJson('serverCache.json')
-      const cleaner = asObject(asServerInfo)
-      this.serverCacheJson = cleaner(JSON.parse(serverCacheText))
+      this.serverCacheJson = asServerInfoCache(
+        await this.memlet.getJson('serverCache.json')
+      )
     } catch (e) {
       this.log(
         `${this.pluginId}: Failed to load server cache: ${JSON.stringify(e)}`
@@ -150,32 +162,32 @@ export class PluginState extends ServerCache {
 
   async fetchServers(): Promise<void> {
     const { io } = this
-    let serverList = this.defaultServers
-    if (!this.disableFetchingServers) {
-      this.log(`${this.pluginId} - GET ${InfoServerUrl}`)
-      const serverListResponse = await io
-        .fetch(InfoServerUrl)
-        .then(async response => {
-          if (!response.ok) {
-            this.log(
-              `${this.pluginId} - Fetching ${InfoServerUrl} failed with ${response.status}`
-            )
-            return
-          }
-          return await response.json()
-        })
-        .catch(err => {
-          this.log(
-            `${this.pluginId} - Fetching ${InfoServerUrl} failed: ${err.message}`
-          )
-        })
-      const remoteServerList: string[] = serverListResponse[this.currencyCode]
 
-      serverList =
-        remoteServerList.map(
-          url => url.replace('https', 'wss') + '/websocket'
-        ) ?? this.defaultServers
-    }
+    if (this.disableFetchingServers) return
+
+    this.log(`${this.pluginId} - GET ${serverListInfoUrl}`)
+
+    const fetchResponseBody = await io
+      .fetch(serverListInfoUrl)
+      .then(async response => {
+        if (!response.ok) {
+          this.log(
+            `${this.pluginId} - Fetching ${serverListInfoUrl} failed with ${response.status}`
+          )
+          return
+        }
+        return await response.json()
+      })
+      .catch(err => {
+        this.log(
+          `${this.pluginId} - Fetching ${serverListInfoUrl} failed: ${err.message}`
+        )
+      })
+    const serverListInfo = asMaybe(asServerListInfo)(fetchResponseBody)
+    const serverList =
+      (serverListInfo == null ? null : serverListInfo[this.currencyCode]) ??
+      this.defaultServers
+
     this.serverCacheLoad(this.serverCacheJson, serverList)
     await this.saveServerCache()
 

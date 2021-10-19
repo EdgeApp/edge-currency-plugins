@@ -10,6 +10,8 @@ export const asServerInfo = asObject({
   responseTime: asNumber,
   numResponseTimes: asNumber
 })
+export type ServerInfoCache = ReturnType<typeof asServerInfoCache>
+export const asServerInfoCache = asObject(asServerInfo)
 
 const RESPONSE_TIME_UNINITIALIZED = 999999999
 const MAX_SCORE = 500
@@ -19,7 +21,7 @@ const RE_ADDED_SERVER_SCORE = -10
 let lastScoreUpTime_: number = Date.now()
 
 export class ServerCache {
-  servers_: { [serverUrl: string]: ServerInfo } = {}
+  servers_: ServerInfoCache = {}
   serverCacheDirty = false
   cacheLastSave_ = 0
   log: EdgeLog
@@ -39,7 +41,7 @@ export class ServerCache {
    * @param newServers: Array<string> of new servers downloaded from the info server
    */
   serverCacheLoad(
-    oldServers: { [serverUrl: string]: ServerInfo },
+    oldServers: ServerInfoCache,
     newServers: string[] = []
   ): void {
     //
