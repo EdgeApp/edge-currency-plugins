@@ -1,11 +1,23 @@
+import { Cleaner } from 'cleaners'
 import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
   addressMessage,
   addressUtxosMessage,
+  asAddressUtxos,
+  asINewBlockResponse,
+  asINewTransactionResponse,
+  asIServerInfo,
+  asITransaction,
+  asITransactionBroadcastResponse,
   broadcastTxMessage,
+  INewBlockResponse,
+  INewTransactionResponse,
   infoMessage,
+  IServerInfo,
+  ITransaction,
+  ITransactionBroadcastResponse,
   PartialTask,
   pingMessage,
   subscribeAddressesMessage,
@@ -15,20 +27,6 @@ import {
 import Deferred from './Deferred'
 import { SocketEmitter } from './MakeSocketEmitter'
 import { makeSocket, OnQueueSpaceCB } from './Socket'
-
-export interface ITransactionBroadcastResponse {
-  result: string // txid
-}
-
-export interface INewTransactionResponse {
-  address: string
-  tx: ITransaction
-}
-
-export interface INewBlockResponse {
-  height: number
-  hash: string
-}
 
 export interface IAccountDetailsBasic {
   address: string
@@ -66,29 +64,6 @@ interface IAccountOpts {
   perPage?: number
 }
 
-export interface ITransaction {
-  txid: string
-  hex: string
-  blockHeight: number
-  confirmations: number
-  blockTime: number
-  fees: string
-  vin: Array<{
-    txid: string
-    vout: number
-    n: number
-    value: string
-    addresses: string[]
-    hex?: string
-  }>
-  vout: Array<{
-    n: number
-    value: string
-    addresses: string[]
-    hex?: string
-  }>
-}
-
 interface IUTXO {
   txid: string
   vout: number
@@ -101,23 +76,6 @@ interface IUTXO {
 export interface IAccountUTXO extends IUTXO {
   address?: string
   path?: string
-}
-
-interface IServerInfoVersion {
-  version: string
-  subversion: string
-}
-
-interface IServerInfo {
-  name: string
-  shortcut: string
-  decimals: number
-  version: string
-  bestHeight: number
-  bestHash: string
-  block0Hash: string
-  testnet: boolean
-  backend?: IServerInfoVersion
 }
 
 export type WatchAddressesCB = (
@@ -236,9 +194,12 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.onQueueSpace(cb)
   }
 
-  async function promisifyWsMessage<T>(message: PartialTask): Promise<T> {
+  async function promisifyWsMessage<T>(
+    message: PartialTask,
+    cleaner?: Cleaner<T>
+  ): Promise<T> {
     const deferred = new Deferred<T>()
-    socket.submitTask({ ...message, deferred })
+    socket.submitTask({ ...message, cleaner, deferred })
     return await deferred.promise
   }
 
@@ -247,15 +208,18 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   }
 
   async function fetchInfo(): Promise<IServerInfo> {
-    return await promisifyWsMessage(infoMessage())
+    return await promisifyWsMessage(infoMessage(), asIServerInfo)
   }
 
   async function fetchAddressUtxos(account: string): Promise<IAccountUTXO[]> {
-    return await promisifyWsMessage(addressUtxosMessage(account))
+    return await promisifyWsMessage(
+      addressUtxosMessage(account),
+      asAddressUtxos
+    )
   }
 
   async function fetchTransaction(hash: string): Promise<ITransaction> {
-    return await promisifyWsMessage(transactionMessage(hash))
+    return await promisifyWsMessage(transactionMessage(hash), asITransaction)
   }
 
   async function fetchAddress(
@@ -279,6 +243,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.subscribe({
       ...subscribeNewBlockMessage(),
       cb: socketCb,
+      cleaner: asINewBlockResponse,
       deferred: deferredBlockSub,
       subscribed: false
     })
@@ -294,6 +259,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.subscribe({
       ...subscribeAddressesMessage(addresses),
       cb: socketCb,
+      cleaner: asINewTransactionResponse,
       deferred: deferredAddressSub,
       subscribed: false
     })
@@ -302,7 +268,10 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   async function broadcastTx(
     transaction: EdgeTransaction
   ): Promise<ITransactionBroadcastResponse> {
-    return await promisifyWsMessage(broadcastTxMessage(transaction))
+    return await promisifyWsMessage(
+      broadcastTxMessage(transaction),
+      asITransactionBroadcastResponse
+    )
   }
 
   return instance

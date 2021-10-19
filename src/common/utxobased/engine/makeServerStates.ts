@@ -4,11 +4,8 @@ import { parse } from 'uri-js'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { PluginState } from '../../plugin/pluginState'
 import { removeItem } from '../../plugin/utils'
-import {
-  BlockBook,
-  INewTransactionResponse,
-  makeBlockBook
-} from '../network/BlockBook'
+import { BlockBook, makeBlockBook } from '../network/BlockBook'
+import { INewTransactionResponse } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
 import { SocketEmitter, SocketEvent } from '../network/MakeSocketEmitter'
 import { WsTask } from '../network/Socket'
