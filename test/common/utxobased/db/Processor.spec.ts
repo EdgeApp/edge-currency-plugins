@@ -591,13 +591,10 @@ describe('Processor transactions tests', () => {
     const [tx4] = await processor.fetchTransactions({ options: {} })
     expect(tx4).not.to.be.undefined
 
-    await processor
-      .fetchTransactions({
-        options: { startDate: new Date(11), endDate: new Date(15) }
-      })
-      .should.be.rejectedWith(
-        'At least one hash is required to query database.'
-      )
+    const results = await processor.fetchTransactions({
+      options: { startDate: new Date(11), endDate: new Date(15) }
+    })
+    expect(results).to.deep.equal([])
 
     const [tx6] = await processor.fetchTransactions({
       options: {
