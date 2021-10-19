@@ -23,13 +23,13 @@ export const scriptPubkeyByPathOptions: CountBaseOptions = {
 export type AddressByScriptPubkeyBaselet = HashBase<IAddress>
 export const addressByScriptPubkeyOptions: HashBaseOptions = {
   name: 'addressByScriptPubkey',
-  prefixSize: 8
+  prefixSize: 2
 }
 
 export type LastUsedByFormatPathBaselet = HashBase<number>
 export const lastUsedByFormatPathOptions: HashBaseOptions = {
   name: 'lastUsedByFormatPath',
-  prefixSize: 3
+  prefixSize: 2
 }
 
 export interface TxIdByBlockHeight {
@@ -54,7 +54,7 @@ export const txIdsByBlockHeightOptions: RangeBaseOptions<
 export type TxByIdBaselet = HashBase<IProcessorTransaction>
 export const txByIdOptions: HashBaseOptions = {
   name: 'txById',
-  prefixSize: 6
+  prefixSize: 2
 }
 
 export interface TxIdByDate {
@@ -72,17 +72,17 @@ export const txIdsByDateOptions: RangeBaseOptions<'date', 'txid'> = {
 export type UtxoByIdBaselet = HashBase<IUTXO>
 export const utxoByIdOptions: HashBaseOptions = {
   name: 'utxoById',
-  prefixSize: 6
+  prefixSize: 2
 }
 
 export type BlockHashByBlockHeightBaselet = HashBase<string>
 export const blockHashByBlockHeightOptions: HashBaseOptions = {
   name: 'blockHashByBlockHeight',
-  prefixSize: 30 * 24 * 60 * 60 * 1000
+  prefixSize: 2
 }
 
 export type UtxoIdsByScriptPubkeyBaselet = HashBase<string[]>
 export const utxoIdsByScriptPubkeyOptions: HashBaseOptions = {
   name: 'utxoIdsByScriptPubkey',
-  prefixSize: 8
+  prefixSize: 2
 }
