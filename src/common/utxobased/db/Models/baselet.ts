@@ -1,170 +1,88 @@
-import { BaseType } from 'baselet'
+import {
+  CountBase,
+  CountBaseOptions,
+  HashBase,
+  HashBaseOptions,
+  RangeBase,
+  RangeBaseOptions
+} from 'baselet'
 
 import { AddressPath } from '../../../plugin/types'
-import { BaseletConfig, IAddress, IProcessorTransaction, IUTXO } from '../types'
-
-// deprecated
-export const RANGE_ID_KEY = 'idKey'
-// deprecated
-export const RANGE_KEY = 'rangeKey'
+import { IAddress, IProcessorTransaction, IUTXO } from '../types'
 
 export const addressPathToPrefix = (
   path: Omit<AddressPath, 'addressIndex'>
 ): string => `${path.format}_${path.changeIndex}`
 
-export type ScriptPubkeyByPath = string | undefined
-export const scriptPubkeyByPathConfig: BaseletConfig<BaseType.CountBase> = {
-  dbName: 'scriptPubkeyByPath',
-  type: BaseType.CountBase,
+export type ScriptPubkeyByPathBaselet = CountBase<string>
+export const scriptPubkeyByPathOptions: CountBaseOptions = {
+  name: 'scriptPubkeyByPath',
   bucketSize: 50
 }
 
-// deprecated
-export type UsedFlagByScriptPubkey = boolean
-export const usedFlagByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'usedFlagByScriptPubkey',
-  type: BaseType.HashBase,
-  bucketSize: 50
+export type AddressByScriptPubkeyBaselet = HashBase<IAddress>
+export const addressByScriptPubkeyOptions: HashBaseOptions = {
+  name: 'addressByScriptPubkey',
+  prefixSize: 8
 }
 
-export type AddressByScriptPubkey = IAddress | undefined
-export const addressByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'addressByScriptPubkey',
-  type: BaseType.HashBase,
-  bucketSize: 8
+export type LastUsedByFormatPathBaselet = HashBase<number>
+export const lastUsedByFormatPathOptions: HashBaseOptions = {
+  name: 'lastUsedByFormatPath',
+  prefixSize: 3
 }
 
-export type LastUsedByFormatPath = number | undefined
-export const lastUsedByFormatPathConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'lastUsedByFormatPath',
-  type: BaseType.HashBase,
-  bucketSize: 3
+export interface TxIdByBlockHeight {
+  txid: string
+  blockHeight: number
 }
-
-// deprectated
-export type AddressPathByMRU = string
-export const addressPathByMRUConfig: BaseletConfig<BaseType.CountBase> = {
-  dbName: 'addressPathByMRU',
-  type: BaseType.CountBase,
-  bucketSize: 100
-}
-
-export interface TxIdsByBlockHeight {
-  [RANGE_ID_KEY]: string
-  [RANGE_KEY]: string
-}
-export const txIdsByBlockHeightConfig: BaseletConfig<BaseType.RangeBase> = {
-  dbName: 'txIdByConfirmations',
-  type: BaseType.RangeBase,
+export type TxIdByBlockHeightBaselet = RangeBase<
+  TxIdByBlockHeight,
+  'blockHeight',
+  'txid'
+>
+export const txIdsByBlockHeightOptions: RangeBaseOptions<
+  'blockHeight',
+  'txid'
+> = {
+  name: 'TxIdByBlockHeight',
   bucketSize: 100000,
-  range: {
-    // deprecated - change to 'txIds'
-    id: RANGE_ID_KEY,
-    // deprecated - change to 'blockHeights'
-    key: RANGE_KEY
-  }
+  rangeKey: 'blockHeight',
+  idKey: 'txid'
 }
 
-// deprecated
-export interface ScriptPubkeysByBalance {
-  [RANGE_ID_KEY]: string
-  [RANGE_KEY]: string
-}
-export const scriptPubkeysByBalanceConfig: BaseletConfig<BaseType.RangeBase> = {
-  dbName: 'scriptPubkeysByBalance',
-  type: BaseType.RangeBase,
-  bucketSize: 100000
+export type TxByIdBaselet = HashBase<IProcessorTransaction>
+export const txByIdOptions: HashBaseOptions = {
+  name: 'txById',
+  prefixSize: 6
 }
 
-export type TxById = IProcessorTransaction | undefined
-export const txByIdConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'txById',
-  type: BaseType.HashBase,
-  bucketSize: 6
+export interface TxIdByDate {
+  txid: string
+  date: number
 }
-
-// deprecated
-export interface TxsByScriptPubkey {
-  [hash: string]: {
-    ins: { [index: number]: true }
-    outs: { [index: number]: true }
-  }
-}
-export const txsByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'txsByScriptPubkey',
-  type: BaseType.HashBase,
-  bucketSize: 8
-}
-
-// deprecated - use TxIdsByDate instead
-export type TxsByDate = TxByDate[]
-interface TxByDate {
-  [RANGE_ID_KEY]: string
-  [RANGE_KEY]: string
-}
-export const txsByDateConfig: BaseletConfig<BaseType.RangeBase> = {
-  dbName: 'txsByDate',
-  type: BaseType.RangeBase,
-  bucketSize: 30 * 24 * 60 * 60 * 1000
-}
-
-export const txIdsByDateRangeKey = 'date'
-export const txIdsByDateRangeId = 'txId'
-export type TxIdsByDate = TxIdByDate[]
-interface TxIdByDate {
-  [txIdsByDateRangeKey]: string
-  [txIdsByDateRangeId]: string
-}
-export const txIdsByDateConfig: BaseletConfig<BaseType.RangeBase> = {
-  dbName: 'txIdsByDate',
-  type: BaseType.RangeBase,
+export type TxIdByDateBaselet = RangeBase<TxIdByDate, 'date', 'txid'>
+export const txIdsByDateOptions: RangeBaseOptions<'date', 'txid'> = {
+  name: 'txIdsByDate',
   bucketSize: 30 * 24 * 60 * 60 * 1000,
-  range: {
-    id: txIdsByDateRangeId,
-    key: txIdsByDateRangeKey
-  }
+  rangeKey: 'date',
+  idKey: 'txid'
 }
 
-export type UtxoById = IUTXO | undefined
-export const utxoByIdConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'utxoById',
-  type: BaseType.HashBase,
-  bucketSize: 6
+export type UtxoByIdBaselet = HashBase<IUTXO>
+export const utxoByIdOptions: HashBaseOptions = {
+  name: 'utxoById',
+  prefixSize: 6
 }
 
-export type BlockHashByBlockHeight = string
-export const blockHashByBlockHeightConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'blockHashByBlockHeight',
-  type: BaseType.HashBase,
-  bucketSize: 30 * 24 * 60 * 60 * 1000
+export type BlockHashByBlockHeightBaselet = HashBase<string>
+export const blockHashByBlockHeightOptions: HashBaseOptions = {
+  name: 'blockHashByBlockHeight',
+  prefixSize: 30 * 24 * 60 * 60 * 1000
 }
 
-// deprecated
-export type UtxosByScriptPubkey = Array<{
-  hash: string
-  vout: number
-}>
-export const utxoIdsByScriptPubkeyConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'utxoIdsByScriptPubkey',
-  type: BaseType.HashBase,
-  bucketSize: 8
-}
-
-// deprecated
-export interface UtxosBySize {
-  [RANGE_ID_KEY]: string
-  [RANGE_KEY]: string
-}
-export const utxoIdsBySizeConfig: BaseletConfig<BaseType.RangeBase> = {
-  dbName: 'utxoIdsBySize',
-  type: BaseType.RangeBase,
-  bucketSize: 100000
-}
-
-// deprecated
-export type SpentUtxoById = IUTXO | undefined
-export const spentUtxoByIdConfig: BaseletConfig<BaseType.HashBase> = {
-  dbName: 'spentUtxoById',
-  type: BaseType.HashBase,
-  bucketSize: 6
+export type UtxoIdsByScriptPubkeyBaselet = HashBase<string[]>
+export const utxoIdsByScriptPubkeyOptions: HashBaseOptions = {
+  name: 'utxoIdsByScriptPubkey',
+  prefixSize: 8
 }
