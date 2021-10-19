@@ -18,7 +18,12 @@ import {
 import { removeItem } from '../../plugin/utils'
 import { Processor } from '../db/makeProcessor'
 import { toEdgeTransaction } from '../db/Models/ProcessorTransaction'
-import { IAddress, IProcessorTransaction, IUTXO } from '../db/types'
+import {
+  IAddress,
+  IProcessorTransaction,
+  IUTXO,
+  makeIAddress
+} from '../db/types'
 import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 import {
   IAccountDetailsBasic,
@@ -170,12 +175,7 @@ export function makeUtxoEngineState(
     for (const format of formatsToProcess) {
       const branches = getFormatSupportedBranches(format)
       for (const branch of branches) {
-        const args: SetLookAheadArgs = {
-          ...commonArgs,
-          format,
-          branch
-        }
-        await setLookAhead(args)
+        await setLookAhead(commonArgs, { format, branch })
       }
     }
   }
@@ -213,7 +213,7 @@ export function makeUtxoEngineState(
         ).catch(() => {
           throw new Error('failed to add to transaction cache')
         })
-        setLookAhead({ ...commonArgs, ...path }).catch(e => {
+        setLookAhead(commonArgs, path).catch(e => {
           log(e)
         })
       }
@@ -283,14 +283,12 @@ export function makeUtxoEngineState(
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
       const promises = addresses.map(async address => {
         const scriptPubkey = walletTools.addressToScriptPubkey(address)
-        await processor.saveAddress({
-          scriptPubkey,
-          used: true,
-          lastQueriedBlockHeight: 0,
-          lastQuery: 0,
-          lastTouched: 0,
-          balance: '0'
-        })
+        await processor.saveAddress(
+          makeIAddress({
+            scriptPubkey,
+            used: true
+          })
+        )
       })
       await Promise.all(promises)
       await run()
@@ -393,49 +391,70 @@ interface AddressTransactionCache {
 
 interface FormatArgs extends CommonArgs, ShortPath {}
 
-interface SetLookAheadArgs extends FormatArgs {}
+const setLookAhead = async (
+  common: CommonArgs,
+  shortPath: ShortPath
+): Promise<void> => {
+  const { currencyInfo, lock, processor, taskCache, walletTools } = common
+  const addressesToSubscribe = new Set<string>()
+  const formatPath: Omit<AddressPath, 'addressIndex'> = {
+    format: shortPath.format,
+    changeIndex: shortPath.branch
+  }
 
-const setLookAhead = async (args: SetLookAheadArgs): Promise<void> => {
-  const { lock, format, branch, currencyInfo, walletTools, processor } = args
+  // Wait for the lock to be released before continuing invocation.
+  // This is to ensure that setLockAhead is not called while the lock is held.
   await lock.acquireAsync()
+
   try {
-    const partialPath: Omit<AddressPath, 'addressIndex'> = {
-      format,
-      changeIndex: branch
-    }
+    let totalAddressCount = processor.numAddressesByFormatPath(formatPath)
+    let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
+      ...formatPath
+    })
 
-    const getAddressCount = (): number =>
-      processor.numAddressesByFormatPath(partialPath)
-
-    let lastUsed = await processor.lastUsedIndexByFormatPath({ ...partialPath })
-    let addressCount = getAddressCount()
-    const addresses = new Set<string>()
-
-    if (Object.keys(args.taskCache.addressSubscribeCache).length === 0) {
-      for (let addressIndex = 0; addressIndex <= addressCount; addressIndex++) {
-        addresses.add(
-          walletTools.getAddress({ ...partialPath, addressIndex }).address
+    // Initialize the addressSubscribeCache with the existing addresses already
+    // processed by the processor. This happens only once; when the cache is empty.
+    if (Object.keys(taskCache.addressSubscribeCache).length === 0) {
+      // If the processor has not processed any addresses then the loop
+      // condition will only iterate once when totalAddressCount is 0 for the
+      // first address in the derivation path.
+      for (
+        let addressIndex = 0;
+        addressIndex <= totalAddressCount;
+        addressIndex++
+      ) {
+        addressesToSubscribe.add(
+          walletTools.getAddress({ ...formatPath, addressIndex }).address
         )
       }
     }
 
-    while (lastUsed + currencyInfo.gapLimit >= addressCount) {
+    // Loop until the total address count meets or exceeds the lookahead count
+    while (totalAddressCount < lastUsedIndex + currencyInfo.gapLimit) {
       const path: AddressPath = {
-        ...partialPath,
-        addressIndex: addressCount
+        ...formatPath,
+        addressIndex: totalAddressCount
       }
       const { address } = walletTools.getAddress(path)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
 
-      await saveAddress({ scriptPubkey, path, ...args })
-      addresses.add(address)
+      // Make a new IAddress and save it
+      await processor.saveAddress(makeIAddress({ scriptPubkey, path }))
 
-      lastUsed = await processor.lastUsedIndexByFormatPath({
-        ...partialPath
+      // Update the last used index now that the address is added to the processor
+      lastUsedIndex = await processor.lastUsedIndexByFormatPath({
+        ...formatPath
       })
-      addressCount = getAddressCount()
+
+      // Update the total address count
+      totalAddressCount = processor.numAddressesByFormatPath(formatPath)
+
+      // Add the displayAddress to the set of addresses to subscribe to after loop
+      addressesToSubscribe.add(address)
     }
-    addToAddressSubscribeCache(args, addresses, { format, branch })
+
+    // Add all the addresses to the subscribe cache for registering subscriptions later
+    addToAddressSubscribeCache(common, addressesToSubscribe, shortPath)
   } finally {
     lock.release()
   }
@@ -754,26 +773,6 @@ const updateTransactions = (
   }
 }
 
-interface SaveAddressArgs extends CommonArgs {
-  scriptPubkey: string
-  path?: AddressPath
-  used?: boolean
-}
-
-const saveAddress = async (args: SaveAddressArgs): Promise<void> => {
-  const { scriptPubkey, path, used = false, processor } = args
-
-  await processor.saveAddress({
-    scriptPubkey,
-    path,
-    used,
-    lastQueriedBlockHeight: 0,
-    lastQuery: 0,
-    lastTouched: 0,
-    balance: '0'
-  })
-}
-
 interface GetTotalAddressCountArgs {
   currencyInfo: EngineCurrencyInfo
   walletInfo: EdgeWalletInfo
@@ -900,7 +899,7 @@ const processAddressTransactions = async (
       if (!addressData.used && used && page === 1) {
         addressData.used = true
         await processor.saveAddress(addressData)
-        await setLookAhead({ ...args, ...path })
+        await setLookAhead(args, path)
       }
 
       for (const rawTx of transactions) {
@@ -921,7 +920,7 @@ const processAddressTransactions = async (
         addressData.lastQueriedBlockHeight = blockHeight
         await processor.saveAddress(addressData)
 
-        await setLookAhead({ ...args, ...path })
+        await setLookAhead(args, path)
 
         // Callback for when an address has been fully processed
         args.onAddressChecked()
@@ -1093,7 +1092,7 @@ const processUtxoTransactions = async (
       used: true
     })
   }
-  setLookAhead({ ...args, ...args.path }).catch(err => {
+  setLookAhead(args, args.path).catch(err => {
     log.error(err)
     throw err
   })

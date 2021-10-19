@@ -1,3 +1,4 @@
+import { SoftPick } from '../../../util/typeUtil'
 import { AddressPath } from '../../plugin/types'
 import { ScriptTypeEnum } from '../keymanager/keymanager'
 
@@ -9,6 +10,22 @@ export interface IAddress {
   lastTouched: number
   used: boolean
   balance: string
+}
+
+export const makeIAddress = (
+  addressFields: SoftPick<IAddress, 'scriptPubkey'>
+): IAddress => {
+  const { scriptPubkey, used = false, ...rest } = addressFields
+
+  return {
+    scriptPubkey,
+    used,
+    lastQueriedBlockHeight: 0,
+    lastQuery: 0,
+    lastTouched: 0,
+    balance: '0',
+    ...rest
+  }
 }
 
 export interface IUTXO {
