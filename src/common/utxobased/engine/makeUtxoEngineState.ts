@@ -409,7 +409,7 @@ const setLookAhead = async (
   await lock.acquireAsync()
 
   try {
-    let totalAddressCount = processor.numAddressesByFormatPath(formatPath)
+    const totalAddressCount = processor.numAddressesByFormatPath(formatPath)
     let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
       ...formatPath
     })
@@ -431,11 +431,13 @@ const setLookAhead = async (
       }
     }
 
-    // Loop until the total address count meets or exceeds the lookahead count
-    while (totalAddressCount < lastUsedIndex + currencyInfo.gapLimit) {
+    // Loop until the total address count equals the lookahead count
+    let lookAheadIndex = lastUsedIndex + currencyInfo.gapLimit
+    let nextAddressIndex = totalAddressCount
+    while (nextAddressIndex <= lookAheadIndex) {
       const path: AddressPath = {
         ...formatPath,
-        addressIndex: totalAddressCount
+        addressIndex: nextAddressIndex
       }
       const { address } = walletTools.getAddress(path)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -443,16 +445,15 @@ const setLookAhead = async (
       // Make a new IAddress and save it
       await processor.saveAddress(makeIAddress({ scriptPubkey, path }))
 
-      // Update the last used index now that the address is added to the processor
+      // Add the displayAddress to the set of addresses to subscribe to after loop
+      addressesToSubscribe.add(address)
+
+      // Update the state for the loop
       lastUsedIndex = await processor.lastUsedIndexByFormatPath({
         ...formatPath
       })
-
-      // Update the total address count
-      totalAddressCount = processor.numAddressesByFormatPath(formatPath)
-
-      // Add the displayAddress to the set of addresses to subscribe to after loop
-      addressesToSubscribe.add(address)
+      lookAheadIndex = lastUsedIndex + currencyInfo.gapLimit
+      nextAddressIndex = processor.numAddressesByFormatPath(formatPath)
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
