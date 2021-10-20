@@ -415,8 +415,13 @@ const setLookAhead = async (
     })
 
     // Initialize the addressSubscribeCache with the existing addresses already
-    // processed by the processor. This happens only once; when the cache is empty.
-    if (Object.keys(taskCache.addressSubscribeCache).length === 0) {
+    // processed by the processor. This happens only once on the first
+    // setLookAheadCall. The addressSubscribeCache size should be equal to the
+    // sum of each totalAddressCount per branch.
+    if (
+      Object.keys(taskCache.addressSubscribeCache).length <
+      totalAddressCount * (shortPath.branch + 1)
+    ) {
       // If the processor has not processed any addresses then the loop
       // condition will only iterate once when totalAddressCount is 0 for the
       // first address in the derivation path.
