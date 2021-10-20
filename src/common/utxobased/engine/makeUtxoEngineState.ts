@@ -118,11 +118,11 @@ export function makeUtxoEngineState(
   let processedPercent = 0
   const onAddressChecked = async (): Promise<void> => {
     processedCount = processedCount + 1
-    const totalCount = await getTotalAddressCount({
-      walletInfo,
-      currencyInfo,
-      processor
-    })
+    const totalCount = await getTotalAddressCount(walletInfo, processor)
+
+    // If we have no addresses, we should not have not yet began processing.
+    if (totalCount === 0) throw new Error('No addresses to process')
+
     const percent = processedCount / totalCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       log(
@@ -776,47 +776,23 @@ const updateTransactions = (
   }
 }
 
-interface GetTotalAddressCountArgs {
-  currencyInfo: EngineCurrencyInfo
-  walletInfo: EdgeWalletInfo
-  processor: Processor
-}
-
 const getTotalAddressCount = async (
-  args: GetTotalAddressCountArgs
+  walletInfo: EdgeWalletInfo,
+  processor: Processor
 ): Promise<number> => {
-  const { walletInfo } = args
-
   const walletFormats = getWalletSupportedFormats(walletInfo)
 
   let count = 0
   for (const format of walletFormats) {
-    count += await getFormatAddressCount({ ...args, format })
+    const branches = getFormatSupportedBranches(format)
+    for (const branch of branches) {
+      const addressCount = processor.numAddressesByFormatPath({
+        format,
+        changeIndex: branch
+      })
+      count += addressCount
+    }
   }
-  return count
-}
-
-interface GetFormatAddressCountArgs extends GetTotalAddressCountArgs {
-  format: CurrencyFormat
-}
-
-const getFormatAddressCount = async (
-  args: GetFormatAddressCountArgs
-): Promise<number> => {
-  const { format, currencyInfo, processor } = args
-
-  let count = 0
-
-  const branches = getFormatSupportedBranches(format)
-  for (const branch of branches) {
-    let branchCount = processor.numAddressesByFormatPath({
-      format,
-      changeIndex: branch
-    })
-    if (branchCount < currencyInfo.gapLimit) branchCount = currencyInfo.gapLimit
-    count += branchCount
-  }
-
   return count
 }
 
