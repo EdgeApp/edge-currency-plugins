@@ -418,7 +418,7 @@ const setLookAhead = async (
       // first address in the derivation path.
       for (
         let addressIndex = 0;
-        addressIndex <= totalAddressCount;
+        addressIndex < totalAddressCount;
         addressIndex++
       ) {
         addressesToSubscribe.add(
