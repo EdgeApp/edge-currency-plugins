@@ -427,8 +427,9 @@ const setLookAhead = async (
       }
     }
 
-    // Loop until the total address count meets or exceeds the lookahead count
-    while (totalAddressCount < lastUsedIndex + currencyInfo.gapLimit) {
+    // Loop until the total address count equals the lookahead count
+    let lookAheadCount = lastUsedIndex + currencyInfo.gapLimit + 1
+    while (totalAddressCount < lookAheadCount) {
       const path: AddressPath = {
         ...formatPath,
         addressIndex: totalAddressCount
@@ -439,16 +440,15 @@ const setLookAhead = async (
       // Make a new IAddress and save it
       await processor.saveAddress(makeIAddress({ scriptPubkey, path }))
 
-      // Update the last used index now that the address is added to the processor
+      // Add the displayAddress to the set of addresses to subscribe to after loop
+      addressesToSubscribe.add(address)
+
+      // Update the state for the loop
       lastUsedIndex = await processor.lastUsedIndexByFormatPath({
         ...formatPath
       })
-
-      // Update the total address count
       totalAddressCount = processor.numAddressesByFormatPath(formatPath)
-
-      // Add the displayAddress to the set of addresses to subscribe to after loop
-      addressesToSubscribe.add(address)
+      lookAheadCount = lastUsedIndex + currencyInfo.gapLimit + 1
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
