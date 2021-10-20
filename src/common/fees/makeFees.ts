@@ -1,4 +1,5 @@
 import * as bs from 'biggystring'
+import { asMaybe } from 'cleaners'
 import { Disklet } from 'disklet'
 import {
   EdgeIo,
@@ -9,9 +10,12 @@ import {
 import { makeMemlet, Memlet } from 'memlet'
 
 import { FEES_PATH, INFO_SERVER_URI } from '../constants'
-import { EngineCurrencyInfo, SimpleFeeSettings } from '../plugin/types'
+import {
+  asSimpleFeeSettings,
+  EngineCurrencyInfo,
+  SimpleFeeSettings
+} from '../plugin/types'
 import { calcMinerFeePerByte } from './calcMinerFeePerByte'
-import { processEarnComFees } from './processEarnComFees'
 import { processInfoServerFees } from './processInfoServerFees'
 import { processMempoolSpaceFees } from './processMempoolSpaceFees'
 
@@ -36,7 +40,8 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
   const { disklet, currencyInfo, ...common } = config
 
   const memlet = makeMemlet(disklet)
-  const fees: SimpleFeeSettings = await fetchCachedFees(memlet, currencyInfo)
+  const fees = await fetchCachedFees(memlet, currencyInfo.simpleFeeSettings)
+
   // The last time the fees were updated
   let timestamp = 0
   let vendorIntervalId: NodeJS.Timeout
@@ -46,7 +51,6 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
 
     const vendorFees = await fetchFeesFromVendor({
       ...common,
-      earnComFeeInfoServer: currencyInfo.earnComFeeInfoServer,
       mempoolSpaceFeeInfoServer: currencyInfo.mempoolSpaceFeeInfoServer
     })
     Object.assign(fees, vendorFees ?? {})
@@ -99,7 +103,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       return rate
     },
 
-    get fees() {
+    get fees(): SimpleFeeSettings {
       return fees
     }
   }
@@ -107,12 +111,12 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
 
 const fetchCachedFees = async (
   memlet: Memlet,
-  currencyInfo: EngineCurrencyInfo
-): Promise<SimpleFeeSettings> =>
-  await memlet
-    .getJson(FEES_PATH)
-    // Return the simple fees settings from currency info by default
-    .catch(() => currencyInfo.simpleFeeSettings)
+  fallback: SimpleFeeSettings
+): Promise<SimpleFeeSettings> => {
+  const data = await memlet.getJson(FEES_PATH).catch(() => undefined)
+  const feeSettings = asMaybe(asSimpleFeeSettings, fallback)(data)
+  return feeSettings
+}
 
 const cacheFees = async (
   memlet: Memlet,
@@ -146,24 +150,12 @@ const fetchFees = async <T>(args: FetchFeesArgs<T>): Promise<T | null> => {
 }
 
 interface FetchFeesFromVendorArgs extends Common {
-  earnComFeeInfoServer?: string
   mempoolSpaceFeeInfoServer?: string
 }
 
 const fetchFeesFromVendor = async (
   args: FetchFeesFromVendorArgs
 ): Promise<Partial<SimpleFeeSettings>> => {
-  if (args.earnComFeeInfoServer != null) {
-    const earnComFees = await fetchFees({
-      ...args,
-      uri: args.earnComFeeInfoServer,
-      processor: processEarnComFees
-    })
-    if (earnComFees != null) {
-      return earnComFees
-    }
-  }
-
   if (args.mempoolSpaceFeeInfoServer != null) {
     const mempoolFees = await fetchFees({
       ...args,
