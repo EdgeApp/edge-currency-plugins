@@ -169,6 +169,8 @@ export function makeUtxoEngineState(
     if (running) return
     running = true
 
+    await initializeAddressSubscriptions()
+
     const formatsToProcess = getWalletSupportedFormats(walletInfo)
     for (const format of formatsToProcess) {
       const branches = getFormatSupportedBranches(format)
@@ -217,6 +219,48 @@ export function makeUtxoEngineState(
       }
     }
   )
+
+  // Initialize the addressSubscribeCache with the existing addresses already
+  // processed by the processor. This happens only once before any call to
+  // setLookAhead.
+  const initializeAddressSubscriptions = async (): Promise<void> => {
+    const totalAddressCount = await getTotalAddressCount(walletInfo, processor)
+
+    if (
+      Object.keys(taskCache.addressSubscribeCache).length < totalAddressCount
+    ) {
+      const supportedFormats = getWalletSupportedFormats(walletInfo)
+      for (const format of supportedFormats) {
+        const branches = getFormatSupportedBranches(format)
+        for (const branch of branches) {
+          const addressesToSubscribe = new Set<string>()
+          const branchAddressCount = processor.numAddressesByFormatPath({
+            format,
+            changeIndex: branch
+          })
+          // If the processor has not processed any addresses then the loop
+          // condition will only iterate once when branchAddressCount is 0 for the
+          // first address in the derivation path.
+          for (
+            let addressIndex = 0;
+            addressIndex < branchAddressCount;
+            addressIndex++
+          ) {
+            const { address } = walletTools.getAddress({
+              addressIndex,
+              changeIndex: branch,
+              format
+            })
+            addressesToSubscribe.add(address)
+          }
+          addToAddressSubscribeCache(commonArgs, addressesToSubscribe, {
+            format,
+            branch
+          })
+        }
+      }
+    }
+  }
 
   return {
     processedPercent,
@@ -393,7 +437,7 @@ const setLookAhead = async (
   common: CommonArgs,
   shortPath: ShortPath
 ): Promise<void> => {
-  const { currencyInfo, lock, processor, taskCache, walletTools } = common
+  const { currencyInfo, lock, processor, walletTools } = common
   const addressesToSubscribe = new Set<string>()
   const formatPath: Omit<AddressPath, 'addressIndex'> = {
     format: shortPath.format,
@@ -409,28 +453,6 @@ const setLookAhead = async (
     let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
       ...formatPath
     })
-
-    // Initialize the addressSubscribeCache with the existing addresses already
-    // processed by the processor. This happens only once on the first
-    // setLookAheadCall. The addressSubscribeCache size should be equal to the
-    // sum of each totalAddressCount per branch.
-    if (
-      Object.keys(taskCache.addressSubscribeCache).length <
-      totalAddressCount * (shortPath.branch + 1)
-    ) {
-      // If the processor has not processed any addresses then the loop
-      // condition will only iterate once when totalAddressCount is 0 for the
-      // first address in the derivation path.
-      for (
-        let addressIndex = 0;
-        addressIndex < totalAddressCount;
-        addressIndex++
-      ) {
-        addressesToSubscribe.add(
-          walletTools.getAddress({ ...formatPath, addressIndex }).address
-        )
-      }
-    }
 
     // Loop until the total address count equals the lookahead count
     let lookAheadCount = lastUsedIndex + currencyInfo.gapLimit + 1
