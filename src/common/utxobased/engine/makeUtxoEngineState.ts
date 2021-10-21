@@ -170,14 +170,7 @@ export function makeUtxoEngineState(
     running = true
 
     await initializeAddressSubscriptions()
-
-    const formatsToProcess = getWalletSupportedFormats(walletInfo)
-    for (const format of formatsToProcess) {
-      const branches = getFormatSupportedBranches(format)
-      for (const branch of branches) {
-        await setLookAhead(commonArgs, { format, branch })
-      }
-    }
+    await setLookAhead(commonArgs)
   }
 
   emitter.on(
@@ -213,7 +206,7 @@ export function makeUtxoEngineState(
         ).catch(() => {
           throw new Error('failed to add to transaction cache')
         })
-        setLookAhead(commonArgs, path).catch(e => {
+        setLookAhead(commonArgs).catch(e => {
           log(e)
         })
       }
@@ -433,22 +426,31 @@ interface AddressTransactionCache {
 
 interface FormatArgs extends CommonArgs, ShortPath {}
 
-const setLookAhead = async (
-  common: CommonArgs,
-  shortPath: ShortPath
-): Promise<void> => {
-  const { currencyInfo, lock, processor, walletTools } = common
-  const addressesToSubscribe = new Set<string>()
-  const formatPath: Omit<AddressPath, 'addressIndex'> = {
-    format: shortPath.format,
-    changeIndex: shortPath.branch
-  }
+const setLookAhead = async (common: CommonArgs): Promise<void> => {
+  const { currencyInfo, lock, processor, walletInfo, walletTools } = common
 
   // Wait for the lock to be released before continuing invocation.
   // This is to ensure that setLockAhead is not called while the lock is held.
   await lock.acquireAsync()
 
   try {
+    const supportedFormats = getWalletSupportedFormats(walletInfo)
+    for (const format of supportedFormats) {
+      const branches = getFormatSupportedBranches(format)
+      for (const branch of branches) {
+        await deriveKeys({ format, branch })
+      }
+    }
+  } finally {
+    lock.release()
+  }
+
+  async function deriveKeys(shortPath: ShortPath): Promise<void> {
+    const addressesToSubscribe = new Set<string>()
+    const formatPath: Omit<AddressPath, 'addressIndex'> = {
+      format: shortPath.format,
+      changeIndex: shortPath.branch
+    }
     let totalAddressCount = processor.numAddressesByFormatPath(formatPath)
     let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
       ...formatPath
@@ -480,8 +482,6 @@ const setLookAhead = async (
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
     addToAddressSubscribeCache(common, addressesToSubscribe, shortPath)
-  } finally {
-    lock.release()
   }
 }
 
@@ -901,7 +901,7 @@ const processAddressTransactions = async (
       if (!addressData.used && used && page === 1) {
         addressData.used = true
         await processor.saveAddress(addressData)
-        await setLookAhead(args, path)
+        await setLookAhead(args)
       }
 
       for (const rawTx of transactions) {
@@ -922,7 +922,7 @@ const processAddressTransactions = async (
         addressData.lastQueriedBlockHeight = blockHeight
         await processor.saveAddress(addressData)
 
-        await setLookAhead(args, path)
+        await setLookAhead(args)
 
         // Callback for when an address has been fully processed
         args.onAddressChecked()
@@ -1095,7 +1095,7 @@ const processUtxoTransactions = async (
       used: true
     })
   }
-  setLookAhead(args, args.path).catch(err => {
+  setLookAhead(args).catch(err => {
     log.error(err)
     throw err
   })
