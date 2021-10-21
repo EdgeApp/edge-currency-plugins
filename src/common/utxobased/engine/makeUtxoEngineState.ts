@@ -118,11 +118,7 @@ export function makeUtxoEngineState(
   let processedPercent = 0
   const onAddressChecked = async (): Promise<void> => {
     processedCount = processedCount + 1
-    const totalCount = await getTotalAddressCount({
-      walletInfo,
-      currencyInfo,
-      processor
-    })
+    const totalCount = await getTotalAddressCount(walletInfo, processor)
     const percent = processedCount / totalCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       log(
@@ -415,14 +411,19 @@ const setLookAhead = async (
     })
 
     // Initialize the addressSubscribeCache with the existing addresses already
-    // processed by the processor. This happens only once; when the cache is empty.
-    if (Object.keys(taskCache.addressSubscribeCache).length === 0) {
+    // processed by the processor. This happens only once on the first
+    // setLookAheadCall. The addressSubscribeCache size should be equal to the
+    // sum of each totalAddressCount per branch.
+    if (
+      Object.keys(taskCache.addressSubscribeCache).length <
+      totalAddressCount * (shortPath.branch + 1)
+    ) {
       // If the processor has not processed any addresses then the loop
       // condition will only iterate once when totalAddressCount is 0 for the
       // first address in the derivation path.
       for (
         let addressIndex = 0;
-        addressIndex <= totalAddressCount;
+        addressIndex < totalAddressCount;
         addressIndex++
       ) {
         addressesToSubscribe.add(
@@ -431,8 +432,9 @@ const setLookAhead = async (
       }
     }
 
-    // Loop until the total address count meets or exceeds the lookahead count
-    while (totalAddressCount < lastUsedIndex + currencyInfo.gapLimit) {
+    // Loop until the total address count equals the lookahead count
+    let lookAheadCount = lastUsedIndex + currencyInfo.gapLimit + 1
+    while (totalAddressCount < lookAheadCount) {
       const path: AddressPath = {
         ...formatPath,
         addressIndex: totalAddressCount
@@ -443,16 +445,15 @@ const setLookAhead = async (
       // Make a new IAddress and save it
       await processor.saveAddress(makeIAddress({ scriptPubkey, path }))
 
-      // Update the last used index now that the address is added to the processor
+      // Add the displayAddress to the set of addresses to subscribe to after loop
+      addressesToSubscribe.add(address)
+
+      // Update the state for the loop
       lastUsedIndex = await processor.lastUsedIndexByFormatPath({
         ...formatPath
       })
-
-      // Update the total address count
       totalAddressCount = processor.numAddressesByFormatPath(formatPath)
-
-      // Add the displayAddress to the set of addresses to subscribe to after loop
-      addressesToSubscribe.add(address)
+      lookAheadCount = lastUsedIndex + currencyInfo.gapLimit + 1
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
@@ -776,47 +777,23 @@ const updateTransactions = (
   }
 }
 
-interface GetTotalAddressCountArgs {
-  currencyInfo: EngineCurrencyInfo
-  walletInfo: EdgeWalletInfo
-  processor: Processor
-}
-
 const getTotalAddressCount = async (
-  args: GetTotalAddressCountArgs
+  walletInfo: EdgeWalletInfo,
+  processor: Processor
 ): Promise<number> => {
-  const { walletInfo } = args
-
   const walletFormats = getWalletSupportedFormats(walletInfo)
 
   let count = 0
   for (const format of walletFormats) {
-    count += await getFormatAddressCount({ ...args, format })
+    const branches = getFormatSupportedBranches(format)
+    for (const branch of branches) {
+      const addressCount = processor.numAddressesByFormatPath({
+        format,
+        changeIndex: branch
+      })
+      count += addressCount
+    }
   }
-  return count
-}
-
-interface GetFormatAddressCountArgs extends GetTotalAddressCountArgs {
-  format: CurrencyFormat
-}
-
-const getFormatAddressCount = async (
-  args: GetFormatAddressCountArgs
-): Promise<number> => {
-  const { format, currencyInfo, processor } = args
-
-  let count = 0
-
-  const branches = getFormatSupportedBranches(format)
-  for (const branch of branches) {
-    let branchCount = processor.numAddressesByFormatPath({
-      format,
-      changeIndex: branch
-    })
-    if (branchCount < currencyInfo.gapLimit) branchCount = currencyInfo.gapLimit
-    count += branchCount
-  }
-
   return count
 }
 
