@@ -5,17 +5,17 @@ import * as wifgrs from 'wifgrs'
 
 import { Coin } from '../coin'
 
-export class Groestlcoin implements Coin {
-  name = 'groestlcoin'
-  segwit = true
-  coinType = 17
-  sighashFunction = crypto.sha256
-  bs58DecodeFunc = base58grs.decode
-  bs58EncodeFunc = base58grs.encode
-  wifEncodeFunc = wifgrs.encode
-  bip32FromBase58Func = bip32grs.fromBase58
-  bip32FromSeedFunc = bip32grs.fromSeed
-  mainnetConstants = {
+export const Groestlcoin: Coin = {
+  name: 'groestlcoin',
+  segwit: true,
+  coinType: 17,
+  sighashFunction: crypto.sha256,
+  bs58DecodeFunc: base58grs.decode,
+  bs58EncodeFunc: base58grs.encode,
+  wifEncodeFunc: wifgrs.encode,
+  bip32FromBase58Func: bip32grs.fromBase58,
+  bip32FromSeedFunc: bip32grs.fromSeed,
+  mainnetConstants: {
     messagePrefix: '\x1cGroestlCoin Signed Message:\n',
     wif: 0x80,
     legacyXPriv: 0x0488ade4,
@@ -27,9 +27,9 @@ export class Groestlcoin implements Coin {
     pubkeyHash: 0x24,
     scriptHash: 0x05,
     bech32: 'grs'
-  }
+  },
 
-  testnetConstants = {
+  testnetConstants: {
     messagePrefix: '\x1cGroestlCoin Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,

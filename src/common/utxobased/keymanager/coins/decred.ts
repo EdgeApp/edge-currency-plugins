@@ -3,23 +3,23 @@ import createHash from 'blake-hash'
 import * as base58 from '../base'
 import { Coin } from '../coin'
 
-export class Decred implements Coin {
-  name = 'decred'
-  segwit = false
-  coinType = 42
-  sighashFunction = blake256
-  bs58DecodeFunc = base58.base58Base(doubleblake256).decode
-  bs58EncodeFunc = base58.base58Base(doubleblake256).encode
-  mainnetConstants = {
+export const Decred: Coin = {
+  name: 'decred',
+  segwit: false,
+  coinType: 42,
+  sighashFunction: blake256,
+  bs58DecodeFunc: base58.base58Base(doubleblake256).decode,
+  bs58EncodeFunc: base58.base58Base(doubleblake256).encode,
+  mainnetConstants: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0x22de,
     legacyXPriv: 0x02fda4e8,
     legacyXPub: 0x02fda926,
     pubkeyHash: 0x073f,
     scriptHash: 0x071a
-  }
+  },
 
-  testnetConstants = {
+  testnetConstants: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0x230e,
     legacyXPriv: 0x04358394,

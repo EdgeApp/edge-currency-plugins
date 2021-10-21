@@ -1,10 +1,10 @@
 import { Coin } from '../coin'
 
-export class Digibyte implements Coin {
-  name = 'digibyte'
-  segwit = true
-  coinType = 20
-  mainnetConstants = {
+export const Digibyte: Coin = {
+  name: 'digibyte',
+  segwit: true,
+  coinType: 20,
+  mainnetConstants: {
     messagePrefix: '\x18Digibyte Signed Message:\n',
     wif: 0x80,
     legacyXPriv: 0x0488ade4,
@@ -16,9 +16,9 @@ export class Digibyte implements Coin {
     pubkeyHash: 0x1e,
     scriptHash: 0x3f,
     bech32: 'dgb'
-  }
+  },
 
-  testnetConstants = {
+  testnetConstants: {
     messagePrefix: '\x18Digibyte Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,

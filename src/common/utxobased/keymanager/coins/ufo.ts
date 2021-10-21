@@ -1,10 +1,10 @@
 import { Coin } from '../coin'
 
-export class Uniformfiscalobject implements Coin {
-  name = 'uniformfiscalobject'
-  segwit = true
-  coinType = 202
-  mainnetConstants = {
+export const Uniformfiscalobject: Coin = {
+  name: 'uniformfiscalobject',
+  segwit: true,
+  coinType: 202,
+  mainnetConstants: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0x9b,
     legacyXPriv: 0x0488ade4,
@@ -16,9 +16,9 @@ export class Uniformfiscalobject implements Coin {
     pubkeyHash: 0x1b,
     scriptHash: 0x44,
     bech32: 'uf'
-  }
+  },
 
-  testnetConstants = {
+  testnetConstants: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,
