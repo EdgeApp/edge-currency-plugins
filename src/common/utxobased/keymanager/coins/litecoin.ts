@@ -1,10 +1,10 @@
 import { Coin } from '../coin'
 
-export class Litecoin implements Coin {
-  name = 'litecoin'
-  segwit = true
-  coinType = 2
-  mainnetConstants = {
+export const Litecoin: Coin = {
+  name: 'litecoin',
+  segwit: true,
+  coinType: 2,
+  mainnetConstants: {
     messagePrefix: '\x18Litecoin Signed Message:\n',
     wif: 0xb0,
     legacyXPriv: 0x019d9cfe,
@@ -16,14 +16,23 @@ export class Litecoin implements Coin {
     pubkeyHash: 0x30,
     scriptHash: 0x32,
     bech32: 'ltc'
-  }
+  },
 
-  legacyConstants = {
-    ...this.mainnetConstants,
-    scriptHash: 0x05
-  }
+  legacyConstants: {
+    messagePrefix: '\x18Litecoin Signed Message:\n',
+    wif: 0xb0,
+    legacyXPriv: 0x019d9cfe,
+    legacyXPub: 0x019da462,
+    wrappedSegwitXPriv: 0x01b26792,
+    wrappedSegwitXPub: 0x01b26ef6,
+    segwitXPriv: 0x04b2430c,
+    segwitXPub: 0x04b24746,
+    pubkeyHash: 0x30,
+    scriptHash: 0x05,
+    bech32: 'ltc'
+  },
 
-  testnetConstants = {
+  testnetConstants: {
     messagePrefix: '\x18Litecoin Signed Message:\n',
     wif: 0xef,
     legacyXPriv: 0x04358394,
