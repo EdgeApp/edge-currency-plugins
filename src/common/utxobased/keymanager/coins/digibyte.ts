@@ -18,6 +18,20 @@ export class Digibyte implements Coin {
     bech32: 'dgb'
   }
 
+  legacyConstants = {
+    messagePrefix: '\x18Digibyte Signed Message:\n',
+    wif: 0x9e,
+    legacyXPriv: 0x0488ade4,
+    legacyXPub: 0x0488b21e,
+    wrappedSegwitXPriv: 0x049d7878,
+    wrappedSegwitXPub: 0x049d7cb2,
+    segwitXPriv: 0x04b2430c,
+    segwitXPub: 0x04b24746,
+    pubkeyHash: 0x1e,
+    scriptHash: 0x3f,
+    bech32: 'dgb'
+  }
+
   testnetConstants = {
     messagePrefix: '\x18Digibyte Signed Message:\n',
     wif: 0xef,

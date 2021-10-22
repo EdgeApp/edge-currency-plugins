@@ -846,11 +846,31 @@ export function wifToPrivateKey(args: WIFToPrivateKeyArgs): string {
     forWIF: true
   })
   const coinClass = getCoinFromString(args.coin)
-  const privateKey = bitcoin.ECPair.fromWIF(
-    args.wifKey,
-    network,
-    coinClass.bs58DecodeFunc
-  ).privateKey
+  let privateKey: Buffer | undefined
+  try {
+    privateKey = bitcoin.ECPair.fromWIF(
+      args.wifKey,
+      network,
+      coinClass.bs58DecodeFunc
+    ).privateKey
+  } catch (err) {
+    // on error, check if we can decode with potential legacy constants instead
+    if (coinClass.legacyConstants != null) {
+      const network = bip32NetworkFromCoin({
+        networkType: args.network,
+        coinString: args.coin,
+        forWIF: true,
+        legacy: true
+      })
+      privateKey = bitcoin.ECPair.fromWIF(
+        args.wifKey,
+        network,
+        coinClass.bs58DecodeFunc
+      ).privateKey
+    } else {
+      throw err
+    }
+  }
   if (typeof privateKey === 'undefined') {
     throw new Error('Failed to convert WIF key to private key')
   }

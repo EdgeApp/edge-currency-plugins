@@ -987,6 +987,42 @@ export const fixtures: Fixture = {
         {
           wifKey: 'L1CAcXSxB48WoRs91gjSaj8eerBj3ruTyun7MvqBpnrc62cXAJqq',
           network: NetworkEnum.Mainnet
+        },
+        {
+          wifKey: 'KzAwX4sqvmrvuUtSEwBq93CcTHLFqXKK5mYf1JwYzgnATrYLeGEz',
+          network: NetworkEnum.Mainnet
+        },
+        {
+          wifKey: 'L5Xn1K6XobLbBFhLgxj6yEzMecZmmUDHwY9izkPx4kfYTSWcHcGd',
+          network: NetworkEnum.Mainnet
+        },
+        {
+          wifKey: '5JQsweUVF7V243N2qmoJtDjGqhXqPcwViWG961P1hsrAoMsNAnQ',
+          network: NetworkEnum.Mainnet
+        },
+        {
+          wifKey: '5J367GdKAsPTKunGfiv5ZWZRxq9N2a8BHoXhsuT5FZLadsF7Tif',
+          network: NetworkEnum.Mainnet
+        },
+        {
+          wifKey: 'QRZrfugqBPM491HUqD2d2G3DvKMpt5T7y2EZnwLPj3PWunVUAzBS',
+          network: NetworkEnum.Mainnet
+        },
+        {
+          wifKey: 'QUNJ3111WoYX4VASJHo5B9LrjwZUV1H368KZUuX6dtGrH6hoCD3z',
+          network: NetworkEnum.Mainnet
+        },
+        {
+          wifKey: 'QWvhA9uX4CpiQn6PHEZtrTpy7ebLp2M6pnqdnNnno7GtuNTnRzgP',
+          network: NetworkEnum.Mainnet
+        },
+        {
+          wifKey: '6JjDEbwSosmp6eoC3ARHVqiWK81NtkDmKgPNQW1uXY3oc32GfX7',
+          network: NetworkEnum.Mainnet
+        },
+        {
+          wifKey: '6JMRQE6GjdgFNXDRs7Y4B8YfSFcuXhQStyewCQ5y5DYDSWuVdTB',
+          network: NetworkEnum.Mainnet
         }
       ],
       addressToScriptPubkeyTests: [
