@@ -441,7 +441,7 @@ interface RawUtxoCache {
   [key: string]: {
     processing: boolean
     path: ShortPath
-    address: Required<IAddress>
+    address: IAddress
     requiredCount: number
   }
 }
@@ -908,7 +908,9 @@ const internalDeriveScriptAddress = async ({
     path,
     scriptTemplate
   })
-  await processor.saveAddress(makeIAddress({ scriptPubkey, path }))
+  await processor.saveAddress(
+    makeIAddress({ scriptPubkey, redeemScript, path })
+  )
   const addresses = new Set<string>()
   addresses.add(address)
   addToAddressSubscribeCache(taskCache, addresses, {
@@ -1218,7 +1220,7 @@ interface ProcessRawUtxoArgs extends FormatArgs {
   requiredCount: number
   utxo: IAccountUTXO
   id: string
-  address: Required<IAddress>
+  address: IAddress
   uri: string
 }
 
@@ -1269,6 +1271,10 @@ const processRawUtxo = async (
     case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
       scriptType = ScriptTypeEnum.p2pkh
+      if (address.redeemScript != null) {
+        scriptType = ScriptTypeEnum.p2sh
+        redeemScript = address.redeemScript
+      }
 
       // Legacy UTXOs need the previous transaction hex as the script
       // If we do not currently have it, add it to the queue to fetch it
@@ -1308,6 +1314,11 @@ const processRawUtxo = async (
     case BIP43PurposeTypeEnum.WrappedSegwit:
       scriptType = ScriptTypeEnum.p2wpkhp2sh
       script = address.scriptPubkey
+      if (address.path == null) {
+        throw new Error(
+          'address path not defined, but required for p2sh wrapped segwit utxo processing'
+        )
+      }
       redeemScript = walletTools.getScriptPubkey(address.path).redeemScript
 
       break
