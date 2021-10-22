@@ -39,15 +39,13 @@ export function base58Base(
   // Decode a base58-check encoded string to a buffer, no result if checksum is wrong
   function decodeUnsafe(stringPayload: string): Buffer | undefined {
     const buffer = base58.decodeUnsafe(stringPayload)
-    if (typeof buffer === 'undefined') return
+    if (buffer == null) return
 
     return decodeRaw(buffer)
   }
 
   function decode(payload: string | undefined): Buffer {
-    if (typeof payload === 'undefined') {
-      throw new Error('Invalid base58 string')
-    }
+    if (payload == null) throw new Error('Invalid base58 string')
     const buffer = base58.decode(payload)
     const bPayload = decodeRaw(buffer)
     if (bPayload == null) throw new Error('Invalid checksum')

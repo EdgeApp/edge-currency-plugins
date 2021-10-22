@@ -62,7 +62,7 @@ const convertBits = (
   to: number,
   strict?: boolean
 ): number[] => {
-  if (typeof strict === 'undefined') {
+  if (strict == null) {
     strict = false
   }
   let accumulator = 0
@@ -86,11 +86,11 @@ const convertBits = (
   }
   if (
     isNaN(to) ||
-    to === null ||
+    to == null ||
     isNaN(accumulator) ||
     isNaN(bits) ||
     isNaN(mask) ||
-    mask === null
+    mask == null
   ) {
     throw Error(`InvalidArgument in function convertBits: ${to}`)
   }
@@ -246,20 +246,20 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
     encodedPayload = pieces[0]
   }
   const payload = decode(encodedPayload.toLowerCase())
-  if (prefix !== null) {
+  if (prefix != null) {
     if (!validChecksum(prefix, payload)) {
       throw new Error(`InvalidArgument: ${address} has invalid checksum`)
     }
   } else {
     const netNames = Object.values(CashaddrPrefixEnum)
     let candidatePrefix = netNames.shift()
-    while (prefix === null && typeof candidatePrefix !== 'undefined') {
+    while (prefix == null && candidatePrefix != null) {
       if (validChecksum(candidatePrefix, payload)) {
         prefix = candidatePrefix
       }
       candidatePrefix = netNames.shift()
     }
-    if (prefix === null) {
+    if (prefix == null) {
       throw new Error(`InvalidArgument: ${address} has invalid checksum`)
     }
   }
@@ -268,7 +268,7 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
   const versionByte = convertedBits.shift()
   const hash = convertedBits
 
-  if (typeof versionByte === 'undefined') {
+  if (versionByte == null) {
     throw new Error('cashaddress converter produced bad version byte')
   }
 

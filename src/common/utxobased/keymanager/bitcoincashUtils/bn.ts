@@ -74,7 +74,7 @@ BN.prototype.toNumber = function () {
 
 BN.prototype.toBuffer = function (opts: Opts) {
   let buf, hex
-  if (typeof opts.size !== 'undefined' && opts.size > 0) {
+  if (opts.size != null && opts.size > 0) {
     hex = this.toString(16, 2)
     const natlen = hex.length / 2
     buf = Buffer.from(hex, 'hex')
