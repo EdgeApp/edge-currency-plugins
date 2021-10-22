@@ -1,10 +1,10 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
-import { cdsScriptTemplates } from '../../../../../src/common/utxobased/keymanager/bitcoincashUtils/checkdatasig'
+import { scriptTemplates } from '../../../../../src/common/utxobased/info/scriptTemplates/bitcoincashScriptTemplates'
 
 describe('bitcoin cash checkdatasig scripting tests', () => {
-  const redeemScript = cdsScriptTemplates.replayProtection(
+  const redeemScript = scriptTemplates.replayProtection(
     '038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508'
   )
   it('bitcoin cash checkdatasig redeem script test', () => {

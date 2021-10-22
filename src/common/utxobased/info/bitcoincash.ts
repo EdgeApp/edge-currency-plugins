@@ -3,6 +3,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoincash',
@@ -56,7 +57,8 @@ const engineInfo: EngineInfo = {
     standardFeeHigh: '10',
     standardFeeLowAmount: '1000000',
     standardFeeHighAmount: '65000000'
-  }
+  },
+  scriptTemplates
 }
 
 export const coinInfo: CoinInfo = {
