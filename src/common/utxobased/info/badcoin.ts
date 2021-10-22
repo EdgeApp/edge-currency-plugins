@@ -1,6 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { EngineCurrencyType, EngineInfo, PluginInfo } from '../../plugin/types'
+import { EngineInfo, PluginInfo } from '../../plugin/types'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'badcoin',
@@ -27,7 +27,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  currencyType: EngineCurrencyType.UTXO,
   coinType: 324,
   formats: ['bip49', 'bip44', 'bip32'],
   network: 'badcoin',
