@@ -173,13 +173,8 @@ export function makeUtxoEngineState(
     if (running) return
     running = true
 
-    const formatsToProcess = getWalletSupportedFormats(walletInfo)
-    for (const format of formatsToProcess) {
-      const branches = getFormatSupportedBranches(format)
-      for (const branch of branches) {
-        await setLookAhead(commonArgs, { format, branch })
-      }
-    }
+    await initializeAddressSubscriptions()
+    await setLookAhead(commonArgs)
   }
 
   emitter.on(
@@ -215,12 +210,54 @@ export function makeUtxoEngineState(
         ).catch(() => {
           throw new Error('failed to add to transaction cache')
         })
-        setLookAhead(commonArgs, path).catch(e => {
+        setLookAhead(commonArgs).catch(e => {
           log(e)
         })
       }
     }
   )
+
+  // Initialize the addressSubscribeCache with the existing addresses already
+  // processed by the processor. This happens only once before any call to
+  // setLookAhead.
+  const initializeAddressSubscriptions = async (): Promise<void> => {
+    const totalAddressCount = await getTotalAddressCount(walletInfo, processor)
+
+    if (
+      Object.keys(taskCache.addressSubscribeCache).length < totalAddressCount
+    ) {
+      const supportedFormats = getWalletSupportedFormats(walletInfo)
+      for (const format of supportedFormats) {
+        const branches = getFormatSupportedBranches(format)
+        for (const branch of branches) {
+          const addressesToSubscribe = new Set<string>()
+          const branchAddressCount = processor.numAddressesByFormatPath({
+            format,
+            changeIndex: branch
+          })
+          // If the processor has not processed any addresses then the loop
+          // condition will only iterate once when branchAddressCount is 0 for the
+          // first address in the derivation path.
+          for (
+            let addressIndex = 0;
+            addressIndex < branchAddressCount;
+            addressIndex++
+          ) {
+            const { address } = walletTools.getAddress({
+              addressIndex,
+              changeIndex: branch,
+              format
+            })
+            addressesToSubscribe.add(address)
+          }
+          addToAddressSubscribeCache(commonArgs, addressesToSubscribe, {
+            format,
+            branch
+          })
+        }
+      }
+    }
+  }
 
   return {
     processedPercent,
@@ -393,48 +430,35 @@ interface AddressTransactionCache {
 
 interface FormatArgs extends CommonArgs, ShortPath {}
 
-const setLookAhead = async (
-  common: CommonArgs,
-  shortPath: ShortPath
-): Promise<void> => {
-  const { currencyInfo, lock, processor, taskCache, walletTools } = common
-  const addressesToSubscribe = new Set<string>()
-  const formatPath: Omit<AddressPath, 'addressIndex'> = {
-    format: shortPath.format,
-    changeIndex: shortPath.branch
-  }
+const setLookAhead = async (common: CommonArgs): Promise<void> => {
+  const { currencyInfo, lock, processor, walletInfo, walletTools } = common
 
   // Wait for the lock to be released before continuing invocation.
   // This is to ensure that setLockAhead is not called while the lock is held.
   await lock.acquireAsync()
 
   try {
-    const totalAddressCount = processor.numAddressesByFormatPath(formatPath)
+    const supportedFormats = getWalletSupportedFormats(walletInfo)
+    for (const format of supportedFormats) {
+      const branches = getFormatSupportedBranches(format)
+      for (const branch of branches) {
+        await deriveKeys({ format, branch })
+      }
+    }
+  } finally {
+    lock.release()
+  }
+
+  async function deriveKeys(shortPath: ShortPath): Promise<void> {
+    const addressesToSubscribe = new Set<string>()
+    const formatPath: Omit<AddressPath, 'addressIndex'> = {
+      format: shortPath.format,
+      changeIndex: shortPath.branch
+    }
+    let totalAddressCount = processor.numAddressesByFormatPath(formatPath)
     let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
       ...formatPath
     })
-
-    // Initialize the addressSubscribeCache with the existing addresses already
-    // processed by the processor. This happens only once on the first
-    // setLookAheadCall. The addressSubscribeCache size should be equal to the
-    // sum of each totalAddressCount per branch.
-    if (
-      Object.keys(taskCache.addressSubscribeCache).length <
-      totalAddressCount * (shortPath.branch + 1)
-    ) {
-      // If the processor has not processed any addresses then the loop
-      // condition will only iterate once when totalAddressCount is 0 for the
-      // first address in the derivation path.
-      for (
-        let addressIndex = 0;
-        addressIndex < totalAddressCount;
-        addressIndex++
-      ) {
-        addressesToSubscribe.add(
-          walletTools.getAddress({ ...formatPath, addressIndex }).address
-        )
-      }
-    }
 
     // Loop until the total address count equals the lookahead count
     let lookAheadIndex = lastUsedIndex + currencyInfo.gapLimit
@@ -463,8 +487,6 @@ const setLookAhead = async (
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
     addToAddressSubscribeCache(common, addressesToSubscribe, shortPath)
-  } finally {
-    lock.release()
   }
 }
 
@@ -884,7 +906,7 @@ const processAddressTransactions = async (
       if (!addressData.used && used && page === 1) {
         addressData.used = true
         await processor.saveAddress(addressData)
-        await setLookAhead(args, path)
+        await setLookAhead(args)
       }
 
       for (const rawTx of transactions) {
@@ -905,7 +927,7 @@ const processAddressTransactions = async (
         addressData.lastQueriedBlockHeight = blockHeight
         await processor.saveAddress(addressData)
 
-        await setLookAhead(args, path)
+        await setLookAhead(args)
 
         // Callback for when an address has been fully processed
         args.onAddressChecked()
@@ -1078,7 +1100,7 @@ const processUtxoTransactions = async (
       used: true
     })
   }
-  setLookAhead(args, args.path).catch(err => {
+  setLookAhead(args).catch(err => {
     log.error(err)
     throw err
   })
