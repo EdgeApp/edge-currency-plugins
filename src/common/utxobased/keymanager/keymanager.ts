@@ -290,10 +290,7 @@ function bip32NetworkFromCoinPrefix(
   let xKeyPrefixes: Bip32
   switch (sigType) {
     case BIP43PurposeTypeEnum.Segwit:
-      if (
-        typeof coinPrefixes.segwitXPub === 'undefined' ||
-        typeof coinPrefixes.segwitXPriv === 'undefined'
-      ) {
+      if (coinPrefixes.segwitXPub == null || coinPrefixes.segwitXPriv == null) {
         throw new Error('segwit xpub prefix is undefined')
       }
       xKeyPrefixes = {
@@ -303,8 +300,8 @@ function bip32NetworkFromCoinPrefix(
       break
     case BIP43PurposeTypeEnum.WrappedSegwit:
       if (
-        typeof coinPrefixes.wrappedSegwitXPub === 'undefined' ||
-        typeof coinPrefixes.wrappedSegwitXPriv === 'undefined'
+        coinPrefixes.wrappedSegwitXPub == null ||
+        coinPrefixes.wrappedSegwitXPriv == null
       ) {
         throw new Error('wrapped segwit xpub prefix is undefined')
       }
@@ -360,7 +357,7 @@ function bip32NetworkFromCoin(
       forWIF
     )
   }
-  if (legacy && typeof coin.legacyConstants !== 'undefined') {
+  if (legacy && coin.legacyConstants != null) {
     return bip32NetworkFromCoinPrefix(
       sigType,
       coin.legacyConstants,
@@ -403,7 +400,7 @@ function guessAddressTypeFromAddress(
   coin: string,
   addressType: AddressTypeEnum | undefined
 ): AddressTypeEnum {
-  if (typeof addressType !== 'undefined') {
+  if (addressType != null) {
     return addressType
   }
   const coinClass: Coin = getCoinFromString(coin)
@@ -528,11 +525,8 @@ export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
   switch (addressType) {
     case AddressTypeEnum.p2pkh:
       if (
-        (typeof coinClass.mainnetConstants.cashaddr !== 'undefined' &&
-          !legacy) ||
-        (typeof coinClass.legacyConstants !== 'undefined' &&
-          typeof coinClass.legacyConstants.cashaddr !== 'undefined' &&
-          legacy)
+        (coinClass.mainnetConstants.cashaddr != null && !legacy) ||
+        (coinClass.legacyConstants?.cashaddr != null && legacy)
       ) {
         return scriptHashToScriptPubkey({
           scriptHash: cashAddressToHash(args.address).scriptHash.toString(
@@ -547,11 +541,8 @@ export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
       break
     case AddressTypeEnum.p2sh:
       if (
-        (typeof coinClass.mainnetConstants.cashaddr !== 'undefined' &&
-          !legacy) ||
-        (typeof coinClass.legacyConstants !== 'undefined' &&
-          typeof coinClass.legacyConstants.cashaddr !== 'undefined' &&
-          legacy)
+        (coinClass.mainnetConstants.cashaddr != null && !legacy) ||
+        (coinClass.legacyConstants?.cashaddr != null && legacy)
       ) {
         return scriptHashToScriptPubkey({
           scriptHash: cashAddressToHash(args.address).scriptHash.toString(
@@ -579,7 +570,7 @@ export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
     bs58DecodeFunc: coinClass.bs58DecodeFunc,
     bs58EncodeFunc: coinClass.bs58EncodeFunc
   }).output
-  if (typeof scriptPubkey === 'undefined') {
+  if (scriptPubkey == null) {
     throw new Error('failed converting address to scriptPubkey')
   }
   return scriptPubkey.toString('hex')
@@ -603,7 +594,7 @@ export function scriptPubkeyToAddress(
   let payment: bitcoin.payments.PaymentCreator
   switch (args.addressType) {
     case AddressTypeEnum.p2pkh:
-      if (typeof coinClass.mainnetConstants.cashaddr !== 'undefined') {
+      if (coinClass.mainnetConstants.cashaddr != null) {
         address = hashToCashAddress(
           scriptPubkeyToScriptHash({
             scriptPubkey: args.scriptPubkey,
@@ -615,10 +606,7 @@ export function scriptPubkeyToAddress(
           args.network
         )
       }
-      if (
-        typeof coinClass.legacyConstants !== 'undefined' &&
-        typeof coinClass.legacyConstants.cashaddr !== 'undefined'
-      ) {
+      if (coinClass.legacyConstants?.cashaddr != null) {
         legacyAddress = hashToCashAddress(
           scriptPubkeyToScriptHash({
             scriptPubkey: args.scriptPubkey,
@@ -633,7 +621,7 @@ export function scriptPubkeyToAddress(
       payment = bitcoin.payments.p2pkh
       break
     case AddressTypeEnum.p2sh:
-      if (typeof coinClass.mainnetConstants.cashaddr !== 'undefined') {
+      if (coinClass.mainnetConstants.cashaddr != null) {
         address = hashToCashAddress(
           scriptPubkeyToScriptHash({
             scriptPubkey: args.scriptPubkey,
@@ -645,10 +633,7 @@ export function scriptPubkeyToAddress(
           args.network
         )
       }
-      if (
-        typeof coinClass.legacyConstants !== 'undefined' &&
-        typeof coinClass.legacyConstants.cashaddr !== 'undefined'
-      ) {
+      if (coinClass.legacyConstants?.cashaddr != null) {
         address = hashToCashAddress(
           scriptPubkeyToScriptHash({
             scriptPubkey: args.scriptPubkey,
@@ -689,7 +674,7 @@ export function scriptPubkeyToAddress(
       bs58EncodeFunc: coinClass.bs58EncodeFunc
     }).address
 
-  if (typeof address === 'undefined' || typeof legacyAddress === 'undefined') {
+  if (address == null || legacyAddress == null) {
     throw new Error('failed converting scriptPubkey to address')
   }
   return { address, legacyAddress }
@@ -718,7 +703,7 @@ function scriptHashToScriptPubkey(args: ScriptHashToScriptPubkeyArgs): string {
     hash: Buffer.from(args.scriptHash, 'hex'),
     network: network
   }).output
-  if (typeof scriptPubkey === 'undefined') {
+  if (scriptPubkey == null) {
     throw new Error('failed converting scriptPubkey to address')
   }
   return scriptPubkey.toString('hex')
@@ -749,7 +734,7 @@ export function scriptPubkeyToScriptHash(
     output: Buffer.from(args.scriptPubkey, 'hex'),
     network: network
   }).hash
-  if (typeof scriptHash === 'undefined') {
+  if (scriptHash == null) {
     throw new Error('failed converting scriptPubkey to address')
   }
   return scriptHash.toString('hex')
@@ -763,11 +748,7 @@ export function scriptPubkeyToP2SH(
       output: Buffer.from(args.scriptPubkey, 'hex')
     }
   })
-  if (
-    typeof p2sh.output === 'undefined' ||
-    typeof p2sh.redeem === 'undefined' ||
-    typeof p2sh.redeem.output === 'undefined'
-  ) {
+  if (p2sh.output == null || p2sh.redeem?.output == null) {
     throw new Error('unable to convert script to p2sh')
   }
   return {
@@ -785,7 +766,7 @@ export function pubkeyToScriptPubkey(
       payment = bitcoin.payments.p2pkh({
         pubkey: Buffer.from(args.pubkey, 'hex')
       })
-      if (typeof payment.output === 'undefined') {
+      if (payment.output == null) {
         throw new Error('failed converting pubkey to script pubkey')
       }
       return { scriptPubkey: payment.output.toString('hex') }
@@ -800,7 +781,7 @@ export function pubkeyToScriptPubkey(
       payment = bitcoin.payments.p2wpkh({
         pubkey: Buffer.from(args.pubkey, 'hex')
       })
-      if (typeof payment.output === 'undefined') {
+      if (payment.output == null) {
         throw new Error('failed converting pubkey to script pubkey')
       }
       return { scriptPubkey: payment.output.toString('hex') }
@@ -821,7 +802,7 @@ export function xprivToPrivateKey(args: XPrivToPrivateKeyArgs): string {
   const privateKey = node
     .derive(args.bip44ChangeIndex)
     .derive(args.bip44AddressIndex).privateKey
-  if (typeof privateKey === 'undefined') {
+  if (privateKey == null) {
     throw new Error('Failed to generate private key from xpriv')
   }
   return privateKey.toString('hex')
@@ -851,7 +832,7 @@ export function wifToPrivateKey(args: WIFToPrivateKeyArgs): string {
     network,
     coinClass.bs58DecodeFunc
   ).privateKey
-  if (typeof privateKey === 'undefined') {
+  if (privateKey == null) {
     throw new Error('Failed to convert WIF key to private key')
   }
   return privateKey.toString('hex')
@@ -879,7 +860,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   // get coin specific replay protection sighhash bits
   let sighashType = bitcoin.Transaction.SIGHASH_ALL
   const coin = getCoinFromString(args.coin)
-  if (typeof coin.sighash !== 'undefined') {
+  if (coin.sighash != null) {
     sighashType = coin.sighash
   }
 
@@ -895,7 +876,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
 
   for (const utxo of uniqueUtxos) {
     // Cannot use a utxo without a script
-    if (typeof utxo.script === 'undefined') continue
+    if (utxo.script == null) continue
     const input: utxopicker.UTXO = {
       hash: Buffer.from(utxo.txid, 'hex').reverse(),
       index: utxo.vout,
@@ -913,7 +894,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
         value: parseInt(utxo.value)
       }
 
-      if (typeof utxo.redeemScript !== 'undefined') {
+      if (utxo.redeemScript != null) {
         input.redeemScript = Buffer.from(utxo.redeemScript, 'hex')
       }
     }
@@ -984,9 +965,9 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
 
   // get coin specific replay protection sighhash bits
   let hashType = bitcoin.Transaction.SIGHASH_ALL
-  if (typeof args.coin !== 'undefined') {
+  if (args.coin != null) {
     const coin = getCoinFromString(args.coin)
-    if (typeof coin.sighash !== 'undefined') {
+    if (coin.sighash != null) {
       hashType = coin.sighash
     }
   }
@@ -994,12 +975,12 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
   for (let i = 0; i < args.inputs.length; i++) {
     const input: TxInput = args.inputs[i]
     if (input.type === TransactionInputTypeEnum.Legacy) {
-      if (typeof input.prevTx === 'undefined') {
+      if (input.prevTx == null) {
         throw Error(
           'legacy inputs require the full previous transaction to be passed'
         )
       }
-      if (typeof input.redeemScript === 'undefined') {
+      if (input.redeemScript == null) {
         psbt.addInput({
           hash: input.prevTxid,
           index: input.index,
@@ -1024,16 +1005,13 @@ export function createTx(args: CreateTxArgs): CreateTxReturn {
       }
     } else {
       segwit = true
-      if (
-        typeof input.prevScriptPubkey === 'undefined' ||
-        typeof input.value === 'undefined'
-      ) {
+      if (input.prevScriptPubkey == null || input.value == null) {
         throw Error(
           'segwit inputs require a script pubkey and value to be passed'
         )
       }
 
-      if (typeof input.redeemScript === 'undefined') {
+      if (input.redeemScript == null) {
         psbt.addInput({
           hash: input.prevTxid,
           index: input.index,
