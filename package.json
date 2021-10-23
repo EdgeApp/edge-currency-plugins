@@ -54,7 +54,7 @@
   "scripts": {
     "clean": "rimraf lib",
     "fix": "eslint . --fix",
-    "lib": "rollup -c",
+    "lib": "sucrase -q -t typescript,imports -d ./lib ./src",
     "lint": "eslint .",
     "precommit": "lint-staged && tsc",
     "prepare": "npm-run-all clean -p lib types",
