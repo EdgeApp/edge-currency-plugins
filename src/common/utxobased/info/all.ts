@@ -12,6 +12,7 @@ import { info as feathercoin } from './feathercoin'
 import { info as groestlcoin } from './groestlcoin'
 import { info as litecoin } from './litecoin'
 import { info as qtum } from './qtum'
+import { info as ravencoin } from './ravencoin'
 import { info as zcoin } from './zcoin'
 
 export { info as badcoin } from './badcoin'
@@ -28,6 +29,7 @@ export { info as feathercoin } from './feathercoin'
 export { info as groestlcoin } from './groestlcoin'
 export { info as litecoin } from './litecoin'
 export { info as qtum } from './qtum'
+export { info as ravencoin } from './ravencoin'
 export { info as zcoin } from './zcoin'
 
 export const all = [
@@ -45,5 +47,6 @@ export const all = [
   groestlcoin,
   litecoin,
   qtum,
+  ravencoin,
   zcoin
 ]
