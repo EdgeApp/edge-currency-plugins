@@ -6,6 +6,7 @@ import { info as bitcoinsv } from './bitcoinsv'
 import { info as bitcointestnet } from './bitcointestnet'
 import { info as dash } from './dash'
 import { info as digibyte } from './digibyte'
+import { info as dogecoin } from './dogecoin'
 import { info as feathercoin } from './feathercoin'
 import { info as litecoin } from './litecoin'
 import { info as zcoin } from './zcoin'
@@ -18,6 +19,7 @@ export { info as bitcoinsv } from './bitcoinsv'
 export { info as bitcointestnet } from './bitcointestnet'
 export { info as dash } from './dash'
 export { info as digibyte } from './digibyte'
+export { info as dogecoin } from './dogecoin'
 export { info as feathercoin } from './feathercoin'
 export { info as litecoin } from './litecoin'
 export { info as zcoin } from './zcoin'
@@ -31,6 +33,7 @@ export const all = [
   bitcointestnet,
   dash,
   digibyte,
+  dogecoin,
   feathercoin,
   litecoin,
   zcoin
