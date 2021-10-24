@@ -14,6 +14,7 @@ import { info as litecoin } from './litecoin'
 import { info as qtum } from './qtum'
 import { info as ravencoin } from './ravencoin'
 import { info as smartcash } from './smartcash'
+import { info as ufo } from './ufo'
 import { info as zcoin } from './zcoin'
 
 export { info as badcoin } from './badcoin'
@@ -32,6 +33,7 @@ export { info as litecoin } from './litecoin'
 export { info as qtum } from './qtum'
 export { info as ravencoin } from './ravencoin'
 export { info as smartcash } from './smartcash'
+export { info as ufo } from './ufo'
 export { info as zcoin } from './zcoin'
 
 export const all = [
@@ -51,5 +53,6 @@ export const all = [
   qtum,
   ravencoin,
   smartcash,
+  ufo,
   zcoin
 ]
