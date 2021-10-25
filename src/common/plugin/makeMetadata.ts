@@ -75,6 +75,7 @@ export const makeMetadata = async (
       const metadata = await memlet.getJson(metadataPath)
       return asLocalWalletMetadata(metadata)
     } catch (err) {
+      log.error(err)
       return await resetMetadata()
     }
   }
