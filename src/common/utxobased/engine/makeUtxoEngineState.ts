@@ -455,7 +455,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
       format: shortPath.format,
       changeIndex: shortPath.branch
     }
-    let totalAddressCount = processor.numAddressesByFormatPath(formatPath)
+    const totalAddressCount = processor.numAddressesByFormatPath(formatPath)
     let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
       ...formatPath
     })
