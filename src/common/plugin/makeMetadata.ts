@@ -77,7 +77,7 @@ const fetchMetadata = async (memlet: Memlet): Promise<LocalWalletMetadata> => {
   try {
     const metadata = await memlet.getJson(metadataPath)
     return asLocalWalletMetadata(metadata)
-  } catch {
+  } catch (err) {
     return await resetMetadata(memlet)
   }
 }
@@ -87,7 +87,7 @@ const resetMetadata = async (memlet: Memlet): Promise<LocalWalletMetadata> => {
     balance: '0',
     lastSeenBlockHeight: 0
   }
-  await memlet.setJson(metadataPath, JSON.stringify(data))
+  await memlet.setJson(metadataPath, data)
   return data
 }
 
@@ -95,5 +95,5 @@ const setMetadata = async (
   memlet: Memlet,
   data: LocalWalletMetadata
 ): Promise<void> => {
-  await memlet.setJson(metadataPath, JSON.stringify(data))
+  await memlet.setJson(metadataPath, data)
 }
