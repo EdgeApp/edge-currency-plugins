@@ -109,7 +109,7 @@ export class PluginState extends ServerCache {
     }
 
     // Fetch servers in the background:
-    this.fetchServers().catch(e => {
+    await this.refreshServers().catch(e => {
       this.log(`${this.pluginId} - ${JSON.stringify(e.toString())}`)
     })
 
@@ -120,7 +120,7 @@ export class PluginState extends ServerCache {
     this.clearServerCache()
     this.serverCacheDirty = true
     await this.saveServerCache()
-    await this.fetchServers()
+    await this.refreshServers()
   }
 
   async saveServerCache(): Promise<void> {
@@ -153,10 +153,8 @@ export class PluginState extends ServerCache {
     }
   }
 
-  async fetchServers(): Promise<void> {
+  async fetchServers(): Promise<string[] | null> {
     const { io } = this
-
-    if (this.disableFetchingServers) return
 
     this.log(`${this.pluginId} - GET ${serverListInfoUrl}`)
 
@@ -178,7 +176,15 @@ export class PluginState extends ServerCache {
     })()
 
     const serverListInfo = asServerListInfo(responseBody)
-    const serverList = serverListInfo[this.currencyCode] ?? this.defaultServers
+
+    return serverListInfo[this.currencyCode] ?? null
+  }
+
+  async refreshServers(): Promise<void> {
+    let serverList = this.defaultServers
+
+    if (!this.disableFetchingServers)
+      serverList = (await this.fetchServers()) ?? this.defaultServers
 
     this.serverCacheLoad(this.serverCacheJson, serverList)
     await this.saveServerCache()
@@ -209,7 +215,7 @@ export class PluginState extends ServerCache {
     this.serverCacheJson = {}
     this.serverCacheDirty = true
     await this.saveServerCache()
-    await this.fetchServers()
+    await this.refreshServers()
     for (const engine of engines) {
       await engine.stop()
     }
