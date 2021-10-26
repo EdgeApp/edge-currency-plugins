@@ -6,7 +6,7 @@ import { MemoryStorage } from 'disklet/lib/src/backends/memory'
 import { FEES_PATH } from '../../../src/common/constants'
 import { Fees, makeFees } from '../../../src/common/fees/makeFees'
 import { SimpleFeeSettings } from '../../../src/common/plugin/types'
-import { makeFakeCurrencyInfo, makeFakeIo, makeFakeLog } from '../../utils'
+import { makeFakeIo, makeFakeLog, makeFakePluginInfo } from '../../utils'
 
 chai.should()
 chai.use(chaiAsPromised)
@@ -15,7 +15,7 @@ const { expect } = chai
 describe('fees', function () {
   const fakeIo = makeFakeIo()
   const fakeLog = makeFakeLog()
-  const fakeCurrencyInfo = makeFakeCurrencyInfo()
+  const fakeMakePluginInfo = makeFakePluginInfo()
   const memory: MemoryStorage = {}
   const disklet = makeMemoryDisklet(memory)
   let fees: Fees
@@ -34,12 +34,12 @@ describe('fees', function () {
     it('should load fees from the currency info file on wallet first load', async () => {
       fees = await makeFees({
         disklet,
-        currencyInfo: fakeCurrencyInfo,
+        pluginInfo: fakeMakePluginInfo,
         io: fakeIo,
         log: fakeLog
       })
 
-      fees.fees.should.eql(fakeCurrencyInfo.simpleFeeSettings)
+      fees.fees.should.eql(fakeMakePluginInfo.engineInfo.simpleFeeSettings)
 
       testJson()
     })
@@ -47,7 +47,7 @@ describe('fees', function () {
     it('should cache fees after started', async () => {
       await fees.start()
 
-      testJson(fakeCurrencyInfo.simpleFeeSettings)
+      testJson(fakeMakePluginInfo.engineInfo.simpleFeeSettings)
 
       // be sure to stop after start, test will hang otherwise
       fees.stop()

@@ -13,17 +13,18 @@ import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
 import { PluginState } from './pluginState'
 import {
   EngineConfig,
-  EngineCurrencyInfo,
   EngineCurrencyType,
-  NetworkEnum
+  NetworkEnum,
+  PluginInfo
 } from './types'
 
 export function makeCurrencyPlugin(
   pluginOptions: EdgeCorePluginOptions,
-  currencyInfo: EngineCurrencyInfo
+  pluginInfo: PluginInfo
 ): EdgeCurrencyPlugin {
+  const { currencyInfo, engineInfo } = pluginInfo
   const { io, log } = pluginOptions
-  const currencyTools = makeCurrencyTools(io, currencyInfo)
+  const currencyTools = makeCurrencyTools(io, pluginInfo)
   const { defaultSettings, pluginId, currencyCode } = currencyInfo
   const {
     customFeeSettings,
@@ -72,12 +73,12 @@ export function makeCurrencyPlugin(
         engineOptions.callbacks.onTxidsChanged
       )
 
-      const network = currencyInfo.networkType ?? NetworkEnum.Mainnet
+      const network = engineInfo.networkType ?? NetworkEnum.Mainnet
 
       const engineConfig: EngineConfig = {
         network,
         walletInfo,
-        currencyInfo,
+        pluginInfo,
         currencyTools,
         io,
         options: {
@@ -89,7 +90,7 @@ export function makeCurrencyPlugin(
       }
 
       let engine: EdgeCurrencyEngine
-      switch (currencyInfo.currencyType) {
+      switch (engineInfo.currencyType) {
         case EngineCurrencyType.UTXO:
           engine = await makeUtxoEngine(engineConfig)
           break
