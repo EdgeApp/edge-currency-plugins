@@ -418,9 +418,7 @@ export async function makeUtxoEngine(
 
       const privateKeys = await Promise.all(
         psbt.inputs.map(async ({ hash, index }) => {
-          const txid = Buffer.isBuffer(hash)
-            ? hash.reverse().toString('hex')
-            : hash
+          const txid = Buffer.from(hash).reverse().toString('hex')
 
           const [utxo] = await processor.fetchUtxos({
             utxoIds: [`${txid}_${index}`]
