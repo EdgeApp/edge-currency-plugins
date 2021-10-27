@@ -1,7 +1,7 @@
 import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
 import { EdgeLog } from 'edge-core-js/types'
-import { makeMemlet, Memlet } from 'memlet'
+import { makeMemlet } from 'memlet'
 
 import AwaitLock from '../utxobased/engine/await-lock'
 import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
@@ -26,7 +26,19 @@ export const makeMetadata = async (
   const memlet = makeMemlet(disklet)
   const lock = new AwaitLock()
 
-  const cache: LocalWalletMetadata = await fetchMetadata(memlet)
+  const instance: Metadata = {
+    get balance() {
+      return cache.balance
+    },
+    get lastSeenBlockHeight() {
+      return cache.lastSeenBlockHeight
+    },
+    clear: async () => {
+      await memlet.delete(metadataPath)
+      const cleanCache = await resetMetadata()
+      Object.assign(cache, cleanCache)
+    }
+  }
 
   emitter.on(
     EngineEvent.ADDRESS_BALANCE_CHANGED,
@@ -39,7 +51,7 @@ export const makeMetadata = async (
           currencyCode,
           cache.balance
         )
-        await setMetadata(memlet, cache)
+        await setMetadata(cache)
       } catch (err) {
         log.error(err)
       } finally {
@@ -53,47 +65,35 @@ export const makeMetadata = async (
     async (_uri: string, height: number) => {
       if (height > cache.lastSeenBlockHeight) {
         cache.lastSeenBlockHeight = height
-        await setMetadata(memlet, cache)
+        await setMetadata(cache)
       }
     }
   )
 
-  return {
-    get balance() {
-      return cache.balance
-    },
-    get lastSeenBlockHeight() {
-      return cache.lastSeenBlockHeight
-    },
-    clear: async () => {
-      await memlet.delete(metadataPath)
-      const cleanCache = await resetMetadata(memlet)
-      Object.assign(cache, cleanCache)
+  const fetchMetadata = async (): Promise<LocalWalletMetadata> => {
+    try {
+      const metadata = await memlet.getJson(metadataPath)
+      return asLocalWalletMetadata(metadata)
+    } catch (err) {
+      log.error(err)
+      return await resetMetadata()
     }
   }
-}
 
-const fetchMetadata = async (memlet: Memlet): Promise<LocalWalletMetadata> => {
-  try {
-    const metadata = await memlet.getJson(metadataPath)
-    return asLocalWalletMetadata(metadata)
-  } catch {
-    return await resetMetadata(memlet)
+  const resetMetadata = async (): Promise<LocalWalletMetadata> => {
+    const data: LocalWalletMetadata = {
+      balance: '0',
+      lastSeenBlockHeight: 0
+    }
+    await memlet.setJson(metadataPath, data)
+    return data
   }
-}
 
-const resetMetadata = async (memlet: Memlet): Promise<LocalWalletMetadata> => {
-  const data: LocalWalletMetadata = {
-    balance: '0',
-    lastSeenBlockHeight: 0
+  const setMetadata = async (data: LocalWalletMetadata): Promise<void> => {
+    await memlet.setJson(metadataPath, data)
   }
-  await memlet.setJson(metadataPath, JSON.stringify(data))
-  return data
-}
 
-const setMetadata = async (
-  memlet: Memlet,
-  data: LocalWalletMetadata
-): Promise<void> => {
-  await memlet.setJson(metadataPath, JSON.stringify(data))
+  const cache = await fetchMetadata()
+
+  return instance
 }
