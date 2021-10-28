@@ -56,7 +56,7 @@
     "fix": "eslint . --fix",
     "lib": "rollup -c",
     "lint": "eslint .",
-    "precommit": "lint-staged && tsc",
+    "precommit": "lint-staged && npm-run-all test prepare",
     "prepare": "npm-run-all clean -p lib types",
     "start": "node -r sucrase/register src/index.ts",
     "test": "mocha -r sucrase/register 'test/**/*.spec.ts'",
