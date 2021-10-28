@@ -25,10 +25,6 @@ export interface AddressPath {
   addressIndex: number
 }
 
-export enum EngineCurrencyType {
-  UTXO
-}
-
 export interface TxOptions {
   utxos?: IUTXO[]
   subtractFee?: boolean
@@ -45,7 +41,6 @@ export interface EngineInfo {
   formats?: CurrencyFormat[]
   forks?: string[]
   coinType: number
-  currencyType: EngineCurrencyType
   network: string // The offical network in lower case - Needs to match the Bitcoin Lib Network Type
   networkType?: NetworkEnum
   uriPrefix?: string

@@ -1,7 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
-import { EngineCurrencyType, EngineInfo, PluginInfo } from '../../plugin/types'
+import { EngineInfo, PluginInfo } from '../../plugin/types'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoinsv',
@@ -33,7 +33,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  currencyType: EngineCurrencyType.UTXO,
   coinType: 236,
   formats: ['bip44', 'bip32'],
   network: 'bitcoinsv',

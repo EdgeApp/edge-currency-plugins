@@ -11,12 +11,7 @@ import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
 import { makeCurrencyTools } from './makeCurrencyTools'
 import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
 import { PluginState } from './pluginState'
-import {
-  EngineConfig,
-  EngineCurrencyType,
-  NetworkEnum,
-  PluginInfo
-} from './types'
+import { EngineConfig, NetworkEnum, PluginInfo } from './types'
 
 export function makeCurrencyPlugin(
   pluginOptions: EdgeCorePluginOptions,
@@ -89,12 +84,7 @@ export function makeCurrencyPlugin(
         pluginState: state
       }
 
-      let engine: EdgeCurrencyEngine
-      switch (engineInfo.currencyType) {
-        case EngineCurrencyType.UTXO:
-          engine = await makeUtxoEngine(engineConfig)
-          break
-      }
+      const engine: EdgeCurrencyEngine = await makeUtxoEngine(engineConfig)
 
       return engine
     },

@@ -7,11 +7,9 @@ import {
   EdgeLog
 } from 'edge-core-js/types'
 
-import { EngineCurrencyType, PluginInfo } from '../src/common/plugin/types'
+import { PluginInfo } from '../src/common/plugin/types'
 
-export const makeFakePluginInfo = (
-  currencyType = EngineCurrencyType.UTXO
-): PluginInfo => {
+export const makeFakePluginInfo = (): PluginInfo => {
   return {
     currencyInfo: {
       addressExplorer: '',
@@ -26,7 +24,6 @@ export const makeFakePluginInfo = (
     },
     engineInfo: {
       coinType: 0,
-      currencyType,
       customFeeSettings: [],
       defaultFee: 0,
       feeUpdateInterval: 0,
