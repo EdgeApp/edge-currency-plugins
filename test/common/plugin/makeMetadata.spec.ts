@@ -9,6 +9,7 @@ import {
   EngineEvent
 } from '../../../src/common/plugin/makeEngineEmitter'
 import { makeMetadata, Metadata } from '../../../src/common/plugin/makeMetadata'
+import { makeFakeLog } from '../../utils'
 
 chai.should()
 chai.use(chaiAsPromised)
@@ -20,7 +21,7 @@ describe('makeMetadata', () => {
   const memory: MemoryStorage = {}
   let disklet: Disklet
   let metadata: Metadata
-  let log: EdgeLog
+  const log: EdgeLog = makeFakeLog()
   const emitter = new EngineEmitter()
 
   before(async () => {
