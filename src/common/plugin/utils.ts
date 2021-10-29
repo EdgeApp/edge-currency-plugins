@@ -16,3 +16,11 @@ export const removeItem = <T>(obj: GenericObject<T>, key: string): void => {
   // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
   delete obj[key]
 }
+
+export const isError = (potentialError: any): potentialError is Error => {
+  return (
+    typeof potentialError.name === 'string' &&
+    typeof potentialError.message === 'string' &&
+    (potentialError.stack == null || typeof potentialError.stack === 'string')
+  )
+}

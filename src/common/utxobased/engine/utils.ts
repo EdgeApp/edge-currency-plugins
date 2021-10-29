@@ -78,8 +78,7 @@ export const validScriptPubkeyFromAddress = (args: {
   coin: string
 }): string =>
   addressToScriptPubkey({
-    ...args,
-    legacy: verifyAddress(args) === VerifyAddressEnum.legacy
+    ...args
   })
 
 export const getFormatSupportedBranches = (

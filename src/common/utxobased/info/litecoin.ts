@@ -65,31 +65,17 @@ export const coinInfo: CoinInfo = {
   segwit: true,
   coinType: 2,
   mainnetConstants: {
-    messagePrefix: '\x18Litecoin Signed Message:\n',
-    wif: 0xb0,
-    legacyXPriv: 0x019d9cfe,
-    legacyXPub: 0x019da462,
-    wrappedSegwitXPriv: 0x01b26792,
-    wrappedSegwitXPub: 0x01b26ef6,
-    segwitXPriv: 0x04b2430c,
-    segwitXPub: 0x04b24746,
-    pubkeyHash: 0x30,
-    scriptHash: 0x32,
-    bech32: 'ltc'
-  },
-
-  legacyConstants: {
-    messagePrefix: '\x18Litecoin Signed Message:\n',
-    wif: 0xb0,
-    legacyXPriv: 0x019d9cfe,
-    legacyXPub: 0x019da462,
-    wrappedSegwitXPriv: 0x01b26792,
-    wrappedSegwitXPub: 0x01b26ef6,
-    segwitXPriv: 0x04b2430c,
-    segwitXPub: 0x04b24746,
-    pubkeyHash: 0x30,
-    scriptHash: 0x05,
-    bech32: 'ltc'
+    messagePrefix: ['\x18Litecoin Signed Message:\n'],
+    wif: [0xb0],
+    legacyXPriv: [0x019d9cfe],
+    legacyXPub: [0x019da462],
+    wrappedSegwitXPriv: [0x01b26792],
+    wrappedSegwitXPub: [0x01b26ef6],
+    segwitXPriv: [0x04b2430c],
+    segwitXPub: [0x04b24746],
+    pubkeyHash: [0x30],
+    scriptHash: [0x32, 0x05],
+    bech32: ['ltc']
   }
 }
 

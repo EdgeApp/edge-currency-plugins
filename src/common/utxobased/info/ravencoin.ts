@@ -51,13 +51,13 @@ export const coinInfo: CoinInfo = {
   segwit: false,
   coinType: 175,
   mainnetConstants: {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0x80,
-    legacyXPriv: 0x0488ade4,
-    legacyXPub: 0x0488b21e,
-    pubkeyHash: 0x3c,
-    scriptHash: 0x7a,
-    bech32: 'bc'
+    messagePrefix: ['\x18Bitcoin Signed Message:\n'],
+    wif: [0x80],
+    legacyXPriv: [0x0488ade4],
+    legacyXPub: [0x0488b21e],
+    pubkeyHash: [0x3c],
+    scriptHash: [0x7a],
+    bech32: ['bc']
   }
 }
 
