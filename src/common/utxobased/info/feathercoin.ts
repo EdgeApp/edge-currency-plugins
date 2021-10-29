@@ -60,17 +60,17 @@ export const coinInfo: CoinInfo = {
   segwit: true,
   coinType: 8,
   mainnetConstants: {
-    messagePrefix: '\x18Feathercoin Signed Message:\n',
-    wif: 0x8e,
-    legacyXPriv: 0x0488daee,
-    legacyXPub: 0x0488bc26,
-    wrappedSegwitXPriv: 0x049d7878,
-    wrappedSegwitXPub: 0x049d7cb2,
-    segwitXPriv: 0x04b2430c,
-    segwitXPub: 0x04b24746,
-    pubkeyHash: 0x0e,
-    scriptHash: 0x05,
-    bech32: 'fc'
+    messagePrefix: ['\x18Feathercoin Signed Message:\n'],
+    wif: [0x8e],
+    legacyXPriv: [0x0488daee],
+    legacyXPub: [0x0488bc26],
+    wrappedSegwitXPriv: [0x049d7878],
+    wrappedSegwitXPub: [0x049d7cb2],
+    segwitXPriv: [0x04b2430c],
+    segwitXPub: [0x04b24746],
+    pubkeyHash: [0x0e],
+    scriptHash: [0x05],
+    bech32: ['fc']
   }
 }
 

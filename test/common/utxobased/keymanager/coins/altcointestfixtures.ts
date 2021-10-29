@@ -641,6 +641,33 @@ export const fixtures: Fixture = {
       wifToPrivateKeyTests: [
         {
           wifKey: 'L1CAcXSxB48WoRs91gjSaj8eerBj3ruTyun7MvqBpnrc62cXAJqq'
+        },
+        {
+          wifKey: 'KzAwX4sqvmrvuUtSEwBq93CcTHLFqXKK5mYf1JwYzgnATrYLeGEz'
+        },
+        {
+          wifKey: 'L5Xn1K6XobLbBFhLgxj6yEzMecZmmUDHwY9izkPx4kfYTSWcHcGd'
+        },
+        {
+          wifKey: '5JQsweUVF7V243N2qmoJtDjGqhXqPcwViWG961P1hsrAoMsNAnQ'
+        },
+        {
+          wifKey: '5J367GdKAsPTKunGfiv5ZWZRxq9N2a8BHoXhsuT5FZLadsF7Tif'
+        },
+        {
+          wifKey: 'QRZrfugqBPM491HUqD2d2G3DvKMpt5T7y2EZnwLPj3PWunVUAzBS'
+        },
+        {
+          wifKey: 'QUNJ3111WoYX4VASJHo5B9LrjwZUV1H368KZUuX6dtGrH6hoCD3z'
+        },
+        {
+          wifKey: 'QWvhA9uX4CpiQn6PHEZtrTpy7ebLp2M6pnqdnNnno7GtuNTnRzgP'
+        },
+        {
+          wifKey: '6JjDEbwSosmp6eoC3ARHVqiWK81NtkDmKgPNQW1uXY3oc32GfX7'
+        },
+        {
+          wifKey: '6JMRQE6GjdgFNXDRs7Y4B8YfSFcuXhQStyewCQ5y5DYDSWuVdTB'
         }
       ],
       addressToScriptPubkeyTests: [
@@ -868,8 +895,7 @@ export const fixtures: Fixture = {
           scriptType: ScriptTypeEnum.p2pkh,
           addressType: AddressTypeEnum.p2pkh,
           address: '1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f',
-          legacyAddress:
-            'bitcoincash:qrr8ftywq56qg3che8hy2r2anuj7ysmy2qwc7tfd96'
+          legacyAddress: '1K6LZdwpKT5XkEZo2T2kW197aMXYbYMc4f'
         }
       ],
       wifToPrivateKeyTests: [
