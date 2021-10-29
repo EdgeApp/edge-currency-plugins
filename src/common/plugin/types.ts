@@ -78,23 +78,27 @@ export interface CoinInfo {
   utxoPicker?: UtxoPicker
   mainnetConstants: CoinPrefixes
   // by default should contain the bitcoin mainnet constants, useful for networks were multiple constants were in use.
-  legacyConstants?: CoinPrefixes
   testnetConstants: CoinPrefixes
 }
 
+/*
+  The first entry in the array is used for standard serialization
+  The second entry in the array is used for legacy serialization
+  All entries in the array are checked whether they can de-serialize the content
+*/
 export interface CoinPrefixes {
-  messagePrefix: string
-  wif: number
-  legacyXPriv: number
-  legacyXPub: number
-  wrappedSegwitXPriv?: number
-  wrappedSegwitXPub?: number
-  segwitXPriv?: number
-  segwitXPub?: number
-  pubkeyHash: number
-  scriptHash: number
-  bech32?: string
-  cashaddr?: string
+  messagePrefix: string[]
+  wif: number[]
+  legacyXPriv: number[]
+  legacyXPub: number[]
+  wrappedSegwitXPriv?: number[]
+  wrappedSegwitXPub?: number[]
+  segwitXPriv?: number[]
+  segwitXPub?: number[]
+  pubkeyHash: number[]
+  scriptHash: number[]
+  bech32?: string[]
+  cashaddr?: string[]
 }
 
 interface BitcoinJSNetwork {

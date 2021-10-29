@@ -79,8 +79,7 @@ export const validScriptPubkeyFromAddress = (args: {
   network: NetworkEnum
 }): string =>
   addressToScriptPubkey({
-    ...args,
-    legacy: verifyAddress(args) === VerifyAddressEnum.legacy
+    ...args
   })
 
 export const getFormatSupportedBranches = (

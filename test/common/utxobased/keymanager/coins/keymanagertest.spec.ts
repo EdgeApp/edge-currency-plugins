@@ -84,12 +84,22 @@ describe('altcoin test fixtures', () => {
             network: j.network,
             coin: f.name
           })
-          const wifKeyRoundTrip = privateKeyToWIF({
+          const wifKey = privateKeyToWIF({
             privateKey: privateKey,
             network: j.network,
             coin: f.name
           })
-          expect(j.wifKey).to.be.equal(wifKeyRoundTrip)
+          const privateKeyRoundTrip = wifToPrivateKey({
+            wifKey,
+            network: j.network,
+            coin: f.name
+          })
+          const wifKeyRoundTrip = privateKeyToWIF({
+            privateKey: privateKeyRoundTrip,
+            network: j.network,
+            coin: f.name
+          })
+          expect(wifKey).to.be.equal(wifKeyRoundTrip)
         })
       })
     }

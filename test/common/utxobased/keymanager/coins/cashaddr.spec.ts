@@ -30,7 +30,7 @@ describe('bitcoin cash address tests', () => {
     const address = hashToCashAddress(
       pubkeyHash,
       CashaddrTypeEnum.pubkeyhash,
-      NetworkEnum.Mainnet
+      'bitcoincash'
     )
     expect(address).to.equal(
       'bitcoincash:qrvcdmgpk73zyfd8pmdl9wnuld36zh9n4gms8s0u59'
@@ -62,7 +62,7 @@ describe('bitcoin cash address tests', () => {
     const address = hashToCashAddress(
       scriptHash,
       CashaddrTypeEnum.scripthash,
-      NetworkEnum.Mainnet
+      'bitcoincash'
     )
     expect(address).to.equal(
       'bitcoincash:pqlmd62cztjhhdrfr7dy5c5gv2np5nmknvhfvqp85n'

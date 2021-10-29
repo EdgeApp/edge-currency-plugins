@@ -106,7 +106,7 @@ const convertBits = (
   return result
 }
 
-const prefixToArray = (prefix: CashaddrPrefixEnum): number[] => {
+const prefixToArray = (prefix: string): number[] => {
   const result = []
   for (let i = 0; i < prefix.length; i++) {
     result.push(prefix.charCodeAt(i) & 31)
@@ -117,7 +117,7 @@ const prefixToArray = (prefix: CashaddrPrefixEnum): number[] => {
 export const hashToCashAddress = (
   scriptHash: string,
   type: CashaddrTypeEnum,
-  network: NetworkEnum
+  prefix: string
 ): string => {
   // Not any, but a BN object
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -165,10 +165,6 @@ export const hashToCashAddress = (
     }
   }
 
-  const prefix: CashaddrPrefixEnum =
-    NetworkEnum.Mainnet === network
-      ? CashaddrPrefixEnum.mainnet
-      : CashaddrPrefixEnum.testnet
   const hashBuffer = Buffer.from(scriptHash, 'hex')
   const eight0 = [0, 0, 0, 0, 0, 0, 0, 0]
   const prefixData = prefixToArray(prefix).concat([0])
