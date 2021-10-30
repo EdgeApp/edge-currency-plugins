@@ -25,10 +25,6 @@ export interface AddressPath {
   addressIndex: number
 }
 
-export enum EngineCurrencyType {
-  UTXO
-}
-
 export interface TxOptions {
   utxos?: IUTXO[]
   subtractFee?: boolean
@@ -36,11 +32,15 @@ export interface TxOptions {
   CPFP?: string
 }
 
-export interface EngineCurrencyInfo extends EdgeCurrencyInfo {
+export interface PluginInfo {
+  currencyInfo: EdgeCurrencyInfo
+  engineInfo: EngineInfo
+}
+
+export interface EngineInfo {
   formats?: CurrencyFormat[]
   forks?: string[]
   coinType: number
-  currencyType: EngineCurrencyType
   network: string // The offical network in lower case - Needs to match the Bitcoin Lib Network Type
   networkType?: NetworkEnum
   uriPrefix?: string
@@ -72,7 +72,7 @@ export const asSimpleFeeSettings = asObject({
 export interface EngineConfig {
   network: NetworkEnum
   walletInfo: EdgeWalletInfo
-  currencyInfo: EngineCurrencyInfo
+  pluginInfo: PluginInfo
   currencyTools: EdgeCurrencyTools
   options: EngineOptions
   io: EdgeIo
