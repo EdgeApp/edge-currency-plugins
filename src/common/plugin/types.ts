@@ -39,7 +39,7 @@ export interface PluginInfo {
 
 export interface EngineInfo {
   formats?: CurrencyFormat[]
-  forks?: string[]
+  forks?: PluginInfo[]
   coinType: number
   network: string // The offical network in lower case - Needs to match the Bitcoin Lib Network Type
   networkType?: NetworkEnum

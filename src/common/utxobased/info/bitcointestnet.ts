@@ -2,6 +2,8 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { EngineInfo, PluginInfo } from '../../plugin/types'
+import { info as bitcoincash } from './bitcoincash'
+import { info as bitcoingold } from './bitcoingold'
 
 export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcointestnet',
@@ -39,7 +41,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 export const engineInfo: EngineInfo = {
   coinType: 1,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
-  forks: ['bitcoincash', 'bitcoingold'],
+  forks: [bitcoincash, bitcoingold],
   network: 'bitcointestnet',
   gapLimit: 25,
   defaultFee: 1000,

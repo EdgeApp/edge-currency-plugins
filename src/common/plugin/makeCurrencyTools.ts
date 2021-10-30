@@ -17,7 +17,6 @@ import * as utxoUtils from '../utxobased/engine/utils'
 import { CurrencyFormatKeys } from '../utxobased/engine/utils'
 import { NetworkEnum, PluginInfo } from './types'
 import * as pluginUtils from './utils'
-import { getFormatsForNetwork } from './utils'
 
 /**
  * The core currency plugin.
@@ -164,8 +163,8 @@ export function makeCurrencyTools(
       const forks = engineInfo.forks ?? []
 
       return forks
-        .filter(network => getFormatsForNetwork(network).includes(format))
-        .map(network => `wallet:${network}`)
+        .filter(({ engineInfo: { formats } }) => formats?.includes(format))
+        .map(({ currencyInfo: { walletType } }) => walletType)
     }
   }
 
