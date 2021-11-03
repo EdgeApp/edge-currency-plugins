@@ -1,7 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { EngineInfo, PluginInfo } from '../../plugin/types'
-import { Coin } from '../keymanager/coin'
+import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'vertcoin',
@@ -52,7 +51,7 @@ const engineInfo: EngineInfo = {
   }
 }
 
-export const coinInfo: Coin = {
+export const coinInfo: CoinInfo = {
   name: 'vertcoin',
   segwit: true,
   coinType: 28,

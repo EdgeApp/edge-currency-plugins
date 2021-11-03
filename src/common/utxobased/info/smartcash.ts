@@ -3,8 +3,7 @@ import * as base58smart from 'bs58smartcheck'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import * as wifsmart from 'wif-smart'
 
-import { EngineInfo, PluginInfo } from '../../plugin/types'
-import { Coin } from '../keymanager/coin'
+import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'smartcash',
@@ -48,7 +47,7 @@ const engineInfo: EngineInfo = {
   }
 }
 
-export const coinInfo: Coin = {
+export const coinInfo: CoinInfo = {
   name: 'smartcash',
   segwit: false,
   coinType: 224,

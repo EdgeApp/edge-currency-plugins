@@ -1,8 +1,7 @@
 import { Psbt } from 'altcoin-js'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { EngineInfo, PluginInfo } from '../../plugin/types'
-import { Coin } from '../keymanager/coin'
+import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoingold',
@@ -53,7 +52,7 @@ const engineInfo: EngineInfo = {
   }
 }
 
-export const coinInfo: Coin = {
+export const coinInfo: CoinInfo = {
   name: 'bitcoingold',
   segwit: true,
   sighash: Psbt.BTG_SIGHASH_ALL,

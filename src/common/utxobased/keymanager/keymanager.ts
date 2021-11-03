@@ -4,7 +4,7 @@ import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
 import { InsufficientFundsError } from 'edge-core-js/types'
 
-import { NetworkEnum } from '../../plugin/types'
+import { CoinInfo, CoinPrefixes, NetworkEnum } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import {
   cashAddressToHash,
@@ -12,7 +12,6 @@ import {
   hashToCashAddress
 } from './bitcoincashUtils/cashAddress'
 import { cdsScriptTemplates } from './bitcoincashUtils/checkdatasig'
-import { Coin, CoinPrefixes } from './coin'
 import { getCoinFromString } from './coinmapper'
 import * as utxopicker from './utxopicker'
 
@@ -348,7 +347,7 @@ function bip32NetworkFromCoin(
   const sigType = args.sigType ?? BIP43PurposeTypeEnum.Legacy
   const forWIF: boolean = args.forWIF ?? false
   const legacy: boolean = args.legacy ?? false
-  const coin: Coin = getCoinFromString(args.coinString)
+  const coin: CoinInfo = getCoinFromString(args.coinString)
   if (args.networkType === NetworkEnum.Testnet) {
     return bip32NetworkFromCoinPrefix(
       sigType,
@@ -403,7 +402,7 @@ function guessAddressTypeFromAddress(
   if (addressType != null) {
     return addressType
   }
-  const coinClass: Coin = getCoinFromString(coin)
+  const coinClass: CoinInfo = getCoinFromString(coin)
   try {
     bitcoin.payments.p2pkh({
       address,

@@ -4,8 +4,7 @@ import * as base58grs from 'bs58grscheck'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import * as wifgrs from 'wifgrs'
 
-import { EngineInfo, PluginInfo } from '../../plugin/types'
-import { Coin } from '../keymanager/coin'
+import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'groestlcoin',
@@ -51,7 +50,7 @@ const engineInfo: EngineInfo = {
   }
 }
 
-export const coinInfo: Coin = {
+export const coinInfo: CoinInfo = {
   name: 'groestlcoin',
   segwit: true,
   coinType: 17,
