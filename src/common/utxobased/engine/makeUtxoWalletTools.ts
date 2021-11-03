@@ -35,11 +35,6 @@ export interface WalletToolsConfig {
   network: NetworkEnum
 }
 
-export interface BitcoinWalletToolsConfig extends WalletToolsConfig {
-  keys: UtxoKeyFormat & { bitcoinKey: string }
-  coin: string // for example bitcoin
-}
-
 export interface UTXOPluginWalletTools {
   getPubkey: (args: AddressPath) => string
 
