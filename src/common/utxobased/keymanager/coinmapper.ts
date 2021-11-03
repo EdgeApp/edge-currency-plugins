@@ -1,7 +1,7 @@
 import { all } from '../info/all'
-import { Coin } from './coin'
+import { CoinInfo } from './../../plugin/types'
 
-export function getCoinFromString(coinName: string): Coin {
+export function getCoinFromString(coinName: string): CoinInfo {
   const pluginInfo = all.find(
     pluginInfo => pluginInfo.coinInfo.name === coinName
   )

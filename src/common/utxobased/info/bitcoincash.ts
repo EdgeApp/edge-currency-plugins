@@ -2,8 +2,7 @@ import * as bitcoin from 'altcoin-js'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
-import { EngineInfo, PluginInfo } from '../../plugin/types'
-import { Coin } from '../keymanager/coin'
+import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoincash',
@@ -60,7 +59,7 @@ const engineInfo: EngineInfo = {
   }
 }
 
-export const coinInfo: Coin = {
+export const coinInfo: CoinInfo = {
   name: 'bitcoincash',
   segwit: false,
   sighash: bitcoin.Psbt.BCH_SIGHASH_ALL,
