@@ -1,6 +1,8 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
+import { CoinInfo } from '../../../../../src/common/plugin/types'
+import { all } from '../../../../../src/common/utxobased/info/all'
 import {
   addressToScriptPubkey,
   privateKeyToWIF,
@@ -14,6 +16,14 @@ import {
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
 import { fixtures } from './altcointestfixtures'
 
+function getCoinInfo(name: string): CoinInfo {
+  const pluginInfo = all.find(pluginInfo => pluginInfo.coinInfo.name === name)
+  if (pluginInfo == null) {
+    throw new Error('Could not find coin info ' + name)
+  }
+  return pluginInfo.coinInfo
+}
+
 describe('altcoin test fixtures', () => {
   fixtures.coins.forEach(f => {
     // test deriving a xpriv from a seed for each coin
@@ -23,7 +33,7 @@ describe('altcoin test fixtures', () => {
           seed: f.mnemonic,
           network: j.network,
           type: j.type,
-          coin: f.name
+          coinInfo: getCoinInfo(f.name)
         })
         expect(resultLegacy).to.equal(j.xpriv)
       })
@@ -35,7 +45,7 @@ describe('altcoin test fixtures', () => {
           xpriv: j.xpriv,
           network: j.network,
           type: j.type,
-          coin: f.name
+          coinInfo: getCoinInfo(f.name)
         })
         expect(resultLegacy).to.equals(j.xpub)
       })
@@ -49,7 +59,7 @@ describe('altcoin test fixtures', () => {
           type: j.type,
           bip44ChangeIndex: 0,
           bip44AddressIndex: j.bip44AddressIndex,
-          coin: f.name
+          coinInfo: getCoinInfo(f.name)
         })
         const scriptPubkey = pubkeyToScriptPubkey({
           pubkey: pubkey,
@@ -59,7 +69,7 @@ describe('altcoin test fixtures', () => {
           scriptPubkey: scriptPubkey,
           network: j.network,
           addressType: j.addressType,
-          coin: f.name
+          coinInfo: getCoinInfo(f.name)
         })
         expect(address.address).to.equals(j.address)
         const legacyAddress = j.legacyAddress ?? j.address
@@ -68,7 +78,7 @@ describe('altcoin test fixtures', () => {
           address: address.address,
           network: j.network,
           addressType: j.addressType,
-          coin: f.name
+          coinInfo: getCoinInfo(f.name)
         })
         expect(scriptPubkeyRoundTrip).to.equals(scriptPubkey)
       })
@@ -80,12 +90,12 @@ describe('altcoin test fixtures', () => {
           const privateKey = wifToPrivateKey({
             wifKey: j.wifKey,
             network: j.network,
-            coin: f.name
+            coinInfo: getCoinInfo(f.name)
           })
           const wifKeyRoundTrip = privateKeyToWIF({
             privateKey: privateKey,
             network: j.network,
-            coin: f.name
+            coinInfo: getCoinInfo(f.name)
           })
           expect(j.wifKey).to.be.equal(wifKeyRoundTrip)
         })
@@ -97,7 +107,7 @@ describe('altcoin test fixtures', () => {
         const scriptPubkey = addressToScriptPubkey({
           address: j.address,
           network: j.network,
-          coin: f.name
+          coinInfo: getCoinInfo(f.name)
         })
         expect(scriptPubkey).to.equal(j.scriptPubkey)
       })
@@ -112,12 +122,12 @@ describe('altcoin test fixtures', () => {
             type: j.type,
             bip44ChangeIndex: 0,
             bip44AddressIndex: 0,
-            coin: f.name
+            coinInfo: getCoinInfo(f.name)
           })
           const derivedWIFKey = privateKeyToWIF({
             privateKey: derivedPrivateKey,
             network: j.network,
-            coin: f.name
+            coinInfo: getCoinInfo(f.name)
           })
           expect(derivedWIFKey).to.equal(j.wifKey)
         })

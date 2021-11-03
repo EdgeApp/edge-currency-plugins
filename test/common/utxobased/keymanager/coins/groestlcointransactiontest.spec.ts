@@ -2,6 +2,7 @@ import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
 import { NetworkEnum } from '../../../../../src/common/plugin/types'
+import { groestlcoin } from '../../../../../src/common/utxobased/info/all'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -20,7 +21,7 @@ describe('groestlcoin transaction creation and signing test', () => {
   const privateKey = wifToPrivateKey({
     wifKey,
     network: NetworkEnum.Mainnet,
-    coin: 'groestlcoin'
+    coinInfo: groestlcoin.coinInfo
   })
   const segwitScriptPubkey: string = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(privateKey),
@@ -55,7 +56,7 @@ describe('groestlcoin transaction creation and signing test', () => {
             address: 'Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg',
             network: NetworkEnum.Mainnet,
             addressType: AddressTypeEnum.p2pkh,
-            coin: 'groestlcoin'
+            coinInfo: groestlcoin.coinInfo
           }),
           amount: 80000
         }
@@ -64,7 +65,7 @@ describe('groestlcoin transaction creation and signing test', () => {
     const { hex: hexTxSigned } = await signTx({
       psbtBase64: base64Tx,
       privateKeys: [privateKey],
-      coin: 'groestlcoin'
+      coinInfo: groestlcoin.coinInfo
     })
     expect(hexTxSigned).to.equal(
       '020000000001013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d0000000000ffffffff0180380100000000001976a914d9863e608009f46ce023c852c7c209a607f8542b88ac024730440220558f35be4edc22260bf98fe197e39aff6bfc3717be853735be837a30bd2a0f4202207b2429dd031e851b82836e24524689c70a8c8bf4be58f9b4be23bf3e76fa577a0121030f25e157a5ddc119bf370beb688878a3600461eb5c769a5556bdfe225d9a246e00000000'

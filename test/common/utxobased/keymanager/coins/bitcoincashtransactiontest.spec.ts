@@ -2,6 +2,10 @@ import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
 import { NetworkEnum } from '../../../../../src/common/plugin/types'
+import {
+  bitcoin,
+  bitcoincash
+} from '../../../../../src/common/utxobased/info/all'
 import { cdsScriptTemplates } from '../../../../../src/common/utxobased/keymanager/bitcoincashUtils/checkdatasig'
 import {
   addressToScriptPubkey,
@@ -23,7 +27,7 @@ describe('bitcoincash transaction creation and signing test', () => {
   const privateKey = wifToPrivateKey({
     wifKey,
     network: NetworkEnum.Mainnet,
-    coin: 'bitcoin'
+    coinInfo: bitcoin.coinInfo
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(privateKey),
@@ -32,7 +36,7 @@ describe('bitcoincash transaction creation and signing test', () => {
   const address: string = scriptPubkeyToAddress({
     scriptPubkey: scriptPubkey,
     network: NetworkEnum.Mainnet,
-    coin: 'bitcoin',
+    coinInfo: bitcoin.coinInfo,
     addressType: AddressTypeEnum.p2pkh
   }).address
   it('Create transaction with one legacy input and one output', async () => {
@@ -45,7 +49,7 @@ describe('bitcoincash transaction creation and signing test', () => {
     */
     const base64Tx: string = createTx({
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoincash',
+      coinInfo: bitcoincash.coinInfo,
       rbf: false,
       inputs: [
         {
@@ -76,7 +80,7 @@ describe('bitcoincash transaction creation and signing test', () => {
             address: address,
             network: NetworkEnum.Mainnet,
             addressType: AddressTypeEnum.p2pkh,
-            coin: 'bitcoin'
+            coinInfo: bitcoin.coinInfo
           }),
           amount: 80000
         }
@@ -85,7 +89,7 @@ describe('bitcoincash transaction creation and signing test', () => {
     const signedTx = await signTx({
       psbtBase64: base64Tx,
       privateKeys: [privateKey],
-      coin: 'bitcoincash'
+      coinInfo: bitcoincash.coinInfo
     })
     expect(signedTx.hex).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006a473044022041e30e01f06523646374a356a61238da09f67cfbb5017ff7df47be7c5d1fc1bf0220788ed258f1b6d9c2b28d49c10909cd2cf48f49139c1bb9fe6bfd102f9bf4e44141210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffff0180380100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000'
@@ -99,7 +103,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
   const privateKey = wifToPrivateKey({
     wifKey,
     network: NetworkEnum.Mainnet,
-    coin: 'bitcoin'
+    coinInfo: bitcoin.coinInfo
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(privateKey),
@@ -115,7 +119,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
   const address: string = scriptPubkeyToAddress({
     scriptPubkey: scriptPubkey,
     network: NetworkEnum.Mainnet,
-    coin: 'bitcoin',
+    coinInfo: bitcoin.coinInfo,
     addressType: AddressTypeEnum.p2pkh
   }).address
   it('Create transaction with one legacy input and one output', async () => {
@@ -128,7 +132,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
     */
     const base64Tx: string = createTx({
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoincash',
+      coinInfo: bitcoincash.coinInfo,
       rbf: false,
       inputs: [
         {
@@ -156,7 +160,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
             address: address,
             network: NetworkEnum.Mainnet,
             addressType: AddressTypeEnum.p2pkh,
-            coin: 'bitcoin'
+            coinInfo: bitcoin.coinInfo
           }),
           amount: 80000
         }
@@ -165,7 +169,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
     const signedTx = await signTx({
       psbtBase64: base64Tx,
       privateKeys: [privateKey],
-      coin: 'bitcoincash'
+      coinInfo: bitcoincash.coinInfo
     })
     expect(signedTx.hex).to.equal(
       '02000000010c95c06e793d969af6d1b253d71da18bbc3e549a9d9816214c2a21bb1eed9be600000000fa4730440220398da49dabcb8bde7b004d62b7a4f50e0c8b74e5f0f99ebb86ce2932ba3df05e02200ba98a43fa4f67f6252b04f586660ed934ee1ef2c3de6cca3ec3b407c93b095c41210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f4554c8e4630440220256c12175e809381f97637933ed6ab97737d263eaaebca6add21bced67fd12a402205ce29ecc1369d6fc1b51977ed38faaf41119e3be1d7edfafd7cfaf0b6061bd070021038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508bb210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455acffffffff0180380100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000'

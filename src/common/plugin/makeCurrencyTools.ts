@@ -28,16 +28,14 @@ export function makeCurrencyTools(
   io: EdgeIo,
   pluginInfo: PluginInfo
 ): EdgeCurrencyTools {
-  const { currencyInfo, engineInfo } = pluginInfo
+  const { currencyInfo, engineInfo, coinInfo } = pluginInfo
 
   const fns: EdgeCurrencyTools = {
     async createPrivateKey(
       walletType: string,
       opts?: JsonObject
     ): Promise<JsonObject> {
-      const mnemonicKey = pluginUtils.getMnemonicKey({
-        coin: engineInfo.network
-      })
+      const mnemonicKey = pluginUtils.getMnemonicKey(coinInfo.name)
       const mnemonic = bip39.entropyToMnemonic(Buffer.from(io.random(32)))
       const keys: JsonObject = {
         [mnemonicKey]: mnemonic
@@ -51,11 +49,11 @@ export function makeCurrencyTools(
     },
 
     async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-      const key = utxoUtils.getXpubKey({ coin: engineInfo.network })
+      const key = utxoUtils.getXpubKey(coinInfo.name)
       // TODO: which xpub should be saved? the root path (m) or hardened path with the wallet format path (m/{purpose}'/{coinType}'/{account}')?
       const publicKey: CurrencyFormatKeys = utxoUtils.deriveXpubsFromKeys({
         keys: walletInfo.keys,
-        coin: engineInfo.network,
+        coinInfo,
         network: engineInfo.networkType ?? NetworkEnum.Mainnet
       })
       walletInfo.keys[key] = publicKey
@@ -87,7 +85,7 @@ export function makeCurrencyTools(
       if (pathname !== '') {
         const parsedPath = utxoUtils.parsePathname({
           pathname: uriObj.pathname,
-          coin: engineInfo.network,
+          coinInfo,
           network: engineInfo.networkType ?? NetworkEnum.Mainnet
         })
         if (parsedPath == null) throw new Error('InvalidUriError')

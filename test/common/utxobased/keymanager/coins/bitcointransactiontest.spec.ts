@@ -2,6 +2,7 @@ import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
 import { NetworkEnum } from '../../../../../src/common/plugin/types'
+import { bitcoin } from '../../../../../src/common/utxobased/info/all'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -29,7 +30,7 @@ describe('bitcoin bip32 seed, aka airbitz seed, to xpriv. Taken from official bi
         '//z59vPw7ern5OHe29jV0s/MycbDwL26t7SxrquopaKfnJmWk5CNioeEgX57eHVyb2xpZmNgXVpXVFFOS0hFQg==',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     expect(result).to.equal(
       'xprv9vHkqa6EV4sPZHYqZznhT2NPtPCjKuDKGY38FBWLvgaDx45zo9WQRUT3dKYnjwih2yJD9mkrocEZXo1ex8G81dwSM1fwqWpWkeS3v86pgKt'
@@ -43,7 +44,7 @@ describe('bitcoin from bip32 seed to private key', () => {
       seed: 'Ha/lqCZZCz+VWN2eGrHYuG/ag6S8w67rldgfCrlcPWI=',
       network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     const privateKey = xprivToPrivateKey({
       xpriv,
@@ -51,12 +52,12 @@ describe('bitcoin from bip32 seed to private key', () => {
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     const wifKey = privateKeyToWIF({
       privateKey: privateKey,
       network: NetworkEnum.Mainnet,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     expect(wifKey).to.equal(
       'L4XwV2KLfsWYzaHbZRBGfrYBabYVCRUz8N6juyUDbMxYBPAeVdug'
@@ -71,7 +72,7 @@ describe('bitcoin get script pubkeys from address', () => {
       address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     expect(scriptPubkey).to.equal(
       '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
@@ -82,7 +83,7 @@ describe('bitcoin get script pubkeys from address', () => {
       address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     expect(scriptPubkey).to.equal(
       '0014c0cebcd6c3d3ca8c75dc5ec62ebe55330ef910e2'
@@ -93,7 +94,7 @@ describe('bitcoin get script pubkeys from address', () => {
       address: '2Mu9hifsg4foPLkyo9i1isPWTobnNmXL3Qk',
       network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     expect(scriptPubkey).to.equal(
       'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
@@ -104,7 +105,7 @@ describe('bitcoin get script pubkeys from address', () => {
       address: 'tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7',
       network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.p2wsh,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     expect(scriptPubkey).to.equal(
       '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
@@ -118,7 +119,7 @@ describe('bitcoin address to electrum script hash', () => {
       address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     expect(scriptPubkey).to.equal(
       '76a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac'
@@ -136,7 +137,7 @@ describe('bitcoin transaction creation and signing test', () => {
   const privateKey = wifToPrivateKey({
     wifKey,
     network: NetworkEnum.Mainnet,
-    coin: 'bitcoin'
+    coinInfo: bitcoin.coinInfo
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
     pubkey: privateKeyToPubkey(privateKey),
@@ -157,19 +158,19 @@ describe('bitcoin transaction creation and signing test', () => {
   const address: string = scriptPubkeyToAddress({
     scriptPubkey: scriptPubkey,
     network: NetworkEnum.Mainnet,
-    coin: 'bitcoin',
+    coinInfo: bitcoin.coinInfo,
     addressType: AddressTypeEnum.p2pkh
   }).address
   const segwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: segwitScriptPubkey,
     network: NetworkEnum.Mainnet,
-    coin: 'bitcoin',
+    coinInfo: bitcoin.coinInfo,
     addressType: AddressTypeEnum.p2wpkh
   }).address
   const wrappedSegwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: wrappedSegwitScriptPubkey,
     network: NetworkEnum.Mainnet,
-    coin: 'bitcoin',
+    coinInfo: bitcoin.coinInfo,
     addressType: AddressTypeEnum.p2sh
   }).legacyAddress
 
@@ -213,7 +214,7 @@ describe('bitcoin transaction creation and signing test', () => {
             address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
             network: NetworkEnum.Mainnet,
             addressType: AddressTypeEnum.p2pkh,
-            coin: 'bitcoin'
+            coinInfo: bitcoin.coinInfo
           }),
           amount: 80000
         }
@@ -222,7 +223,7 @@ describe('bitcoin transaction creation and signing test', () => {
     const signedTx = await signTx({
       psbtBase64: base64Tx,
       privateKeys: [privateKey],
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     expect(signedTx.hex).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7' +
@@ -251,7 +252,7 @@ describe('bitcoin transaction creation and signing test', () => {
         address: segwitAddress,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2wpkh,
-        coin: 'bitcoin'
+        coinInfo: bitcoin.coinInfo
       }),
       amount: 200
     }
@@ -266,7 +267,7 @@ describe('bitcoin transaction creation and signing test', () => {
     const { hex: rawtransaction } = await signTx({
       psbtBase64: base64Tx,
       privateKeys: [privateKey],
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
 
     expect(rawtransaction).to.equal(
@@ -294,7 +295,7 @@ describe('bitcoin transaction creation and signing test', () => {
     const { hex: segwitRawTransaction } = await signTx({
       psbtBase64: segwitTx,
       privateKeys: Array(nOutputs).fill(privateKey),
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
 
     expect(segwitRawTransaction).to.equal(
@@ -342,7 +343,7 @@ describe('bitcoin transaction creation and signing test', () => {
         address: address,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2pkh,
-        coin: 'bitcoin'
+        coinInfo: bitcoin.coinInfo
       }),
       amount: 200
     }
@@ -352,7 +353,7 @@ describe('bitcoin transaction creation and signing test', () => {
         address: segwitAddress,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2wpkh,
-        coin: 'bitcoin'
+        coinInfo: bitcoin.coinInfo
       }),
       amount: 200
     }
@@ -362,7 +363,7 @@ describe('bitcoin transaction creation and signing test', () => {
         address: wrappedSegwitAddress,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2sh,
-        coin: 'bitcoin'
+        coinInfo: bitcoin.coinInfo
       }),
       amount: 200
     }
@@ -377,7 +378,7 @@ describe('bitcoin transaction creation and signing test', () => {
     const { hex: rawtransaction } = await signTx({
       psbtBase64: base64Tx,
       privateKeys: [privateKey, privateKey, privateKey],
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
     expect(rawtransaction).to.equal(
       '020000000001033ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006b483045022100c10c70dab0e8e88a67bb013d276b88b3d5a52d3cb3ec53aa7d2e7c4704e89dc602207fabdfa3b55b196da7792de9fe436535501fce2fe76439d5361bd5d9dd69bd0901210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffffb385ee16c29a8148e7e99187a293e96fcf9a16e4967d3afc8f7838024dfa268b0100000000ffffffff9e5d335ec9133a9e5ed426d08c421273594b82ab9876b5beb66716384688f2e901000000171600148bbc95d2709c71607c60ee3f097c1217482f518dffffffff03c8000000000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88acc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc80000000000000017a9142427d83a84e5793ce6f6efc33020d844dd217dbb8700024730440220008a9738e8acdc002ae4bb415ff7368161057ed9b22fd8b671c5acbb47379a69022045ab99fa73730fa367d3972d41b26b4ef337b34c4e593c4f47800ed4ee1c64fd01210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f4550247304402201d4f3ee993cfb468dc41387ac618081c36c49ebc9db528155b51d346382c347802201d1c07201f80df3e6e86195444532b6be86e9a429a7eb5a0ae268df9760a974601210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f45500000000'
@@ -408,7 +409,7 @@ describe('bitcoin transaction creation and signing test', () => {
         address: address,
         network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2pkh,
-        coin: 'bitcoin'
+        coinInfo: bitcoin.coinInfo
       }),
       amount: 200
     }
@@ -423,7 +424,7 @@ describe('bitcoin transaction creation and signing test', () => {
     const signedTx = await signTx({
       psbtBase64: base64Tx,
       privateKeys: [privateKey],
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
 
     const txInputs: TxInput[] = Array(nOutputs)
@@ -446,7 +447,7 @@ describe('bitcoin transaction creation and signing test', () => {
     const { hex: hexTxMultiSigned } = await signTx({
       psbtBase64: base64TxMulti,
       privateKeys: Array(nOutputs).fill(privateKey),
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     })
 
     expect(hexTxMultiSigned).to.equal(

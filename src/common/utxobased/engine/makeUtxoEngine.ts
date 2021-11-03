@@ -51,7 +51,7 @@ export async function makeUtxoEngine(
     io,
     pluginState
   } = config
-  const { currencyInfo, engineInfo } = pluginInfo
+  const { currencyInfo, engineInfo, coinInfo } = pluginInfo
 
   const walletFormat = getWalletFormat(walletInfo)
   if (
@@ -65,7 +65,7 @@ export async function makeUtxoEngine(
 
   const walletTools = makeUtxoWalletTools({
     keys: walletInfo.keys,
-    coin: engineInfo.network,
+    coinInfo,
     network
   })
 
@@ -177,14 +177,11 @@ export async function makeUtxoEngine(
     },
 
     getDisplayPrivateSeed(): string | null {
-      return getMnemonic({ keys: walletInfo.keys, coin: engineInfo.network })
+      return getMnemonic(walletInfo.keys, coinInfo.name)
     },
 
     getDisplayPublicSeed(): string | null {
-      const xpubs = getXpubs({
-        keys: walletInfo.keys,
-        coin: engineInfo.network
-      })
+      const xpubs = getXpubs(walletInfo.keys, coinInfo.name)
       return Object.values(xpubs).join('\n')
     },
 
@@ -333,7 +330,7 @@ export async function makeUtxoEngine(
         forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
         targets,
         feeRate,
-        coin: engineInfo.network,
+        coinInfo,
         network,
         setRBF,
         freshChangeAddress,
@@ -412,7 +409,7 @@ export async function makeUtxoEngine(
       const xprivKeys = await fetchOrDeriveXprivFromKeys({
         keys: walletInfo.keys,
         walletLocalEncryptedDisklet,
-        coin: engineInfo.network,
+        coinInfo,
         network
       })
 
@@ -435,7 +432,7 @@ export async function makeUtxoEngine(
       )
       const signedTx = await signTx({
         psbtBase64: psbt.base64,
-        coin: engineInfo.network,
+        coinInfo,
         privateKeys
       })
       transaction.txid = signedTx.id
@@ -481,7 +478,7 @@ export async function makeUtxoEngine(
       const tmpProcessor = await makeProcessor(tmpConfig)
       const tmpWalletTools = makeUtxoWalletTools({
         keys: { wifKeys: privateKeys },
-        coin: engineInfo.network,
+        coinInfo,
         network
       })
 

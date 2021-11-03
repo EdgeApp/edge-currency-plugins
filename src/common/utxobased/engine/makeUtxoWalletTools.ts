@@ -1,4 +1,9 @@
-import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
+import {
+  AddressPath,
+  CoinInfo,
+  CurrencyFormat,
+  NetworkEnum
+} from '../../plugin/types'
 import {
   addressToScriptPubkey,
   privateKeyToPubkey,
@@ -26,7 +31,7 @@ export interface UtxoKeyFormat {
 
 export interface WalletToolsConfig {
   keys: UtxoKeyFormat
-  coin: string
+  coinInfo: CoinInfo
   network: NetworkEnum
 }
 
@@ -72,9 +77,9 @@ interface AddressReturn {
 export function makeUtxoWalletTools(
   config: WalletToolsConfig
 ): UTXOPluginWalletTools {
-  const { coin, network } = config
+  const { coinInfo, keys, network } = config
 
-  const xpubKeys = getXpubs(config)
+  const xpubKeys = getXpubs(keys, coinInfo.name)
 
   let wifKeys: string[]
   if (config.keys.wifKeys != null) {
@@ -86,7 +91,7 @@ export function makeUtxoWalletTools(
       return wifToPrivateKey({
         wifKey: wifKeys[args.addressIndex],
         network,
-        coin
+        coinInfo
       })
     } else {
       throw new Error('no wif key at index')
@@ -106,7 +111,7 @@ export function makeUtxoWalletTools(
       return xpubToPubkey({
         xpub: xpubKeys[args.format] ?? '',
         network,
-        coin,
+        coinInfo,
         type: currencyFormatToPurposeType(args.format),
         bip44ChangeIndex: args.changeIndex,
         bip44AddressIndex: args.addressIndex
@@ -130,12 +135,12 @@ export function makeUtxoWalletTools(
         scriptPubkey,
         network,
         addressType,
-        coin
+        coinInfo
       })
     },
 
     addressToScriptPubkey(address: string): string {
-      return addressToScriptPubkey({ address, network, coin })
+      return addressToScriptPubkey({ address, network, coinInfo })
     },
 
     scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): AddressReturn {
@@ -145,7 +150,7 @@ export function makeUtxoWalletTools(
         scriptPubkey: args.scriptPubkey,
         network,
         addressType,
-        coin
+        coinInfo
       })
     },
 
@@ -163,7 +168,7 @@ export function makeUtxoWalletTools(
         xpriv: xprivKeys[path.format] ?? '',
         network,
         type: currencyFormatToPurposeType(path.format),
-        coin,
+        coinInfo,
         bip44ChangeIndex: path.changeIndex,
         bip44AddressIndex: path.addressIndex
       })

@@ -2,6 +2,7 @@ import { expect } from 'chai'
 
 import { NetworkEnum } from '../../../../src/common/plugin/types'
 import { makeUtxoWalletTools } from '../../../../src/common/utxobased/engine/makeUtxoWalletTools'
+import { bitcoin } from '../../../../src/common/utxobased/info/all'
 
 describe('wallet tools tests', () => {
   const walletTools = makeUtxoWalletTools({
@@ -21,7 +22,7 @@ describe('wallet tools tests', () => {
           'yprvAHwhK6RbpuS3dgCYHM5jc2ZvEKd7Bi61u9FVhYMpgMSuZS613T1xxQeKTffhrHY79hZ5PsskBjcc6C2V7DrnsMsNaGDaWev3GLRQRgV7hxF'
       }
     },
-    coin: 'bitcoin',
+    coinInfo: bitcoin.coinInfo,
     network: NetworkEnum.Mainnet
   })
 
@@ -50,7 +51,7 @@ describe('wallet tools wif test', () => {
     keys: {
       wifKeys: ['L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr']
     },
-    coin: 'bitcoin',
+    coinInfo: bitcoin.coinInfo,
     network: NetworkEnum.Mainnet
   })
 

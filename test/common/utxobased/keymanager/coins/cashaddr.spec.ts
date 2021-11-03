@@ -2,6 +2,7 @@ import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
 import { NetworkEnum } from '../../../../../src/common/plugin/types'
+import { bitcoin } from '../../../../../src/common/utxobased/info/all'
 import {
   cashAddressToHash,
   CashaddrTypeEnum,
@@ -20,11 +21,11 @@ describe('bitcoin cash address tests', () => {
       address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     }),
     network: NetworkEnum.Mainnet,
     scriptType: ScriptTypeEnum.p2pkh,
-    coin: 'bitcoin'
+    coinInfo: bitcoin.coinInfo
   })
   it('pubkey hash to cashaddr', () => {
     const address = hashToCashAddress(
@@ -51,11 +52,11 @@ describe('bitcoin cash address tests', () => {
       address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
       network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'bitcoin'
+      coinInfo: bitcoin.coinInfo
     }),
     network: NetworkEnum.Mainnet,
     scriptType: ScriptTypeEnum.p2sh,
-    coin: 'bitcoin'
+    coinInfo: bitcoin.coinInfo
   })
 
   it('script hash to cashaddr', () => {

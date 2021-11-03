@@ -2,7 +2,7 @@ import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
 import { EdgeParsedUri } from 'edge-core-js/types'
 
-import { CurrencyFormat, NetworkEnum } from '../../plugin/types'
+import { CoinInfo, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 import * as pluginUtils from '../../plugin/utils'
 import { IUTXO } from '../db/types'
 import {
@@ -74,28 +74,29 @@ export const getScriptTypeFromPurposeType = (
 
 export const validScriptPubkeyFromAddress = (args: {
   address: string
-  coin: string
+  coinInfo: CoinInfo
   network: NetworkEnum
 }): string =>
   addressToScriptPubkey({
-    ...args,
+    address: args.address,
+    coinInfo: args.coinInfo,
+    network: args.network,
     legacy: verifyAddress(args) === VerifyAddressEnum.legacy
   })
 
-export const getXprivKey = ({ coin }: { coin: string }): string =>
-  `${coin}Xpriv`
+export const getXprivKey = (coinName: string): string => `${coinName}Xpriv`
 
-export const getXpubKey = ({ coin }: { coin: string }): string => `${coin}Xpub`
+export const getXpubKey = (coinName: string): string => `${coinName}Xpub`
 
-export const getXpriv = (args: {
-  keys: UtxoKeyFormat
-  coin: string
-}): CurrencyFormatKeys => args.keys[getXprivKey(args)]
+export const getXpriv = (
+  keys: UtxoKeyFormat,
+  coinName: string
+): CurrencyFormatKeys => keys[getXprivKey(coinName)]
 
-export const getXpubs = (args: {
-  keys: UtxoKeyFormat
-  coin: string
-}): CurrencyFormatKeys => args.keys[getXpubKey(args)]
+export const getXpubs = (
+  keys: UtxoKeyFormat,
+  coinName: string
+): CurrencyFormatKeys => keys[getXpubKey(coinName)]
 
 export const getWalletCoinType = (args: { keys: UtxoKeyFormat }): number =>
   args.keys.coinType ?? 0
@@ -145,7 +146,7 @@ export type CurrencyFormatKeys = {
 export const fetchOrDeriveXprivFromKeys = async (args: {
   keys: UtxoKeyFormat
   walletLocalEncryptedDisklet: Disklet
-  coin: string
+  coinInfo: CoinInfo
   network: NetworkEnum
 }): Promise<CurrencyFormatKeys> => {
   const filename = 'walletKeys.json'
@@ -165,14 +166,14 @@ export const fetchOrDeriveXprivFromKeys = async (args: {
 
 export const deriveXprivFromKeys = (args: {
   keys: UtxoKeyFormat
-  coin: string
+  coinInfo: CoinInfo
   network: NetworkEnum
 }): CurrencyFormatKeys => {
   const keys: CurrencyFormatKeys = {}
   const xprivArgs = {
-    seed: pluginUtils.getMnemonic(args),
+    seed: pluginUtils.getMnemonic(args.keys, args.coinInfo.name),
     coinType: getWalletCoinType(args),
-    coin: args.coin,
+    coinInfo: args.coinInfo,
     network: args.network
   }
   const walletPurpose = getPurposeTypeFromKeys(args)
@@ -203,13 +204,15 @@ export const deriveXprivFromKeys = (args: {
 
 export const deriveXpubsFromKeys = (args: {
   keys: UtxoKeyFormat
-  coin: string
+  coinInfo: CoinInfo
   network: NetworkEnum
 }): CurrencyFormatKeys => {
   const xpubs: CurrencyFormatKeys = {}
   for (const format of getWalletSupportedFormats(args)) {
     xpubs[format] = deriveXpub({
-      ...args,
+      keys: args.keys,
+      coinInfo: args.coinInfo,
+      network: args.network,
       type: currencyFormatToPurposeType(format)
     })
   }
@@ -219,7 +222,7 @@ export const deriveXpubsFromKeys = (args: {
 export const deriveXpub = (args: {
   keys: UtxoKeyFormat
   type: BIP43PurposeTypeEnum
-  coin: string
+  coinInfo: CoinInfo
   network: NetworkEnum
 }): string => {
   const xpriv = deriveXprivFromKeys(args)[
@@ -232,7 +235,7 @@ export const deriveXpub = (args: {
 
 export const parsePathname = (args: {
   pathname: string
-  coin: string
+  coinInfo: CoinInfo
   network: NetworkEnum
 }): EdgeParsedUri => {
   const edgeParsedUri: EdgeParsedUri = {}
@@ -242,7 +245,7 @@ export const parsePathname = (args: {
     wifToPrivateKey({
       wifKey: args.pathname,
       network: args.network,
-      coin: args.coin
+      coinInfo: args.coinInfo
     })
     edgeParsedUri.privateKeys = [args.pathname]
   } catch (e) {
@@ -250,7 +253,7 @@ export const parsePathname = (args: {
     const addressFormat = verifyAddress({
       address: args.pathname,
       network: args.network,
-      coin: args.coin
+      coinInfo: args.coinInfo
     })
 
     switch (addressFormat) {
