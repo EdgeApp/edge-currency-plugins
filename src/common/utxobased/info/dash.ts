@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { EngineInfo, PluginInfo } from '../../plugin/types'
+import { Coin } from '../keymanager/coin'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'dash',
@@ -50,4 +51,31 @@ const engineInfo: EngineInfo = {
   }
 }
 
-export const info: PluginInfo = { currencyInfo, engineInfo }
+export const coinInfo: Coin = {
+  name: 'dash',
+  segwit: false,
+  coinType: 5,
+  mainnetConstants: {
+    messagePrefix: 'unused',
+    wif: 0xcc,
+    legacyXPriv: 0x02fe52f8,
+    legacyXPub: 0x02fe52cc,
+    pubkeyHash: 0x4c,
+    scriptHash: 0x10
+  },
+
+  testnetConstants: {
+    messagePrefix: 'unused',
+    wif: 0xef,
+    legacyXPriv: 0x04358394,
+    legacyXPub: 0x043587cf,
+    pubkeyHash: 0x6f,
+    scriptHash: 0xc4
+  }
+}
+
+export const info: PluginInfo = {
+  currencyInfo,
+  engineInfo,
+  coinInfo
+}
