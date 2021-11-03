@@ -8,6 +8,7 @@ import {
 } from 'edge-core-js/types'
 
 import { IUTXO } from '../utxobased/db/types'
+import { Coin } from '../utxobased/keymanager/coin'
 import { EngineEmitter } from './makeEngineEmitter'
 import { PluginState } from './pluginState'
 
@@ -35,6 +36,7 @@ export interface TxOptions {
 export interface PluginInfo {
   currencyInfo: EdgeCurrencyInfo
   engineInfo: EngineInfo
+  coinInfo: Coin
 }
 
 export interface EngineInfo {
