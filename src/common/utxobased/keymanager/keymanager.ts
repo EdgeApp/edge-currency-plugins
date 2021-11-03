@@ -870,7 +870,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   const mergedArray = [...args.utxos, ...args.forceUseUtxo]
   const uniqueUtxos = [
     ...mergedArray
-      .reduce((map, obj) => map.set(obj.id, obj), new Map())
+      .reduce((map, obj) => map.set(obj.id, obj), new Map<string, IUTXO>())
       .values()
   ]
 

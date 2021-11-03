@@ -151,16 +151,17 @@ export function makeUtxoWalletTools(
 
     getPrivateKey(args: GetPrivateKeyArgs): string {
       const { path, xprivKeys } = args
+      const xpriv = xprivKeys[path.format]
       if (wifKeys != null) {
         return getPrivateKeyAtIndex(path)
       }
-      if (xprivKeys[path.format] != null) {
+      if (xpriv == null) {
         throw new Error(
           `wallet tools: xpriv with format ${path.format} does not exist`
         )
       }
       return xprivToPrivateKey({
-        xpriv: xprivKeys[path.format] ?? '',
+        xpriv: xpriv,
         network,
         type: currencyFormatToPurposeType(path.format),
         coin,
