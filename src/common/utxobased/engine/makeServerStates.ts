@@ -377,8 +377,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     return serverStates[uri].blockHeight
   }
 
-  refillServers()
-
   return {
     setPickNextTaskCB,
     stop,
