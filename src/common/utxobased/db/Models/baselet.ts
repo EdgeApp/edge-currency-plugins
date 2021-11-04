@@ -45,7 +45,7 @@ export const txIdsByBlockHeightOptions: RangeBaseOptions<
   'blockHeight',
   'txid'
 > = {
-  name: 'TxIdByBlockHeight',
+  name: 'txIdByBlockHeight',
   bucketSize: 100000,
   rangeKey: 'blockHeight',
   idKey: 'txid'
