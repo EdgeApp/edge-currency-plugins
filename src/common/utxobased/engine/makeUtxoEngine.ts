@@ -1,4 +1,5 @@
 import * as bs from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
@@ -18,25 +19,23 @@ import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
-import { getMnemonic } from '../../plugin/utils'
 import { makeProcessor } from '../db/makeProcessor'
 import {
   fromEdgeTransaction,
   toEdgeTransaction
 } from '../db/Models/ProcessorTransaction'
 import { IProcessorTransaction, IUTXO } from '../db/types'
+import {
+  asNumbWalletInfo,
+  asPrivateKey,
+  NumbWalletInfo
+} from '../keymanager/cleaners'
 import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import { UTXOTxOtherParams } from './types'
-import {
-  fetchOrDeriveXprivFromKeys,
-  getWalletFormat,
-  getWalletSupportedFormats,
-  getXpubs,
-  sumUtxos
-} from './utils'
+import { fetchOrDeriveXprivFromKeys, sumUtxos } from './utils'
 
 export async function makeUtxoEngine(
   config: EngineConfig
@@ -45,14 +44,23 @@ export async function makeUtxoEngine(
     network,
     pluginInfo,
     pluginDisklet,
-    walletInfo,
+    // Rename to make it explicit that this is sensitive memory
+    walletInfo: sensitiveWalletInfo,
     options: { walletLocalDisklet, walletLocalEncryptedDisklet, emitter, log },
     io,
     pluginState
   } = config
   const { currencyInfo, engineInfo, coinInfo } = pluginInfo
 
-  const walletFormat = getWalletFormat(walletInfo)
+  const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
+  // This walletInfo is desensitized (numb) and should be passed around over the original walletInfo
+  const walletInfo = asNumbWalletInfo(pluginInfo)(sensitiveWalletInfo)
+  const {
+    publicKey,
+    supportedFormats: walletFormatsSupported,
+    format: walletFormat
+  } = walletInfo.keys
+
   if (
     engineInfo.formats == null ||
     !engineInfo.formats.includes(walletFormat)
@@ -63,7 +71,7 @@ export async function makeUtxoEngine(
   }
 
   const walletTools = makeUtxoWalletTools({
-    keys: walletInfo.keys,
+    publicKey,
     coin: coinInfo.name,
     network
   })
@@ -86,6 +94,7 @@ export async function makeUtxoEngine(
   const state = makeUtxoEngineState({
     ...config,
     walletTools,
+    walletInfo,
     processor,
     pluginState
   })
@@ -162,7 +171,7 @@ export async function makeUtxoEngine(
         data: {
           walletInfo: {
             walletFormat,
-            walletFormatsSupported: getWalletSupportedFormats(walletInfo),
+            walletFormatsSupported,
             pluginType: currencyInfo.pluginId
           },
           processorState: await processor.dumpData(),
@@ -176,14 +185,14 @@ export async function makeUtxoEngine(
     },
 
     getDisplayPrivateSeed(): string | null {
-      return getMnemonic({ keys: walletInfo.keys, coin: coinInfo.name })
+      // Private key may be missing for watch-only wallets
+      const privateKey = asMaybe(asCurrencyPrivateKey)(sensitiveWalletInfo.keys)
+      if (privateKey == null) return null
+      return privateKey.seed
     },
 
     getDisplayPublicSeed(): string | null {
-      const xpubs = getXpubs({
-        keys: walletInfo.keys,
-        coin: coinInfo.name
-      })
+      const xpubs = publicKey.publicKeys
       return Object.values(xpubs).join('\n')
     },
 
@@ -426,9 +435,14 @@ export async function makeUtxoEngine(
       if (psbt == null || edgeSpendInfo == null)
         throw new Error('Invalid transaction data')
 
+      // Private key may be missing for watch-only wallets
+      const privateKey = asMaybe(asCurrencyPrivateKey)(sensitiveWalletInfo.keys)
+      if (privateKey == null)
+        throw new Error('Cannot sign a transaction for a read-only wallet')
+
       // Derive the xprivs on the fly, since we do not persist them
       const xprivKeys = await fetchOrDeriveXprivFromKeys({
-        keys: walletInfo.keys,
+        privateKey,
         walletLocalEncryptedDisklet,
         coin: coinInfo.name,
         network
@@ -477,6 +491,17 @@ export async function makeUtxoEngine(
 
     async sweepPrivateKeys(spendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
       const privateKeys = spendInfo.privateKeys ?? []
+      const dummyNumbWalletInfo: NumbWalletInfo = {
+        id: walletInfo.id,
+        type: walletInfo.type,
+        keys: {
+          format: walletInfo.keys.format,
+          supportedFormats: walletInfo.keys.supportedFormats,
+          publicKey: {
+            publicKeys: {}
+          }
+        }
+      }
       if (privateKeys.length < 1) throw new Error('No private keys given')
       let success: (
         value: EdgeTransaction | PromiseLike<EdgeTransaction>
@@ -496,7 +521,8 @@ export async function makeUtxoEngine(
       const tmpMetadata = await makeMetadata(tmpConfig)
       const tmpProcessor = await makeProcessor(tmpConfig)
       const tmpWalletTools = makeUtxoWalletTools({
-        keys: { wifKeys: privateKeys },
+        publicKey: dummyNumbWalletInfo.keys.publicKey,
+        wifKeys: privateKeys,
         coin: coinInfo.name,
         network
       })
@@ -537,6 +563,7 @@ export async function makeUtxoEngine(
           }
         },
         walletTools: tmpWalletTools,
+        walletInfo: dummyNumbWalletInfo,
         processor: tmpProcessor,
         pluginState
       })

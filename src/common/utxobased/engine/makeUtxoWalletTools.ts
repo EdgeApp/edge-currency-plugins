@@ -1,5 +1,6 @@
 import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
+import { PublicKey } from '../keymanager/cleaners'
 import {
   addressToScriptPubkey,
   privateKeyToPubkey,
@@ -14,27 +15,14 @@ import {
   CurrencyFormatKeys,
   currencyFormatToPurposeType,
   getAddressTypeFromPurposeType,
-  getScriptTypeFromPurposeType,
-  getXpubs
+  getScriptTypeFromPurposeType
 } from './utils'
 
-export interface UtxoKeyFormat {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [mnemonicKey: string]: any // ${coinName}Key = mnemonic or seed string
-  format?: CurrencyFormat
-  coinType?: number
-  wifKeys?: string[]
-}
-
 export interface WalletToolsConfig {
-  keys: UtxoKeyFormat
+  publicKey: PublicKey
+  wifKeys?: string[]
   coin: string
   network: NetworkEnum
-}
-
-export interface BitcoinWalletToolsConfig extends WalletToolsConfig {
-  keys: UtxoKeyFormat & { bitcoinKey: string }
-  coin: string // for example bitcoin
 }
 
 export interface UTXOPluginWalletTools {
@@ -87,16 +75,11 @@ interface GetScriptAddressReturn {
 export function makeUtxoWalletTools(
   config: WalletToolsConfig
 ): UTXOPluginWalletTools {
-  const { coin, network } = config
+  const { coin, network, publicKey, wifKeys = [] } = config
 
-  const xpubKeys = getXpubs(config)
+  const xpubKeys = publicKey.publicKeys
 
-  let wifKeys: string[]
-  if (config.keys.wifKeys != null) {
-    wifKeys = config.keys.wifKeys
-  }
-
-  const getPrivateKeyAtIndex = (args: AddressPath): string => {
+  const getPrivateKeyFromWifAtIndex = (args: AddressPath): string => {
     if (args.changeIndex === 0 && wifKeys[args.addressIndex] != null) {
       return wifToPrivateKey({
         wifKey: wifKeys[args.addressIndex],
@@ -110,8 +93,8 @@ export function makeUtxoWalletTools(
 
   const fns: UTXOPluginWalletTools = {
     getPubkey(args: AddressPath): string {
-      if (wifKeys != null) {
-        return privateKeyToPubkey(getPrivateKeyAtIndex(args))
+      if (wifKeys.length > 0) {
+        return privateKeyToPubkey(getPrivateKeyFromWifAtIndex(args))
       }
       if (xpubKeys[args.format] == null) {
         throw new Error(
@@ -167,8 +150,8 @@ export function makeUtxoWalletTools(
     getPrivateKey(args: GetPrivateKeyArgs): string {
       const { path, xprivKeys } = args
       const xpriv = xprivKeys[path.format]
-      if (wifKeys != null) {
-        return getPrivateKeyAtIndex(path)
+      if (wifKeys.length > 0) {
+        return getPrivateKeyFromWifAtIndex(path)
       }
       if (xpriv == null) {
         throw new Error(

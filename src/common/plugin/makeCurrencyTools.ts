@@ -1,5 +1,6 @@
 import * as bn from 'biggystring'
 import * as bip39 from 'bip39'
+import { uncleaner } from 'cleaners'
 import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
@@ -13,10 +14,13 @@ import {
 import * as uri from 'uri-js'
 import urlParse from 'url-parse'
 
-import * as utxoUtils from '../utxobased/engine/utils'
-import { CurrencyFormatKeys } from '../utxobased/engine/utils'
+import { parsePathname } from '../utxobased/engine/utils'
+import {
+  asNumbWalletInfo,
+  asPrivateKey,
+  PrivateKey
+} from '../utxobased/keymanager/cleaners'
 import { NetworkEnum, PluginInfo } from './types'
-import * as pluginUtils from './utils'
 import { getFormatsForNetwork } from './utils'
 
 /**
@@ -30,36 +34,29 @@ export function makeCurrencyTools(
 ): EdgeCurrencyTools {
   const { currencyInfo, engineInfo, coinInfo } = pluginInfo
 
+  const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
+  const wasCurrencyPrivateKey = uncleaner(asCurrencyPrivateKey)
+  const asCurrencyNumbWalletInfo = asNumbWalletInfo(pluginInfo)
+
   const fns: EdgeCurrencyTools = {
     async createPrivateKey(
-      walletType: string,
+      _walletType: string,
       opts?: JsonObject
     ): Promise<JsonObject> {
-      const mnemonicKey = pluginUtils.getMnemonicKey({
-        coin: coinInfo.name
-      })
       const mnemonic = bip39.entropyToMnemonic(Buffer.from(io.random(32)))
-      const keys: JsonObject = {
-        [mnemonicKey]: mnemonic
-      }
 
-      return {
-        ...keys,
+      const privateKey: PrivateKey = {
+        seed: mnemonic,
         format: opts?.format ?? engineInfo.formats?.[0] ?? 'bip44',
         coinType: opts?.coinType ?? coinInfo.coinType ?? 0
       }
+
+      return wasCurrencyPrivateKey(privateKey)
     },
 
     async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-      const key = utxoUtils.getXpubKey({ coin: coinInfo.name })
-      // TODO: which xpub should be saved? the root path (m) or hardened path with the wallet format path (m/{purpose}'/{coinType}'/{account}')?
-      const publicKey: CurrencyFormatKeys = utxoUtils.deriveXpubsFromKeys({
-        keys: walletInfo.keys,
-        coin: coinInfo.name,
-        network: engineInfo.networkType ?? NetworkEnum.Mainnet
-      })
-      walletInfo.keys[key] = publicKey
-      return walletInfo.keys
+      const numbWalletInfo = asCurrencyNumbWalletInfo(walletInfo)
+      return numbWalletInfo.keys.publicKey
     },
 
     async parseUri(uri: string): Promise<EdgeParsedUri> {
@@ -85,7 +82,7 @@ export function makeCurrencyTools(
       const parsedUri: EdgeParsedUri = {}
       // Parse the pathname and add it to the result object
       if (pathname !== '') {
-        const parsedPath = utxoUtils.parsePathname({
+        const parsedPath = parsePathname({
           pathname: uriObj.pathname,
           coin: coinInfo.name,
           network: engineInfo.networkType ?? NetworkEnum.Mainnet

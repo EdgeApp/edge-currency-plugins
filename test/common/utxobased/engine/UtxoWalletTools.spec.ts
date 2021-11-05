@@ -5,20 +5,12 @@ import { makeUtxoWalletTools } from '../../../../src/common/utxobased/engine/mak
 
 describe('wallet tools tests', () => {
   const walletTools = makeUtxoWalletTools({
-    keys: {
-      format: 'bip49',
-      bitcoinKey:
-        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-      coinType: 0,
-      dataKey: 'uU0scsGxX1IWo4D4v8oB0T+caUrYibGwBjHrR5xeoK0=',
-      syncKey: 'PFzlVyzztuA/QoSS/m9jHkvPv1s=',
-      bitcoinXpub: {
+    publicKey: {
+      publicKeys: {
         bip49:
-          'ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP'
-      },
-      bitcoinXpriv: {
-        bip49:
-          'yprvAHwhK6RbpuS3dgCYHM5jc2ZvEKd7Bi61u9FVhYMpgMSuZS613T1xxQeKTffhrHY79hZ5PsskBjcc6C2V7DrnsMsNaGDaWev3GLRQRgV7hxF'
+          'ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP',
+        bip84:
+          'zpub6qmK2GdQoxXphTU8DjQNBFc9xKc3XnoNBUhKHKfKchMmVLENqeVn8GcwL9ThKYme2Qqnvq8RSrJh2PkpPGhy5rXmizkRBZ7naCd33hHSpaN'
       }
     },
     coin: 'bitcoin',
@@ -47,9 +39,8 @@ describe('wallet tools tests', () => {
 
 describe('wallet tools wif test', () => {
   const walletTools = makeUtxoWalletTools({
-    keys: {
-      wifKeys: ['L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr']
-    },
+    publicKey: {} as any,
+    wifKeys: ['L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'],
     coin: 'bitcoin',
     network: NetworkEnum.Mainnet
   })
