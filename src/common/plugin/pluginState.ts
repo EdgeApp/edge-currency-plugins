@@ -3,15 +3,10 @@
 import { asArray, asEither, asNull, asObject, asString } from 'cleaners'
 import { navigateDisklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js/types'
-import { makeMemlet, Memlet } from 'memlet'
+import { makeMemlet } from 'memlet'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
-import {
-  asServerInfoCache,
-  ServerInfoCache,
-  Servers,
-  ServerScores
-} from './serverScores'
+import { asServerInfoCache, ServerScores } from './serverScores'
 
 const serverListInfoUrl = 'https://info1.edge.app/v1/blockBook/'
 const asWebsocketUrl = (raw: unknown): string => {
@@ -43,133 +38,56 @@ export interface PluginStateSettings {
   log: EdgeLog
 }
 
-export class PluginState {
-  // On-disk server information:
-  // serverCache: ServerCache
+export interface PluginState {
+  addEngine: (engineState: UtxoEngineState) => void
+  removeEngine: (engineState: UtxoEngineState) => void
+  dumpData: () => JsonObject
+  load: () => Promise<PluginState>
+  serverScoreDown: (uri: string) => void
+  serverScoreUp: (uri: string, score: number) => void
+  clearCache: () => Promise<void>
+  getLocalServers: (
+    numServersWanted: number,
+    includePatterns: string[]
+  ) => string[]
+  updateServers: (settings: JsonObject) => Promise<void>
+}
 
-  /**
-   * Begins notifying the engine of state changes. Used at connection time.
-   */
-  addEngine(engineState: UtxoEngineState): void {
-    this.engines.push(engineState)
-  }
+export function makePluginState(settings: PluginStateSettings): PluginState {
+  const { io, defaultSettings, currencyCode, pluginId, log } = settings
+  let defaultServers = defaultSettings.blockBookServers
+  let disableFetchingServers = !!(
+    defaultSettings.disableFetchingServers ?? false
+  )
+  let engines: UtxoEngineState[] = []
+  const memlet = makeMemlet(navigateDisklet(io.disklet, 'plugins/' + pluginId))
 
-  /**
-   * Stops notifying the engine of state changes. Used at disconnection time.
-   */
-  removeEngine(engineState: UtxoEngineState): void {
-    this.engines = this.engines.filter(engine => engine !== engineState)
-  }
+  let serverCacheJson = {}
+  let serverCacheDirty = false
+  let servers = {}
 
-  dumpData(): JsonObject {
-    return {
-      'pluginState.servers_': this.servers
-    }
-  }
+  const serverScores = new ServerScores(log)
 
-  // ------------------------------------------------------------------------
-  // Private stuff
-  // ------------------------------------------------------------------------
-  io: EdgeIo
-  log: EdgeLog
-  disableFetchingServers: boolean
-  defaultServers: string[]
-  currencyCode: string
-  serverCacheDirty: boolean
-  servers: Servers
-
-  engines: UtxoEngineState[]
-  memlet: Memlet
-
-  serverCacheJson: ServerInfoCache
-  pluginId: string
-  serverScores: ServerScores
-
-  constructor({
-    io,
-    defaultSettings,
-    currencyCode,
-    pluginId,
-    log
-  }: PluginStateSettings) {
-    this.log = log
-    this.io = io
-    this.defaultServers = defaultSettings.blockBookServers
-    this.disableFetchingServers = !!(
-      defaultSettings.disableFetchingServers ?? false
-    )
-    this.currencyCode = currencyCode
-    this.engines = []
-    this.memlet = makeMemlet(navigateDisklet(io.disklet, 'plugins/' + pluginId))
-
-    this.pluginId = pluginId
-    this.serverCacheJson = {}
-    this.serverCacheDirty = false
-    this.servers = {}
-
-    this.serverScores = new ServerScores(log)
-  }
-
-  async load(): Promise<PluginState> {
-    try {
-      this.serverCacheJson = asServerInfoCache(
-        await this.memlet.getJson('serverCache.json')
-      )
-    } catch (e) {
-      this.log(
-        `${this.pluginId}: Failed to load server cache: ${JSON.stringify(e)}`
-      )
-    }
-
-    // Fetch servers in the background:
-    await this.refreshServers().catch(e => {
-      this.log(`${this.pluginId} - ${JSON.stringify(e.toString())}`)
-    })
-
-    return this
-  }
-
-  serverScoreDown(uri: string): void {
-    this.serverScores.serverScoreDown(this.servers, uri, this.dirtyServerCache)
-  }
-
-  serverScoreUp(uri: string, score: number): void {
-    this.serverScores.serverScoreUp(
-      this.servers,
-      uri,
-      score,
-      this.dirtyServerCache
-    )
-  }
-
-  async clearCache(): Promise<void> {
-    this.serverScores.clearServerScoreTimes()
-    this.servers = {}
-    this.serverCacheDirty = true
-    await this.saveServerCache()
-    await this.refreshServers()
-  }
-
-  async saveServerCache(): Promise<void> {
-    // this.printServerCache()
-    if (this.serverCacheDirty) {
-      await this.memlet.setJson('serverCache.json', this.servers).catch(e => {
-        this.log(`${this.pluginId} - ${JSON.stringify(e.toString())}`)
+  const saveServerCache = async (): Promise<void> => {
+    serverScores.printServers(servers)
+    if (serverCacheDirty) {
+      await memlet.setJson('serverCache.json', servers).catch(e => {
+        log(`${pluginId} - ${JSON.stringify(e.toString())}`)
       })
-      this.serverCacheDirty = false
-      this.serverScores.scoresLastLoaded = Date.now()
-      this.log(`${this.pluginId} - Saved server cache`)
+      serverCacheDirty = false
+      serverScores.scoresLastLoaded = Date.now()
+      log(`${pluginId} - Saved server cache`)
     }
   }
 
-  dirtyServerCache(serverUrl: string): void {
-    this.serverCacheDirty = true
-    for (const engine of this.engines) {
+  const dirtyServerCache = (serverUrl: string): void => {
+    serverCacheDirty = true
+    for (const engine of engines) {
       if (engine.processedPercent === 1) {
         for (const uri of engine.getServerList()) {
           if (uri === serverUrl) {
-            this.saveServerCache().catch(e => {
-              this.log(`${this.pluginId} - ${JSON.stringify(e.toString())}`)
+            saveServerCache().catch(e => {
+              log(`${pluginId} - ${JSON.stringify(e.toString())}`)
             })
             return
           }
@@ -178,21 +96,8 @@ export class PluginState {
     }
   }
 
-  getLocalServers(
-    numServersWanted: number,
-    includePatterns: string[] = []
-  ): string[] {
-    return this.serverScores.getServers(
-      this.servers,
-      numServersWanted,
-      includePatterns
-    )
-  }
-
-  async fetchServers(): Promise<string[] | null> {
-    const { io } = this
-
-    this.log(`${this.pluginId} - GET ${serverListInfoUrl}`)
+  const fetchServers = async (): Promise<string[] | null> => {
+    log(`${pluginId} - GET ${serverListInfoUrl}`)
 
     const response = await io.fetch(serverListInfoUrl)
     const responseBody = await (async () => {
@@ -200,65 +105,125 @@ export class PluginState {
         if (response.ok) {
           return await response.json()
         }
-        this.log(
-          `${this.pluginId} - Fetching ${serverListInfoUrl} failed with status ${response.status}`
+        log(
+          `${pluginId} - Fetching ${serverListInfoUrl} failed with status ${response.status}`
         )
       } catch (err) {
-        this.log(
-          `${this.pluginId} - Fetching ${serverListInfoUrl} failed: ${err}`
-        )
+        log(`${pluginId} - Fetching ${serverListInfoUrl} failed: ${err}`)
       }
       return {}
     })()
 
     const serverListInfo = asServerListInfo(responseBody)
 
-    return serverListInfo[this.currencyCode] ?? null
+    return serverListInfo[currencyCode] ?? null
   }
 
-  async refreshServers(): Promise<void> {
-    let serverList = this.defaultServers
+  const refreshServers = async (): Promise<void> => {
+    let serverList = defaultServers
 
-    if (!this.disableFetchingServers)
-      serverList = (await this.fetchServers()) ?? this.defaultServers
+    if (!disableFetchingServers)
+      serverList = (await fetchServers()) ?? defaultServers
 
-    this.serverScores.serverScoresLoad(
-      this.servers,
-      this.serverCacheJson,
-      this.dirtyServerCache,
+    serverScores.serverScoresLoad(
+      servers,
+      serverCacheJson,
+      dirtyServerCache,
       serverList
     )
-    await this.saveServerCache()
+    await saveServerCache()
 
     // Tell the engines about the new servers:
-    for (const engine of this.engines) {
+    for (const engine of engines) {
       engine.refillServers()
     }
   }
 
-  async updateServers(settings: JsonObject): Promise<void> {
-    const { blockBookServers, disableFetchingServers } = settings
-    if (typeof disableFetchingServers === 'boolean') {
-      this.disableFetchingServers = disableFetchingServers
-    }
-    if (Array.isArray(blockBookServers)) {
-      this.defaultServers = blockBookServers
-    }
-    const engines = []
-    const disconnects = []
-    for (const engine of this.engines) {
-      engines.push(engine)
-      engine.setServerList([])
-      disconnects.push(engine.stop())
-    }
-    await Promise.all(disconnects)
-    this.serverScores.clearServerScoreTimes()
-    this.serverCacheJson = {}
-    this.serverCacheDirty = true
-    await this.saveServerCache()
-    await this.refreshServers()
-    for (const engine of engines) {
-      await engine.stop()
+  return {
+    /**
+     * Begins notifying the engine of state changes. Used at connection time.
+     */
+    addEngine(engineState: UtxoEngineState): void {
+      engines.push(engineState)
+    },
+
+    /**
+     * Stops notifying the engine of state changes. Used at disconnection time.
+     */
+    removeEngine(engineState: UtxoEngineState): void {
+      engines = engines.filter(engine => engine !== engineState)
+    },
+
+    dumpData(): JsonObject {
+      return {
+        'pluginState.servers_': servers
+      }
+    },
+
+    async load(): Promise<PluginState> {
+      try {
+        serverCacheJson = asServerInfoCache(
+          await memlet.getJson('serverCache.json')
+        )
+      } catch (e) {
+        log(`${pluginId}: Failed to load server cache: ${JSON.stringify(e)}`)
+      }
+
+      // Fetch servers in the background:
+      refreshServers().catch(e => {
+        log(`${pluginId} - ${JSON.stringify(e.toString())}`)
+      })
+
+      return this
+    },
+
+    serverScoreDown(uri: string): void {
+      serverScores.serverScoreDown(servers, uri, dirtyServerCache)
+    },
+
+    serverScoreUp(uri: string, score: number): void {
+      serverScores.serverScoreUp(servers, uri, score, dirtyServerCache)
+    },
+
+    async clearCache(): Promise<void> {
+      serverScores.clearServerScoreTimes()
+      servers = {}
+      serverCacheDirty = true
+      await saveServerCache()
+      await refreshServers()
+    },
+
+    getLocalServers(
+      numServersWanted: number,
+      includePatterns: string[] = []
+    ): string[] {
+      return serverScores.getServers(servers, numServersWanted, includePatterns)
+    },
+
+    async updateServers(settings: JsonObject): Promise<void> {
+      const { blockBookServers } = settings
+      if (typeof settings.disableFetchingServers === 'boolean') {
+        disableFetchingServers = settings.disableFetchingServers
+      }
+      if (Array.isArray(blockBookServers)) {
+        defaultServers = blockBookServers
+      }
+      const enginesToBeStopped = []
+      const disconnects = []
+      for (const engine of engines) {
+        enginesToBeStopped.push(engine)
+        engine.setServerList([])
+        disconnects.push(engine.stop())
+      }
+      await Promise.all(disconnects)
+      serverScores.clearServerScoreTimes()
+      serverCacheJson = {}
+      serverCacheDirty = true
+      await saveServerCache()
+      await refreshServers()
+      for (const engine of enginesToBeStopped) {
+        await engine.stop()
+      }
     }
   }
 }
