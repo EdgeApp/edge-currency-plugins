@@ -9,6 +9,7 @@ import {
 } from 'edge-core-js/types'
 
 import { IUTXO } from '../utxobased/db/types'
+import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
 import { EngineEmitter } from './makeEngineEmitter'
 import { PluginState } from './pluginState'
 
@@ -52,6 +53,7 @@ export interface EngineInfo {
   mempoolSpaceFeeInfoServer?: string
   customFeeSettings: CustomFeeSetting[]
   simpleFeeSettings: SimpleFeeSettings
+  scriptTemplates?: ScriptTemplates
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   AddressPath,
   CurrencyFormat,
   EngineConfig,
+  EngineInfo,
   NetworkEnum,
   PluginInfo
 } from '../../plugin/types'
@@ -24,7 +25,11 @@ import {
   IUTXO,
   makeIAddress
 } from '../db/types'
-import { BIP43PurposeTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
+import {
+  BIP43PurposeTypeEnum,
+  derivationLevelScriptHash,
+  ScriptTypeEnum
+} from '../keymanager/keymanager'
 import {
   IAccountDetailsBasic,
   IAccountUTXO,
@@ -60,6 +65,8 @@ export interface UtxoEngineState {
   start: () => Promise<void>
 
   stop: () => Promise<void>
+
+  deriveScriptAddress: (script: string) => Promise<EdgeFreshAddress>
 
   getFreshAddress: (branch?: number) => Promise<EdgeFreshAddress>
 
@@ -250,10 +257,14 @@ export function makeUtxoEngineState(
             })
             addressesToSubscribe.add(address)
           }
-          addToAddressSubscribeCache(commonArgs, addressesToSubscribe, {
-            format,
-            branch
-          })
+          addToAddressSubscribeCache(
+            commonArgs.taskCache,
+            addressesToSubscribe,
+            {
+              format,
+              branch
+            }
+          )
         }
       }
     }
@@ -316,6 +327,21 @@ export function makeUtxoEngineState(
           legacyAddress:
             legacyAddress !== publicAddress ? legacyAddress : undefined
         }
+      }
+    },
+
+    async deriveScriptAddress(script): Promise<EdgeFreshAddress> {
+      const walletPurpose = getPurposeTypeFromKeys(walletInfo)
+      const { address } = await internalDeriveScriptAddress({
+        walletTools: commonArgs.walletTools,
+        engineInfo: commonArgs.pluginInfo.engineInfo,
+        processor: commonArgs.processor,
+        taskCache: commonArgs.taskCache,
+        format: getCurrencyFormatFromPurposeType(walletPurpose),
+        script
+      })
+      return {
+        publicAddress: address
       }
     },
 
@@ -415,7 +441,7 @@ interface RawUtxoCache {
   [key: string]: {
     processing: boolean
     path: ShortPath
-    address: Required<IAddress>
+    address: IAddress
     requiredCount: number
   }
 }
@@ -474,11 +500,17 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
         ...formatPath,
         addressIndex: nextAddressIndex
       }
-      const { address } = walletTools.getAddress(path)
-      const scriptPubkey = walletTools.addressToScriptPubkey(address)
+
+      const { scriptPubkey, redeemScript } = walletTools.getScriptPubkey(path)
+      const { address } = walletTools.scriptPubkeyToAddress({
+        scriptPubkey,
+        format: path.format
+      })
 
       // Make a new IAddress and save it
-      await processor.saveAddress(makeIAddress({ scriptPubkey, path }))
+      await processor.saveAddress(
+        makeIAddress({ scriptPubkey, redeemScript, path })
+      )
 
       // Add the displayAddress to the set of addresses to subscribe to after loop
       addressesToSubscribe.add(address)
@@ -492,21 +524,25 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
-    addToAddressSubscribeCache(common, addressesToSubscribe, shortPath)
+    addToAddressSubscribeCache(
+      common.taskCache,
+      addressesToSubscribe,
+      shortPath
+    )
   }
 }
 
 const addToAddressSubscribeCache = (
-  args: CommonArgs,
+  taskCache: TaskCache,
   addresses: Set<string>,
   path: ShortPath
 ): void => {
   addresses.forEach(address => {
-    args.taskCache.addressSubscribeCache[address] = {
+    taskCache.addressSubscribeCache[address] = {
       path,
       processing: false
     }
-    args.taskCache.addressWatching = false
+    taskCache.addressWatching = false
   })
 }
 
@@ -836,6 +872,60 @@ const getTotalAddressCount = async (
   return count
 }
 
+interface DeriveScriptAddressArgs {
+  walletTools: UTXOPluginWalletTools
+  engineInfo: EngineInfo
+  processor: Processor
+  format: CurrencyFormat
+  taskCache: TaskCache
+  script: string
+}
+
+interface DeriveScriptAddressReturn {
+  address: string
+  scriptPubkey: string
+  redeemScript: string
+}
+
+const internalDeriveScriptAddress = async ({
+  walletTools,
+  engineInfo,
+  processor,
+  format,
+  taskCache,
+  script
+}: DeriveScriptAddressArgs): Promise<DeriveScriptAddressReturn> => {
+  if (engineInfo.scriptTemplates == null) {
+    throw new Error(
+      `cannot derive script address ${script} without defined script template`
+    )
+  }
+
+  const scriptTemplate = engineInfo.scriptTemplates[script]
+
+  const path: AddressPath = {
+    format,
+    changeIndex: derivationLevelScriptHash(scriptTemplate),
+    addressIndex: 0
+  }
+
+  // save the address to the processor and add it to the cache
+  const { address, scriptPubkey, redeemScript } = walletTools.getScriptAddress({
+    path,
+    scriptTemplate
+  })
+  await processor.saveAddress(
+    makeIAddress({ scriptPubkey, redeemScript, path })
+  )
+  const addresses = new Set<string>()
+  addresses.add(address)
+  addToAddressSubscribeCache(taskCache, addresses, {
+    format: path.format,
+    branch: path.changeIndex
+  })
+  return { address, scriptPubkey, redeemScript }
+}
+
 interface GetFreshAddressArgs extends FormatArgs {}
 
 interface GetFreshAddressReturn {
@@ -1136,7 +1226,7 @@ interface ProcessRawUtxoArgs extends FormatArgs {
   requiredCount: number
   utxo: IAccountUTXO
   id: string
-  address: Required<IAddress>
+  address: IAddress
   uri: string
 }
 
@@ -1148,7 +1238,6 @@ const processRawUtxo = async (
     id,
     address,
     format,
-    walletTools,
     processor,
     path,
     taskCache,
@@ -1187,6 +1276,10 @@ const processRawUtxo = async (
     case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
       scriptType = ScriptTypeEnum.p2pkh
+      if (address.redeemScript != null) {
+        scriptType = ScriptTypeEnum.p2sh
+        redeemScript = address.redeemScript
+      }
 
       // Legacy UTXOs need the previous transaction hex as the script
       // If we do not currently have it, add it to the queue to fetch it
@@ -1226,7 +1319,12 @@ const processRawUtxo = async (
     case BIP43PurposeTypeEnum.WrappedSegwit:
       scriptType = ScriptTypeEnum.p2wpkhp2sh
       script = address.scriptPubkey
-      redeemScript = walletTools.getScriptPubkey(address.path).redeemScript
+      if (address.redeemScript == null) {
+        throw new Error(
+          'Address redeem script not defined, but required for p2sh wrapped segwit utxo processing'
+        )
+      }
+      redeemScript = address.redeemScript
 
       break
     case BIP43PurposeTypeEnum.Segwit:
