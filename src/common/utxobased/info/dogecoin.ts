@@ -1,6 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { EngineInfo, PluginInfo } from '../../plugin/types'
+import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'dogecoin',
@@ -49,4 +49,31 @@ const engineInfo: EngineInfo = {
   }
 }
 
-export const info: PluginInfo = { currencyInfo, engineInfo }
+export const coinInfo: CoinInfo = {
+  name: 'dogecoin',
+  segwit: false,
+  coinType: 3,
+  mainnetConstants: {
+    messagePrefix: '\x18Dogecoin Signed Message:\n',
+    wif: 0x9e,
+    legacyXPriv: 0x02fac398,
+    legacyXPub: 0x02facafd,
+    pubkeyHash: 0x1e,
+    scriptHash: 0x16
+  },
+
+  testnetConstants: {
+    messagePrefix: '\x18Dogecoin Signed Message:\n',
+    wif: 0xef,
+    legacyXPriv: 0x04358394,
+    legacyXPub: 0x043587cf,
+    pubkeyHash: 0x6f,
+    scriptHash: 0xc4
+  }
+}
+
+export const info: PluginInfo = {
+  currencyInfo,
+  engineInfo,
+  coinInfo
+}
