@@ -500,11 +500,17 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
         ...formatPath,
         addressIndex: nextAddressIndex
       }
-      const { address } = walletTools.getAddress(path)
-      const scriptPubkey = walletTools.addressToScriptPubkey(address)
+
+      const { scriptPubkey, redeemScript } = walletTools.getScriptPubkey(path)
+      const { address } = walletTools.scriptPubkeyToAddress({
+        scriptPubkey,
+        format: path.format
+      })
 
       // Make a new IAddress and save it
-      await processor.saveAddress(makeIAddress({ scriptPubkey, path }))
+      await processor.saveAddress(
+        makeIAddress({ scriptPubkey, redeemScript, path })
+      )
 
       // Add the displayAddress to the set of addresses to subscribe to after loop
       addressesToSubscribe.add(address)
@@ -1232,7 +1238,6 @@ const processRawUtxo = async (
     id,
     address,
     format,
-    walletTools,
     processor,
     path,
     taskCache,
@@ -1314,12 +1319,12 @@ const processRawUtxo = async (
     case BIP43PurposeTypeEnum.WrappedSegwit:
       scriptType = ScriptTypeEnum.p2wpkhp2sh
       script = address.scriptPubkey
-      if (address.path == null) {
+      if (address.redeemScript == null) {
         throw new Error(
-          'address path not defined, but required for p2sh wrapped segwit utxo processing'
+          'Address redeem script not defined, but required for p2sh wrapped segwit utxo processing'
         )
       }
-      redeemScript = walletTools.getScriptPubkey(address.path).redeemScript
+      redeemScript = address.redeemScript
 
       break
     case BIP43PurposeTypeEnum.Segwit:
