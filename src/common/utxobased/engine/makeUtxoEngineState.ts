@@ -1007,19 +1007,19 @@ const processAddressTransactions = async (
 
       // If address is used and previously not marked as used, mark as used.
       const used = txs > 0 || unconfirmedTxs > 0
-
       if (!addressData.used && used && page === 1) {
         addressData.used = true
-        await processor.saveAddress(addressData)
-        await setLookAhead(args)
       }
 
+      // Process and save the address's transactions
       for (const rawTx of transactions) {
         const tx = processRawTx({ ...args, tx: rawTx })
         await processor.saveTransaction({ tx, scriptPubkey })
         await transactionChanged({ ...args, tx })
       }
 
+      // Halt on finishing the processing of address transaction until
+      // we have progressed through all of the blockbook pages
       if (page < totalPages) {
         // Add the address back to the cache, incrementing the page
         transactionsCache[address] = {
@@ -1028,24 +1028,24 @@ const processAddressTransactions = async (
           blockHeight,
           page: page + 1
         }
-      } else {
-        addressData.lastQueriedBlockHeight = blockHeight
-        await processor.saveAddress(addressData)
-
-        await setLookAhead(args)
-
-        // Callback for when an address has been fully processed
-        args.onAddressChecked()
+        return
       }
+
+      // Update the lastQueriedBlockHeight for the address
+      addressData.lastQueriedBlockHeight = blockHeight
+
+      // Save/update the fully-processed address
+      await processor.saveAddress(addressData)
+      // Invoke the callback for when an address has been fully processed
+      await args.onAddressChecked()
+      // Call setLookAhead to update the lookahead
+      await setLookAhead(args)
     })
-    .catch(() => {
-      args.processing = false
-      transactionsCache[address] = {
-        path,
-        processing: args.processing,
-        blockHeight,
-        page
-      }
+    .catch(err => {
+      // Log the error for debugging purposes without crashing the engine
+      // This will cause frozen wallet syncs
+      console.error(err.toString())
+      console.log(err.stack)
     })
   return {
     ...addressMessage(address, {
@@ -1215,7 +1215,7 @@ const processUtxoTransactions = async (
       used: true
     })
   }
-  setLookAhead(args).catch(err => {
+  await setLookAhead(args).catch(err => {
     log.error(err)
     throw err
   })
