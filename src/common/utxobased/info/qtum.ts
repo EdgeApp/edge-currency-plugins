@@ -25,7 +25,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 const engineInfo: EngineInfo = {
   formats: ['bip44', 'bip32'],
-  network: 'qtum',
   gapLimit: 10,
   defaultFee: 1000,
   feeUpdateInterval: 60000,

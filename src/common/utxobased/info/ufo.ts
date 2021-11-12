@@ -28,7 +28,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 const engineInfo: EngineInfo = {
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
-  network: 'uniformfiscalobject',
   gapLimit: 10,
   defaultFee: 50000,
   feeUpdateInterval: 60000,

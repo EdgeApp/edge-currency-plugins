@@ -43,7 +43,6 @@ export interface PluginInfo {
 export interface EngineInfo {
   formats?: CurrencyFormat[]
   forks?: string[]
-  network: string // The offical network in lower case - Needs to match the Bitcoin Lib Network Type
   networkType?: NetworkEnum
   uriPrefix?: string
   gapLimit: number
@@ -60,7 +59,7 @@ export interface EngineInfo {
  */
 
 export interface CoinInfo {
-  name: string
+  name: string // The offical network name in lower case. Must match the Bitcoin Lib Network Type
   segwit: boolean
   coinType: number
   sighash?: number

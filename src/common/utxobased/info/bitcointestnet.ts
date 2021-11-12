@@ -44,7 +44,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
 export const engineInfo: EngineInfo = {
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   forks: ['bitcoincash', 'bitcoingold'],
-  network: 'bitcointestnet',
   networkType: NetworkEnum.Testnet,
   gapLimit: 25,
   defaultFee: 1000,

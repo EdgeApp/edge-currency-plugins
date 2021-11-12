@@ -27,7 +27,6 @@ export const makeFakePluginInfo = (): PluginInfo => {
       defaultFee: 0,
       feeUpdateInterval: 0,
       gapLimit: 0,
-      network: '',
       simpleFeeSettings: {
         highFee: '1',
         lowFee: '2',

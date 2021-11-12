@@ -28,7 +28,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 const engineInfo: EngineInfo = {
   formats: ['bip49', 'bip44', 'bip32'],
-  network: 'badcoin',
   gapLimit: 10,
   defaultFee: 500000,
   feeUpdateInterval: 60000,

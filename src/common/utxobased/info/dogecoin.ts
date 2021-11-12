@@ -32,7 +32,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 const engineInfo: EngineInfo = {
   formats: ['bip44', 'bip32'],
-  network: 'dogecoin',
   gapLimit: 10,
   defaultFee: 1000,
   feeUpdateInterval: 10000,

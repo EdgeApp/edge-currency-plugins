@@ -34,7 +34,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 const engineInfo: EngineInfo = {
   formats: ['bip44', 'bip32'],
-  network: 'bitcoinsv',
   uriPrefix: 'bitcoin',
   gapLimit: 10,
   defaultFee: 10000,
