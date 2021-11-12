@@ -33,7 +33,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  coinType: 236,
   formats: ['bip44', 'bip32'],
   network: 'bitcoinsv',
   uriPrefix: 'bitcoin',

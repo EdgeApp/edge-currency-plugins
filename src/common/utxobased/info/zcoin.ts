@@ -32,7 +32,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const engineInfo: EngineInfo = {
-  coinType: 136,
   formats: ['bip44', 'bip32'],
   network: 'zcoin',
   uriPrefix: 'firo',

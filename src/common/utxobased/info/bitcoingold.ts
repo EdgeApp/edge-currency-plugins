@@ -35,7 +35,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  coinType: 156,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   network: 'bitcoingold',
   gapLimit: 10,

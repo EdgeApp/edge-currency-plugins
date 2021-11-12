@@ -42,7 +42,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  coinType: 145,
   formats: ['bip44', 'bip32'],
   forks: ['bitcoincashsv'],
   network: 'bitcoincash',

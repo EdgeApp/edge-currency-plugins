@@ -42,7 +42,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const engineInfo: EngineInfo = {
-  coinType: 1,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   forks: ['bitcoincash', 'bitcoingold'],
   network: 'bitcointestnet',

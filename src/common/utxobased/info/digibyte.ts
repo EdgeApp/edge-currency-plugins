@@ -27,7 +27,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  coinType: 20,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   forks: [],
   network: 'digibyte',

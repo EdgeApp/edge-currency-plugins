@@ -38,7 +38,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const engineInfo: EngineInfo = {
-  coinType: 2,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   network: 'litecoin',
   gapLimit: 10,

@@ -33,7 +33,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  coinType: 5,
   formats: ['bip44', 'bip32'],
   network: 'dash',
   gapLimit: 10,

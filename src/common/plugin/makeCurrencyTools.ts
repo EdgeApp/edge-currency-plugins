@@ -28,7 +28,7 @@ export function makeCurrencyTools(
   io: EdgeIo,
   pluginInfo: PluginInfo
 ): EdgeCurrencyTools {
-  const { currencyInfo, engineInfo } = pluginInfo
+  const { currencyInfo, engineInfo, coinInfo } = pluginInfo
 
   const fns: EdgeCurrencyTools = {
     async createPrivateKey(
@@ -46,7 +46,7 @@ export function makeCurrencyTools(
       return {
         ...keys,
         format: opts?.format ?? engineInfo.formats?.[0] ?? 'bip44',
-        coinType: opts?.coinType ?? engineInfo.coinType ?? 0
+        coinType: opts?.coinType ?? coinInfo.coinType ?? 0
       }
     },
 

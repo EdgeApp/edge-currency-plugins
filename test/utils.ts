@@ -23,7 +23,6 @@ export const makeFakePluginInfo = (): PluginInfo => {
       walletType: ''
     },
     engineInfo: {
-      coinType: 0,
       customFeeSettings: [],
       defaultFee: 0,
       feeUpdateInterval: 0,
