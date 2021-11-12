@@ -1,7 +1,12 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
-import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import {
+  CoinInfo,
+  EngineInfo,
+  NetworkEnum,
+  PluginInfo
+} from '../../plugin/types'
 
 export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcointestnet',
@@ -41,6 +46,7 @@ export const engineInfo: EngineInfo = {
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   forks: ['bitcoincash', 'bitcoingold'],
   network: 'bitcointestnet',
+  networkType: NetworkEnum.Testnet,
   gapLimit: 25,
   defaultFee: 1000,
   feeUpdateInterval: 60000,
