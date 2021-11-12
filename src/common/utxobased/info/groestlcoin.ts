@@ -22,6 +22,14 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockBookServers: ['wss://blockbook.groestlcoin.org'],
     disableFetchingServers: true
   },
+  customFeeTemplate: [
+    {
+      type: 'nativeAmount',
+      key: 'satPerByte',
+      displayName: 'Satoshis Per Byte',
+      displayMultiplier: '0'
+    }
+  ],
   metaTokens: [],
 
   // Explorers:
@@ -37,7 +45,6 @@ const engineInfo: EngineInfo = {
   gapLimit: 10,
   defaultFee: 100000,
   feeUpdateInterval: 60000,
-  customFeeSettings: ['satPerByte'],
   simpleFeeSettings: {
     highFee: '150',
     lowFee: '20',

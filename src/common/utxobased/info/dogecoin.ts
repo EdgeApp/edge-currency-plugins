@@ -21,6 +21,14 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     disableFetchingServers: false
   },
+  customFeeTemplate: [
+    {
+      type: 'nativeAmount',
+      key: 'satPerByte',
+      displayName: 'Satoshis Per Byte',
+      displayMultiplier: '0'
+    }
+  ],
   metaTokens: [],
 
   // Explorers:
@@ -36,7 +44,6 @@ const engineInfo: EngineInfo = {
   defaultFee: 1000,
   feeUpdateInterval: 10000,
   // minRelay: '???',
-  customFeeSettings: ['satPerByte'],
   simpleFeeSettings: {
     highFee: '526316',
     lowFee: '526316',

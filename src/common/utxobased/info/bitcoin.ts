@@ -27,6 +27,14 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     disableFetchingServers: false
   },
+  customFeeTemplate: [
+    {
+      type: 'nativeAmount',
+      key: 'satPerByte',
+      displayName: 'Satoshis Per Byte',
+      displayMultiplier: '0'
+    }
+  ],
   metaTokens: [],
 
   // Explorers:
@@ -46,7 +54,6 @@ const engineInfo: EngineInfo = {
   defaultFee: 1000,
   feeUpdateInterval: 60000,
   mempoolSpaceFeeInfoServer: 'https://mempool.space/api/v1/fees/recommended',
-  customFeeSettings: ['satPerByte'],
   simpleFeeSettings: {
     highFee: '150',
     lowFee: '20',

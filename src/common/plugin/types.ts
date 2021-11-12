@@ -49,7 +49,6 @@ export interface EngineInfo {
   defaultFee: number
   feeUpdateInterval: number
   mempoolSpaceFeeInfoServer?: string
-  customFeeSettings: CustomFeeSetting[]
   simpleFeeSettings: SimpleFeeSettings
   scriptTemplates?: ScriptTemplates
 }
@@ -107,8 +106,6 @@ interface Bip32 {
   public: number
   private: number
 }
-
-export type CustomFeeSetting = 'satPerByte'
 
 export type FeeRates = ReturnType<typeof asFeeRates>
 export const asFeeRates = asObject({

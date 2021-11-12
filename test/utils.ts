@@ -17,13 +17,20 @@ export const makeFakePluginInfo = (): PluginInfo => {
       defaultSettings: {},
       denominations: [],
       displayName: '',
+      customFeeTemplate: [
+        {
+          type: 'nativeAmount',
+          key: 'satPerByte',
+          displayName: 'Satoshis Per Byte',
+          displayMultiplier: '0'
+        }
+      ],
       metaTokens: [],
       pluginId: '',
       transactionExplorer: '',
       walletType: ''
     },
     engineInfo: {
-      customFeeSettings: [],
       defaultFee: 0,
       feeUpdateInterval: 0,
       gapLimit: 0,

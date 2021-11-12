@@ -97,11 +97,14 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
         return bs.toFixed(rate, 0, 0)
       }
 
+      const customFeeTemplate = (currencyInfo.customFeeTemplate ?? [])[0]
+      if (customFeeTemplate == null) throw new Error('No custom fee template')
+
       const rate = calcMinerFeePerByte(
         sumSpendTargets(spendTargets),
         fees,
         networkFeeOption,
-        customNetworkFee[engineInfo.customFeeSettings[0]]
+        customNetworkFee[customFeeTemplate.key]
       )
       return rate
     },
