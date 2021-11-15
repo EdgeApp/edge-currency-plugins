@@ -20,10 +20,9 @@ describe('altcoin test fixtures', () => {
   fixtures.coins.forEach(f => {
     // test deriving a xpriv from a seed for each coin
     f.seedToXPrivTests.forEach(j => {
-      it(`${f.name} bip44 mnemonic to xpriv ${j.network} ${j.type}`, () => {
+      it(`${f.name} bip44 mnemonic to xpriv ${j.type}`, () => {
         const resultLegacy = seedOrMnemonicToXPriv({
           seed: f.mnemonic,
-          network: j.network,
           type: j.type,
           coin: f.name
         })
@@ -32,10 +31,9 @@ describe('altcoin test fixtures', () => {
     })
     // test deriving a xpub from a xpriv for each coin
     f.xprivToXPubTests.forEach(j => {
-      it(`${f.name} bip32 xpriv to xpub ${j.network} ${j.type}`, () => {
+      it(`${f.name} bip32 xpriv to xpub ${j.type}`, () => {
         const resultLegacy = xprivToXPub({
           xpriv: j.xpriv,
-          network: j.network,
           type: j.type,
           coin: f.name
         })
@@ -44,10 +42,9 @@ describe('altcoin test fixtures', () => {
     })
     // derive a public key from an xpub and create a scriptPubkey for each coin
     f.xpubToPubkeyTests.forEach(j => {
-      it(`${f.name} ${j.network} given an xpub, generate a ${j.addressType} address and cross verify script pubkey result`, () => {
+      it(`${f.name} given an xpub, generate a ${j.addressType} address and cross verify script pubkey result`, () => {
         const pubkey = xpubToPubkey({
           xpub: j.xpub,
-          network: j.network,
           type: j.type,
           bip44ChangeIndex: 0,
           bip44AddressIndex: j.bip44AddressIndex,
@@ -59,7 +56,6 @@ describe('altcoin test fixtures', () => {
         }).scriptPubkey
         const address = scriptPubkeyToAddress({
           scriptPubkey: scriptPubkey,
-          network: j.network,
           addressType: j.addressType,
           coin: f.name
         })
@@ -68,7 +64,6 @@ describe('altcoin test fixtures', () => {
         expect(address.legacyAddress).to.equals(legacyAddress)
         const scriptPubkeyRoundTrip = addressToScriptPubkey({
           address: address.address,
-          network: j.network,
           addressType: j.addressType,
           coin: f.name
         })
@@ -81,12 +76,10 @@ describe('altcoin test fixtures', () => {
         it(`${f.name} WIF to private key to WIF`, () => {
           const privateKey = wifToPrivateKey({
             wifKey: j.wifKey,
-            network: j.network,
             coin: f.name
           })
           const wifKeyRoundTrip = privateKeyToWIF({
             privateKey: privateKey,
-            network: j.network,
             coin: f.name
           })
           expect(j.wifKey).to.be.equal(wifKeyRoundTrip)
@@ -98,7 +91,6 @@ describe('altcoin test fixtures', () => {
       it(`${f.name} guess script pubkeys from address ${message}`, () => {
         const scriptPubkey = addressToScriptPubkey({
           address: j.address,
-          network: j.network,
           coin: f.name
         })
         expect(scriptPubkey).to.equal(j.scriptPubkey)
@@ -110,7 +102,6 @@ describe('altcoin test fixtures', () => {
         it(`${f.name} xpriv to wif`, () => {
           const derivedPrivateKey = xprivToPrivateKey({
             xpriv: j.xpriv,
-            network: j.network,
             type: j.type,
             bip44ChangeIndex: 0,
             bip44AddressIndex: 0,
@@ -118,7 +109,6 @@ describe('altcoin test fixtures', () => {
           })
           const derivedWIFKey = privateKeyToWIF({
             privateKey: derivedPrivateKey,
-            network: j.network,
             coin: f.name
           })
           expect(derivedWIFKey).to.equal(j.wifKey)
