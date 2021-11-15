@@ -15,12 +15,6 @@ import { UtxoPicker } from '../utxobased/keymanager/utxopicker'
 import { EngineEmitter } from './makeEngineEmitter'
 import { PluginState } from './pluginState'
 
-// this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
-export enum NetworkEnum {
-  Mainnet = 'mainnet',
-  Testnet = 'testnet'
-}
-
 export type CurrencyFormat = ReturnType<typeof asCurrencyFormat>
 export const asCurrencyFormat = asValue('bip32', 'bip44', 'bip49', 'bip84')
 
@@ -46,7 +40,6 @@ export interface PluginInfo {
 export interface EngineInfo {
   formats?: CurrencyFormat[]
   forks?: string[]
-  networkType?: NetworkEnum
   uriPrefix?: string
   gapLimit: number
   defaultFee: number
@@ -127,7 +120,6 @@ export const asSimpleFeeSettings = asObject({
 })
 
 export interface EngineConfig {
-  network: NetworkEnum
   walletInfo: EdgeWalletInfo
   pluginInfo: PluginInfo
   pluginDisklet: Disklet

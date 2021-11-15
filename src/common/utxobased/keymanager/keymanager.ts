@@ -5,7 +5,7 @@ import * as bip39 from 'bip39'
 import bitcoinMessage from 'bitcoinjs-message'
 import { InsufficientFundsError } from 'edge-core-js/types'
 
-import { CoinInfo, CoinPrefixes, NetworkEnum } from '../../plugin/types'
+import { CoinInfo, CoinPrefixes } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
 import {
@@ -53,7 +53,6 @@ export enum TransactionInputTypeEnum {
 export interface VerifyAddressArgs {
   address: string
   coin: string
-  network: NetworkEnum
 }
 
 export enum VerifyAddressEnum {
@@ -64,7 +63,6 @@ export enum VerifyAddressEnum {
 
 export interface SeedOrMnemonicToXPrivArgs {
   seed: string
-  network: NetworkEnum
   type: BIP43PurposeTypeEnum
   coinType?: number // defaults to the coin type as defined in the coin class
   account?: number // defaults to account 0'
@@ -73,14 +71,12 @@ export interface SeedOrMnemonicToXPrivArgs {
 
 export interface XPrivToXPubArgs {
   xpriv: string
-  network: NetworkEnum
   type: BIP43PurposeTypeEnum
   coin: string
 }
 
 export interface XPrivToPrivateKeyArgs {
   xpriv: string
-  network: NetworkEnum
   type: BIP43PurposeTypeEnum
   bip44ChangeIndex: number
   bip44AddressIndex: number
@@ -89,7 +85,6 @@ export interface XPrivToPrivateKeyArgs {
 
 export interface XPubToPubkeyArgs {
   xpub: string
-  network: NetworkEnum
   type: BIP43PurposeTypeEnum
   bip44ChangeIndex: number
   bip44AddressIndex: number
@@ -98,7 +93,6 @@ export interface XPubToPubkeyArgs {
 
 export interface AddressToScriptPubkeyArgs {
   address: string
-  network: NetworkEnum
   addressType?: AddressTypeEnum
   legacy?: boolean
   coin: string
@@ -117,7 +111,6 @@ export interface PubkeyToScriptPubkeyReturn {
 export interface ScriptPubkeyToAddressArgs {
   scriptPubkey: string
   addressType: AddressTypeEnum
-  network: NetworkEnum
   coin: string
   redeemScript?: string
 }
@@ -135,14 +128,12 @@ export interface ScriptPubkeyToAddressReturn {
 export interface ScriptPubkeyToScriptHashArgs {
   scriptPubkey: string
   scriptType: ScriptTypeEnum
-  network: NetworkEnum
   coin: string
 }
 
 export interface ScriptPubkeyToP2SHArgs {
   scriptPubkey: string
   coin?: string
-  network?: NetworkEnum
 }
 
 export interface ScriptPubkeyToP2SHReturn {
@@ -154,19 +145,16 @@ export interface ScriptPubkeyToP2SHReturn {
 interface ScriptHashToScriptPubkeyArgs {
   scriptHash: string
   scriptType: ScriptTypeEnum
-  network: NetworkEnum
   coin: string
 }
 
 export interface WIFToPrivateKeyArgs {
   wifKey: string
-  network: NetworkEnum
   coin: string
 }
 
 export interface PrivateKeyToWIFArgs {
   privateKey: string
-  network: NetworkEnum
   coin: string
 }
 
@@ -186,7 +174,6 @@ export interface TxOutput {
 }
 
 export interface CreateTxArgs {
-  network: NetworkEnum
   inputs: TxInput[]
   outputs: TxOutput[]
   rbf: boolean
@@ -199,7 +186,6 @@ export interface CreateTxReturn {
 }
 
 export interface MakeTxArgs {
-  network: NetworkEnum
   forceUseUtxo: IUTXO[]
   utxos: IUTXO[]
   targets: MakeTxTarget[]
@@ -247,7 +233,6 @@ export interface Bip32 {
 }
 
 interface Bip32NetworkFromCoinArgs {
-  networkType: NetworkEnum
   coinString: string
   sigType?: BIP43PurposeTypeEnum
   forWIF?: boolean
@@ -352,14 +337,6 @@ function bip32NetworkFromCoin(
   const forWIF: boolean = args.forWIF ?? false
   const legacy: boolean = args.legacy ?? false
   const coin: CoinInfo = getCoinFromString(args.coinString)
-  if (args.networkType === NetworkEnum.Testnet) {
-    return bip32NetworkFromCoinPrefix(
-      sigType,
-      coin.testnetConstants,
-      coin.segwit,
-      forWIF
-    )
-  }
   if (legacy && coin.legacyConstants != null) {
     return bip32NetworkFromCoinPrefix(
       sigType,
@@ -379,7 +356,6 @@ function bip32NetworkFromCoin(
 export function verifyAddress(args: VerifyAddressArgs): VerifyAddressEnum {
   try {
     const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-      networkType: args.network,
       coinString: args.coin
     })
     guessAddressTypeFromAddress(args.address, network, args.coin, undefined)
@@ -387,7 +363,6 @@ export function verifyAddress(args: VerifyAddressArgs): VerifyAddressEnum {
   } catch (e) {}
   try {
     const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-      networkType: args.network,
       coinString: args.coin,
       legacy: true
     })
@@ -395,6 +370,17 @@ export function verifyAddress(args: VerifyAddressArgs): VerifyAddressEnum {
     return VerifyAddressEnum.legacy
   } catch (e) {}
   return VerifyAddressEnum.bad
+}
+
+function getCashAddrPrefixes(coinInfo: CoinInfo): string[] {
+  const prefixes: string[] = []
+  if (coinInfo.mainnetConstants.cashaddr != null) {
+    prefixes.push(coinInfo.mainnetConstants.cashaddr)
+  }
+  if (coinInfo.legacyConstants?.cashaddr != null) {
+    prefixes.push(coinInfo.legacyConstants.cashaddr)
+  }
+  return prefixes
 }
 
 function guessAddressTypeFromAddress(
@@ -433,14 +419,16 @@ function guessAddressTypeFromAddress(
     bitcoin.payments.p2wpkh({ address, network })
     return AddressTypeEnum.p2wpkh
   } catch (e) {}
-  try {
-    const info = cashAddressToHash(address)
-    if (info.type === CashaddrTypeEnum.pubkeyhash) {
-      return AddressTypeEnum.p2pkh
-    }
-    return AddressTypeEnum.p2sh
-  } catch (e) {}
-
+  const cashAddrPrefixes = getCashAddrPrefixes(coinClass)
+  if (cashAddrPrefixes.length > 0) {
+    try {
+      const info = cashAddressToHash(address, cashAddrPrefixes)
+      if (info.type === CashaddrTypeEnum.pubkeyhash) {
+        return AddressTypeEnum.p2pkh
+      }
+      return AddressTypeEnum.p2sh
+    } catch (e) {}
+  }
   throw new Error('Could not determine address type of ' + address)
 }
 
@@ -451,15 +439,13 @@ export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
     ? bip39.mnemonicToSeedSync(args.seed)
     : Buffer.from(args.seed, 'base64')
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin,
     sigType: args.type
   })
   const coin = getCoinFromString(args.coin)
   const purpose = bip43PurposeTypeEnumToNumber(args.type)
-  let coinType = args.coinType ?? coin.coinType
+  const coinType = args.coinType ?? coin.coinType
   const account = args.account ?? 0
-  coinType = args.network === 'testnet' ? 1 : coinType
   const bip32FromSeedFunc = coin.bip32FromSeedFunc ?? bip32.fromSeed
   const root: bip32.BIP32Interface = bip32FromSeedFunc(seed)
   root.network = network
@@ -475,7 +461,6 @@ export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
 
 export function xprivToXPub(args: XPrivToXPubArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin,
     sigType: args.type
   })
@@ -499,7 +484,6 @@ export function derivationLevelScriptHash(
 
 export function xpubToPubkey(args: XPubToPubkeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin,
     sigType: args.type
   })
@@ -515,7 +499,6 @@ export function xpubToPubkey(args: XPubToPubkeyArgs): string {
 export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
   const legacy = args.legacy ?? false
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin,
     legacy: args.legacy
   })
@@ -526,6 +509,7 @@ export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
     args.addressType
   )
   const coinClass = getCoinFromString(args.coin)
+  const cashAddrPrefixes = getCashAddrPrefixes(coinClass)
   let payment: bitcoin.payments.PaymentCreator
   switch (addressType) {
     case AddressTypeEnum.p2pkh:
@@ -534,10 +518,10 @@ export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
         (coinClass.legacyConstants?.cashaddr != null && legacy)
       ) {
         return scriptHashToScriptPubkey({
-          scriptHash: cashAddressToHash(args.address).scriptHash.toString(
-            'hex'
-          ),
-          network: args.network,
+          scriptHash: cashAddressToHash(
+            args.address,
+            cashAddrPrefixes
+          ).scriptHash.toString('hex'),
           scriptType: ScriptTypeEnum.p2pkh,
           coin: args.coin
         })
@@ -550,10 +534,10 @@ export function addressToScriptPubkey(args: AddressToScriptPubkeyArgs): string {
         (coinClass.legacyConstants?.cashaddr != null && legacy)
       ) {
         return scriptHashToScriptPubkey({
-          scriptHash: cashAddressToHash(args.address).scriptHash.toString(
-            'hex'
-          ),
-          network: args.network,
+          scriptHash: cashAddressToHash(
+            args.address,
+            cashAddrPrefixes
+          ).scriptHash.toString('hex'),
           scriptType: ScriptTypeEnum.p2sh,
           coin: args.coin
         })
@@ -585,11 +569,9 @@ export function scriptPubkeyToAddress(
   args: ScriptPubkeyToAddressArgs
 ): ScriptPubkeyToAddressReturn {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin
   })
   const legacyNetwork: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin,
     legacy: true
   })
@@ -603,24 +585,22 @@ export function scriptPubkeyToAddress(
         address = hashToCashAddress(
           scriptPubkeyToScriptHash({
             scriptPubkey: args.scriptPubkey,
-            network: args.network,
             scriptType: ScriptTypeEnum.p2pkh,
             coin: args.coin
           }),
           CashaddrTypeEnum.pubkeyhash,
-          args.network
+          coinClass.mainnetConstants.cashaddr
         )
       }
       if (coinClass.legacyConstants?.cashaddr != null) {
         legacyAddress = hashToCashAddress(
           scriptPubkeyToScriptHash({
             scriptPubkey: args.scriptPubkey,
-            network: args.network,
             scriptType: ScriptTypeEnum.p2pkh,
             coin: args.coin
           }),
           CashaddrTypeEnum.pubkeyhash,
-          args.network
+          coinClass.legacyConstants.cashaddr
         )
       }
       payment = bitcoin.payments.p2pkh
@@ -630,24 +610,22 @@ export function scriptPubkeyToAddress(
         address = hashToCashAddress(
           scriptPubkeyToScriptHash({
             scriptPubkey: args.scriptPubkey,
-            network: args.network,
             scriptType: ScriptTypeEnum.p2sh,
             coin: args.coin
           }),
           CashaddrTypeEnum.scripthash,
-          args.network
+          coinClass.mainnetConstants.cashaddr
         )
       }
       if (coinClass.legacyConstants?.cashaddr != null) {
         address = hashToCashAddress(
           scriptPubkeyToScriptHash({
             scriptPubkey: args.scriptPubkey,
-            network: args.network,
             scriptType: ScriptTypeEnum.p2sh,
             coin: args.coin
           }),
           CashaddrTypeEnum.scripthash,
-          args.network
+          coinClass.legacyConstants.cashaddr
         )
       }
       payment = bitcoin.payments.p2sh
@@ -687,7 +665,6 @@ export function scriptPubkeyToAddress(
 
 function scriptHashToScriptPubkey(args: ScriptHashToScriptPubkeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin
   })
   let payment: bitcoin.payments.PaymentCreator
@@ -718,7 +695,6 @@ export function scriptPubkeyToScriptHash(
   args: ScriptPubkeyToScriptHashArgs
 ): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin
   })
   let payment: bitcoin.payments.PaymentCreator
@@ -748,12 +724,11 @@ export function scriptPubkeyToScriptHash(
 export function scriptPubkeyToP2SH(
   args: ScriptPubkeyToP2SHArgs
 ): ScriptPubkeyToP2SHReturn {
-  const { scriptPubkey, coin, network } = args
+  const { scriptPubkey, coin } = args
   let bip32Network
-  if (coin != null && network != null) {
+  if (coin != null) {
     bip32Network = bip32NetworkFromCoin({
-      coinString: coin,
-      networkType: network
+      coinString: coin
     })
   }
   const p2sh = bitcoin.payments.p2sh({
@@ -807,7 +782,6 @@ export function pubkeyToScriptPubkey(
 
 export function xprivToPrivateKey(args: XPrivToPrivateKeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin,
     sigType: args.type
   })
@@ -825,7 +799,6 @@ export function xprivToPrivateKey(args: XPrivToPrivateKeyArgs): string {
 
 export function privateKeyToWIF(args: PrivateKeyToWIFArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin,
     forWIF: true
   })
@@ -837,7 +810,6 @@ export function privateKeyToWIF(args: PrivateKeyToWIFArgs): string {
 
 export function wifToPrivateKey(args: WIFToPrivateKeyArgs): string {
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    networkType: args.network,
     coinString: args.coin,
     forWIF: true
   })
@@ -936,8 +908,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   const targets: utxopicker.Target[] = args.targets.map(target => {
     const script = addressToScriptPubkey({
       address: target.address,
-      coin: coin.name,
-      network: args.network
+      coin: coin.name
     })
     return {
       script,
@@ -946,8 +917,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   })
   const changeScript = addressToScriptPubkey({
     address: args.freshChangeAddress,
-    coin: coin.name,
-    network: args.network
+    coin: coin.name
   })
 
   const utxoPicker = coin.utxoPicker ?? utxopicker.utxoPicker

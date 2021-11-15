@@ -1,4 +1,4 @@
-import { AddressPath, CurrencyFormat, NetworkEnum } from '../../plugin/types'
+import { AddressPath, CurrencyFormat } from '../../plugin/types'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
 import { PublicKey } from '../keymanager/cleaners'
 import {
@@ -23,7 +23,6 @@ export interface WalletToolsConfig {
   publicKey: PublicKey
   wifKeys?: string[]
   coin: string
-  network: NetworkEnum
 }
 
 export interface UTXOPluginWalletTools {
@@ -84,7 +83,7 @@ interface SignMessageArgs {
 export function makeUtxoWalletTools(
   config: WalletToolsConfig
 ): UTXOPluginWalletTools {
-  const { coin, network, publicKey, wifKeys = [] } = config
+  const { coin, publicKey, wifKeys = [] } = config
 
   const xpubKeys = publicKey.publicKeys
 
@@ -92,7 +91,6 @@ export function makeUtxoWalletTools(
     if (args.changeIndex === 0 && wifKeys[args.addressIndex] != null) {
       return wifToPrivateKey({
         wifKey: wifKeys[args.addressIndex],
-        network,
         coin
       })
     } else {
@@ -112,7 +110,6 @@ export function makeUtxoWalletTools(
       }
       return xpubToPubkey({
         xpub: xpubKeys[args.format] ?? '',
-        network,
         coin,
         type: currencyFormatToPurposeType(args.format),
         bip44ChangeIndex: args.changeIndex,
@@ -135,14 +132,13 @@ export function makeUtxoWalletTools(
       const addressType = getAddressTypeFromPurposeType(purposeType)
       return scriptPubkeyToAddress({
         scriptPubkey,
-        network,
         addressType,
         coin
       })
     },
 
     addressToScriptPubkey(address: string): string {
-      return addressToScriptPubkey({ address, network, coin })
+      return addressToScriptPubkey({ address, coin })
     },
 
     scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): AddressReturn {
@@ -150,7 +146,6 @@ export function makeUtxoWalletTools(
       const addressType = getAddressTypeFromPurposeType(purposeType)
       return scriptPubkeyToAddress({
         scriptPubkey: args.scriptPubkey,
-        network,
         addressType,
         coin
       })
@@ -169,7 +164,6 @@ export function makeUtxoWalletTools(
       }
       return xprivToPrivateKey({
         xpriv: xpriv,
-        network,
         type: currencyFormatToPurposeType(path.format),
         coin,
         bip44ChangeIndex: path.changeIndex,
@@ -186,7 +180,6 @@ export function makeUtxoWalletTools(
       const script = scriptTemplate(publicKey)
       const { address, scriptPubkey, redeemScript } = scriptPubkeyToP2SH({
         coin,
-        network,
         scriptPubkey: script
       })
       if (address == null) {

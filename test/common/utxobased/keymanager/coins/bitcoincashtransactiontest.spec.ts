@@ -1,7 +1,6 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
-import { NetworkEnum } from '../../../../../src/common/plugin/types'
 import { scriptTemplates } from '../../../../../src/common/utxobased/info/scriptTemplates/bitcoincashScriptTemplates'
 import {
   addressToScriptPubkey,
@@ -22,7 +21,6 @@ describe('bitcoincash transaction creation and signing test', () => {
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
   const privateKey = wifToPrivateKey({
     wifKey,
-    network: NetworkEnum.Mainnet,
     coin: 'bitcoin'
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
@@ -31,7 +29,6 @@ describe('bitcoincash transaction creation and signing test', () => {
   }).scriptPubkey
   const address: string = scriptPubkeyToAddress({
     scriptPubkey: scriptPubkey,
-    network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2pkh
   }).address
@@ -44,7 +41,6 @@ describe('bitcoincash transaction creation and signing test', () => {
       It is enough to pass the full previous rawtransaction.
     */
     const base64Tx: string = createTx({
-      network: NetworkEnum.Mainnet,
       coin: 'bitcoincash',
       rbf: false,
       inputs: [
@@ -74,7 +70,6 @@ describe('bitcoincash transaction creation and signing test', () => {
         {
           scriptPubkey: addressToScriptPubkey({
             address: address,
-            network: NetworkEnum.Mainnet,
             addressType: AddressTypeEnum.p2pkh,
             coin: 'bitcoin'
           }),
@@ -100,7 +95,6 @@ describe('bitcoincash replay protection transaction creation and signing test', 
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
   const privateKey = wifToPrivateKey({
     wifKey,
-    network: NetworkEnum.Mainnet,
     coin: 'bitcoin'
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
@@ -116,7 +110,6 @@ describe('bitcoincash replay protection transaction creation and signing test', 
   const redeemScript = info.redeemScript
   const address: string = scriptPubkeyToAddress({
     scriptPubkey: scriptPubkey,
-    network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2pkh
   }).address
@@ -129,7 +122,6 @@ describe('bitcoincash replay protection transaction creation and signing test', 
       It is enough to pass the full previous rawtransaction.
     */
     const base64Tx: string = createTx({
-      network: NetworkEnum.Mainnet,
       coin: 'bitcoincash',
       rbf: false,
       inputs: [
@@ -156,7 +148,6 @@ describe('bitcoincash replay protection transaction creation and signing test', 
         {
           scriptPubkey: addressToScriptPubkey({
             address: address,
-            network: NetworkEnum.Mainnet,
             addressType: AddressTypeEnum.p2pkh,
             coin: 'bitcoin'
           }),
