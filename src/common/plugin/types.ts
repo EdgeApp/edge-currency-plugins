@@ -72,7 +72,6 @@ export interface CoinInfo {
   mainnetConstants: CoinPrefixes
   // by default should contain the bitcoin mainnet constants, useful for networks were multiple constants were in use.
   legacyConstants?: CoinPrefixes
-  testnetConstants: CoinPrefixes
 }
 
 export interface CoinPrefixes {
