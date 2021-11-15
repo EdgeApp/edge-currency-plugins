@@ -58,15 +58,6 @@ export const coinInfo: CoinInfo = {
     pubkeyHash: 0x3c,
     scriptHash: 0x7a,
     bech32: 'bc'
-  },
-
-  testnetConstants: {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0xef,
-    legacyXPriv: 0x04358394,
-    legacyXPub: 0x043587cf,
-    pubkeyHash: 0x6f,
-    scriptHash: 0xc4
   }
 }
 
