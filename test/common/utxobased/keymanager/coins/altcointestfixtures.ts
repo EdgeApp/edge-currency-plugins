@@ -1224,12 +1224,6 @@ export const fixtures: Fixture = {
             'xprv9xwq8XoNMYibm1tgqx9MknBEhV2piDRtYrVLdbRFHaQiYc8Y3yxhWVBui2Pcw6GK1GjhMMsY9qnJAAFEW5QhvvQP8wCyBRMnnGCSADhBBY5',
           network: NetworkEnum.Mainnet,
           type: BIP43PurposeTypeEnum.Legacy
-        },
-        {
-          xpriv:
-            'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
-          network: NetworkEnum.Testnet,
-          type: BIP43PurposeTypeEnum.Legacy
         }
       ],
       xprivToXPubTests: [
@@ -1240,14 +1234,6 @@ export const fixtures: Fixture = {
           type: BIP43PurposeTypeEnum.Legacy,
           xpub:
             'xpub6BwBY3LGBvGtyVy9wygN7v7yFWsK7g9jv5QwRyprquwhRQTgbXGx4HWPZHRnF5ueji94Dztce4k3RJnt2ir3xWBS7y6bDk8ryS8vKXyoYPL'
-        },
-        {
-          xpriv:
-            'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
-          network: NetworkEnum.Testnet,
-          type: BIP43PurposeTypeEnum.Legacy,
-          xpub:
-            'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
         }
       ],
       xpubToPubkeyTests: [
@@ -1310,6 +1296,90 @@ export const fixtures: Fixture = {
           network: NetworkEnum.Mainnet,
           scriptPubkey: '0014b3a7c506ee6746d5402354dfd2b4f5350afedc8e'
         }
+      ]
+    },
+    {
+      name: 'bitcoingoldtestnet',
+      mnemonic:
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+      seedToXPrivTests: [
+        {
+          xpriv:
+            'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.Legacy
+        }
+      ],
+      xprivToXPubTests: [
+        {
+          xpriv:
+            'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.Legacy,
+          xpub:
+            'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
+        }
+      ],
+      xpubToPubkeyTests: [
+        // {
+        //   xpub:
+        //     'xpub6BwBY3LGBvGtyVy9wygN7v7yFWsK7g9jv5QwRyprquwhRQTgbXGx4HWPZHRnF5ueji94Dztce4k3RJnt2ir3xWBS7y6bDk8ryS8vKXyoYPL',
+        //   network: NetworkEnum.Mainnet,
+        //   type: BIP43PurposeTypeEnum.Legacy,
+        //   bip44ChangeIndex: 0,
+        //   bip44AddressIndex: 0,
+        //   scriptType: ScriptTypeEnum.p2pkh,
+        //   addressType: AddressTypeEnum.p2pkh,
+        //   address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9',
+        //   legacyAddress: '1McdhUQiZ2fatmKMvVn8sc8YemYpeDum1k'
+        // },
+        // {
+        //   xpub:
+        //     'ypub6Wu2Ax4NRoLJW1UCNBRMatwYW5Vr7vqgE4SK6FdKssNEUA2NCor8c5oSdMTUgHT3V9yj1LzMLTJpXwCh7hVenJdfhLB9M6qxmi6bcoFSdVd',
+        //   network: NetworkEnum.Mainnet,
+        //   type: BIP43PurposeTypeEnum.WrappedSegwit,
+        //   bip44ChangeIndex: 0,
+        //   bip44AddressIndex: 0,
+        //   scriptType: ScriptTypeEnum.p2wpkhp2sh,
+        //   addressType: AddressTypeEnum.p2sh,
+        //   address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn',
+        //   legacyAddress: '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i'
+        // },
+        // {
+        //   xpub:
+        //     'zpub6sBMnpX8349mvyqk3Y4U1mTJAeCpY4qGNgMeJejYe1sjPYyVVs6qBDrycdTNd7kHXCZBUxuTB9kojxvHKVU6kS9hsoUeekK1QRBU9nDYtx2',
+        //   network: NetworkEnum.Mainnet,
+        //   type: BIP43PurposeTypeEnum.Segwit,
+        //   bip44ChangeIndex: 0,
+        //   bip44AddressIndex: 0,
+        //   scriptType: ScriptTypeEnum.p2wpkh,
+        //   addressType: AddressTypeEnum.p2wpkh,
+        //   address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu',
+        //   legacyAddress: 'bc1qkwnu2phwvard2spr2n0a9d84x590ahywfczcd5'
+        // }
+      ],
+      wifToPrivateKeyTests: [
+        {
+          wifKey: 'cV3TWoKnJVjnZX7ZucyYcZHRc2WKtb2ZsaLFnmcojZJxnq3pPeBy',
+          network: NetworkEnum.Testnet
+        }
+      ],
+      addressToScriptPubkeyTests: [
+        // {
+        //   address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9',
+        //   network: NetworkEnum.Mainnet,
+        //   scriptPubkey: '76a914e21fb547704ff606ba769b9d6d7985f4cca760f788ac'
+        // },
+        // {
+        //   address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn',
+        //   network: NetworkEnum.Mainnet,
+        //   scriptPubkey: 'a9142fdadae8827ecedb668946c073ebbb0482820c6387'
+        // },
+        // {
+        //   address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu',
+        //   network: NetworkEnum.Mainnet,
+        //   scriptPubkey: '0014b3a7c506ee6746d5402354dfd2b4f5350afedc8e'
+        // }
       ]
     },
     {
@@ -1414,6 +1484,74 @@ export const fixtures: Fixture = {
           address: 'pz689gnx6z7cnsfhq6jpxtx0k9hhcwulev5cpumfk0',
           network: NetworkEnum.Mainnet,
           scriptPubkey: 'a914b472a266d0bd89c13706a4132ccfb16f7c3b9fcb87'
+        },
+        {
+          extraMessage: 'p2sh',
+          address: 'bchtest:pq2wfeuppegjpnrg64ws8vmv7e4fatwzwq9rvngx8x',
+          network: NetworkEnum.Testnet,
+          scriptPubkey: 'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
+        },
+        {
+          extraMessage: 'without prefix',
+          address: 'pq2wfeuppegjpnrg64ws8vmv7e4fatwzwq9rvngx8x',
+          network: NetworkEnum.Testnet,
+          scriptPubkey: 'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
+        }
+      ]
+    },
+    {
+      name: 'bitcoincashtestnet',
+      mnemonic:
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+      seedToXPrivTests: [
+        {
+          xpriv:
+            'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.Legacy
+        }
+      ],
+      xprivToXPubTests: [
+        {
+          xpriv:
+            'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.Legacy,
+          xpub:
+            'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba'
+        }
+      ],
+      xpubToPubkeyTests: [
+        {
+          xpub:
+            'tpubDC5FSnBiZDMmhiuCmWAYsLwgLYrrT9rAqvTySfuCCrgsWz8wxMXUS9Tb9iVMvcRbvFcAHGkMD5Kx8koh4GquNGNTfohfk7pgjhaPCdXpoba',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.Legacy,
+          bip44ChangeIndex: 0,
+          bip44AddressIndex: 0,
+          scriptType: ScriptTypeEnum.p2pkh,
+          addressType: AddressTypeEnum.p2pkh,
+          address: 'bchtest:qqaz6s295ncfs53m86qj0uw6sl8u2kuw0ymst35fx4',
+          legacyAddress: 'mkpZhYtJu2r87Js3pDiWJDmPte2NRZ8bJV'
+        }
+      ],
+      wifToPrivateKeyTests: [
+        {
+          wifKey: 'cNxENxFVynNHk6t5Vp3HWjYka4vrqi2rNLEpgYBWwsRa4hEx8Uj8',
+          network: NetworkEnum.Testnet
+        }
+      ],
+      addressToScriptPubkeyTests: [
+        {
+          address: 'bchtest:qrall9d5uddv4yvdyms4wwfw59jr5twzsvashd0fst',
+          network: NetworkEnum.Testnet,
+          scriptPubkey: '76a914fbff95b4e35aca918d26e157392ea1643a2dc28388ac'
+        },
+        {
+          extraMessage: 'without prefix',
+          address: 'qrall9d5uddv4yvdyms4wwfw59jr5twzsvashd0fst',
+          network: NetworkEnum.Testnet,
+          scriptPubkey: '76a914fbff95b4e35aca918d26e157392ea1643a2dc28388ac'
         },
         {
           extraMessage: 'p2sh',
@@ -1592,6 +1730,112 @@ export const fixtures: Fixture = {
           message: 'This is an example of a signed message.',
           signature:
             'H9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
+        }
+      ]
+    },
+    {
+      name: 'bitcointestnet',
+      mnemonic:
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+      seedToXPrivTests: [
+        {
+          xpriv:
+            'vprv9K7GLAaERuM58PVvbk1sMo7wzVCoPwzZpVXLRBmum93gL5pSqQCAAvZjtmz93nnnYMr9i2FwG2fqrwYLRgJmDDwFjGiamGsbRMJ5Y6siJ8H',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.Segwit
+        },
+        {
+          xpriv:
+            'uprv91G7gZkzehuMVxDJTYE6tLivdF8e4rvzSu1LFfKw3b2Qx1Aj8vpoFnHdfUZ3hmi9jsvPifmZ24RTN2KhwB8BfMLTVqaBReibyaFFcTP1s9n',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.WrappedSegwit
+        },
+        {
+          xpriv:
+            'tprv8fPDJN9UQqg6pFsQsrVxTwHZmXLvHpfGGcsCA9rtnatUgVtBKxhtFeqiyaYKSWydunKpjhvgJf6PwTwgirwuCbFq8YKgpQiaVJf3JCrNmkR',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.Legacy
+        }
+      ],
+      xprivToXPubTests: [
+        {
+          xpriv:
+            'vprv9K7GLAaERuM58PVvbk1sMo7wzVCoPwzZpVXLRBmum93gL5pSqQCAAvZjtmz93nnnYMr9i2FwG2fqrwYLRgJmDDwFjGiamGsbRMJ5Y6siJ8H',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.Segwit,
+          xpub:
+            'vpub5Y6cjg78GGuNLsaPhmYsiw4gYX3HoQiRBiSwDaBXKUafCt9bNwWQiitDk5VZ5BVxYnQdwoTyXSs2JHRPAgjAvtbBrf8ZhDYe2jWAqvZVnsc'
+        },
+        {
+          xpriv:
+            'uprv91G7gZkzehuMVxDJTYE6tLivdF8e4rvzSu1LFfKw3b2Qx1Aj8vpoFnHdfUZ3hmi9jsvPifmZ24RTN2KhwB8BfMLTVqaBReibyaFFcTP1s9n',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.WrappedSegwit,
+          xpub:
+            'upub5EFU65HtV5TeiSHmZZm7FUffBGy8UKeqp7vw43jYbvZPpoVsgU93oac7Wk3u6moKegAEWtGNF8DehrnHtv21XXEMYRUocHqguyjknFHYfgY'
+        },
+        {
+          xpriv:
+            'tprv8fVU32aAEuEPeH1WYx3LhXtSFZTRaFqjbFNPaJZ9R8fCVja44tSaUPZEKGpMK6McUDkWWMvRiVfKR3Wzei6AmLoTNYHMAZ9KtvVTLZZdhvA',
+          network: NetworkEnum.Testnet,
+          type: BIP43PurposeTypeEnum.Legacy,
+          xpub:
+            'tpubDCBWBScQPGv4Xk3JSbhw6wYYpayMjb2eAYyArpbSqQTbLDpphHGAetB6VQgVeftLML8vDSUEWcC2xDi3qJJ3YCDChJDvqVzpgoYSuT52MhJ'
+        }
+      ],
+      xpubToPubkeyTests: [
+        // {
+        //   xpub:
+        //     'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj',
+        //   network: NetworkEnum.Mainnet,
+        //   type: BIP43PurposeTypeEnum.Legacy,
+        //   bip44ChangeIndex: 0,
+        //   bip44AddressIndex: 0,
+        //   scriptType: ScriptTypeEnum.p2pkh,
+        //   addressType: AddressTypeEnum.p2pkh,
+        //   address: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA'
+        // },
+        // {
+        //   xpub:
+        //     'ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP',
+        //   network: NetworkEnum.Mainnet,
+        //   type: BIP43PurposeTypeEnum.WrappedSegwit,
+        //   bip44ChangeIndex: 0,
+        //   bip44AddressIndex: 0,
+        //   scriptType: ScriptTypeEnum.p2wpkhp2sh,
+        //   addressType: AddressTypeEnum.p2sh,
+        //   address: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf'
+        // },
+        // {
+        //   xpub:
+        //     'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs',
+        //   network: NetworkEnum.Mainnet,
+        //   type: BIP43PurposeTypeEnum.Segwit,
+        //   bip44ChangeIndex: 0,
+        //   bip44AddressIndex: 0,
+        //   scriptType: ScriptTypeEnum.p2wpkh,
+        //   addressType: AddressTypeEnum.p2wpkh,
+        //   address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
+        // }
+      ],
+      wifToPrivateKeyTests: [
+        {
+          wifKey: 'cTGP1SdrZ28j12fzxL99bCUb1RtwYH2Jy7ukSdzzC7HUrJQdDJgq',
+          network: NetworkEnum.Testnet
+        }
+      ],
+      addressToScriptPubkeyTests: [
+        {
+          address: '2Mu9hifsg4foPLkyo9i1isPWTobnNmXL3Qk',
+          network: NetworkEnum.Testnet,
+          scriptPubkey: 'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
+        },
+        {
+          address:
+            'tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7',
+          network: NetworkEnum.Testnet,
+          scriptPubkey:
+            '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
         }
       ]
     }
