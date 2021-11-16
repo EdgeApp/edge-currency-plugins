@@ -362,7 +362,7 @@ export async function makeUtxoEngine(
       for (const output of tx.outputs) {
         const scriptPubkey = output.script.toString('hex')
         const own = await processor.fetchAddress(scriptPubkey)
-        if (own != null) {
+        if (own == null) {
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
         }
       }
