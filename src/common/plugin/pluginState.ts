@@ -82,13 +82,14 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     serverCacheDirty = true
     for (const engine of engines) {
       if (engine.processedPercent === 1) {
-        for (const uri of engine.getServerList()) {
-          if (uri === serverUrl) {
-            saveServerCache().catch(e => {
-              log(`${pluginId} - ${JSON.stringify(e.toString())}`)
-            })
-            return
-          }
+        const isFound = engine.getServerList().includes(serverUrl)
+        if (isFound) {
+          saveServerCache().catch(e => {
+            log(`${pluginId} - ${JSON.stringify(e.toString())}`)
+          })
+          // Early exit because the server cache is no longer dirty after
+          // calling saveServerCache
+          return
         }
       }
     }
