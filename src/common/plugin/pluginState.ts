@@ -66,8 +66,6 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
   let serverCacheDirty = false
   let servers = {}
 
-  const serverScores = new ServerScores(log)
-
   const saveServerCache = async (): Promise<void> => {
     serverScores.printServers(servers)
     if (serverCacheDirty) {
@@ -80,7 +78,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     }
   }
 
-  const dirtyServerCache = (serverUrl: string): void => {
+  const onDirtyServer = (serverUrl: string): void => {
     serverCacheDirty = true
     for (const engine of engines) {
       if (engine.processedPercent === 1) {
@@ -95,6 +93,11 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
     }
   }
+
+  const serverScores = new ServerScores({
+    log,
+    onDirtyServer
+  })
 
   const fetchServers = async (): Promise<string[] | null> => {
     log(`${pluginId} - GET ${serverListInfoUrl}`)
@@ -125,12 +128,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     if (!disableFetchingServers)
       serverList = (await fetchServers()) ?? defaultServers
 
-    serverScores.serverScoresLoad(
-      servers,
-      serverCacheJson,
-      dirtyServerCache,
-      serverList
-    )
+    serverScores.serverScoresLoad(servers, serverCacheJson, serverList)
     await saveServerCache()
 
     // Tell the engines about the new servers:
@@ -178,11 +176,11 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     },
 
     serverScoreDown(uri: string): void {
-      serverScores.serverScoreDown(servers, uri, dirtyServerCache)
+      serverScores.serverScoreDown(servers, uri)
     },
 
     serverScoreUp(uri: string, score: number): void {
-      serverScores.serverScoreUp(servers, uri, score, dirtyServerCache)
+      serverScores.serverScoreUp(servers, uri, score)
     },
 
     async clearCache(): Promise<void> {

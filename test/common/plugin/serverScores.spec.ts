@@ -75,10 +75,10 @@ describe(`ServerCache`, function () {
     ]
 
     // $FlowFixMe
-    const scores = new ServerScores(testLog)
+    const scores = new ServerScores({ log: testLog, onDirtyServer: callback })
     const cache = {}
 
-    scores.serverScoresLoad(diskServerCache, cache, callback, newServers)
+    scores.serverScoresLoad(diskServerCache, cache, newServers)
     const result = scores.getServers(cache, 8)
 
     console.log('\n\n process version:', process.version, '\n\n')
@@ -171,11 +171,11 @@ describe(`ServerCache`, function () {
     ]
 
     // $FlowFixMe
-    const scores = new ServerScores(testLog)
+    const scores = new ServerScores({ log: testLog, onDirtyServer: callback })
     const cache = {}
 
-    scores.serverScoresLoad(cache, diskServerCache, callback, newServers)
-    scores.serverScoreUp(cache, 'server8', 0, callback, 405)
+    scores.serverScoresLoad(cache, diskServerCache, newServers)
+    scores.serverScoreUp(cache, 'server8', 0, 405)
     const control = [
       'server8',
       'server2',
@@ -245,9 +245,9 @@ describe(`ServerCache`, function () {
     const cache = {}
 
     // $FlowFixMe
-    const scores = new ServerScores(testLog)
+    const scores = new ServerScores({ log: testLog, onDirtyServer: callback })
 
-    scores.serverScoresLoad(cache, diskServerCache, callback, newServers)
+    scores.serverScoresLoad(cache, diskServerCache, newServers)
     const result = scores.getServers(cache, 8)
 
     const expected =

@@ -19,15 +19,23 @@ const MIN_SCORE = -100
 const DROPPED_SERVER_SCORE = -100
 const RE_ADDED_SERVER_SCORE = -10
 
+interface ServerScoresOptions {
+  log: EdgeLog
+  onDirtyServer?: (serverUrl: string) => void
+}
+
 export class ServerScores {
   scoresLastLoaded: number
   log: EdgeLog
   lastScoreUpTime: number
+  onDirtyServer: (serverUrl: string) => void
 
-  constructor(log: EdgeLog) {
+  constructor(options: ServerScoresOptions) {
+    const { log, onDirtyServer = () => {} } = options
     this.log = log
     this.scoresLastLoaded = Date.now()
     this.lastScoreUpTime = Date.now()
+    this.onDirtyServer = onDirtyServer
   }
 
   /**
@@ -38,7 +46,6 @@ export class ServerScores {
   serverScoresLoad(
     servers: ServerInfoCache,
     oldServers: { [serverUrl: string]: ServerInfo },
-    dirtyServerCacheCB: (serverUrl: string) => void,
     newServers: string[] = []
   ): void {
     //
@@ -92,7 +99,7 @@ export class ServerScores {
 
       oldServer.serverScore = serverScore
       servers[serverUrl] = oldServer
-      dirtyServerCacheCB(serverUrl)
+      this.onDirtyServer(serverUrl)
     }
   }
 
@@ -126,7 +133,6 @@ export class ServerScores {
     servers: ServerInfoCache,
     serverUrl: string,
     responseTimeMilliseconds: number,
-    dirtyServerCacheCB: (serverUrl: string) => void,
     changeScore = 1
   ): void {
     const serverInfo: ServerInfo = servers[serverUrl]
@@ -138,24 +144,18 @@ export class ServerScores {
     this.lastScoreUpTime = Date.now()
 
     if (responseTimeMilliseconds !== 0) {
-      this.setResponseTime(
-        servers,
-        serverUrl,
-        responseTimeMilliseconds,
-        dirtyServerCacheCB
-      )
+      this.setResponseTime(servers, serverUrl, responseTimeMilliseconds)
     }
 
     this.log(
       `${serverUrl}: score UP to ${serverInfo.serverScore} ${responseTimeMilliseconds}ms`
     )
-    dirtyServerCacheCB(serverUrl)
+    this.onDirtyServer(serverUrl)
   }
 
   serverScoreDown(
     servers: ServerInfoCache,
     serverUrl: string,
-    dirtyServerCacheCB: (serverUrl: string) => void,
     changeScore = 10
   ): void {
     const currentTime = Date.now()
@@ -172,18 +172,17 @@ export class ServerScores {
     }
 
     if (serverInfo.numResponseTimes === 0) {
-      this.setResponseTime(servers, serverUrl, 9999, dirtyServerCacheCB)
+      this.setResponseTime(servers, serverUrl, 9999)
     }
 
     this.log(`${serverUrl}: score DOWN to ${serverInfo.serverScore}`)
-    dirtyServerCacheCB(serverUrl)
+    this.onDirtyServer(serverUrl)
   }
 
   setResponseTime(
     servers: ServerInfoCache,
     serverUrl: string,
-    responseTimeMilliseconds: number,
-    dirtyServerCacheCB: (serverUrl: string) => void
+    responseTimeMilliseconds: number
   ): void {
     const serverInfo: ServerInfo = servers[serverUrl]
     serverInfo.numResponseTimes++
@@ -201,7 +200,7 @@ export class ServerScores {
       }
     }
     serverInfo.responseTime = newTime
-    dirtyServerCacheCB(serverUrl)
+    this.onDirtyServer(serverUrl)
   }
 
   getServers(
