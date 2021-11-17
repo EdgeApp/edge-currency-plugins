@@ -11,11 +11,11 @@ import {
 export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcointestnet',
   walletType: 'wallet:bitcointestnet',
-  currencyCode: 'TESTBTC',
+  currencyCode: 'TBTC',
   displayName: 'Bitcoin Testnet',
   denominations: [
-    { name: 'TESTBTC', multiplier: '100000000', symbol: '₿' },
-    { name: 'mTESTBTC', multiplier: '100000', symbol: 'm₿' },
+    { name: 'TBTC', multiplier: '100000000', symbol: '₿' },
+    { name: 'mTBTC', multiplier: '100000', symbol: 'm₿' },
     { name: 'bits', multiplier: '100', symbol: 'ƀ' },
     { name: 'sats', multiplier: '1', symbol: 's' }
   ],
