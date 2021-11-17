@@ -93,7 +93,9 @@ describe('bitcoincash transaction creation and signing test', () => {
   })
 })
 
-describe('bitcoincash replay protection transaction creation and signing test', () => {
+describe('bitcoincash replay protection transaction creation and signing test', function () {
+  this.timeout(10000)
+
   // key with control on the unspent output and used to sign the transaction
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
   const privateKey = wifToPrivateKey({
