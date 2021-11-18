@@ -10,7 +10,7 @@ import {
 import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
 import { makeCurrencyTools } from './makeCurrencyTools'
 import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
-import { PluginState } from './pluginState'
+import { makePluginState } from './pluginState'
 import { EngineConfig, NetworkEnum, PluginInfo } from './types'
 
 export function makeCurrencyPlugin(
@@ -26,7 +26,7 @@ export function makeCurrencyPlugin(
     blockBookServers,
     disableFetchingServers
   } = defaultSettings
-  const state = new PluginState({
+  const state = makePluginState({
     io,
     currencyCode,
     pluginId,
