@@ -48,7 +48,7 @@ import AwaitLock from './await-lock'
 import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
 import { makeServerStates, ServerStates } from './makeServerStates'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
-import { makeTaskCache, TaskCache } from './taskCache'
+import { makeTaskState, TaskState } from './taskState'
 import {
   currencyFormatToPurposeType,
   getCurrencyFormatFromPurposeType,
@@ -98,27 +98,7 @@ export function makeUtxoEngineState(
 
   const { supportedFormats } = walletInfo.keys
 
-  const taskState: TaskState = {
-    addressWatching: false,
-    blockWatching: false,
-    addressSubscribeTasks: makeTaskCache(),
-    transactionTasks: makeTaskCache(),
-    utxoTasks: makeTaskCache(),
-    rawUtxoTasks: makeTaskCache(),
-    processedUtxoTasks: makeTaskCache(),
-    updateTransactionTasks: makeTaskCache()
-  }
-
-  const clearTaskState = (): void => {
-    taskState.addressWatching = false
-    taskState.blockWatching = false
-    taskState.addressSubscribeTasks.clear()
-    taskState.transactionTasks.clear()
-    taskState.utxoTasks.clear()
-    taskState.rawUtxoTasks.clear()
-    taskState.processedUtxoTasks.clear()
-    taskState.updateTransactionTasks.clear()
-  }
+  const taskState = makeTaskState({ walletTools, processor })
 
   let processedCount = 0
   let processedPercent = 0
@@ -206,16 +186,13 @@ export function makeUtxoEngineState(
           processing: false,
           path
         })
-        addTransactionTasks(
-          commonArgs,
+
+        await taskState.addTransactionTask(
           response.address,
           path.format,
           path.branch,
-          0,
-          taskState.transactionTasks
-        ).catch(() => {
-          throw new Error('failed to add to transaction cache')
-        })
+          0
+        )
         setLookAhead(commonArgs).catch(e => {
           log(e)
         })
@@ -236,7 +213,6 @@ export function makeUtxoEngineState(
       for (const format of supportedFormats) {
         const branches = getFormatSupportedBranches(format)
         for (const branch of branches) {
-          const addressesToSubscribe = new Set<string>()
           const branchAddressCount = processor.numAddressesByFormatPath({
             format,
             changeIndex: branch
@@ -254,12 +230,14 @@ export function makeUtxoEngineState(
               changeIndex: branch,
               format
             })
-            addressesToSubscribe.add(address)
+            taskState.addressSubscribeTasks.add(address, {
+              path: {
+                format,
+                branch
+              },
+              processing: false
+            })
           }
-          addAddressSubscribeTasks(commonArgs.taskState, addressesToSubscribe, {
-            format,
-            branch
-          })
         }
       }
     }
@@ -277,7 +255,7 @@ export function makeUtxoEngineState(
 
     async stop(): Promise<void> {
       serverStates.stop()
-      clearTaskState()
+      taskState.clearTaskState()
       running = false
     },
 
@@ -403,48 +381,6 @@ interface ShortPath {
   format: CurrencyFormat
   branch: number
 }
-interface TaskState {
-  addressWatching: boolean
-  blockWatching: boolean
-  addressSubscribeTasks: TaskCache<AddressSubscribeTask>
-  utxoTasks: TaskCache<UtxosTask>
-  rawUtxoTasks: TaskCache<RawUtxoTask>
-  processedUtxoTasks: TaskCache<ProcessedUtxoTask>
-  transactionTasks: TaskCache<TransactionTask>
-  updateTransactionTasks: TaskCache<UpdateTransactionTask>
-}
-
-interface UpdateTransactionTask {
-  processing: boolean
-}
-interface AddressSubscribeTask {
-  processing: boolean
-  path: ShortPath
-}
-
-interface UtxosTask {
-  processing: boolean
-  path: ShortPath
-}
-
-interface ProcessedUtxoTask {
-  processing: boolean
-  full: boolean
-  utxos: Set<IUTXO>
-  path: ShortPath
-}
-interface RawUtxoTask {
-  processing: boolean
-  path: ShortPath
-  address: IAddress
-  requiredCount: number
-}
-interface TransactionTask {
-  processing: boolean
-  path: ShortPath
-  page: number
-  blockHeight: number
-}
 
 interface FormatArgs extends CommonArgs, ShortPath {}
 
@@ -454,6 +390,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
     lock,
     processor,
     supportedFormats,
+    taskState,
     walletTools
   } = common
 
@@ -473,7 +410,6 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
   }
 
   async function deriveKeys(shortPath: ShortPath): Promise<void> {
-    const addressesToSubscribe = new Set<string>()
     const formatPath: Omit<AddressPath, 'addressIndex'> = {
       format: shortPath.format,
       changeIndex: shortPath.branch
@@ -503,8 +439,11 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
         makeIAddress({ scriptPubkey, redeemScript, path })
       )
 
-      // Add the displayAddress to the set of addresses to subscribe to after loop
-      addressesToSubscribe.add(address)
+      // Add the address to the set of addresses to subscribe to after loop
+      taskState.addressSubscribeTasks.add(address, {
+        path: shortPath,
+        processing: false
+      })
 
       // Update the state for the loop
       lastUsedIndex = await processor.lastUsedIndexByFormatPath({
@@ -513,53 +452,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
       lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
       nextAddressIndex = processor.numAddressesByFormatPath(formatPath)
     }
-
-    // Add all the addresses to the subscribe cache for registering subscriptions later
-    addAddressSubscribeTasks(common.taskState, addressesToSubscribe, shortPath)
   }
-}
-
-const addAddressSubscribeTasks = (
-  taskState: TaskState,
-  addresses: Set<string>,
-  path: ShortPath
-): void => {
-  addresses.forEach(address => {
-    taskState.addressSubscribeTasks.add(address, {
-      path,
-      processing: false
-    })
-  })
-  taskState.addressWatching = false
-}
-
-const addTransactionTasks = async (
-  args: CommonArgs,
-  address: string,
-  format: CurrencyFormat,
-  branch: number,
-  blockHeight: number,
-  transactionTasks: TaskCache<TransactionTask>
-): Promise<void> => {
-  const { walletTools, processor } = args
-  // Fetch the blockHeight for the address from the database
-  const scriptPubkey = walletTools.addressToScriptPubkey(address)
-
-  if (blockHeight === 0) {
-    const { lastQueriedBlockHeight = 0 } =
-      (await processor.fetchAddress(scriptPubkey)) ?? {}
-    blockHeight = lastQueriedBlockHeight
-  }
-
-  transactionTasks.add(address, {
-    processing: false,
-    path: {
-      format,
-      branch
-    },
-    page: 1, // Page starts on 1
-    blockHeight
-  })
 }
 
 interface TransactionChangedArgs {
@@ -713,13 +606,11 @@ export const pickNextTask = async (
           processing: false,
           path: task.path
         })
-        await addTransactionTasks(
-          args,
+        await taskState.addTransactionTask(
           address,
           task.path.format,
           task.path.branch,
-          blockHeight,
-          transactionTasks
+          blockHeight
         )
       }
       task.processing = true
@@ -898,11 +789,12 @@ const internalDeriveScriptAddress = async ({
   await processor.saveAddress(
     makeIAddress({ scriptPubkey, redeemScript, path })
   )
-  const addresses = new Set<string>()
-  addresses.add(address)
-  addAddressSubscribeTasks(taskState, addresses, {
-    format: path.format,
-    branch: path.changeIndex
+  taskState.addressSubscribeTasks.add(address, {
+    path: {
+      format: path.format,
+      branch: path.changeIndex
+    },
+    processing: false
   })
   return { address, scriptPubkey, redeemScript }
 }
@@ -1235,31 +1127,25 @@ const processRawUtxo = async (
     uri,
     log
   } = args
-  const { rawUtxoTasks, processedUtxoTasks } = taskState
+  const { rawUtxoTasks } = taskState
   let scriptType: ScriptTypeEnum
   let script: string
   let redeemScript: string | undefined
 
   // Function to call once we are finished
   const done = (): void =>
-    addProcessedUtxosTask(
-      processedUtxoTasks,
-      path,
-      address.scriptPubkey,
-      requiredCount,
-      {
-        id,
-        txid: utxo.txid,
-        vout: utxo.vout,
-        value: utxo.value,
-        scriptPubkey: address.scriptPubkey,
-        script,
-        redeemScript,
-        scriptType,
-        blockHeight: utxo.height ?? -1,
-        spent: false
-      }
-    )
+    taskState.addProcessedUtxoTask(path, address.scriptPubkey, requiredCount, {
+      id,
+      txid: utxo.txid,
+      vout: utxo.vout,
+      value: utxo.value,
+      scriptPubkey: address.scriptPubkey,
+      script,
+      redeemScript,
+      scriptType,
+      blockHeight: utxo.height ?? -1,
+      spent: false
+    })
 
   switch (currencyFormatToPurposeType(format)) {
     case BIP43PurposeTypeEnum.Airbitz:
@@ -1325,22 +1211,4 @@ const processRawUtxo = async (
 
   // Since we have everything, call done
   done()
-}
-
-const addProcessedUtxosTask = (
-  processedUtxoTasks: TaskCache<ProcessedUtxoTask>,
-  path: ShortPath,
-  scriptPubkey: string,
-  requiredCount: number,
-  utxo: IUTXO
-): void => {
-  const processedUtxos = processedUtxoTasks.get(scriptPubkey) ?? {
-    utxos: new Set(),
-    processing: false,
-    path,
-    full: false
-  }
-  processedUtxos.utxos.add(utxo)
-  processedUtxoTasks.add(scriptPubkey, processedUtxos)
-  processedUtxos.full = processedUtxos.utxos.size >= requiredCount
 }
