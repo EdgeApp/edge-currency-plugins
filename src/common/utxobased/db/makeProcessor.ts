@@ -88,7 +88,7 @@ export interface Processor {
   Used to store transactions. Needs to be updated for confirmation
   heights, and detecting used script pubkeys */
 
-  saveTransaction: (args: SaveTransactionArgs) => Promise<void>
+  saveTransaction: (args: SaveTransactionArgs) => Promise<IProcessorTransaction>
   numTransactions: () => number
   removeTransaction: (txId: string) => Promise<void>
   fetchTransactions: (
@@ -269,7 +269,9 @@ export async function makeProcessor(
       })
     },
 
-    async saveTransaction(args: SaveTransactionArgs): Promise<void> {
+    async saveTransaction(
+      args: SaveTransactionArgs
+    ): Promise<IProcessorTransaction> {
       const { scriptPubkey, tx } = args
       return await baselets.tx(async tables => {
         // Check if the transaction already exists
@@ -334,6 +336,8 @@ export async function makeProcessor(
 
         // Save transaction
         await tables.txById.insert('', transaction.txid, transaction)
+
+        return transaction
       })
     },
 

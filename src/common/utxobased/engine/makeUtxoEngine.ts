@@ -414,7 +414,7 @@ export async function makeUtxoEngine(
         walletTools,
         processor
       })
-      return await processor.saveTransaction({ tx })
+      await processor.saveTransaction({ tx })
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
