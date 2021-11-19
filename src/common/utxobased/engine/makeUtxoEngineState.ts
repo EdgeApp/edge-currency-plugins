@@ -98,7 +98,7 @@ export function makeUtxoEngineState(
 
   const { supportedFormats } = walletInfo.keys
 
-  const taskCache: TaskCache = {
+  const taskState: TaskState = {
     addressWatching: false,
     blockWatching: false,
     addressSubscribeCache: {},
@@ -109,15 +109,15 @@ export function makeUtxoEngineState(
     updateTransactionsCache: {}
   }
 
-  const clearTaskCache = (): void => {
-    taskCache.addressWatching = false
-    taskCache.blockWatching = false
-    taskCache.addressSubscribeCache = {}
-    taskCache.transactionsCache = {}
-    taskCache.utxosCache = {}
-    taskCache.rawUtxosCache = {}
-    taskCache.processedUtxosCache = {}
-    taskCache.updateTransactionsCache = {}
+  const clearTaskState = (): void => {
+    taskState.addressWatching = false
+    taskState.blockWatching = false
+    taskState.addressSubscribeCache = {}
+    taskState.transactionsCache = {}
+    taskState.utxosCache = {}
+    taskState.rawUtxosCache = {}
+    taskState.processedUtxosCache = {}
+    taskState.updateTransactionsCache = {}
   }
 
   let processedCount = 0
@@ -156,7 +156,7 @@ export function makeUtxoEngineState(
     walletTools,
     processor,
     emitter,
-    taskCache,
+    taskState,
     onAddressChecked,
     io: config.io,
     log,
@@ -191,7 +191,7 @@ export function makeUtxoEngineState(
       })
       for (const tx of txs) {
         if (tx == null) continue
-        taskCache.updateTransactionsCache[tx.txid] = { processing: false }
+        taskState.updateTransactionsCache[tx.txid] = { processing: false }
       }
     }
   )
@@ -199,10 +199,10 @@ export function makeUtxoEngineState(
   emitter.on(
     EngineEvent.NEW_ADDRESS_TRANSACTION,
     async (_uri: string, response: INewTransactionResponse): Promise<void> => {
-      const state = taskCache.addressSubscribeCache[response.address]
+      const state = taskState.addressSubscribeCache[response.address]
       if (state != null) {
         const { path } = state
-        taskCache.utxosCache[response.address] = {
+        taskState.utxosCache[response.address] = {
           processing: false,
           path
         }
@@ -212,7 +212,7 @@ export function makeUtxoEngineState(
           path.format,
           path.branch,
           0,
-          taskCache.transactionsCache
+          taskState.transactionsCache
         ).catch(() => {
           throw new Error('failed to add to transaction cache')
         })
@@ -233,7 +233,7 @@ export function makeUtxoEngineState(
     )
 
     if (
-      Object.keys(taskCache.addressSubscribeCache).length < totalAddressCount
+      Object.keys(taskState.addressSubscribeCache).length < totalAddressCount
     ) {
       for (const format of supportedFormats) {
         const branches = getFormatSupportedBranches(format)
@@ -259,7 +259,7 @@ export function makeUtxoEngineState(
             addressesToSubscribe.add(address)
           }
           addToAddressSubscribeCache(
-            commonArgs.taskCache,
+            commonArgs.taskState,
             addressesToSubscribe,
             {
               format,
@@ -283,7 +283,7 @@ export function makeUtxoEngineState(
 
     async stop(): Promise<void> {
       serverStates.stop()
-      clearTaskCache()
+      clearTaskState()
       running = false
     },
 
@@ -336,7 +336,7 @@ export function makeUtxoEngineState(
         walletTools: commonArgs.walletTools,
         engineInfo: commonArgs.pluginInfo.engineInfo,
         processor: commonArgs.processor,
-        taskCache: commonArgs.taskCache,
+        taskState: commonArgs.taskState,
         format: walletInfo.keys.format,
         script
       })
@@ -396,7 +396,7 @@ interface CommonArgs {
   walletTools: UTXOPluginWalletTools
   processor: Processor
   emitter: EngineEmitter
-  taskCache: TaskCache
+  taskState: TaskState
   onAddressChecked: () => void
   io: EdgeIo
   log: EdgeLog
@@ -409,7 +409,7 @@ interface ShortPath {
   format: CurrencyFormat
   branch: number
 }
-interface TaskCache {
+interface TaskState {
   addressWatching: boolean
   blockWatching: boolean
   addressSubscribeCache: AddressSubscribeCache
@@ -524,7 +524,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
     addToAddressSubscribeCache(
-      common.taskCache,
+      common.taskState,
       addressesToSubscribe,
       shortPath
     )
@@ -532,16 +532,16 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 }
 
 const addToAddressSubscribeCache = (
-  taskCache: TaskCache,
+  taskState: TaskState,
   addresses: Set<string>,
   path: ShortPath
 ): void => {
   addresses.forEach(address => {
-    taskCache.addressSubscribeCache[address] = {
+    taskState.addressSubscribeCache[address] = {
       path,
       processing: false
     }
-    taskCache.addressWatching = false
+    taskState.addressWatching = false
   })
 }
 
@@ -610,7 +610,7 @@ export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<WsTask<any> | undefined | boolean> => {
-  const { taskCache, uri, serverStates } = args
+  const { taskState, uri, serverStates } = args
 
   const {
     addressSubscribeCache,
@@ -619,7 +619,7 @@ export const pickNextTask = async (
     processedUtxosCache,
     transactionsCache,
     updateTransactionsCache
-  } = taskCache
+  } = taskState
 
   const serverState = serverStates.getServerState(uri)
   if (serverState == null) return
@@ -717,7 +717,7 @@ export const pickNextTask = async (
   // Check if there are any addresses pending to be subscribed
   if (
     Object.keys(addressSubscribeCache).length > 0 &&
-    !taskCache.addressWatching
+    !taskState.addressWatching
   ) {
     const blockHeight = serverStates.getBlockHeight(uri)
     // Loop each address that needs to be subscribed
@@ -745,7 +745,7 @@ export const pickNextTask = async (
       state.processing = true
     }
 
-    taskCache.addressWatching = true
+    taskState.addressWatching = true
 
     const queryTime = Date.now()
     const deferredAddressSub = new Deferred<unknown>()
@@ -754,10 +754,10 @@ export const pickNextTask = async (
         serverStates.serverScoreUp(uri, Date.now() - queryTime)
       })
       .catch(() => {
-        taskCache.addressWatching = false
+        taskState.addressWatching = false
       })
     deferredAddressSub.promise.catch(() => {
-      taskCache.addressWatching = false
+      taskState.addressWatching = false
     })
     serverStates.watchAddresses(
       uri,
@@ -824,7 +824,7 @@ interface UpdateTransactionsArgs extends CommonArgs {
 const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<ITransaction> => {
-  const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
+  const { emitter, walletTools, txId, pluginInfo, processor, taskState } = args
   const deferredITransaction = new Deferred<ITransaction>()
   deferredITransaction.promise
     .then(async (rawTx: ITransaction) => {
@@ -849,7 +849,7 @@ const updateTransactions = (
       })
     })
     .catch(() => {
-      taskCache.updateTransactionsCache[txId] = { processing: false }
+      taskState.updateTransactionsCache[txId] = { processing: false }
     })
   return {
     ...transactionMessage(txId),
@@ -881,7 +881,7 @@ interface DeriveScriptAddressArgs {
   engineInfo: EngineInfo
   processor: Processor
   format: CurrencyFormat
-  taskCache: TaskCache
+  taskState: TaskState
   script: string
 }
 
@@ -896,7 +896,7 @@ const internalDeriveScriptAddress = async ({
   engineInfo,
   processor,
   format,
-  taskCache,
+  taskState,
   script
 }: DeriveScriptAddressArgs): Promise<DeriveScriptAddressReturn> => {
   if (engineInfo.scriptTemplates == null) {
@@ -923,7 +923,7 @@ const internalDeriveScriptAddress = async ({
   )
   const addresses = new Set<string>()
   addresses.add(address)
-  addToAddressSubscribeCache(taskCache, addresses, {
+  addToAddressSubscribeCache(taskState, addresses, {
     format: path.format,
     branch: path.changeIndex
   })
@@ -992,11 +992,11 @@ const processAddressTransactions = async (
     processor,
     walletTools,
     path,
-    taskCache,
+    taskState,
     serverStates,
     uri
   } = args
-  const transactionsCache = taskCache.transactionsCache
+  const transactionsCache = taskState.transactionsCache
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const addressData = await processor.fetchAddress(scriptPubkey)
@@ -1129,12 +1129,12 @@ const processAddressUtxos = async (
     address,
     walletTools,
     processor,
-    taskCache,
+    taskState,
     path,
     serverStates,
     uri
   } = args
-  const { utxosCache, rawUtxosCache } = taskCache
+  const { utxosCache, rawUtxosCache } = taskState
   const queryTime = Date.now()
   const deferredIAccountUTXOs = new Deferred<IAccountUTXO[]>()
   deferredIAccountUTXOs.promise
@@ -1253,13 +1253,13 @@ const processRawUtxo = async (
     format,
     processor,
     path,
-    taskCache,
+    taskState,
     requiredCount,
     serverStates,
     uri,
     log
   } = args
-  const { rawUtxosCache, processedUtxosCache } = taskCache
+  const { rawUtxosCache, processedUtxosCache } = taskState
   let scriptType: ScriptTypeEnum
   let script: string
   let redeemScript: string | undefined
