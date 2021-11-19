@@ -14,7 +14,6 @@ import {
   EngineInfo,
   PluginInfo
 } from '../../plugin/types'
-import { removeItem } from '../../plugin/utils'
 import { Processor } from '../db/makeProcessor'
 import { toEdgeTransaction } from '../db/Models/ProcessorTransaction'
 import {
@@ -49,6 +48,7 @@ import AwaitLock from './await-lock'
 import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
 import { makeServerStates, ServerStates } from './makeServerStates'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
+import { makeTaskCache, TaskCache } from './taskCache'
 import {
   currencyFormatToPurposeType,
   getCurrencyFormatFromPurposeType,
@@ -101,23 +101,23 @@ export function makeUtxoEngineState(
   const taskState: TaskState = {
     addressWatching: false,
     blockWatching: false,
-    addressSubscribeCache: {},
-    transactionsCache: {},
-    utxosCache: {},
-    rawUtxosCache: {},
-    processedUtxosCache: {},
-    updateTransactionsCache: {}
+    addressSubscribeTasks: makeTaskCache(),
+    transactionTasks: makeTaskCache(),
+    utxoTasks: makeTaskCache(),
+    rawUtxoTasks: makeTaskCache(),
+    processedUtxoTasks: makeTaskCache(),
+    updateTransactionTasks: makeTaskCache()
   }
 
   const clearTaskState = (): void => {
     taskState.addressWatching = false
     taskState.blockWatching = false
-    taskState.addressSubscribeCache = {}
-    taskState.transactionsCache = {}
-    taskState.utxosCache = {}
-    taskState.rawUtxosCache = {}
-    taskState.processedUtxosCache = {}
-    taskState.updateTransactionsCache = {}
+    taskState.addressSubscribeTasks.clear()
+    taskState.transactionTasks.clear()
+    taskState.utxoTasks.clear()
+    taskState.rawUtxoTasks.clear()
+    taskState.processedUtxoTasks.clear()
+    taskState.updateTransactionTasks.clear()
   }
 
   let processedCount = 0
@@ -191,7 +191,7 @@ export function makeUtxoEngineState(
       })
       for (const tx of txs) {
         if (tx == null) continue
-        taskState.updateTransactionsCache[tx.txid] = { processing: false }
+        taskState.updateTransactionTasks.add(tx.txid, { processing: false })
       }
     }
   )
@@ -199,20 +199,20 @@ export function makeUtxoEngineState(
   emitter.on(
     EngineEvent.NEW_ADDRESS_TRANSACTION,
     async (_uri: string, response: INewTransactionResponse): Promise<void> => {
-      const state = taskState.addressSubscribeCache[response.address]
-      if (state != null) {
-        const { path } = state
-        taskState.utxosCache[response.address] = {
+      const task = taskState.addressSubscribeTasks.get(response.address)
+      if (task != null) {
+        const { path } = task
+        taskState.utxoTasks.add(response.address, {
           processing: false,
           path
-        }
-        addToTransactionCache(
+        })
+        addTransactionTasks(
           commonArgs,
           response.address,
           path.format,
           path.branch,
           0,
-          taskState.transactionsCache
+          taskState.transactionTasks
         ).catch(() => {
           throw new Error('failed to add to transaction cache')
         })
@@ -223,7 +223,7 @@ export function makeUtxoEngineState(
     }
   )
 
-  // Initialize the addressSubscribeCache with the existing addresses already
+  // Initialize the addressSubscribeTasks with the existing addresses already
   // processed by the processor. This happens only once before any call to
   // setLookAhead.
   const initializeAddressSubscriptions = async (): Promise<void> => {
@@ -232,9 +232,7 @@ export function makeUtxoEngineState(
       processor
     )
 
-    if (
-      Object.keys(taskState.addressSubscribeCache).length < totalAddressCount
-    ) {
+    if (taskState.addressSubscribeTasks.size < totalAddressCount) {
       for (const format of supportedFormats) {
         const branches = getFormatSupportedBranches(format)
         for (const branch of branches) {
@@ -258,14 +256,10 @@ export function makeUtxoEngineState(
             })
             addressesToSubscribe.add(address)
           }
-          addToAddressSubscribeCache(
-            commonArgs.taskState,
-            addressesToSubscribe,
-            {
-              format,
-              branch
-            }
-          )
+          addAddressSubscribeTasks(commonArgs.taskState, addressesToSubscribe, {
+            format,
+            branch
+          })
         }
       }
     }
@@ -412,46 +406,44 @@ interface ShortPath {
 interface TaskState {
   addressWatching: boolean
   blockWatching: boolean
-  addressSubscribeCache: AddressSubscribeCache
-  utxosCache: UtxosCache
-  rawUtxosCache: RawUtxoCache
-  processedUtxosCache: ProcessedUtxoCache
-  transactionsCache: AddressTransactionCache
-  updateTransactionsCache: UpdateTransactionCache
+  addressSubscribeTasks: TaskCache<AddressSubscribeTask>
+  utxoTasks: TaskCache<UtxosTask>
+  rawUtxoTasks: TaskCache<RawUtxoTask>
+  processedUtxoTasks: TaskCache<ProcessedUtxoTask>
+  transactionTasks: TaskCache<TransactionTask>
+  updateTransactionTasks: TaskCache<UpdateTransactionTask>
 }
 
-interface UpdateTransactionCache {
-  [key: string]: { processing: boolean }
+interface UpdateTransactionTask {
+  processing: boolean
 }
-interface AddressSubscribeCache {
-  [key: string]: { processing: boolean; path: ShortPath }
+interface AddressSubscribeTask {
+  processing: boolean
+  path: ShortPath
 }
-interface UtxosCache {
-  [key: string]: { processing: boolean; path: ShortPath }
+
+interface UtxosTask {
+  processing: boolean
+  path: ShortPath
 }
-interface ProcessedUtxoCache {
-  [key: string]: {
-    processing: boolean
-    full: boolean
-    utxos: Set<IUTXO>
-    path: ShortPath
-  }
+
+interface ProcessedUtxoTask {
+  processing: boolean
+  full: boolean
+  utxos: Set<IUTXO>
+  path: ShortPath
 }
-interface RawUtxoCache {
-  [key: string]: {
-    processing: boolean
-    path: ShortPath
-    address: IAddress
-    requiredCount: number
-  }
+interface RawUtxoTask {
+  processing: boolean
+  path: ShortPath
+  address: IAddress
+  requiredCount: number
 }
-interface AddressTransactionCache {
-  [key: string]: {
-    processing: boolean
-    path: ShortPath
-    page: number
-    blockHeight: number
-  }
+interface TransactionTask {
+  processing: boolean
+  path: ShortPath
+  page: number
+  blockHeight: number
 }
 
 interface FormatArgs extends CommonArgs, ShortPath {}
@@ -523,35 +515,31 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
-    addToAddressSubscribeCache(
-      common.taskState,
-      addressesToSubscribe,
-      shortPath
-    )
+    addAddressSubscribeTasks(common.taskState, addressesToSubscribe, shortPath)
   }
 }
 
-const addToAddressSubscribeCache = (
+const addAddressSubscribeTasks = (
   taskState: TaskState,
   addresses: Set<string>,
   path: ShortPath
 ): void => {
   addresses.forEach(address => {
-    taskState.addressSubscribeCache[address] = {
+    taskState.addressSubscribeTasks.add(address, {
       path,
       processing: false
-    }
-    taskState.addressWatching = false
+    })
   })
+  taskState.addressWatching = false
 }
 
-const addToTransactionCache = async (
+const addTransactionTasks = async (
   args: CommonArgs,
   address: string,
   format: CurrencyFormat,
   branch: number,
   blockHeight: number,
-  transactions: AddressTransactionCache
+  transactionTasks: TaskCache<TransactionTask>
 ): Promise<void> => {
   const { walletTools, processor } = args
   // Fetch the blockHeight for the address from the database
@@ -563,7 +551,7 @@ const addToTransactionCache = async (
     blockHeight = lastQueriedBlockHeight
   }
 
-  transactions[address] = {
+  transactionTasks.add(address, {
     processing: false,
     path: {
       format,
@@ -571,7 +559,7 @@ const addToTransactionCache = async (
     },
     page: 1, // Page starts on 1
     blockHeight
-  }
+  })
 }
 
 interface TransactionChangedArgs {
@@ -613,12 +601,12 @@ export const pickNextTask = async (
   const { taskState, uri, serverStates } = args
 
   const {
-    addressSubscribeCache,
-    utxosCache,
-    rawUtxosCache,
-    processedUtxosCache,
-    transactionsCache,
-    updateTransactionsCache
+    addressSubscribeTasks,
+    utxoTasks,
+    rawUtxoTasks,
+    processedUtxoTasks,
+    transactionTasks,
+    updateTransactionTasks
   } = taskState
 
   const serverState = serverStates.getServerState(uri)
@@ -641,32 +629,30 @@ export const pickNextTask = async (
   }
 
   // Loop processed utxos, these are just database ops, triggers setLookAhead
-  if (Object.keys(processedUtxosCache).length > 0) {
-    for (const scriptPubkey of Object.keys(processedUtxosCache)) {
+  if (processedUtxoTasks.size > 0) {
+    for (const [scriptPubkey, task] of processedUtxoTasks.entries) {
       // Only process when all utxos for a specific address have been gathered
-      const state = processedUtxosCache[scriptPubkey]
-      if (!state.processing && state.full) {
-        state.processing = true
+      if (!task.processing && task.full) {
+        task.processing = true
         await processUtxoTransactions({
           ...args,
           scriptPubkey,
-          utxos: state.utxos,
-          path: state.path
+          utxos: task.utxos,
+          path: task.path
         })
-        removeItem(processedUtxosCache, scriptPubkey)
+        processedUtxoTasks.remove(scriptPubkey)
         return true
       }
     }
   }
 
   // Loop unparsed utxos, some require a network call to get the full tx data
-  for (const utxoString of Object.keys(rawUtxosCache)) {
-    const state = rawUtxosCache[utxoString]
+  for (const [utxoString, task] of rawUtxoTasks.entries) {
     const utxo: IAccountUTXO = JSON.parse(utxoString)
     if (utxo == null) continue
-    if (!state.processing) {
+    if (!task.processing) {
       // check if we need to fetch additional network content for legacy purpose type
-      const purposeType = currencyFormatToPurposeType(state.path.format)
+      const purposeType = currencyFormatToPurposeType(task.path.format)
       if (
         purposeType === BIP43PurposeTypeEnum.Airbitz ||
         purposeType === BIP43PurposeTypeEnum.Legacy
@@ -674,13 +660,13 @@ export const pickNextTask = async (
         // if we do need to make a network call, check with the serverState
         if (!serverStates.serverCanGetTx(uri, utxo.txid)) return
       }
-      state.processing = true
-      removeItem(rawUtxosCache, utxoString)
+      task.processing = true
+      rawUtxoTasks.remove(utxoString)
       const wsTask = await processRawUtxo({
         ...args,
-        ...state,
-        ...state.path,
-        address: state.address,
+        ...task,
+        ...task.path,
+        address: task.address,
         utxo,
         id: `${utxo.txid}_${utxo.vout}`
       })
@@ -689,18 +675,17 @@ export const pickNextTask = async (
   }
 
   // Loop to process addresses to utxos
-  for (const address of Object.keys(utxosCache)) {
-    const state = utxosCache[address]
+  for (const [address, task] of utxoTasks.entries) {
     // Check if we need to fetch address UTXOs
-    if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
-      state.processing = true
+    if (!task.processing && serverStates.serverCanGetAddress(uri, address)) {
+      task.processing = true
 
-      removeItem(utxosCache, address)
+      utxoTasks.remove(address)
 
       // Fetch and process address UTXOs
       const wsTask = await processAddressUtxos({
         ...args,
-        ...state,
+        ...task,
         address
       })
       wsTask.deferred.promise
@@ -715,34 +700,29 @@ export const pickNextTask = async (
   }
 
   // Check if there are any addresses pending to be subscribed
-  if (
-    Object.keys(addressSubscribeCache).length > 0 &&
-    !taskState.addressWatching
-  ) {
+  if (addressSubscribeTasks.size > 0 && !taskState.addressWatching) {
     const blockHeight = serverStates.getBlockHeight(uri)
     // Loop each address that needs to be subscribed
-    for (const address of Object.keys(addressSubscribeCache)) {
-      const state = addressSubscribeCache[address]
+    for (const [address, task] of addressSubscribeTasks.entries) {
       // Add address in the cache to the set of addresses to watch
-      const { path, processing: subscribed } = state
       // only process newly watched addresses
-      if (subscribed) continue
-      if (path != null) {
+      if (task.processing) continue
+      if (task.path != null) {
         // Add the newly watched addresses to the UTXO cache
-        utxosCache[address] = {
+        utxoTasks.add(address, {
           processing: false,
-          path
-        }
-        await addToTransactionCache(
+          path: task.path
+        })
+        await addTransactionTasks(
           args,
           address,
-          path.format,
-          path.branch,
+          task.path.format,
+          task.path.branch,
           blockHeight,
-          transactionsCache
+          transactionTasks
         )
       }
-      state.processing = true
+      task.processing = true
     }
 
     taskState.addressWatching = true
@@ -752,6 +732,7 @@ export const pickNextTask = async (
     deferredAddressSub.promise
       .then(() => {
         serverStates.serverScoreUp(uri, Date.now() - queryTime)
+        taskState.addressWatching = false
       })
       .catch(() => {
         taskState.addressWatching = false
@@ -761,21 +742,18 @@ export const pickNextTask = async (
     })
     serverStates.watchAddresses(
       uri,
-      Array.from(Object.keys(addressSubscribeCache)),
+      addressSubscribeTasks.keys,
       deferredAddressSub
     )
     return true
   }
 
   // filled when transactions potentially changed (e.g. through new block notification)
-  if (Object.keys(updateTransactionsCache).length > 0) {
-    for (const txId of Object.keys(updateTransactionsCache)) {
-      if (
-        !updateTransactionsCache[txId].processing &&
-        serverStates.serverCanGetTx(uri, txId)
-      ) {
-        updateTransactionsCache[txId].processing = true
-        removeItem(updateTransactionsCache, txId)
+  if (updateTransactionTasks.size > 0) {
+    for (const [txId, task] of updateTransactionTasks.entries) {
+      if (!task.processing && serverStates.serverCanGetTx(uri, txId)) {
+        task.processing = true
+        updateTransactionTasks.remove(txId)
         const updateTransactionTask = updateTransactions({ ...args, txId })
         // once resolved, add the txid to the server cache
         updateTransactionTask.deferred.promise
@@ -792,17 +770,16 @@ export const pickNextTask = async (
   }
 
   // loop to get and process transaction history of single addresses, triggers setLookAhead
-  for (const address of Object.keys(transactionsCache)) {
-    const state = transactionsCache[address]
-    if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
-      state.processing = true
+  for (const [address, task] of transactionTasks.entries) {
+    if (!task.processing && serverStates.serverCanGetAddress(uri, address)) {
+      task.processing = true
 
-      removeItem(transactionsCache, address)
+      transactionTasks.remove(address)
 
       // Fetch and process address UTXOs
       const wsTask = await processAddressTransactions({
         ...args,
-        ...state,
+        ...task,
         address
       })
       wsTask.deferred.promise
@@ -849,7 +826,7 @@ const updateTransactions = (
       })
     })
     .catch(() => {
-      taskState.updateTransactionsCache[txId] = { processing: false }
+      taskState.updateTransactionTasks.add(txId, { processing: false })
     })
   return {
     ...transactionMessage(txId),
@@ -923,7 +900,7 @@ const internalDeriveScriptAddress = async ({
   )
   const addresses = new Set<string>()
   addresses.add(address)
-  addToAddressSubscribeCache(taskState, addresses, {
+  addAddressSubscribeTasks(taskState, addresses, {
     format: path.format,
     branch: path.changeIndex
   })
@@ -996,7 +973,6 @@ const processAddressTransactions = async (
     serverStates,
     uri
   } = args
-  const transactionsCache = taskState.transactionsCache
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
   const addressData = await processor.fetchAddress(scriptPubkey)
@@ -1037,12 +1013,12 @@ const processAddressTransactions = async (
       // we have progressed through all of the blockbook pages
       if (page < totalPages) {
         // Add the address back to the cache, incrementing the page
-        transactionsCache[address] = {
+        taskState.transactionTasks.add(address, {
           path,
           processing: false,
           blockHeight,
           page: page + 1
-        }
+        })
         return
       }
 
@@ -1134,7 +1110,7 @@ const processAddressUtxos = async (
     serverStates,
     uri
   } = args
-  const { utxosCache, rawUtxosCache } = taskState
+  const { utxoTasks, rawUtxoTasks } = taskState
   const queryTime = Date.now()
   const deferredIAccountUTXOs = new Deferred<IAccountUTXO[]>()
   deferredIAccountUTXOs.promise
@@ -1146,21 +1122,21 @@ const processAddressUtxos = async (
         return
       }
       for (const utxo of utxos) {
-        rawUtxosCache[JSON.stringify(utxo)] = {
+        rawUtxoTasks.add(JSON.stringify(utxo), {
           processing: false,
           requiredCount: utxos.length,
           path,
           // TypeScript yells otherwise
           address: { ...addressData, path: addressData.path }
-        }
+        })
       }
     })
     .catch(() => {
       args.processing = false
-      utxosCache[address] = {
+      utxoTasks.add(address, {
         processing: args.processing,
         path
-      }
+      })
     })
   return {
     ...addressUtxosMessage(address),
@@ -1259,15 +1235,15 @@ const processRawUtxo = async (
     uri,
     log
   } = args
-  const { rawUtxosCache, processedUtxosCache } = taskState
+  const { rawUtxoTasks, processedUtxoTasks } = taskState
   let scriptType: ScriptTypeEnum
   let script: string
   let redeemScript: string | undefined
 
   // Function to call once we are finished
   const done = (): void =>
-    addToProcessedUtxosCache(
-      processedUtxosCache,
+    addProcessedUtxosTask(
+      processedUtxoTasks,
       path,
       address.scriptPubkey,
       requiredCount,
@@ -1312,12 +1288,12 @@ const processRawUtxo = async (
             .catch(e => {
               // If something went wrong, add the UTXO back to the queue
               log('error in processed utxos cache, re-adding utxo to cache:', e)
-              rawUtxosCache[JSON.stringify(utxo)] = {
+              rawUtxoTasks.add(JSON.stringify(utxo), {
                 processing: false,
                 path,
                 address,
                 requiredCount
-              }
+              })
             })
           return {
             ...transactionMessage(utxo.txid),
@@ -1351,20 +1327,20 @@ const processRawUtxo = async (
   done()
 }
 
-const addToProcessedUtxosCache = (
-  processedUtxosCache: ProcessedUtxoCache,
+const addProcessedUtxosTask = (
+  processedUtxoTasks: TaskCache<ProcessedUtxoTask>,
   path: ShortPath,
   scriptPubkey: string,
   requiredCount: number,
   utxo: IUTXO
 ): void => {
-  const processedUtxos = processedUtxosCache[scriptPubkey] ?? {
+  const processedUtxos = processedUtxoTasks.get(scriptPubkey) ?? {
     utxos: new Set(),
     processing: false,
     path,
     full: false
   }
   processedUtxos.utxos.add(utxo)
-  processedUtxosCache[scriptPubkey] = processedUtxos
+  processedUtxoTasks.add(scriptPubkey, processedUtxos)
   processedUtxos.full = processedUtxos.utxos.size >= requiredCount
 }
