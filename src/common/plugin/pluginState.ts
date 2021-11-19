@@ -50,6 +50,7 @@ export interface PluginState {
     numServersWanted: number,
     includePatterns: string[]
   ) => string[]
+  refreshServers: () => Promise<void>
   updateServers: (settings: JsonObject) => Promise<void>
 }
 
@@ -189,7 +190,6 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       servers = {}
       serverCacheDirty = true
       await saveServerCache()
-      await refreshServers()
     },
 
     getLocalServers(
@@ -198,6 +198,8 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     ): string[] {
       return serverScores.getServers(servers, numServersWanted, includePatterns)
     },
+
+    refreshServers,
 
     async updateServers(settings: JsonObject): Promise<void> {
       const { blockBookServers } = settings

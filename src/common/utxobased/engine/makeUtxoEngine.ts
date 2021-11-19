@@ -403,6 +403,7 @@ export async function makeUtxoEngine(
 
       // finally restart the state
       await state.start()
+      await pluginState.refreshServers()
     },
 
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
