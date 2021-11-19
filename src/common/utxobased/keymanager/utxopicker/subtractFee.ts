@@ -1,7 +1,7 @@
-import { Output, Result, UtxoPickerArgs } from './types'
+import { Output, UtxoPickerArgs, UtxoPickerResult } from './types'
 import * as utils from './utils'
 
-export function subtractFee(args: UtxoPickerArgs): Result {
+export function subtractFee(args: UtxoPickerArgs): UtxoPickerResult {
   const { utxos, targets, feeRate } = args
 
   const outputs: Output[] = targets.map(target => ({

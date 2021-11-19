@@ -31,9 +31,11 @@ export interface UtxoPickerArgs {
   changeScript: string
 }
 
-export interface Result {
+export interface UtxoPickerResult {
   inputs?: Input[]
   outputs?: Output[]
   changeUsed: boolean
   fee: number
 }
+
+export type UtxoPickingFunc = (args: UtxoPickerArgs) => UtxoPickerResult

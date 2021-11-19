@@ -1,9 +1,9 @@
-import { Output, Result, UTXO, UtxoPickerArgs } from './types'
+import { Output, UTXO, UtxoPickerArgs, UtxoPickerResult } from './types'
 import * as utils from './utils'
 // add inputs until we reach or surpass the target value (or deplete)
 // worst-case: O(n)
 
-export function accumulative(args: UtxoPickerArgs): Result {
+export function accumulative(args: UtxoPickerArgs): UtxoPickerResult {
   const { utxos, targets, feeRate, changeScript } = args
 
   if (!isFinite(utils.uintOrNaN(feeRate))) {
