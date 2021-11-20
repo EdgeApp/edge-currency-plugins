@@ -6,7 +6,6 @@ import { makeTaskCache, TaskCache } from './taskCache'
 
 export interface TaskState {
   addressWatching: boolean
-  blockWatching: boolean
   addressSubscribeTasks: TaskCache<AddressSubscribeTask>
   utxoTasks: TaskCache<UtxosTask>
   rawUtxoTasks: TaskCache<RawUtxoTask>
@@ -76,7 +75,6 @@ export const makeTaskState = ({
 }: TaskStateConfig): TaskState => {
   return {
     addressWatching: false,
-    blockWatching: false,
     addressSubscribeTasks: makeTaskCache(),
     transactionTasks: makeTaskCache(),
     utxoTasks: makeTaskCache(),
@@ -85,7 +83,6 @@ export const makeTaskState = ({
     updateTransactionTasks: makeTaskCache(),
     clearTaskState: function () {
       this.addressWatching = false
-      this.blockWatching = false
       this.addressSubscribeTasks.clear()
       this.transactionTasks.clear()
       this.utxoTasks.clear()
