@@ -18,7 +18,7 @@ export function makeCurrencyPlugin(
   pluginInfo: PluginInfo
 ): EdgeCurrencyPlugin {
   const { currencyInfo, engineInfo } = pluginInfo
-  const { io, log } = pluginOptions
+  const { io, log, pluginDisklet } = pluginOptions
   const currencyTools = makeCurrencyTools(io, pluginInfo)
   const { defaultSettings, pluginId, currencyCode } = currencyInfo
   const {
@@ -30,6 +30,7 @@ export function makeCurrencyPlugin(
     io,
     currencyCode,
     pluginId,
+    pluginDisklet,
     log,
     defaultSettings: {
       customFeeSettings,
