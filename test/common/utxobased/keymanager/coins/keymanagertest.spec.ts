@@ -1,3 +1,4 @@
+import * as bitcoin from 'altcoin-js'
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
@@ -7,6 +8,7 @@ import {
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   seedOrMnemonicToXPriv,
+  signMessageBase64,
   wifToPrivateKey,
   xprivToPrivateKey,
   xprivToXPub,
@@ -120,6 +122,20 @@ describe('altcoin test fixtures', () => {
             coin: f.name
           })
           expect(derivedWIFKey).to.equal(j.wifKey)
+        })
+      })
+    }
+    if (f.signMessageTests != null) {
+      f.signMessageTests.forEach(j => {
+        it(`${f.name} sign message test`, () => {
+          const privateKey = bitcoin.ECPair.fromWIF(j.wif).privateKey?.toString(
+            'hex'
+          )
+          if (privateKey == null) {
+            throw new Error('private key cannot be null')
+          }
+          const signature = signMessageBase64(j.message, privateKey)
+          expect(signature).to.eqls(j.signature)
         })
       })
     }
