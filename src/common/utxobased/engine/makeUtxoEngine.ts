@@ -399,8 +399,11 @@ export async function makeUtxoEngine(
       // clear the networking cache
       await pluginState.clearCache()
       await metadata.clear()
+      fees.stop()
+      await fees.clearCache()
 
-      // finally restart the state
+      // Restart the engine
+      await fees.start()
       await state.start()
       await pluginState.refreshServers()
     },
