@@ -542,6 +542,34 @@ export async function makeUtxoEngine(
       })
       await tmpState.start()
       return end
+    },
+
+    otherMethods: {
+      signMessageBase64: async (
+        message: string,
+        address: string
+      ): Promise<string> => {
+        const scriptPubkey = walletTools.addressToScriptPubkey(address)
+        const processorAddress = await processor.fetchAddress(scriptPubkey)
+        if (processorAddress?.path == null) {
+          throw new Error('Missing address to sign with')
+        }
+
+        // Derive the xprivs on the fly, since we do not persist them
+        const xprivKeys = await fetchOrDeriveXprivFromKeys({
+          keys: walletInfo.keys,
+          walletLocalEncryptedDisklet,
+          coin: engineInfo.network,
+          network
+        })
+
+        const signature = await walletTools.signMessage({
+          path: processorAddress?.path,
+          message,
+          xprivKeys
+        })
+        return signature
+      }
     }
   }
 
