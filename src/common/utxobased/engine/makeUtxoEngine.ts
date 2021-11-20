@@ -53,6 +53,8 @@ export async function makeUtxoEngine(
   const { currencyInfo, engineInfo, coinInfo } = pluginInfo
 
   const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
+  // Private key may be missing for watch-only wallets
+  const asMaybeCurrencyPrivateKey = asMaybe(asCurrencyPrivateKey)
   // This walletInfo is desensitized (numb) and should be passed around over the original walletInfo
   const walletInfo = asNumbWalletInfo(pluginInfo)(sensitiveWalletInfo)
   const {
@@ -185,8 +187,7 @@ export async function makeUtxoEngine(
     },
 
     getDisplayPrivateSeed(): string | null {
-      // Private key may be missing for watch-only wallets
-      const privateKey = asMaybe(asCurrencyPrivateKey)(sensitiveWalletInfo.keys)
+      const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
       if (privateKey == null) return null
       return privateKey.seed
     },
@@ -435,8 +436,8 @@ export async function makeUtxoEngine(
       if (psbt == null || edgeSpendInfo == null)
         throw new Error('Invalid transaction data')
 
-      // Private key may be missing for watch-only wallets
-      const privateKey = asMaybe(asCurrencyPrivateKey)(sensitiveWalletInfo.keys)
+      const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
+
       if (privateKey == null)
         throw new Error('Cannot sign a transaction for a read-only wallet')
 
@@ -569,6 +570,38 @@ export async function makeUtxoEngine(
       })
       await tmpState.start()
       return end
+    },
+
+    otherMethods: {
+      signMessageBase64: async (
+        message: string,
+        address: string
+      ): Promise<string> => {
+        const scriptPubkey = walletTools.addressToScriptPubkey(address)
+        const processorAddress = await processor.fetchAddress(scriptPubkey)
+        if (processorAddress?.path == null) {
+          throw new Error('Missing address to sign with')
+        }
+        const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
+
+        if (privateKey == null)
+          throw new Error('Cannot sign a message for a read-only wallet')
+
+        // Derive the xprivs on the fly, since we do not persist them
+        const xprivKeys = await fetchOrDeriveXprivFromKeys({
+          privateKey,
+          walletLocalEncryptedDisklet,
+          coin: coinInfo.name,
+          network
+        })
+
+        const signature = await walletTools.signMessageBase64({
+          path: processorAddress?.path,
+          message,
+          xprivKeys
+        })
+        return signature
+      }
     }
   }
 

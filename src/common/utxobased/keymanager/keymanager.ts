@@ -2,6 +2,7 @@
 import * as bitcoin from 'altcoin-js'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
+import bitcoinMessage from 'bitcoinjs-message'
 import { InsufficientFundsError } from 'edge-core-js/types'
 
 import { CoinInfo, CoinPrefixes, NetworkEnum } from '../../plugin/types'
@@ -863,6 +864,16 @@ export function scriptPubkeyToElectrumScriptHash(scriptPubkey: string): string {
   return Buffer.from(
     bitcoin.crypto.sha256(Buffer.from(scriptPubkey, 'hex')).reverse()
   ).toString('hex')
+}
+
+export function signMessageBase64(message: string, privateKey: string): string {
+  const keyPair = bitcoin.ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'))
+  if (keyPair.privateKey == null) {
+    throw new Error('Address could not sign message')
+  }
+  return bitcoinMessage
+    .sign(message, keyPair.privateKey, keyPair.compressed)
+    .toString('base64')
 }
 
 export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
