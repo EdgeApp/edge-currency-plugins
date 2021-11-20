@@ -3,7 +3,6 @@ export const INFO_SERVER_URI = 'https://info1.edgesecure.co:8444/v1'
 
 // Fees
 export const FEES_PATH = 'fees.json'
-export const FEES_DISKLET_PATH = 'fees'
 export const MAX_FEE = 999999999.0
 export const LOW_FEE = 2
 export const MAX_HIGH_DELAY = 200

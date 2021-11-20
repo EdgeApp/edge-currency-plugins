@@ -75,6 +75,7 @@ export function makeCurrencyPlugin(
         network,
         walletInfo,
         pluginInfo,
+        pluginDisklet,
         currencyTools,
         io,
         options: {

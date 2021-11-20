@@ -1,5 +1,4 @@
 import * as bs from 'biggystring'
-import { navigateDisklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
@@ -15,7 +14,6 @@ import {
 } from 'edge-core-js/types'
 
 import { filterUndefined } from '../../../util/filterUndefined'
-import { FEES_DISKLET_PATH } from '../../constants'
 import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
@@ -46,6 +44,7 @@ export async function makeUtxoEngine(
   const {
     network,
     pluginInfo,
+    pluginDisklet,
     walletInfo,
     options: { walletLocalDisklet, walletLocalEncryptedDisklet, emitter, log },
     io,
@@ -70,7 +69,7 @@ export async function makeUtxoEngine(
   })
 
   const fees = await makeFees({
-    disklet: navigateDisklet(walletLocalDisklet, FEES_DISKLET_PATH),
+    disklet: pluginDisklet,
     pluginInfo,
     io,
     log: config.options.log

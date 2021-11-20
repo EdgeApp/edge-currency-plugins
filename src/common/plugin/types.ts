@@ -1,5 +1,6 @@
 import { bip32 } from 'altcoin-js'
 import { asNumber, asObject, asString } from 'cleaners'
+import { Disklet } from 'disklet'
 import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
@@ -131,6 +132,7 @@ export interface EngineConfig {
   network: NetworkEnum
   walletInfo: EdgeWalletInfo
   pluginInfo: PluginInfo
+  pluginDisklet: Disklet
   currencyTools: EdgeCurrencyTools
   options: EngineOptions
   io: EdgeIo
