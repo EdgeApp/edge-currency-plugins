@@ -32,6 +32,7 @@ interface Common {
 export interface Fees {
   start: () => Promise<void>
   stop: () => void
+  clearCache: () => Promise<void>
   getRate: (edgeSpendInfo: EdgeSpendInfo) => Promise<string>
   fees: SimpleFeeSettings
 }
@@ -80,6 +81,10 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
 
     stop(): void {
       clearInterval(vendorIntervalId)
+    },
+
+    async clearCache(): Promise<void> {
+      await memlet.delete(FEES_PATH)
     },
 
     async getRate(edgeSpendInfo: EdgeSpendInfo): Promise<string> {

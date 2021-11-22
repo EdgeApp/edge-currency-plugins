@@ -1,7 +1,7 @@
 // Typescript translation from original code in edge-currency-bitcoin
 
 import { asArray, asEither, asNull, asObject, asString } from 'cleaners'
-import { navigateDisklet } from 'disklet'
+import { Disklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet } from 'memlet'
 
@@ -14,6 +14,8 @@ const asWebsocketUrl = (raw: unknown): string => {
   return `wss://${url.host}/websocket`
 }
 const asServerListInfo = asObject(asEither(asArray(asWebsocketUrl), asNull))
+
+const SERVER_CACHE_FILE = 'serverCache.json'
 
 /** A JSON object (as opposed to an array or primitive). */
 interface JsonObject {
@@ -35,6 +37,7 @@ export interface PluginStateSettings {
   defaultSettings: CurrencySettings
   currencyCode: string
   pluginId: string
+  pluginDisklet: Disklet
   log: EdgeLog
 }
 
@@ -50,17 +53,25 @@ export interface PluginState {
     numServersWanted: number,
     includePatterns: string[]
   ) => string[]
+  refreshServers: () => Promise<void>
   updateServers: (settings: JsonObject) => Promise<void>
 }
 
 export function makePluginState(settings: PluginStateSettings): PluginState {
-  const { io, defaultSettings, currencyCode, pluginId, log } = settings
+  const {
+    io,
+    defaultSettings,
+    currencyCode,
+    pluginId,
+    pluginDisklet,
+    log
+  } = settings
   let defaultServers = defaultSettings.blockBookServers
   let disableFetchingServers = !!(
     defaultSettings.disableFetchingServers ?? false
   )
   let engines: UtxoEngineState[] = []
-  const memlet = makeMemlet(navigateDisklet(io.disklet, 'plugins/' + pluginId))
+  const memlet = makeMemlet(pluginDisklet)
 
   let serverCacheJson = {}
   let serverCacheDirty = false
@@ -69,7 +80,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
   const saveServerCache = async (): Promise<void> => {
     serverScores.printServers(servers)
     if (serverCacheDirty) {
-      await memlet.setJson('serverCache.json', servers).catch(e => {
+      await memlet.setJson(SERVER_CACHE_FILE, servers).catch(e => {
         log(`${pluginId} - ${JSON.stringify(e.toString())}`)
       })
       serverCacheDirty = false
@@ -162,7 +173,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     async load(): Promise<PluginState> {
       try {
         serverCacheJson = asServerInfoCache(
-          await memlet.getJson('serverCache.json')
+          await memlet.getJson(SERVER_CACHE_FILE)
         )
       } catch (e) {
         log(`${pluginId}: Failed to load server cache: ${JSON.stringify(e)}`)
@@ -188,8 +199,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       serverScores.clearServerScoreTimes()
       servers = {}
       serverCacheDirty = true
-      await saveServerCache()
-      await refreshServers()
+      await memlet.delete(SERVER_CACHE_FILE)
     },
 
     getLocalServers(
@@ -198,6 +208,8 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     ): string[] {
       return serverScores.getServers(servers, numServersWanted, includePatterns)
     },
+
+    refreshServers,
 
     async updateServers(settings: JsonObject): Promise<void> {
       const { blockBookServers } = settings
