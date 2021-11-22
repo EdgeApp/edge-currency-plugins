@@ -44,15 +44,12 @@ export interface PluginInfo {
 export interface EngineInfo {
   formats?: CurrencyFormat[]
   forks?: string[]
-  coinType: number
-  network: string // The offical network in lower case - Needs to match the Bitcoin Lib Network Type
   networkType?: NetworkEnum
   uriPrefix?: string
   gapLimit: number
   defaultFee: number
   feeUpdateInterval: number
   mempoolSpaceFeeInfoServer?: string
-  customFeeSettings: CustomFeeSetting[]
   simpleFeeSettings: SimpleFeeSettings
   scriptTemplates?: ScriptTemplates
 }
@@ -62,7 +59,7 @@ export interface EngineInfo {
  */
 
 export interface CoinInfo {
-  name: string
+  name: string // The offical network name in lower case. Must match the Bitcoin Lib Network Type
   segwit: boolean
   coinType: number
   sighash?: number
@@ -110,8 +107,6 @@ interface Bip32 {
   public: number
   private: number
 }
-
-export type CustomFeeSetting = 'satPerByte'
 
 export type FeeRates = ReturnType<typeof asFeeRates>
 export const asFeeRates = asObject({

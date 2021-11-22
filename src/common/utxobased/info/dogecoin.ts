@@ -21,6 +21,14 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     disableFetchingServers: false
   },
+  customFeeTemplate: [
+    {
+      type: 'nativeAmount',
+      key: 'satPerByte',
+      displayName: 'Satoshis Per Byte',
+      displayMultiplier: '0'
+    }
+  ],
   metaTokens: [],
 
   // Explorers:
@@ -31,14 +39,11 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  coinType: 3,
   formats: ['bip44', 'bip32'],
-  network: 'dogecoin',
   gapLimit: 10,
   defaultFee: 1000,
   feeUpdateInterval: 10000,
   // minRelay: '???',
-  customFeeSettings: ['satPerByte'],
   simpleFeeSettings: {
     highFee: '526316',
     lowFee: '526316',

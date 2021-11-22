@@ -1083,7 +1083,7 @@ interface ProcessRawTxArgs extends CommonArgs {
 const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
   const {
     tx,
-    pluginInfo: { engineInfo }
+    pluginInfo: { coinInfo }
   } = args
   return {
     txid: tx.txid,
@@ -1098,7 +1098,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
       n: input.n,
       scriptPubkey: validScriptPubkeyFromAddress({
         address: input.addresses[0],
-        coin: engineInfo.network,
+        coin: coinInfo.name,
         network: args.network
       }),
       amount: input.value
@@ -1109,7 +1109,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
         output.hex ??
         validScriptPubkeyFromAddress({
           address: output.addresses[0],
-          coin: engineInfo.network,
+          coin: coinInfo.name,
           network: args.network
         }),
       amount: output.value

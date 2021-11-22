@@ -21,6 +21,14 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockBookServers: [],
     disableFetchingServers: true
   },
+  customFeeTemplate: [
+    {
+      type: 'nativeAmount',
+      key: 'satPerByte',
+      displayName: 'Satoshis Per Byte',
+      displayMultiplier: '0'
+    }
+  ],
   metaTokens: [],
 
   // Explorers:
@@ -30,13 +38,10 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  coinType: 224,
   formats: ['bip44', 'bip32'],
-  network: 'smartcash',
   gapLimit: 10,
   defaultFee: 100000,
   feeUpdateInterval: 60000,
-  customFeeSettings: ['satPerByte'],
   simpleFeeSettings: {
     highFee: '1500',
     lowFee: '200',

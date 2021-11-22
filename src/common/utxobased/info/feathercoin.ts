@@ -19,6 +19,14 @@ export const currencyInfo: EdgeCurrencyInfo = {
     blockBookServers: [],
     disableFetchingServers: false
   },
+  customFeeTemplate: [
+    {
+      type: 'nativeAmount',
+      key: 'satPerByte',
+      displayName: 'Satoshis Per Byte',
+      displayMultiplier: '0'
+    }
+  ],
   metaTokens: [],
 
   // Explorers:
@@ -32,13 +40,10 @@ export const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const engineInfo: EngineInfo = {
-  coinType: 8,
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
-  network: 'feathercoin',
   gapLimit: 10,
   defaultFee: 1000,
   feeUpdateInterval: 60000,
-  customFeeSettings: ['satPerByte'],
   simpleFeeSettings: {
     highFee: '1200',
     lowFee: '400',

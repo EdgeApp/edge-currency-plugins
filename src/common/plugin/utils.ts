@@ -13,9 +13,9 @@ export const getMnemonic = (args: {
   return key
 }
 
-export const getFormatsForNetwork = (network: string): string[] => {
+export const getFormatsForNetwork = (coinName: string): string[] => {
   for (const plugin of plugins) {
-    if (plugin.engineInfo.network === network)
+    if (plugin.coinInfo.name === coinName)
       return plugin.engineInfo.formats ?? []
   }
   return []

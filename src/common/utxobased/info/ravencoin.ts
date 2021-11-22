@@ -15,6 +15,14 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockBookServers: ['wss://blockbook.ravencoin.org'],
     disableFetchingServers: false
   },
+  customFeeTemplate: [
+    {
+      type: 'nativeAmount',
+      key: 'satPerByte',
+      displayName: 'Satoshis Per Byte',
+      displayMultiplier: '0'
+    }
+  ],
   metaTokens: [],
 
   // Explorers:
@@ -24,13 +32,10 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
-  coinType: 175,
   formats: ['bip44', 'bip32'],
-  network: 'ravencoin',
   gapLimit: 10,
   defaultFee: 1000,
   feeUpdateInterval: 60000,
-  customFeeSettings: ['satPerByte'],
   simpleFeeSettings: {
     highFee: '150',
     lowFee: '20',
