@@ -392,19 +392,19 @@ export async function makeUtxoEngine(
     },
 
     async resyncBlockchain(): Promise<void> {
-      // stops and resets the state
-      await state.stop()
-      // now get rid of all the db information
+      // Stops the engine
+      await fns.killEngine()
+
+      // Clear cache and state
       await processor.clearAll()
-      // clear the networking cache
       await pluginState.clearCache()
       await metadata.clear()
-      fees.stop()
       await fees.clearCache()
 
       // Restart the engine
-      await fees.start()
-      await state.start()
+      await fns.startEngine()
+
+      // Refresh the servers for the engine
       await pluginState.refreshServers()
     },
 
