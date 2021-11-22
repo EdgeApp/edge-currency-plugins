@@ -825,22 +825,29 @@ interface UpdateTransactionsArgs extends CommonArgs {
 const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<ITransaction> => {
-  const { txId, processor, taskCache } = args
+  const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
   const deferredITransaction = new Deferred<ITransaction>()
   deferredITransaction.promise
     .then(async (rawTx: ITransaction) => {
+      // check if raw tx is still not confirmed, if so, don't change anything
+      if (rawTx.blockHeight < 1) return
+      // Create new tx from raw tx
       const tx = processRawTx({ ...args, tx: rawTx })
-      // check if tx is still not confirmed, if so, don't change anything
-      if (tx.blockHeight < 1) {
-        return
-      }
+      // Remove any existing input utxos from the processor
       for (const input of tx.inputs) {
         await processor.removeUtxos([`${input.txId}_${input.outputIndex}`])
       }
-      await processor.saveTransaction({
+      // Process and save new tx
+      const processedTx = await processor.saveTransaction({
         tx
       })
-      await transactionChanged({ ...args, tx })
+      await transactionChanged({
+        emitter,
+        walletTools,
+        processor,
+        pluginInfo,
+        tx: processedTx
+      })
     })
     .catch(() => {
       taskCache.updateTransactionsCache[txId] = { processing: false }
@@ -983,6 +990,8 @@ const processAddressTransactions = async (
     address,
     page = 1,
     blockHeight,
+    emitter,
+    pluginInfo,
     processor,
     walletTools,
     path,
@@ -1014,8 +1023,17 @@ const processAddressTransactions = async (
       // Process and save the address's transactions
       for (const rawTx of transactions) {
         const tx = processRawTx({ ...args, tx: rawTx })
-        await processor.saveTransaction({ tx, scriptPubkey })
-        await transactionChanged({ ...args, tx })
+        const processedTx = await processor.saveTransaction({
+          tx,
+          scriptPubkey
+        })
+        await transactionChanged({
+          emitter,
+          walletTools,
+          processor,
+          pluginInfo,
+          tx: processedTx
+        })
       }
 
       // Halt on finishing the processing of address transaction until
