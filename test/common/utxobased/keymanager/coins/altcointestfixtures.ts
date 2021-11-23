@@ -49,6 +49,12 @@ interface XPubToPubkeyTests {
   legacyAddress?: string
 }
 
+interface SignMessageTests {
+  wif: string
+  message: string
+  signature: string
+}
+
 interface Coin {
   name: string
   mnemonic: string
@@ -58,6 +64,7 @@ interface Coin {
   xprivToWifTests?: XPrivToWifTests[]
   xpubToPubkeyTests: XPubToPubkeyTests[]
   addressToScriptPubkeyTests: AddressToScriptPubkeyTests[]
+  signMessageTests?: SignMessageTests[]
 }
 
 interface Fixture {
@@ -1577,6 +1584,14 @@ export const fixtures: Fixture = {
           network: NetworkEnum.Testnet,
           scriptPubkey:
             '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
+        }
+      ],
+      signMessageTests: [
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          signature:
+            'H9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
         }
       ]
     }
