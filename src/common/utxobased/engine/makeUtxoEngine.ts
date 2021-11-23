@@ -559,11 +559,11 @@ export async function makeUtxoEngine(
         const xprivKeys = await fetchOrDeriveXprivFromKeys({
           keys: walletInfo.keys,
           walletLocalEncryptedDisklet,
-          coin: engineInfo.network,
+          coin: coinInfo.name,
           network
         })
 
-        const signature = await walletTools.signMessage({
+        const signature = await walletTools.signMessageBase64({
           path: processorAddress?.path,
           message,
           xprivKeys

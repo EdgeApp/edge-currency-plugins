@@ -6,7 +6,7 @@ import {
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   scriptPubkeyToP2SH,
-  signMessage,
+  signMessageBase64,
   wifToPrivateKey,
   xprivToPrivateKey,
   xpubToPubkey
@@ -53,7 +53,7 @@ export interface UTXOPluginWalletTools {
 
   getScriptAddress: (args: GetScriptAddressArgs) => GetScriptAddressReturn
 
-  signMessage: (args: SignMessageArgs) => string
+  signMessageBase64: (args: SignMessageArgs) => string
 }
 
 interface ScriptPubkeyReturn {
@@ -212,12 +212,12 @@ export function makeUtxoWalletTools(
       return { address, scriptPubkey, redeemScript }
     },
 
-    signMessage({ path, message, xprivKeys }: SignMessageArgs): string {
+    signMessageBase64({ path, message, xprivKeys }: SignMessageArgs): string {
       const privKey = fns.getPrivateKey({
         path,
         xprivKeys
       })
-      return signMessage(message, privKey)
+      return signMessageBase64(message, privKey)
     }
   }
 
