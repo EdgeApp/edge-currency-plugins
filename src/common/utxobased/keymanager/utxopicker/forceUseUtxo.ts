@@ -1,10 +1,10 @@
-import { Output, Result, UTXO, UtxoPickerArgs } from './types'
+import { Output, UTXO, UtxoPickerArgs, UtxoPickerResult } from './types'
 import * as utils from './utils'
 // implementation very similar to accumulative strategy
 // add inputs until we reach or surpass the target value (or deplete)
 // worst-case: O(n)
 
-export function forceUseUtxo(args: UtxoPickerArgs): Result {
+export function forceUseUtxo(args: UtxoPickerArgs): UtxoPickerResult {
   const { utxos, useUtxos, targets, feeRate, changeScript } = args
 
   if (!isFinite(utils.uintOrNaN(feeRate))) {

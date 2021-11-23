@@ -215,7 +215,7 @@ export interface MakeTxTarget {
   value: number
 }
 
-interface MakeTxReturn extends Required<utxopicker.Result> {
+interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
   psbtBase64: string
 }
 
@@ -949,12 +949,15 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     coin: coin.name,
     network: args.network
   })
+
+  const utxoPicker = coin.utxoPicker ?? utxopicker.utxoPicker
+
   const utxopicking =
     args.forceUseUtxo != null ?? false
-      ? utxopicker.forceUseUtxo
+      ? utxoPicker.forceUseUtxo
       : args.subtractFee ?? false
-      ? utxopicker.subtractFee
-      : utxopicker.accumulative
+      ? utxoPicker.subtractFee
+      : utxoPicker.accumulative
   const result = utxopicking({
     utxos: mappedUtxos,
     useUtxos,

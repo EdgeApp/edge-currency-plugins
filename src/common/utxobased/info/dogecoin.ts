@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { makeDogeUtxoPicker } from './utxoPickers/dogeUtxoPicker'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'dogecoin',
@@ -43,7 +44,6 @@ const engineInfo: EngineInfo = {
   gapLimit: 10,
   defaultFee: 1000,
   feeUpdateInterval: 10000,
-  // minRelay: '???',
   simpleFeeSettings: {
     highFee: '526316',
     lowFee: '526316',
@@ -58,6 +58,7 @@ export const coinInfo: CoinInfo = {
   name: 'dogecoin',
   segwit: false,
   coinType: 3,
+  utxoPicker: makeDogeUtxoPicker(),
   mainnetConstants: {
     messagePrefix: '\x18Dogecoin Signed Message:\n',
     wif: 0x9e,

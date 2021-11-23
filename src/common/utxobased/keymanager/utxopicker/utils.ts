@@ -1,7 +1,7 @@
 /* eslint-disable no-fallthrough */
 /* eslint-disable no-duplicate-case */
 import { ScriptTypeEnum } from '../keymanager'
-import { Input, Output, Result, UTXO } from './types'
+import { Input, Output, UTXO, UtxoPickerResult } from './types'
 
 const WITNESS_SCALE = 4
 const OP_CODE_VSIZE = WITNESS_SCALE - 1
@@ -123,7 +123,7 @@ export function finalize(
   outputs: Output[],
   feeRate: number,
   changeScript: string
-): Result {
+): UtxoPickerResult {
   const inValue = sumOrNaN(inputs)
   const outValue = sumOrNaN(outputs)
   let fee = feeRate * transactionBytes(inputs, outputs)

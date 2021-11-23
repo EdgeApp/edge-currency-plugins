@@ -11,6 +11,7 @@ import {
 
 import { IUTXO } from '../utxobased/db/types'
 import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
+import { UtxoPicker } from '../utxobased/keymanager/utxopicker'
 import { EngineEmitter } from './makeEngineEmitter'
 import { PluginState } from './pluginState'
 
@@ -74,6 +75,7 @@ export interface CoinInfo {
     network: BitcoinJSNetwork
   ) => bip32.BIP32Interface
   bip32FromSeedFunc?: (seed: Buffer) => bip32.BIP32Interface
+  utxoPicker?: UtxoPicker
   mainnetConstants: CoinPrefixes
   // by default should contain the bitcoin mainnet constants, useful for networks were multiple constants were in use.
   legacyConstants?: CoinPrefixes
