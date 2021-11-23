@@ -1,5 +1,5 @@
 import { bip32 } from 'altcoin-js'
-import { asNumber, asObject, asString } from 'cleaners'
+import { asNumber, asObject, asString, asValue } from 'cleaners'
 import { Disklet } from 'disklet'
 import {
   EdgeCurrencyEngineOptions,
@@ -20,7 +20,8 @@ export enum NetworkEnum {
   Testnet = 'testnet'
 }
 
-export type CurrencyFormat = 'bip32' | 'bip44' | 'bip49' | 'bip84'
+export type CurrencyFormat = ReturnType<typeof asCurrencyFormat>
+export const asCurrencyFormat = asValue('bip32', 'bip44', 'bip49', 'bip84')
 
 export interface AddressPath {
   format: CurrencyFormat

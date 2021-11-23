@@ -3,8 +3,8 @@ import { Disklet } from 'disklet'
 import { EdgeParsedUri } from 'edge-core-js/types'
 
 import { CurrencyFormat, NetworkEnum } from '../../plugin/types'
-import * as pluginUtils from '../../plugin/utils'
 import { IUTXO } from '../db/types'
+import { getSupportedFormats, PrivateKey } from '../keymanager/cleaners'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -17,7 +17,6 @@ import {
   wifToPrivateKey,
   xprivToXPub
 } from '../keymanager/keymanager'
-import { UtxoKeyFormat } from './makeUtxoWalletTools'
 
 export const getCurrencyFormatFromPurposeType = (
   purpose: BIP43PurposeTypeEnum
@@ -35,9 +34,11 @@ export const getCurrencyFormatFromPurposeType = (
 }
 
 export const getAddressTypeFromKeys = (
-  keys: UtxoKeyFormat
+  privateKey: PrivateKey
 ): AddressTypeEnum => {
-  return getAddressTypeFromPurposeType(getPurposeTypeFromKeys({ keys }))
+  return getAddressTypeFromPurposeType(
+    currencyFormatToPurposeType(privateKey.format)
+  )
 }
 
 export const getAddressTypeFromPurposeType = (
@@ -82,41 +83,6 @@ export const validScriptPubkeyFromAddress = (args: {
     legacy: verifyAddress(args) === VerifyAddressEnum.legacy
   })
 
-export const getXprivKey = ({ coin }: { coin: string }): string =>
-  `${coin}Xpriv`
-
-export const getXpubKey = ({ coin }: { coin: string }): string => `${coin}Xpub`
-
-export const getXpriv = (args: {
-  keys: UtxoKeyFormat
-  coin: string
-}): CurrencyFormatKeys => args.keys[getXprivKey(args)]
-
-export const getXpubs = (args: {
-  keys: UtxoKeyFormat
-  coin: string
-}): CurrencyFormatKeys => args.keys[getXpubKey(args)]
-
-export const getWalletCoinType = (args: { keys: UtxoKeyFormat }): number =>
-  args.keys.coinType ?? 0
-
-export const getWalletFormat = (args: {
-  keys: UtxoKeyFormat
-}): CurrencyFormat => args.keys.format ?? 'bip32'
-
-export const getWalletSupportedFormats = (args: {
-  keys: UtxoKeyFormat
-}): CurrencyFormat[] => {
-  const formats: CurrencyFormat[] = [getWalletFormat(args)]
-  // If wallet is Segwit, it also should support WrappedSegwit
-  if (getPurposeTypeFromKeys(args) === BIP43PurposeTypeEnum.Segwit) {
-    formats.push(
-      getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.WrappedSegwit)
-    )
-  }
-  return formats
-}
-
 export const getFormatSupportedBranches = (
   format: CurrencyFormat
 ): number[] => {
@@ -125,12 +91,6 @@ export const getFormatSupportedBranches = (
     branches.push(1)
   }
   return branches
-}
-
-export const getPurposeTypeFromKeys = (args: {
-  keys: UtxoKeyFormat
-}): BIP43PurposeTypeEnum => {
-  return currencyFormatToPurposeType(getWalletFormat(args))
 }
 
 export const currencyFormatToPurposeType = (
@@ -143,7 +103,7 @@ export type CurrencyFormatKeys = {
 }
 
 export const fetchOrDeriveXprivFromKeys = async (args: {
-  keys: UtxoKeyFormat
+  privateKey: PrivateKey
   walletLocalEncryptedDisklet: Disklet
   coin: string
   network: NetworkEnum
@@ -164,19 +124,22 @@ export const fetchOrDeriveXprivFromKeys = async (args: {
 }
 
 export const deriveXprivFromKeys = (args: {
-  keys: UtxoKeyFormat
+  privateKey: PrivateKey
   coin: string
   network: NetworkEnum
 }): CurrencyFormatKeys => {
   const keys: CurrencyFormatKeys = {}
   const xprivArgs = {
-    seed: pluginUtils.getMnemonic(args),
-    coinType: getWalletCoinType(args),
+    seed: args.privateKey.seed,
+    coinType: args.privateKey.coinType,
     coin: args.coin,
     network: args.network
   }
-  const walletPurpose = getPurposeTypeFromKeys(args)
-  if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
+  const walletPurpose = currencyFormatToPurposeType(args.privateKey.format)
+  if (
+    walletPurpose === BIP43PurposeTypeEnum.Segwit ||
+    walletPurpose === BIP43PurposeTypeEnum.WrappedSegwit
+  ) {
     keys[
       getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit)
     ] = seedOrMnemonicToXPriv({
@@ -202,12 +165,12 @@ export const deriveXprivFromKeys = (args: {
 }
 
 export const deriveXpubsFromKeys = (args: {
-  keys: UtxoKeyFormat
+  privateKey: PrivateKey
   coin: string
   network: NetworkEnum
 }): CurrencyFormatKeys => {
   const xpubs: CurrencyFormatKeys = {}
-  for (const format of getWalletSupportedFormats(args)) {
+  for (const format of getSupportedFormats(args.privateKey.format)) {
     xpubs[format] = deriveXpub({
       ...args,
       type: currencyFormatToPurposeType(format)
@@ -217,10 +180,10 @@ export const deriveXpubsFromKeys = (args: {
 }
 
 export const deriveXpub = (args: {
-  keys: UtxoKeyFormat
-  type: BIP43PurposeTypeEnum
+  privateKey: PrivateKey
   coin: string
   network: NetworkEnum
+  type: BIP43PurposeTypeEnum
 }): string => {
   const xpriv = deriveXprivFromKeys(args)[
     getCurrencyFormatFromPurposeType(args.type)

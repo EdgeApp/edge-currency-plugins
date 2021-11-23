@@ -1,9 +1,10 @@
-import { EdgeLog, EdgeTransaction, EdgeWalletInfo } from 'edge-core-js/types'
+import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 import { parse } from 'uri-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { PluginState } from '../../plugin/pluginState'
 import { removeItem } from '../../plugin/utils'
+import { NumbWalletInfo } from '../keymanager/cleaners'
 import { BlockBook, makeBlockBook } from '../network/BlockBook'
 import { INewTransactionResponse } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
@@ -21,7 +22,7 @@ interface ServerState {
 
 interface ServerStateConfig {
   engineStarted: boolean
-  walletInfo: EdgeWalletInfo
+  walletInfo: NumbWalletInfo
   pluginState: PluginState
   engineEmitter: EngineEmitter
   log: EdgeLog

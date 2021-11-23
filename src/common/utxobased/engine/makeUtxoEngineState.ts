@@ -3,8 +3,7 @@ import {
   EdgeFreshAddress,
   EdgeIo,
   EdgeLog,
-  EdgeTransaction,
-  EdgeWalletInfo
+  EdgeTransaction
 } from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
@@ -25,6 +24,7 @@ import {
   IUTXO,
   makeIAddress
 } from '../db/types'
+import { NumbWalletInfo } from '../keymanager/cleaners'
 import {
   BIP43PurposeTypeEnum,
   derivationLevelScriptHash,
@@ -54,8 +54,6 @@ import {
   currencyFormatToPurposeType,
   getCurrencyFormatFromPurposeType,
   getFormatSupportedBranches,
-  getPurposeTypeFromKeys,
-  getWalletSupportedFormats,
   validScriptPubkeyFromAddress
 } from './utils'
 
@@ -83,6 +81,7 @@ export interface UtxoEngineState {
 
 export interface UtxoEngineStateConfig extends EngineConfig {
   walletTools: UTXOPluginWalletTools
+  walletInfo: NumbWalletInfo
   processor: Processor
 }
 
@@ -98,6 +97,8 @@ export function makeUtxoEngineState(
     processor,
     pluginState
   } = config
+
+  const { supportedFormats } = walletInfo.keys
 
   const taskCache: TaskCache = {
     addressWatching: false,
@@ -125,7 +126,7 @@ export function makeUtxoEngineState(
   let processedPercent = 0
   const onAddressChecked = async (): Promise<void> => {
     processedCount = processedCount + 1
-    const totalCount = await getTotalAddressCount(walletInfo, processor)
+    const totalCount = await getTotalAddressCount(supportedFormats, processor)
 
     // If we have no addresses, we should not have not yet began processing.
     if (totalCount === 0) throw new Error('No addresses to process')
@@ -163,6 +164,7 @@ export function makeUtxoEngineState(
     io: config.io,
     log,
     serverStates,
+    supportedFormats,
     lock
   }
 
@@ -228,12 +230,14 @@ export function makeUtxoEngineState(
   // processed by the processor. This happens only once before any call to
   // setLookAhead.
   const initializeAddressSubscriptions = async (): Promise<void> => {
-    const totalAddressCount = await getTotalAddressCount(walletInfo, processor)
+    const totalAddressCount = await getTotalAddressCount(
+      supportedFormats,
+      processor
+    )
 
     if (
       Object.keys(taskCache.addressSubscribeCache).length < totalAddressCount
     ) {
-      const supportedFormats = getWalletSupportedFormats(walletInfo)
       for (const format of supportedFormats) {
         const branches = getFormatSupportedBranches(format)
         for (const branch of branches) {
@@ -287,7 +291,7 @@ export function makeUtxoEngineState(
     },
 
     async getFreshAddress(branch = 0): Promise<EdgeFreshAddress> {
-      const walletPurpose = getPurposeTypeFromKeys(walletInfo)
+      const walletPurpose = currencyFormatToPurposeType(walletInfo.keys.format)
       if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
         const { address: publicAddress } = await internalGetFreshAddress({
           ...commonArgs,
@@ -331,13 +335,12 @@ export function makeUtxoEngineState(
     },
 
     async deriveScriptAddress(script): Promise<EdgeFreshAddress> {
-      const walletPurpose = getPurposeTypeFromKeys(walletInfo)
       const { address } = await internalDeriveScriptAddress({
         walletTools: commonArgs.walletTools,
         engineInfo: commonArgs.pluginInfo.engineInfo,
         processor: commonArgs.processor,
         taskCache: commonArgs.taskCache,
-        format: getCurrencyFormatFromPurposeType(walletPurpose),
+        format: walletInfo.keys.format,
         script
       })
       return {
@@ -393,7 +396,7 @@ interface CommonArgs {
   engineStarted: boolean
   network: NetworkEnum
   pluginInfo: PluginInfo
-  walletInfo: EdgeWalletInfo
+  walletInfo: NumbWalletInfo
   walletTools: UTXOPluginWalletTools
   processor: Processor
   emitter: EngineEmitter
@@ -402,6 +405,7 @@ interface CommonArgs {
   io: EdgeIo
   log: EdgeLog
   serverStates: ServerStates
+  supportedFormats: CurrencyFormat[]
   lock: AwaitLock
 }
 
@@ -461,7 +465,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
     pluginInfo: { engineInfo },
     lock,
     processor,
-    walletInfo,
+    supportedFormats,
     walletTools
   } = common
 
@@ -470,7 +474,6 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
   await lock.acquireAsync()
 
   try {
-    const supportedFormats = getWalletSupportedFormats(walletInfo)
     for (const format of supportedFormats) {
       const branches = getFormatSupportedBranches(format)
       for (const branch of branches) {
@@ -860,13 +863,11 @@ const updateTransactions = (
 }
 
 const getTotalAddressCount = async (
-  walletInfo: EdgeWalletInfo,
+  supportedFormats: CurrencyFormat[],
   processor: Processor
 ): Promise<number> => {
-  const walletFormats = getWalletSupportedFormats(walletInfo)
-
   let count = 0
-  for (const format of walletFormats) {
+  for (const format of supportedFormats) {
     const branches = getFormatSupportedBranches(format)
     for (const branch of branches) {
       const addressCount = processor.numAddressesByFormatPath({
