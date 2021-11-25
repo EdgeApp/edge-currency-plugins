@@ -1,7 +1,6 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
-import { NetworkEnum } from '../../../../../src/common/plugin/types'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -21,7 +20,6 @@ describe('groestlcoin transaction creation and signing test', function () {
   const wifKey = 'KyeNA49yfj4JDoMEWtpQiosP6eig55att3cTv6NBXCeFNsHoNnyM'
   const privateKey = wifToPrivateKey({
     wifKey,
-    network: NetworkEnum.Mainnet,
     coin: 'groestlcoin'
   })
   const segwitScriptPubkey: string = pubkeyToScriptPubkey({
@@ -38,7 +36,6 @@ describe('groestlcoin transaction creation and signing test', function () {
       It is enough to pass the full previous rawtransaction.
     */
     const base64Tx: string = createTx({
-      network: NetworkEnum.Mainnet,
       rbf: false,
       inputs: [
         {
@@ -55,7 +52,6 @@ describe('groestlcoin transaction creation and signing test', function () {
         {
           scriptPubkey: addressToScriptPubkey({
             address: 'Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg',
-            network: NetworkEnum.Mainnet,
             addressType: AddressTypeEnum.p2pkh,
             coin: 'groestlcoin'
           }),

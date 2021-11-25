@@ -1,7 +1,6 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
-import { NetworkEnum } from '../../../../../src/common/plugin/types'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -27,7 +26,6 @@ describe('bitcoin bip32 seed, aka airbitz seed, to xpriv. Taken from official bi
     const result = seedOrMnemonicToXPriv({
       seed:
         '//z59vPw7ern5OHe29jV0s/MycbDwL26t7SxrquopaKfnJmWk5CNioeEgX57eHVyb2xpZmNgXVpXVFFOS0hFQg==',
-      network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin'
     })
@@ -41,13 +39,11 @@ describe('bitcoin from bip32 seed to private key', () => {
   it('generate a wif key from a bip32 seed', () => {
     const xpriv = seedOrMnemonicToXPriv({
       seed: 'Ha/lqCZZCz+VWN2eGrHYuG/ag6S8w67rldgfCrlcPWI=',
-      network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       coin: 'bitcoin'
     })
     const privateKey = xprivToPrivateKey({
       xpriv,
-      network: NetworkEnum.Mainnet,
       type: BIP43PurposeTypeEnum.Legacy,
       bip44ChangeIndex: 0,
       bip44AddressIndex: 0,
@@ -55,7 +51,6 @@ describe('bitcoin from bip32 seed to private key', () => {
     })
     const wifKey = privateKeyToWIF({
       privateKey: privateKey,
-      network: NetworkEnum.Mainnet,
       coin: 'bitcoin'
     })
     expect(wifKey).to.equal(
@@ -69,7 +64,6 @@ describe('bitcoin get script pubkeys from address', () => {
   it('p2pkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
-      network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoin'
     })
@@ -80,7 +74,6 @@ describe('bitcoin get script pubkeys from address', () => {
   it('p2wpkh address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
-      network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2wpkh,
       coin: 'bitcoin'
     })
@@ -91,9 +84,8 @@ describe('bitcoin get script pubkeys from address', () => {
   it('p2sh testnet address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: '2Mu9hifsg4foPLkyo9i1isPWTobnNmXL3Qk',
-      network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.p2sh,
-      coin: 'bitcoin'
+      coin: 'bitcointestnet'
     })
     expect(scriptPubkey).to.equal(
       'a91414e4e7810e5120cc68d55d03b36cf66a9eadc27087'
@@ -102,9 +94,8 @@ describe('bitcoin get script pubkeys from address', () => {
   it('p2wsh mainnet address to scriptPubkey', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: 'tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7',
-      network: NetworkEnum.Testnet,
       addressType: AddressTypeEnum.p2wsh,
-      coin: 'bitcoin'
+      coin: 'bitcointestnet'
     })
     expect(scriptPubkey).to.equal(
       '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
@@ -116,7 +107,6 @@ describe('bitcoin address to electrum script hash', () => {
   it('tests as documented in https://electrumx.readthedocs.io/en/latest/protocol-basics.html', () => {
     const scriptPubkey = addressToScriptPubkey({
       address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-      network: NetworkEnum.Mainnet,
       addressType: AddressTypeEnum.p2pkh,
       coin: 'bitcoin'
     })
@@ -137,7 +127,6 @@ describe('bitcoin transaction creation and signing test', function () {
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
   const privateKey = wifToPrivateKey({
     wifKey,
-    network: NetworkEnum.Mainnet,
     coin: 'bitcoin'
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
@@ -158,19 +147,16 @@ describe('bitcoin transaction creation and signing test', function () {
   }).redeemScript
   const address: string = scriptPubkeyToAddress({
     scriptPubkey: scriptPubkey,
-    network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2pkh
   }).address
   const segwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: segwitScriptPubkey,
-    network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2wpkh
   }).address
   const wrappedSegwitAddress: string = scriptPubkeyToAddress({
     scriptPubkey: wrappedSegwitScriptPubkey,
-    network: NetworkEnum.Mainnet,
     coin: 'bitcoin',
     addressType: AddressTypeEnum.p2sh
   }).legacyAddress
@@ -184,7 +170,6 @@ describe('bitcoin transaction creation and signing test', function () {
       It is enough to pass the full previous rawtransaction.
     */
     const base64Tx: string = createTx({
-      network: NetworkEnum.Mainnet,
       rbf: false,
       inputs: [
         {
@@ -213,7 +198,6 @@ describe('bitcoin transaction creation and signing test', function () {
         {
           scriptPubkey: addressToScriptPubkey({
             address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
-            network: NetworkEnum.Mainnet,
             addressType: AddressTypeEnum.p2pkh,
             coin: 'bitcoin'
           }),
@@ -251,7 +235,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const txOutput: TxOutput = {
       scriptPubkey: addressToScriptPubkey({
         address: segwitAddress,
-        network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2wpkh,
         coin: 'bitcoin'
       }),
@@ -261,7 +244,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const base64Tx: string = createTx({
       inputs: [txInput],
       outputs: Array(nOutputs).fill(txOutput),
-      network: NetworkEnum.Mainnet,
       rbf: false
     }).psbt
 
@@ -290,7 +272,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const segwitTx: string = createTx({
       inputs: txInputs,
       outputs: [txOutput],
-      network: NetworkEnum.Mainnet,
       rbf: false
     }).psbt
     const { hex: segwitRawTransaction } = await signTx({
@@ -342,7 +323,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const txOutputLegacy: TxOutput = {
       scriptPubkey: addressToScriptPubkey({
         address: address,
-        network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2pkh,
         coin: 'bitcoin'
       }),
@@ -352,7 +332,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const txOutputSegwit: TxOutput = {
       scriptPubkey: addressToScriptPubkey({
         address: segwitAddress,
-        network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2wpkh,
         coin: 'bitcoin'
       }),
@@ -362,7 +341,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const txOutputWrappedSegwit: TxOutput = {
       scriptPubkey: addressToScriptPubkey({
         address: wrappedSegwitAddress,
-        network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2sh,
         coin: 'bitcoin'
       }),
@@ -372,7 +350,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const base64Tx: string = createTx({
       inputs: [txInputLegacy, txInputSegwit, txInputWrappedSegwit],
       outputs: [txOutputLegacy, txOutputSegwit, txOutputWrappedSegwit],
-      network: NetworkEnum.Mainnet,
       rbf: false
     }).psbt
 
@@ -408,7 +385,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const txOutput: TxOutput = {
       scriptPubkey: addressToScriptPubkey({
         address: address,
-        network: NetworkEnum.Mainnet,
         addressType: AddressTypeEnum.p2pkh,
         coin: 'bitcoin'
       }),
@@ -418,7 +394,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const base64Tx: string = createTx({
       inputs: [txInput],
       outputs: Array(nOutputs).fill(txOutput),
-      network: NetworkEnum.Mainnet,
       rbf: false
     }).psbt
 
@@ -441,7 +416,6 @@ describe('bitcoin transaction creation and signing test', function () {
     const base64TxMulti: string = createTx({
       inputs: txInputs,
       outputs: [txOutput, txOutput],
-      network: NetworkEnum.Mainnet,
       rbf: false
     }).psbt
 

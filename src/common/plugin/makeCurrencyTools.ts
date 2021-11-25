@@ -20,7 +20,7 @@ import {
   asPrivateKey,
   PrivateKey
 } from '../utxobased/keymanager/cleaners'
-import { NetworkEnum, PluginInfo } from './types'
+import { PluginInfo } from './types'
 import { getFormatsForNetwork } from './utils'
 
 /**
@@ -84,8 +84,7 @@ export function makeCurrencyTools(
       if (pathname !== '') {
         const parsedPath = parsePathname({
           pathname: uriObj.pathname,
-          coin: coinInfo.name,
-          network: engineInfo.networkType ?? NetworkEnum.Mainnet
+          coin: coinInfo.name
         })
         if (parsedPath == null) throw new Error('InvalidUriError')
 

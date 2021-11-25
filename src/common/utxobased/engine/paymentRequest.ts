@@ -32,7 +32,6 @@ export function getSpendTargets(
 
 export async function getPaymentDetails(
   paymentProtocolURL: string,
-  network: string,
   currencyCode: string,
   fetch: EdgeFetchFunction
 ): Promise<EdgePaymentProtocolInfo> {

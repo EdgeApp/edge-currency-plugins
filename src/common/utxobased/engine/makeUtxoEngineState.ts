@@ -12,7 +12,6 @@ import {
   CurrencyFormat,
   EngineConfig,
   EngineInfo,
-  NetworkEnum,
   PluginInfo
 } from '../../plugin/types'
 import { removeItem } from '../../plugin/utils'
@@ -89,7 +88,6 @@ export function makeUtxoEngineState(
   config: UtxoEngineStateConfig
 ): UtxoEngineState {
   const {
-    network,
     pluginInfo,
     walletInfo,
     walletTools,
@@ -153,7 +151,6 @@ export function makeUtxoEngineState(
   })
   const commonArgs: CommonArgs = {
     engineStarted,
-    network,
     pluginInfo,
     walletInfo,
     walletTools,
@@ -394,7 +391,6 @@ export function makeUtxoEngineState(
 
 interface CommonArgs {
   engineStarted: boolean
-  network: NetworkEnum
   pluginInfo: PluginInfo
   walletInfo: NumbWalletInfo
   walletTools: UTXOPluginWalletTools
@@ -1099,8 +1095,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
       n: input.n,
       scriptPubkey: validScriptPubkeyFromAddress({
         address: input.addresses[0],
-        coin: coinInfo.name,
-        network: args.network
+        coin: coinInfo.name
       }),
       amount: input.value
     })),
@@ -1110,8 +1105,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
         output.hex ??
         validScriptPubkeyFromAddress({
           address: output.addresses[0],
-          coin: coinInfo.name,
-          network: args.network
+          coin: coinInfo.name
         }),
       amount: output.value
     })),
