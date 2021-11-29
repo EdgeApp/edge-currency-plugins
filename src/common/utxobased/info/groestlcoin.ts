@@ -20,7 +20,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockBookServers: ['wss://blockbook.groestlcoin.org'],
-    disableFetchingServers: true
+    disableFetchingServers: false
   },
   customFeeTemplate: [
     {

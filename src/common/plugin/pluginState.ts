@@ -66,7 +66,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     pluginDisklet,
     log
   } = settings
-  let defaultServers = defaultSettings.blockBookServers
+  let defaultServers = defaultSettings.blockBookServers.map(asWebsocketUrl)
   let disableFetchingServers = !!(
     defaultSettings.disableFetchingServers ?? false
   )
@@ -217,7 +217,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
         disableFetchingServers = settings.disableFetchingServers
       }
       if (Array.isArray(blockBookServers)) {
-        defaultServers = blockBookServers
+        defaultServers = blockBookServers.map(asWebsocketUrl)
       }
       const enginesToBeStopped = []
       const disconnects = []
