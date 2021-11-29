@@ -6,7 +6,7 @@ import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'zcoin',
   walletType: 'wallet:zcoin',
-  displayName: 'Zcoin',
+  displayName: 'Firo',
   currencyCode: 'FIRO',
   denominations: [
     { name: 'FIRO', multiplier: '100000000', symbol: 'ƒ' },
