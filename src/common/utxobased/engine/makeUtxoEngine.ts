@@ -189,7 +189,9 @@ export async function makeUtxoEngine(
     getDisplayPrivateSeed(): string | null {
       const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
       if (privateKey == null) return null
-      return privateKey.seed
+      return privateKey.format === 'bip32'
+        ? Buffer.from(privateKey.seed, 'base64').toString('hex')
+        : privateKey.seed
     },
 
     getDisplayPublicSeed(): string | null {
