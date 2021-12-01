@@ -15,6 +15,7 @@ import {
 } from 'edge-core-js/types'
 
 import { filterUndefined } from '../../../util/filterUndefined'
+import { unixTime } from '../../../util/unixtime'
 import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
@@ -392,7 +393,7 @@ export async function makeUtxoEngine(
         },
         currencyCode: currencyInfo.currencyCode,
         txid: '',
-        date: 0,
+        date: unixTime(),
         blockHeight: 0,
         nativeAmount,
         networkFee,
@@ -488,6 +489,9 @@ export async function makeUtxoEngine(
           }
         })
       }
+
+      // Update the transaction's date because it's has been modified
+      transaction.date = unixTime()
 
       return transaction
     },
