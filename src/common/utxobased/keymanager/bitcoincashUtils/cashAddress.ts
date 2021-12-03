@@ -105,7 +105,8 @@ const prefixToArray = (prefix: string): number[] => {
 export const hashToCashAddress = (
   scriptHash: string,
   type: CashaddrTypeEnum,
-  cashAddrPrefix: string
+  cashAddrPrefix: string,
+  includePrefix: boolean = false
 ): string => {
   // Not any, but a BN object
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -161,7 +162,9 @@ export const hashToCashAddress = (
   const payloadData = convertBits([versionByte].concat(arr), 8, 5)
   const checksumData = prefixData.concat(payloadData).concat(eight0)
   const payload = payloadData.concat(checksumToArray(polymod(checksumData)))
-  return cashAddrPrefix + ':' + encode(payload)
+  return includePrefix
+    ? cashAddrPrefix + ':' + encode(payload)
+    : encode(payload)
 }
 
 export const cashAddressToHash = (
