@@ -736,7 +736,8 @@ export function scriptPubkeyToAddress(
             coin: args.coin
           }),
           CashaddrTypeEnum.pubkeyhash,
-          standardPrefixes.cashaddr
+          standardPrefixes.cashaddr,
+          false
         )
       }
       if (legacyPrefixes.cashaddr != null) {
@@ -747,7 +748,8 @@ export function scriptPubkeyToAddress(
             coin: args.coin
           }),
           CashaddrTypeEnum.pubkeyhash,
-          legacyPrefixes.cashaddr
+          legacyPrefixes.cashaddr,
+          false
         )
       }
       payment = bitcoin.payments.p2pkh
@@ -761,7 +763,8 @@ export function scriptPubkeyToAddress(
             coin: args.coin
           }),
           CashaddrTypeEnum.scripthash,
-          standardPrefixes.cashaddr
+          standardPrefixes.cashaddr,
+          false
         )
       }
       if (legacyPrefixes.cashaddr != null) {
@@ -772,7 +775,8 @@ export function scriptPubkeyToAddress(
             coin: args.coin
           }),
           CashaddrTypeEnum.scripthash,
-          legacyPrefixes.cashaddr
+          legacyPrefixes.cashaddr,
+          false
         )
       }
       payment = bitcoin.payments.p2sh

@@ -24,14 +24,22 @@ describe('bitcoin cash address tests', () => {
     coin: 'bitcoin'
   })
   it('pubkey hash to cashaddr', () => {
-    const address = hashToCashAddress(
+    let address = hashToCashAddress(
       pubkeyHash,
       CashaddrTypeEnum.pubkeyhash,
-      'bitcoincash'
+      'bitcoincash',
+      true
     )
     expect(address).to.equal(
       'bitcoincash:qrvcdmgpk73zyfd8pmdl9wnuld36zh9n4gms8s0u59'
     )
+    address = hashToCashAddress(
+      pubkeyHash,
+      CashaddrTypeEnum.pubkeyhash,
+      'bitcoincash',
+      false
+    )
+    expect(address).to.equal('qrvcdmgpk73zyfd8pmdl9wnuld36zh9n4gms8s0u59')
   })
 
   it('cash address to pubkey hash', () => {
@@ -55,14 +63,22 @@ describe('bitcoin cash address tests', () => {
   })
 
   it('script hash to cashaddr', () => {
-    const address = hashToCashAddress(
+    let address = hashToCashAddress(
       scriptHash,
       CashaddrTypeEnum.scripthash,
-      'bitcoincash'
+      'bitcoincash',
+      true
     )
     expect(address).to.equal(
       'bitcoincash:pqlmd62cztjhhdrfr7dy5c5gv2np5nmknvhfvqp85n'
     )
+    address = hashToCashAddress(
+      scriptHash,
+      CashaddrTypeEnum.scripthash,
+      'bitcoincash',
+      false
+    )
+    expect(address).to.equal('pqlmd62cztjhhdrfr7dy5c5gv2np5nmknvhfvqp85n')
   })
 
   it('cash address to script hash', () => {
