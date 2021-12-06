@@ -430,7 +430,7 @@ export async function makeUtxoEngine(
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
-      const { psbt, edgeSpendInfo }: Partial<UtxoTxOtherParams> =
+      const { psbt, edgeSpendInfo }: UtxoTxOtherParams =
         transaction.otherParams ?? {}
       if (psbt == null || edgeSpendInfo == null)
         throw new Error('Invalid transaction data')
