@@ -35,7 +35,7 @@ import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
-import { UTXOTxOtherParams } from './types'
+import { UtxoTxOtherParams } from './types'
 import { fetchOrDeriveXprivFromKeys, sumUtxos } from './utils'
 
 export async function makeUtxoEngine(
@@ -430,7 +430,7 @@ export async function makeUtxoEngine(
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
-      const { psbt, edgeSpendInfo }: Partial<UTXOTxOtherParams> =
+      const { psbt, edgeSpendInfo }: Partial<UtxoTxOtherParams> =
         transaction.otherParams ?? {}
       if (psbt == null || edgeSpendInfo == null)
         throw new Error('Invalid transaction data')
