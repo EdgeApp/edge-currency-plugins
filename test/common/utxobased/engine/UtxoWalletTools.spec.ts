@@ -1,6 +1,5 @@
 import { expect } from 'chai'
 
-import { NetworkEnum } from '../../../../src/common/plugin/types'
 import { makeUtxoWalletTools } from '../../../../src/common/utxobased/engine/makeUtxoWalletTools'
 
 describe('wallet tools tests', () => {
@@ -13,8 +12,7 @@ describe('wallet tools tests', () => {
           'zpub6qmK2GdQoxXphTU8DjQNBFc9xKc3XnoNBUhKHKfKchMmVLENqeVn8GcwL9ThKYme2Qqnvq8RSrJh2PkpPGhy5rXmizkRBZ7naCd33hHSpaN'
       }
     },
-    coin: 'bitcoin',
-    network: NetworkEnum.Mainnet
+    coin: 'bitcoin'
   })
 
   it('Get Address test', () => {
@@ -41,8 +39,7 @@ describe('wallet tools wif test', () => {
   const walletTools = makeUtxoWalletTools({
     publicKey: {} as any,
     wifKeys: ['L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'],
-    coin: 'bitcoin',
-    network: NetworkEnum.Mainnet
+    coin: 'bitcoin'
   })
 
   it('Get Address test', () => {

@@ -42,7 +42,6 @@ export async function makeUtxoEngine(
   config: EngineConfig
 ): Promise<EdgeCurrencyEngine> {
   const {
-    network,
     pluginInfo,
     pluginDisklet,
     // Rename to make it explicit that this is sensitive memory
@@ -75,8 +74,7 @@ export async function makeUtxoEngine(
 
   const walletTools = makeUtxoWalletTools({
     publicKey,
-    coin: coinInfo.name,
-    network
+    coin: coinInfo.name
   })
 
   const fees = await makeFees({
@@ -219,7 +217,6 @@ export async function makeUtxoEngine(
     ): Promise<EdgePaymentProtocolInfo> {
       return await getPaymentDetails(
         paymentProtocolUrl,
-        network,
         currencyInfo.currencyCode,
         io.fetch
       )
@@ -361,7 +358,6 @@ export async function makeUtxoEngine(
         targets,
         feeRate,
         coin: coinInfo.name,
-        network,
         setRBF,
         freshChangeAddress,
         subtractFee
@@ -448,8 +444,7 @@ export async function makeUtxoEngine(
       const xprivKeys = await fetchOrDeriveXprivFromKeys({
         privateKey,
         walletLocalEncryptedDisklet,
-        coin: coinInfo.name,
-        network
+        coin: coinInfo.name
       })
 
       const privateKeys = await Promise.all(
@@ -530,8 +525,7 @@ export async function makeUtxoEngine(
       const tmpWalletTools = makeUtxoWalletTools({
         publicKey: dummyNumbWalletInfo.keys.publicKey,
         wifKeys: privateKeys,
-        coin: coinInfo.name,
-        network
+        coin: coinInfo.name
       })
 
       tmpEmitter.on(EngineEvent.ADDRESSES_CHECKED, async (ratio: number) => {
@@ -597,8 +591,7 @@ export async function makeUtxoEngine(
         const xprivKeys = await fetchOrDeriveXprivFromKeys({
           privateKey,
           walletLocalEncryptedDisklet,
-          coin: coinInfo.name,
-          network
+          coin: coinInfo.name
         })
 
         const signature = await walletTools.signMessageBase64({

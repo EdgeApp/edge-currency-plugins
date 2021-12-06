@@ -13,7 +13,6 @@ import { EdgeWalletInfo } from 'edge-core-js/types'
 import {
   asCurrencyFormat,
   CurrencyFormat,
-  NetworkEnum,
   PluginInfo
 } from '../../plugin/types'
 import { deriveXpubsFromKeys } from '../engine/utils'
@@ -168,8 +167,7 @@ export const asNumbWalletInfo = (
     if (privateKey != null) {
       const publicKey = deriveXpubsFromKeys({
         privateKey,
-        coin: coinInfo.name,
-        network: engineInfo.networkType ?? NetworkEnum.Mainnet
+        coin: coinInfo.name
       })
 
       return {

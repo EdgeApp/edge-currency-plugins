@@ -6,36 +6,22 @@ import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'bitcoincash',
-  walletType: 'wallet:bitcoincash',
-  currencyCode: 'BCH',
+  pluginId: 'bitcoincashtestnet',
+  walletType: 'wallet:bitcoincashtestnet',
+  currencyCode: 'TBCH',
   displayName: 'Bitcoin Cash',
   denominations: [
-    { name: 'BCH', multiplier: '100000000', symbol: '₿' },
-    { name: 'mBCH', multiplier: '100000', symbol: 'm₿' },
+    { name: 'TBCH', multiplier: '100000000', symbol: '₿' },
+    { name: 'mTBCH', multiplier: '100000', symbol: 'm₿' },
     { name: 'cash', multiplier: '100', symbol: 'ƀ' }
   ],
 
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockBookServers: [
-      'https://bch1.trezor.io',
-      'https://bch2.trezor.io',
-      'https://bch3.trezor.io',
-      'https://bch4.trezor.io',
-      'https://bch5.trezor.io'
-    ],
+    blockBookServers: [],
     disableFetchingServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
   metaTokens: [],
 
   // Explorers:
@@ -67,28 +53,28 @@ const engineInfo: EngineInfo = {
 }
 
 export const coinInfo: CoinInfo = {
-  name: 'bitcoincash',
+  name: 'bitcoincashtestnet',
   segwit: false,
   sighash: bitcoin.Psbt.BCH_SIGHASH_ALL,
-  coinType: 145,
+  coinType: 1,
 
   mainnetConstants: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0x80,
-    legacyXPriv: 0x0488ade4,
-    legacyXPub: 0x0488b21e,
-    pubkeyHash: 0x00,
-    scriptHash: 0x05,
-    cashaddr: 'bitcoincash'
+    wif: 0xef,
+    legacyXPriv: 0x04358394,
+    legacyXPub: 0x043587cf,
+    pubkeyHash: 0x6f,
+    scriptHash: 0xc4,
+    cashaddr: 'bchtest'
   },
 
   legacyConstants: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0x80,
-    legacyXPriv: 0x0488ade4,
-    legacyXPub: 0x0488b21e,
-    pubkeyHash: 0x00,
-    scriptHash: 0x05
+    wif: 0xef,
+    legacyXPriv: 0x04358394,
+    legacyXPub: 0x043587cf,
+    pubkeyHash: 0x6f,
+    scriptHash: 0xc4
   }
 }
 

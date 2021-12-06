@@ -66,15 +66,6 @@ export const coinInfo: CoinInfo = {
     legacyXPub: 0x02fe52cc,
     pubkeyHash: 0x4c,
     scriptHash: 0x10
-  },
-
-  testnetConstants: {
-    messagePrefix: 'unused',
-    wif: 0xef,
-    legacyXPriv: 0x04358394,
-    legacyXPub: 0x043587cf,
-    pubkeyHash: 0x6f,
-    scriptHash: 0xc4
   }
 }
 

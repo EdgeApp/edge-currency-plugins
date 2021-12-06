@@ -2,7 +2,7 @@ import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
 import { EdgeParsedUri } from 'edge-core-js/types'
 
-import { CurrencyFormat, NetworkEnum } from '../../plugin/types'
+import { CurrencyFormat } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import { getSupportedFormats, PrivateKey } from '../keymanager/cleaners'
 import {
@@ -76,7 +76,6 @@ export const getScriptTypeFromPurposeType = (
 export const validScriptPubkeyFromAddress = (args: {
   address: string
   coin: string
-  network: NetworkEnum
 }): string =>
   addressToScriptPubkey({
     ...args,
@@ -106,7 +105,6 @@ export const fetchOrDeriveXprivFromKeys = async (args: {
   privateKey: PrivateKey
   walletLocalEncryptedDisklet: Disklet
   coin: string
-  network: NetworkEnum
 }): Promise<CurrencyFormatKeys> => {
   const filename = 'walletKeys.json'
   let keys: CurrencyFormatKeys
@@ -126,14 +124,12 @@ export const fetchOrDeriveXprivFromKeys = async (args: {
 export const deriveXprivFromKeys = (args: {
   privateKey: PrivateKey
   coin: string
-  network: NetworkEnum
 }): CurrencyFormatKeys => {
   const keys: CurrencyFormatKeys = {}
   const xprivArgs = {
     seed: args.privateKey.seed,
     coinType: args.privateKey.coinType,
-    coin: args.coin,
-    network: args.network
+    coin: args.coin
   }
   const walletPurpose = currencyFormatToPurposeType(args.privateKey.format)
   if (
@@ -167,7 +163,6 @@ export const deriveXprivFromKeys = (args: {
 export const deriveXpubsFromKeys = (args: {
   privateKey: PrivateKey
   coin: string
-  network: NetworkEnum
 }): CurrencyFormatKeys => {
   const xpubs: CurrencyFormatKeys = {}
   for (const format of getSupportedFormats(args.privateKey.format)) {
@@ -182,7 +177,6 @@ export const deriveXpubsFromKeys = (args: {
 export const deriveXpub = (args: {
   privateKey: PrivateKey
   coin: string
-  network: NetworkEnum
   type: BIP43PurposeTypeEnum
 }): string => {
   const xpriv = deriveXprivFromKeys(args)[
@@ -196,7 +190,6 @@ export const deriveXpub = (args: {
 export const parsePathname = (args: {
   pathname: string
   coin: string
-  network: NetworkEnum
 }): EdgeParsedUri => {
   const edgeParsedUri: EdgeParsedUri = {}
 
@@ -204,7 +197,6 @@ export const parsePathname = (args: {
   try {
     wifToPrivateKey({
       wifKey: args.pathname,
-      network: args.network,
       coin: args.coin
     })
     edgeParsedUri.privateKeys = [args.pathname]
@@ -212,7 +204,6 @@ export const parsePathname = (args: {
     // If the pathname is non of the above, then assume it's an address and check for validity
     const addressFormat = verifyAddress({
       address: args.pathname,
-      network: args.network,
       coin: args.coin
     })
 

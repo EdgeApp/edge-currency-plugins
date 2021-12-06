@@ -6,18 +6,6 @@ import { Buffer } from 'buffer'
 import { decode, encode } from './base32'
 import BN from './bn'
 
-export enum CashaddrPrefixEnum {
-  mainnet = 'bitcoincash',
-  testnet = 'bchtest',
-  testnetalt = 'bitcoincashtestnet'
-}
-
-// this enumerates the network types of single coins. Can be expanded to add regtest, signet, stagenet etc.
-export enum NetworkEnum {
-  Mainnet = 'mainnet',
-  Testnet = 'testnet'
-}
-
 export enum CashaddrTypeEnum {
   pubkeyhash = 'pubkeyhash',
   scripthash = 'scripthash'
@@ -106,7 +94,7 @@ const convertBits = (
   return result
 }
 
-const prefixToArray = (prefix: CashaddrPrefixEnum): number[] => {
+const prefixToArray = (prefix: string): number[] => {
   const result = []
   for (let i = 0; i < prefix.length; i++) {
     result.push(prefix.charCodeAt(i) & 31)
@@ -117,7 +105,7 @@ const prefixToArray = (prefix: CashaddrPrefixEnum): number[] => {
 export const hashToCashAddress = (
   scriptHash: string,
   type: CashaddrTypeEnum,
-  network: NetworkEnum
+  cashAddrPrefix: string
 ): string => {
   // Not any, but a BN object
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -165,22 +153,21 @@ export const hashToCashAddress = (
     }
   }
 
-  const prefix: CashaddrPrefixEnum =
-    NetworkEnum.Mainnet === network
-      ? CashaddrPrefixEnum.mainnet
-      : CashaddrPrefixEnum.testnet
   const hashBuffer = Buffer.from(scriptHash, 'hex')
   const eight0 = [0, 0, 0, 0, 0, 0, 0, 0]
-  const prefixData = prefixToArray(prefix).concat([0])
+  const prefixData = prefixToArray(cashAddrPrefix).concat([0])
   const versionByte = getTypeBits(type) + getHashSizeBits(hashBuffer)
   const arr = Array.prototype.slice.call(hashBuffer, 0)
   const payloadData = convertBits([versionByte].concat(arr), 8, 5)
   const checksumData = prefixData.concat(payloadData).concat(eight0)
   const payload = payloadData.concat(checksumToArray(polymod(checksumData)))
-  return prefix + ':' + encode(payload)
+  return cashAddrPrefix + ':' + encode(payload)
 }
 
-export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
+export const cashAddressToHash = (
+  address: string,
+  cashAddrPrefixes: string[]
+): BitcoinCashScriptHash => {
   function getHashSize(versionByte: number): number {
     switch (versionByte & 7) {
       case 0:
@@ -214,14 +201,6 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
   // not any, but a bignum payload
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function validChecksum(prefix: string, payload: any): boolean {
-    function prefixToArray(prefix: string): number[] {
-      const result = []
-      for (let i = 0; i < prefix.length; i++) {
-        result.push(prefix.charCodeAt(i) & 31)
-      }
-      return result
-    }
-
     const prefixData = prefixToArray(prefix).concat([0])
     return polymod(prefixData.concat(payload)).eqn(0)
   }
@@ -251,13 +230,15 @@ export const cashAddressToHash = (address: string): BitcoinCashScriptHash => {
       throw new Error(`InvalidArgument: ${address} has invalid checksum`)
     }
   } else {
-    const netNames = Object.values(CashaddrPrefixEnum)
-    let candidatePrefix = netNames.shift()
-    while (prefix == null && candidatePrefix != null) {
+    // Loop over all of the currency's cashaddr prefixes to see if any of them
+    // validate the checksum for the payload. If we find one, then we'll use
+    // it as the selected prefix. Otherwise, we'll throw an error.
+    for (let i = 0; i < cashAddrPrefixes.length; ++i) {
+      const candidatePrefix = cashAddrPrefixes[i]
       if (validChecksum(candidatePrefix, payload)) {
         prefix = candidatePrefix
+        break
       }
-      candidatePrefix = netNames.shift()
     }
     if (prefix == null) {
       throw new Error(`InvalidArgument: ${address} has invalid checksum`)
