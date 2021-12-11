@@ -642,9 +642,8 @@ export const pickNextTask = async (
 
   // Loop processed utxos, these are just database ops, triggers setLookAhead
   if (Object.keys(processorUtxoCache).length > 0) {
-    for (const scriptPubkey of Object.keys(processorUtxoCache)) {
+    for (const [scriptPubkey, state] of Object.entries(processorUtxoCache)) {
       // Only process when all utxos for a specific address have been gathered
-      const state = processorUtxoCache[scriptPubkey]
       if (!state.processing && state.full) {
         state.processing = true
         await processProcessorUtxos({
@@ -660,8 +659,7 @@ export const pickNextTask = async (
   }
 
   // Loop unparsed utxos, some require a network call to get the full tx data
-  for (const utxoString of Object.keys(rawUtxoCache)) {
-    const state = rawUtxoCache[utxoString]
+  for (const [utxoString, state] of Object.entries(rawUtxoCache)) {
     const utxo: IAccountUTXO = JSON.parse(utxoString)
     if (utxo == null) continue
     if (!state.processing) {
@@ -689,8 +687,7 @@ export const pickNextTask = async (
   }
 
   // Loop to process addresses to utxos
-  for (const address of Object.keys(addressUtxoCache)) {
-    const state = addressUtxoCache[address]
+  for (const [address, state] of Object.entries(addressUtxoCache)) {
     // Check if we need to fetch address UTXOs
     if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
       state.processing = true
@@ -721,8 +718,7 @@ export const pickNextTask = async (
   ) {
     const blockHeight = serverStates.getBlockHeight(uri)
     // Loop each address that needs to be subscribed
-    for (const address of Object.keys(addressSubscribeCache)) {
-      const state = addressSubscribeCache[address]
+    for (const [address, state] of Object.entries(addressSubscribeCache)) {
       // Add address in the cache to the set of addresses to watch
       const { path, processing: subscribed } = state
       // only process newly watched addresses
@@ -769,12 +765,9 @@ export const pickNextTask = async (
 
   // filled when transactions potentially changed (e.g. through new block notification)
   if (Object.keys(updateTransactionCache).length > 0) {
-    for (const txId of Object.keys(updateTransactionCache)) {
-      if (
-        !updateTransactionCache[txId].processing &&
-        serverStates.serverCanGetTx(uri, txId)
-      ) {
-        updateTransactionCache[txId].processing = true
+    for (const [txId, state] of Object.entries(updateTransactionCache)) {
+      if (!state.processing && serverStates.serverCanGetTx(uri, txId)) {
+        state.processing = true
         removeItem(updateTransactionCache, txId)
         const updateTransactionTask = updateTransactions({ ...args, txId })
         // once resolved, add the txid to the server cache
@@ -792,8 +785,7 @@ export const pickNextTask = async (
   }
 
   // loop to get and process transaction history of single addresses, triggers setLookAhead
-  for (const address of Object.keys(addressTransactionCache)) {
-    const state = addressTransactionCache[address]
+  for (const [address, state] of Object.entries(addressTransactionCache)) {
     if (!state.processing && serverStates.serverCanGetAddress(uri, address)) {
       state.processing = true
 
