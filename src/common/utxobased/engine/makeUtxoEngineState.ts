@@ -1126,7 +1126,7 @@ const processAddressUtxos = async (
     serverStates,
     uri
   } = args
-  const { addressUtxoCache, rawUtxoCache } = taskCache
+  const { addressUtxoCache, rawUtxoCache, processorUtxoCache } = taskCache
   const queryTime = Date.now()
   const deferredIAccountUTXOs = new Deferred<IAccountUTXO[]>()
   deferredIAccountUTXOs.promise
@@ -1137,6 +1137,12 @@ const processAddressUtxos = async (
       if (addressData == null || addressData.path == null) {
         return
       }
+
+      if (utxos.length === 0) {
+        addToProcessorUtxoCache(processorUtxoCache, path, scriptPubkey, 0)
+        return
+      }
+
       for (const utxo of utxos) {
         rawUtxoCache[JSON.stringify(utxo)] = {
           processing: false,
@@ -1348,7 +1354,7 @@ const addToProcessorUtxoCache = (
   path: ShortPath,
   scriptPubkey: string,
   requiredCount: number,
-  utxo: IUTXO
+  utxo?: IUTXO
 ): void => {
   const processorUtxos = processorUtxosCache[scriptPubkey] ?? {
     utxos: new Set(),
@@ -1356,7 +1362,7 @@ const addToProcessorUtxoCache = (
     path,
     full: false
   }
-  processorUtxos.utxos.add(utxo)
+  if (utxo != null) processorUtxos.utxos.add(utxo)
   processorUtxosCache[scriptPubkey] = processorUtxos
   processorUtxos.full = processorUtxos.utxos.size >= requiredCount
 }
