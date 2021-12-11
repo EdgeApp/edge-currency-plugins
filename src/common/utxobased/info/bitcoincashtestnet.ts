@@ -59,22 +59,13 @@ export const coinInfo: CoinInfo = {
   coinType: 1,
 
   mainnetConstants: {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0xef,
-    legacyXPriv: 0x04358394,
-    legacyXPub: 0x043587cf,
-    pubkeyHash: 0x6f,
-    scriptHash: 0xc4,
-    cashaddr: 'bchtest'
-  },
-
-  legacyConstants: {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0xef,
-    legacyXPriv: 0x04358394,
-    legacyXPub: 0x043587cf,
-    pubkeyHash: 0x6f,
-    scriptHash: 0xc4
+    messagePrefix: ['\x18Bitcoin Signed Message:\n'],
+    wif: [0xef],
+    legacyXPriv: [0x04358394],
+    legacyXPub: [0x043587cf],
+    pubkeyHash: [0x6f],
+    scriptHash: [0xc4],
+    cashaddr: ['bchtest']
   }
 }
 

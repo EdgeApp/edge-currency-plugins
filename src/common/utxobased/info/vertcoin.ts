@@ -61,17 +61,17 @@ export const coinInfo: CoinInfo = {
   segwit: true,
   coinType: 28,
   mainnetConstants: {
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    wif: 0x80,
-    legacyXPriv: 0x0488ade4,
-    legacyXPub: 0x0488b21e,
-    wrappedSegwitXPriv: 0x0488ade4,
-    wrappedSegwitXPub: 0x0488b21e,
-    segwitXPriv: 0x0488ade4,
-    segwitXPub: 0x0488b21e,
-    pubkeyHash: 0x47,
-    scriptHash: 0x05,
-    bech32: 'vtc'
+    messagePrefix: ['\x18Bitcoin Signed Message:\n'],
+    wif: [0x80],
+    legacyXPriv: [0x0488ade4],
+    legacyXPub: [0x0488b21e],
+    wrappedSegwitXPriv: [0x0488ade4],
+    wrappedSegwitXPub: [0x0488b21e],
+    segwitXPriv: [0x0488ade4],
+    segwitXPub: [0x0488b21e],
+    pubkeyHash: [0x47],
+    scriptHash: [0x05],
+    bech32: ['vtc']
   }
 }
 
