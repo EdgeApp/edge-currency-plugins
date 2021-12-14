@@ -7,12 +7,11 @@ import {
   RangeBaseOptions
 } from 'baselet'
 
-import { AddressPath } from '../../../plugin/types'
+import { ChangePath } from '../../../plugin/types'
 import { IAddress, IProcessorTransaction, IUTXO } from '../types'
 
-export const addressPathToPrefix = (
-  path: Omit<AddressPath, 'addressIndex'>
-): string => `${path.format}_${path.changeIndex}`
+export const addressPathToPrefix = (path: ChangePath): string =>
+  `${path.format}_${path.changeIndex}`
 
 export type ScriptPubkeyByPathBaselet = CountBase<string>
 export const scriptPubkeyByPathOptions: CountBaseOptions = {

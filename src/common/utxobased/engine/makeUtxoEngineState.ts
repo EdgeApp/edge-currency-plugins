@@ -479,21 +479,15 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 
   async function deriveKeys(changePath: ChangePath): Promise<void> {
     const addressesToSubscribe = new Set<string>()
-    const formatPath: Omit<AddressPath, 'addressIndex'> = {
-      format: changePath.format,
-      changeIndex: changePath.changeIndex
-    }
-    const totalAddressCount = processor.numAddressesByFormatPath(formatPath)
-    let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
-      ...formatPath
-    })
+    const totalAddressCount = processor.numAddressesByFormatPath(changePath)
+    let lastUsedIndex = await processor.lastUsedIndexByFormatPath(changePath)
 
     // Loop until the total address count equals the lookahead count
     let lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
     let nextAddressIndex = totalAddressCount
     while (nextAddressIndex <= lookAheadIndex) {
       const path: AddressPath = {
-        ...formatPath,
+        ...changePath,
         addressIndex: nextAddressIndex
       }
 
@@ -512,11 +506,9 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
       addressesToSubscribe.add(address)
 
       // Update the state for the loop
-      lastUsedIndex = await processor.lastUsedIndexByFormatPath({
-        ...formatPath
-      })
+      lastUsedIndex = await processor.lastUsedIndexByFormatPath(changePath)
       lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
-      nextAddressIndex = processor.numAddressesByFormatPath(formatPath)
+      nextAddressIndex = processor.numAddressesByFormatPath(changePath)
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
