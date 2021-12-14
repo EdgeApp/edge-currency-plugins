@@ -18,6 +18,12 @@ import { PluginState } from './pluginState'
 export type CurrencyFormat = ReturnType<typeof asCurrencyFormat>
 export const asCurrencyFormat = asValue('bip32', 'bip44', 'bip49', 'bip84')
 
+// Path up to changeIndex
+export interface ChangePath {
+  format: CurrencyFormat
+  changeIndex: number
+}
+// Path up to addressIndex
 export interface AddressPath {
   format: CurrencyFormat
   changeIndex: number

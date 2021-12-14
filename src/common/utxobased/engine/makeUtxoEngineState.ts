@@ -9,6 +9,7 @@ import {
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
   AddressPath,
+  ChangePath,
   CurrencyFormat,
   EngineConfig,
   EngineInfo,
@@ -210,7 +211,7 @@ export function makeUtxoEngineState(
           commonArgs,
           response.address,
           path.format,
-          path.branch,
+          path.changeIndex,
           0,
           taskCache.addressTransactionCache
         ).catch(() => {
@@ -263,7 +264,7 @@ export function makeUtxoEngineState(
             addressesToSubscribe,
             {
               format,
-              branch
+              changeIndex: branch
             }
           )
         }
@@ -295,13 +296,13 @@ export function makeUtxoEngineState(
           format: getCurrencyFormatFromPurposeType(
             BIP43PurposeTypeEnum.WrappedSegwit
           ),
-          branch: branch
+          changeIndex: branch
         })
 
         const { address: segwitAddress } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit),
-          branch: branch
+          changeIndex: branch
         })
 
         return {
@@ -320,7 +321,7 @@ export function makeUtxoEngineState(
         } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(walletPurpose),
-          branch: branch
+          changeIndex: branch
         })
 
         return {
@@ -405,10 +406,6 @@ interface CommonArgs {
   lock: AwaitLock
 }
 
-interface ShortPath {
-  format: CurrencyFormat
-  branch: number
-}
 interface TaskCache {
   addressWatching: boolean
   blockWatching: boolean
@@ -424,23 +421,23 @@ interface UpdateTransactionCache {
   [key: string]: { processing: boolean }
 }
 interface AddressSubscribeCache {
-  [key: string]: { processing: boolean; path: ShortPath }
+  [key: string]: { processing: boolean; path: ChangePath }
 }
 interface AddressUtxoCache {
-  [key: string]: { processing: boolean; path: ShortPath }
+  [key: string]: { processing: boolean; path: ChangePath }
 }
 interface ProcessorUtxoCache {
   [key: string]: {
     processing: boolean
     full: boolean
     utxos: Set<IUTXO>
-    path: ShortPath
+    path: ChangePath
   }
 }
 interface RawUtxoCache {
   [key: string]: {
     processing: boolean
-    path: ShortPath
+    path: ChangePath
     address: IAddress
     requiredCount: number
   }
@@ -448,13 +445,13 @@ interface RawUtxoCache {
 interface AddressTransactionCache {
   [key: string]: {
     processing: boolean
-    path: ShortPath
+    path: ChangePath
     page: number
     blockHeight: number
   }
 }
 
-interface FormatArgs extends CommonArgs, ShortPath {}
+interface FormatArgs extends CommonArgs, ChangePath {}
 
 const setLookAhead = async (common: CommonArgs): Promise<void> => {
   const {
@@ -473,18 +470,18 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
     for (const format of supportedFormats) {
       const branches = getFormatSupportedBranches(format)
       for (const branch of branches) {
-        await deriveKeys({ format, branch })
+        await deriveKeys({ format, changeIndex: branch })
       }
     }
   } finally {
     lock.release()
   }
 
-  async function deriveKeys(shortPath: ShortPath): Promise<void> {
+  async function deriveKeys(changePath: ChangePath): Promise<void> {
     const addressesToSubscribe = new Set<string>()
     const formatPath: Omit<AddressPath, 'addressIndex'> = {
-      format: shortPath.format,
-      changeIndex: shortPath.branch
+      format: changePath.format,
+      changeIndex: changePath.changeIndex
     }
     const totalAddressCount = processor.numAddressesByFormatPath(formatPath)
     let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
@@ -526,7 +523,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
     addToAddressSubscribeCache(
       common.taskCache,
       addressesToSubscribe,
-      shortPath
+      changePath
     )
   }
 }
@@ -534,7 +531,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 const addToAddressSubscribeCache = (
   taskCache: TaskCache,
   addresses: Set<string>,
-  path: ShortPath
+  path: ChangePath
 ): void => {
   addresses.forEach(address => {
     taskCache.addressSubscribeCache[address] = {
@@ -567,7 +564,7 @@ const addToAddressTransactionCache = async (
     processing: false,
     path: {
       format,
-      branch
+      changeIndex: branch
     },
     page: 1, // Page starts on 1
     blockHeight
@@ -733,7 +730,7 @@ export const pickNextTask = async (
           args,
           address,
           path.format,
-          path.branch,
+          path.changeIndex,
           blockHeight,
           addressTransactionCache
         )
@@ -917,7 +914,7 @@ const internalDeriveScriptAddress = async ({
   addresses.add(address)
   addToAddressSubscribeCache(taskCache, addresses, {
     format: path.format,
-    branch: path.changeIndex
+    changeIndex: path.changeIndex
   })
   return { address, scriptPubkey, redeemScript }
 }
@@ -932,7 +929,7 @@ interface GetFreshAddressReturn {
 const internalGetFreshAddress = async (
   args: GetFreshAddressArgs
 ): Promise<GetFreshAddressReturn> => {
-  const { format, branch, walletTools, processor } = args
+  const { format, changeIndex: branch, walletTools, processor } = args
 
   const numAddresses = processor.numAddressesByFormatPath({
     format,
@@ -964,7 +961,7 @@ interface ProcessAddressTxsArgs extends CommonArgs {
   processing: boolean
   page: number
   blockHeight: number
-  path: ShortPath
+  path: ChangePath
   address: string
   uri: string
 }
@@ -1109,7 +1106,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
 
 interface ProcessAddressUtxosArgs extends CommonArgs {
   processing: boolean
-  path: ShortPath
+  path: ChangePath
   address: string
   uri: string
 }
@@ -1170,7 +1167,7 @@ const processAddressUtxos = async (
 interface ProcessUtxoTransactionArgs extends CommonArgs {
   scriptPubkey: string
   utxos: Set<IUTXO>
-  path: ShortPath
+  path: ChangePath
 }
 
 const processProcessorUtxos = async (
@@ -1233,7 +1230,7 @@ const processProcessorUtxos = async (
 }
 
 interface ProcessRawUtxoArgs extends FormatArgs {
-  path: ShortPath
+  path: ChangePath
   requiredCount: number
   utxo: IAccountUTXO
   id: string
@@ -1351,7 +1348,7 @@ const processRawUtxo = async (
 
 const addToProcessorUtxoCache = (
   processorUtxosCache: ProcessorUtxoCache,
-  path: ShortPath,
+  path: ChangePath,
   scriptPubkey: string,
   requiredCount: number,
   utxo?: IUTXO
