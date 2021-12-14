@@ -1,23 +1,52 @@
 import { EdgeTransaction } from 'edge-core-js/types'
 
 import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
+import { UtxoTxOtherParams } from '../../engine/types'
 import { Processor } from '../makeProcessor'
 import { IProcessorTransaction } from '../types'
 
 export const fromEdgeTransaction = (
   tx: EdgeTransaction
-): IProcessorTransaction => ({
-  txid: tx.txid,
-  hex: tx.signedTx,
-  blockHeight: tx.blockHeight,
-  date: tx.date,
-  fees: tx.networkFee,
-  inputs: tx.otherParams?.inputs ?? [],
-  outputs: tx.otherParams?.outputs ?? [],
-  ourIns: tx.otherParams?.ourIns ?? [],
-  ourOuts: tx.otherParams?.ourOuts ?? [],
-  ourAmount: tx.nativeAmount ?? '0'
-})
+): IProcessorTransaction => {
+  const otherParams = tx.otherParams as UtxoTxOtherParams
+  if (otherParams == null) throw new Error('Invalid transaction data')
+  if (otherParams.psbt == null)
+    throw new Error('Missing PSBT in edge transaction data')
+
+  /**
+   * [1]: Buffer.from is necessary because Buffers are converted to Uint8Arrays
+   * after through passing the bridge.
+   */
+  const inputs = otherParams.psbt.inputs.map((input, n) => ({
+    amount: input.value.toString(),
+    scriptPubkey: Buffer.from(input.script).toString('hex'), // [1]
+    n,
+    txId: Buffer.from(input.hash).reverse().toString('hex'), // [1]
+    outputIndex: input.index
+  }))
+  const outputs = otherParams.psbt.outputs.map((input, n) => ({
+    amount: input.value.toString(),
+
+    scriptPubkey: Buffer.from(input.script).toString('hex'), // [1]
+    n
+  }))
+
+  return {
+    txid: tx.txid,
+    hex: tx.signedTx,
+    blockHeight: tx.blockHeight,
+    date: tx.date,
+    fees: tx.networkFee,
+    inputs: inputs,
+    outputs: outputs,
+    // We can leave ourIns/ourOuts blank because they'll be updated by the
+    // processor when receiving the transaction from blockbook.
+    // We may want to calculate these preemptively, but for now this will work.
+    ourIns: [],
+    ourOuts: [],
+    ourAmount: tx.nativeAmount ?? '0'
+  }
+}
 
 interface ToEdgeTransactionArgs {
   tx: IProcessorTransaction
@@ -52,12 +81,6 @@ export const toEdgeTransaction = async (
     nativeAmount: args.tx.ourAmount,
     networkFee: args.tx.fees,
     signedTx: args.tx.hex,
-    ourReceiveAddresses,
-    otherParams: {
-      inputs: args.tx.inputs,
-      outputs: args.tx.outputs,
-      ourIns: args.tx.ourIns,
-      ourOuts: args.tx.ourOuts
-    }
+    ourReceiveAddresses
   }
 }
