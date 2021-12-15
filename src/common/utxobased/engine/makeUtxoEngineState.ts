@@ -241,46 +241,33 @@ export function makeUtxoEngineState(
   // processed by the processor. This happens only once before any call to
   // setLookAhead.
   const initializeAddressSubscriptions = async (): Promise<void> => {
-    const totalAddressCount = await getTotalAddressCount(
-      supportedFormats,
-      processor
-    )
-
-    if (
-      Object.keys(taskCache.addressSubscribeCache).length < totalAddressCount
-    ) {
-      for (const format of supportedFormats) {
-        const branches = getFormatSupportedBranches(format)
-        for (const branch of branches) {
-          const addressesToSubscribe = new Set<string>()
-          const branchAddressCount = processor.numAddressesByFormatPath({
-            format,
-            changeIndex: branch
+    for (const format of supportedFormats) {
+      const branches = getFormatSupportedBranches(format)
+      for (const branch of branches) {
+        const addressesToSubscribe = new Set<string>()
+        const branchAddressCount = processor.numAddressesByFormatPath({
+          format,
+          changeIndex: branch
+        })
+        // If the processor has not processed any addresses then the loop
+        // condition will only iterate once when branchAddressCount is 0 for the
+        // first address in the derivation path.
+        for (
+          let addressIndex = 0;
+          addressIndex < branchAddressCount;
+          addressIndex++
+        ) {
+          const { address } = walletTools.getAddress({
+            addressIndex,
+            changeIndex: branch,
+            format
           })
-          // If the processor has not processed any addresses then the loop
-          // condition will only iterate once when branchAddressCount is 0 for the
-          // first address in the derivation path.
-          for (
-            let addressIndex = 0;
-            addressIndex < branchAddressCount;
-            addressIndex++
-          ) {
-            const { address } = walletTools.getAddress({
-              addressIndex,
-              changeIndex: branch,
-              format
-            })
-            addressesToSubscribe.add(address)
-          }
-          addToAddressSubscribeCache(
-            commonArgs.taskCache,
-            addressesToSubscribe,
-            {
-              format,
-              changeIndex: branch
-            }
-          )
+          addressesToSubscribe.add(address)
         }
+        addToAddressSubscribeCache(commonArgs.taskCache, addressesToSubscribe, {
+          format,
+          changeIndex: branch
+        })
       }
     }
   }
@@ -884,24 +871,6 @@ const updateTransactions = (
     cleaner: asITransaction,
     deferred: deferredITransaction
   }
-}
-
-const getTotalAddressCount = async (
-  supportedFormats: CurrencyFormat[],
-  processor: Processor
-): Promise<number> => {
-  let count = 0
-  for (const format of supportedFormats) {
-    const branches = getFormatSupportedBranches(format)
-    for (const branch of branches) {
-      const addressCount = processor.numAddressesByFormatPath({
-        format,
-        changeIndex: branch
-      })
-      count += addressCount
-    }
-  }
-  return count
 }
 
 interface DeriveScriptAddressArgs {
