@@ -260,7 +260,7 @@ export async function makeProcessor(
         // Return all UTXOs if no UTXO ids are specified
         if (utxoIds.length === 0) {
           const { data } = await tables.utxoById.dumpData('')
-          return Object.values(data[''])
+          return Object.values(data[''] ?? {})
         }
 
         return await tables.utxoById.query('', utxoIds)
