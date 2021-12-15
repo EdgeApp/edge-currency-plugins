@@ -453,21 +453,35 @@ export async function makeUtxoEngine(
         coin: coinInfo.name
       })
 
-      const privateKeys = await Promise.all(
-        psbt.inputs.map(async ({ hash, index }) => {
-          const txid = Buffer.from(hash).reverse().toString('hex')
+      // Use the privateKeys (WIFs) from spendInfo, otherwise get them from the
+      // PBST inputs.
+      const privateKeys = await (async () => {
+        if (edgeSpendInfo.privateKeys != null) {
+          return edgeSpendInfo.privateKeys.map(wif =>
+            walletTools.getPrivateKeyFromWif(wif)
+          )
+        } else {
+          return await Promise.all(
+            psbt.inputs.map(async ({ hash, index }) => {
+              const txid = Buffer.from(hash).reverse().toString('hex')
 
-          const [utxo] = await processor.fetchUtxos({
-            utxoIds: [`${txid}_${index}`]
-          })
-          if (utxo == null) throw new Error('Invalid UTXO')
+              const [utxo] = await processor.fetchUtxos({
+                utxoIds: [`${txid}_${index}`]
+              })
+              if (utxo == null) throw new Error('Invalid UTXO')
 
-          const address = await processor.fetchAddress(utxo.scriptPubkey)
-          if (address?.path == null) throw new Error('Invalid script pubkey')
+              const address = await processor.fetchAddress(utxo.scriptPubkey)
+              if (address?.path == null)
+                throw new Error('Invalid script pubkey')
 
-          return walletTools.getPrivateKey({ path: address.path, xprivKeys })
-        })
-      )
+              return walletTools.getPrivateKey({
+                path: address.path,
+                xprivKeys
+              })
+            })
+          )
+        }
+      })()
       const signedTx = await signTx({
         psbtBase64: psbt.base64,
         coin: coinInfo.name,
