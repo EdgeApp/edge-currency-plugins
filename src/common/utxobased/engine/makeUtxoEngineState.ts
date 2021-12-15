@@ -257,9 +257,18 @@ export function makeUtxoEngineState(
           addressIndex < branchAddressCount;
           addressIndex++
         ) {
-          const { address } = walletTools.getAddress({
-            addressIndex,
+          const processorAddress = await processor.fetchAddress({
+            format,
             changeIndex: branch,
+            addressIndex
+          })
+          if (processorAddress == null) {
+            throw new Error(
+              'Missing processor during address subscription initialization'
+            )
+          }
+          const { address } = walletTools.scriptPubkeyToAddress({
+            scriptPubkey: processorAddress.scriptPubkey,
             format
           })
           addressesToSubscribe.add(address)
