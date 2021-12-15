@@ -923,7 +923,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   const utxoPicker = coin.utxoPicker ?? utxopicker.utxoPicker
 
   const utxopicking =
-    args.forceUseUtxo != null ?? false
+    args.forceUseUtxo.length > 0
       ? utxoPicker.forceUseUtxo
       : args.subtractFee ?? false
       ? utxoPicker.subtractFee
