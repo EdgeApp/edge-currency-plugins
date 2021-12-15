@@ -90,7 +90,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
     async getRate(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
       const {
         spendTargets,
-        networkFeeOption,
+        networkFeeOption = 'standard',
         customNetworkFee = {},
         otherParams = {}
       } = edgeSpendInfo
