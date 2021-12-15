@@ -21,7 +21,6 @@ import {
 
 export interface WalletToolsConfig {
   publicKey: PublicKey
-  wifKeys?: string[]
   coin: string
 }
 
@@ -30,6 +29,11 @@ export interface UTXOPluginWalletTools {
 
   getScriptPubkey: (args: AddressPath) => ScriptPubkeyReturn
 
+  getScriptPubkeyFromWif: (
+    wif: string,
+    format: CurrencyFormat
+  ) => ScriptPubkeyReturn
+
   getAddress: (args: AddressPath) => AddressReturn
 
   addressToScriptPubkey: (address: string) => string
@@ -37,6 +41,8 @@ export interface UTXOPluginWalletTools {
   scriptPubkeyToAddress: (args: ScriptPubkeyToAddressArgs) => AddressReturn
 
   getPrivateKey: (args: GetPrivateKeyArgs) => string
+
+  getPrivateKeyFromWif: (wif: string) => string
 
   getScriptAddress: (args: GetScriptAddressArgs) => GetScriptAddressReturn
 
@@ -83,26 +89,12 @@ interface SignMessageArgs {
 export function makeUtxoWalletTools(
   config: WalletToolsConfig
 ): UTXOPluginWalletTools {
-  const { coin, publicKey, wifKeys = [] } = config
+  const { coin, publicKey } = config
 
   const xpubKeys = publicKey.publicKeys
 
-  const getPrivateKeyFromWifAtIndex = (args: AddressPath): string => {
-    if (args.changeIndex === 0 && wifKeys[args.addressIndex] != null) {
-      return wifToPrivateKey({
-        wifKey: wifKeys[args.addressIndex],
-        coin
-      })
-    } else {
-      throw new Error('no wif key at index')
-    }
-  }
-
   const fns: UTXOPluginWalletTools = {
     getPubkey(args: AddressPath): string {
-      if (wifKeys.length > 0) {
-        return privateKeyToPubkey(getPrivateKeyFromWifAtIndex(args))
-      }
       if (xpubKeys[args.format] == null) {
         throw new Error(
           `wallet tools: xpub with format ${args.format} does not exist`
@@ -122,6 +114,25 @@ export function makeUtxoWalletTools(
       const scriptType = getScriptTypeFromPurposeType(purposeType)
       return pubkeyToScriptPubkey({
         pubkey: fns.getPubkey(args),
+        scriptType
+      })
+    },
+
+    // Used specifically for sweeping private keys (WIFs)
+    getScriptPubkeyFromWif(
+      wifKey: string,
+      format: CurrencyFormat
+    ): ScriptPubkeyReturn {
+      const purposeType = currencyFormatToPurposeType(format)
+      const scriptType = getScriptTypeFromPurposeType(purposeType)
+      const pubkey = privateKeyToPubkey(
+        wifToPrivateKey({
+          wifKey,
+          coin
+        })
+      )
+      return pubkeyToScriptPubkey({
+        pubkey: pubkey,
         scriptType
       })
     },
@@ -154,9 +165,6 @@ export function makeUtxoWalletTools(
     getPrivateKey(args: GetPrivateKeyArgs): string {
       const { path, xprivKeys } = args
       const xpriv = xprivKeys[path.format]
-      if (wifKeys.length > 0) {
-        return getPrivateKeyFromWifAtIndex(path)
-      }
       if (xpriv == null) {
         throw new Error(
           `wallet tools: xpriv with format ${path.format} does not exist`
@@ -168,6 +176,13 @@ export function makeUtxoWalletTools(
         coin,
         bip44ChangeIndex: path.changeIndex,
         bip44AddressIndex: path.addressIndex
+      })
+    },
+
+    getPrivateKeyFromWif(wifKey: string): string {
+      return wifToPrivateKey({
+        wifKey,
+        coin
       })
     },
 

@@ -77,6 +77,8 @@ export interface UtxoEngineState {
   getServerList: () => string[]
 
   setServerList: (serverList: string[]) => void
+
+  loadWifs: (wifs: string[]) => Promise<void>
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
@@ -121,19 +123,30 @@ export function makeUtxoEngineState(
     taskCache.updateTransactionCache = {}
   }
 
+  /**
+   * There are two processes that need to complete per address:
+   * 1. Address transaction processing
+   * 2. Address UTXO processing
+   **/
+  const processesPerAddress = 2
   let processedCount = 0
   let processedPercent = 0
-  const onAddressChecked = async (): Promise<void> => {
+  const updateProgressRatio = async (): Promise<void> => {
+    // We expect the total number of progress updates to equal the number of
+    // addresses multiplied the number of processes per address.
+    const expectedProccessCount =
+      Object.keys(taskCache.addressSubscribeCache).length * processesPerAddress
+
+    // Increment the processed count
     processedCount = processedCount + 1
-    const totalCount = await getTotalAddressCount(supportedFormats, processor)
 
     // If we have no addresses, we should not have not yet began processing.
-    if (totalCount === 0) throw new Error('No addresses to process')
+    if (expectedProccessCount === 0) throw new Error('No addresses to process')
 
-    const percent = processedCount / totalCount
+    const percent = processedCount / expectedProccessCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       log(
-        `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${totalCount}`
+        `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${expectedProccessCount}`
       )
       processedPercent = percent
       emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
@@ -158,7 +171,7 @@ export function makeUtxoEngineState(
     processor,
     emitter,
     taskCache,
-    onAddressChecked,
+    updateProgressRatio,
     io: config.io,
     log,
     serverStates,
@@ -386,6 +399,40 @@ export function makeUtxoEngineState(
     },
     setServerList(serverList: string[]) {
       serverStates.setServerList(serverList)
+    },
+
+    async loadWifs(wifs: string[]) {
+      for (const wif of wifs) {
+        for (const format of supportedFormats) {
+          const changePath: ChangePath = {
+            format,
+            changeIndex: 0
+          }
+          const path: AddressPath = {
+            ...changePath,
+            addressIndex: 0
+          }
+          const {
+            scriptPubkey,
+            redeemScript
+          } = walletTools.getScriptPubkeyFromWif(wif, format)
+          const { address } = walletTools.scriptPubkeyToAddress({
+            scriptPubkey,
+            format: path.format
+          })
+
+          // Make a new IAddress and save it
+          await processor.saveAddress(
+            makeIAddress({ scriptPubkey, redeemScript, path })
+          )
+
+          taskCache.addressSubscribeCache[address] = {
+            path: changePath,
+            processing: false
+          }
+        }
+      }
+      taskCache.addressWatching = false
     }
   }
 }
@@ -398,7 +445,7 @@ interface CommonArgs {
   processor: Processor
   emitter: EngineEmitter
   taskCache: TaskCache
-  onAddressChecked: () => void
+  updateProgressRatio: () => void
   io: EdgeIo
   log: EdgeLog
   serverStates: ServerStates
@@ -1032,8 +1079,10 @@ const processAddressTransactions = async (
 
       // Save/update the fully-processed address
       await processor.saveAddress(addressData)
-      // Invoke the callback for when an address has been fully processed
-      await args.onAddressChecked()
+
+      // Update the progress now that the transactions for an address have processed
+      await args.updateProgressRatio()
+
       // Call setLookAhead to update the lookahead
       await setLookAhead(args)
     })
@@ -1215,6 +1264,10 @@ const processProcessorUtxos = async (
       used: true
     })
   }
+
+  // Update the progress now that the UTXOs for an address have been processed
+  await args.updateProgressRatio()
+
   await setLookAhead(args).catch(err => {
     log.error(err)
     throw err

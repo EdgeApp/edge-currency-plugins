@@ -1,5 +1,6 @@
 import * as bs from 'biggystring'
 import { asMaybe } from 'cleaners'
+import { makeMemoryDisklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
@@ -497,28 +498,42 @@ export async function makeUtxoEngine(
     },
 
     async sweepPrivateKeys(spendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
-      const privateKeys = spendInfo.privateKeys ?? []
-      const dummyNumbWalletInfo: NumbWalletInfo = {
+      // Create the promise to return
+      let success: (
+        value: EdgeTransaction | PromiseLike<EdgeTransaction>
+      ) => void
+      let failure: (err?: any) => void
+      const end = new Promise<EdgeTransaction>((resolve, reject) => {
+        success = resolve
+        failure = reject
+      })
+
+      // The temporary wallet info should include all formats for the currency
+      const allFormats = engineInfo.formats
+      if (allFormats == null) {
+        throw new Error(
+          `Missing  formats for wallet type ${currencyInfo.walletType}`
+        )
+      }
+
+      const tmpWalletInfo: NumbWalletInfo = {
         id: walletInfo.id,
         type: walletInfo.type,
         keys: {
           format: walletInfo.keys.format,
-          supportedFormats: walletInfo.keys.supportedFormats,
+          supportedFormats: allFormats,
           publicKey: {
             publicKeys: {}
           }
         }
       }
+
+      const privateKeys = spendInfo.privateKeys ?? []
       if (privateKeys.length < 1) throw new Error('No private keys given')
-      let success: (
-        value: EdgeTransaction | PromiseLike<EdgeTransaction>
-      ) => void
-      let failure: (reason?: never) => void
-      const end: Promise<EdgeTransaction> = new Promise((resolve, reject) => {
-        success = resolve
-        failure = reject
-      })
-      const tmpDisklet = walletLocalDisklet
+
+      // Make temporary wallet disklet
+      const tmpDisklet = makeMemoryDisklet()
+      const tmpEncryptedDisklet = makeMemoryDisklet()
       const tmpEmitter = new EngineEmitter()
       const tmpConfig = {
         disklet: tmpDisklet,
@@ -528,29 +543,34 @@ export async function makeUtxoEngine(
       const tmpMetadata = await makeMetadata(tmpConfig)
       const tmpProcessor = await makeProcessor(tmpConfig)
       const tmpWalletTools = makeUtxoWalletTools({
-        publicKey: dummyNumbWalletInfo.keys.publicKey,
-        wifKeys: privateKeys,
+        publicKey: tmpWalletInfo.keys.publicKey,
         coin: coinInfo.name
       })
 
+      // Max spend after imported wallet finishes sync
       tmpEmitter.on(EngineEvent.ADDRESSES_CHECKED, async (ratio: number) => {
         if (ratio === 1) {
-          await tmpState.stop()
+          try {
+            await tmpState.stop()
 
-          const utxos = (await processor.fetchUtxos({ utxoIds: [] })) as IUTXO[]
-          if (utxos === null || utxos.length < 1) {
-            throw new Error('Private key has no funds')
+            const tmpUtxos = (await tmpProcessor.fetchUtxos({
+              utxoIds: []
+            })) as IUTXO[]
+            if (tmpUtxos === null || tmpUtxos.length < 1) {
+              throw new Error('Private key has no funds')
+            }
+            const destAddress = await this.getFreshAddress({})
+            const nativeAmount = tmpMetadata.balance
+            const options: TxOptions = { utxos: tmpUtxos, subtractFee: true }
+            spendInfo.spendTargets = [
+              { publicAddress: destAddress.publicAddress, nativeAmount }
+            ]
+            // @ts-expect-error TODO: TheCharlatan - add option to makeSpend declaration in edge-core-js
+            const tx = await this.makeSpend(spendInfo, options)
+            success(tx)
+          } catch (e) {
+            failure(e)
           }
-          const publicAddress = await this.getFreshAddress({})
-          const nativeAmount = tmpMetadata.balance
-          const options: TxOptions = { utxos, subtractFee: true }
-          spendInfo.spendTargets = [
-            { publicAddress: publicAddress.publicAddress, nativeAmount }
-          ]
-          // @ts-expect-error TODO: TheCharlatan - add option to makeSpend declaration in edge-core-js
-          this.makeSpend(spendInfo, options)
-            .then(tx => success(tx))
-            .catch(e => failure(e))
         }
       })
 
@@ -558,23 +578,26 @@ export async function makeUtxoEngine(
         ...config,
         options: {
           ...config.options,
+          walletLocalDisklet: tmpDisklet,
+          walletLocalEncryptedDisklet: tmpEncryptedDisklet,
           emitter: tmpEmitter
         },
         pluginInfo: {
           ...pluginInfo,
           engineInfo: {
             ...engineInfo,
-            // hack to not overflow the wallet tools private key array
-            gapLimit: privateKeys.length + 1
+            // Disables setLookAhead because we're gonna load from WIFs
+            gapLimit: 0
           }
         },
-        walletTools: tmpWalletTools,
-        walletInfo: dummyNumbWalletInfo,
         processor: tmpProcessor,
-        pluginState
+        walletTools: tmpWalletTools,
+        walletInfo: tmpWalletInfo
       })
+      await tmpState.loadWifs(privateKeys)
       await tmpState.start()
-      return end
+
+      return await end
     },
 
     otherMethods: {
