@@ -3,6 +3,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { serverListFields } from '../../plugin/utils'
 import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -19,13 +20,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockBookServers: [
+    ...serverListFields([
       'https://bch1.trezor.io',
       'https://bch2.trezor.io',
       'https://bch3.trezor.io',
       'https://bch4.trezor.io',
       'https://bch5.trezor.io'
-    ],
+    ]),
     disableFetchingServers: false
   },
   customFeeTemplate: [

@@ -5,6 +5,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import * as wifgrs from 'wifgrs'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'groestlcoin',
@@ -19,7 +20,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockBookServers: ['wss://blockbook.groestlcoin.org'],
+    ...serverListFields(['wss://blockbook.groestlcoin.org']),
     disableFetchingServers: false
   },
   customFeeTemplate: [

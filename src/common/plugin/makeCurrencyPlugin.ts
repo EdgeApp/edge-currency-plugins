@@ -23,7 +23,7 @@ export function makeCurrencyPlugin(
   const { defaultSettings, pluginId, currencyCode } = currencyInfo
   const {
     customFeeSettings,
-    blockBookServers,
+    serverList,
     disableFetchingServers
   } = defaultSettings
   const state = makePluginState({
@@ -34,7 +34,7 @@ export function makeCurrencyPlugin(
     log,
     defaultSettings: {
       customFeeSettings,
-      blockBookServers,
+      serverList,
       disableFetchingServers
     }
   })

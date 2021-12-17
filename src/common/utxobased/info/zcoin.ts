@@ -2,6 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { serverListFields } from '../../plugin/utils'
 
 export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'zcoin',
@@ -16,7 +17,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockBookServers: ['https://blockbook.zcoin.io/'],
+    ...serverListFields(['https://blockbook.zcoin.io/']),
     disableFetchingServers: false
   },
   customFeeTemplate: [
