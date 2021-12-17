@@ -24,7 +24,7 @@ interface JsonObject {
 
 export interface CurrencySettings {
   customFeeSettings: string[]
-  blockBookServers: string[]
+  serverList: string[]
   disableFetchingServers?: boolean
 }
 
@@ -66,7 +66,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     pluginDisklet,
     log
   } = settings
-  let defaultServers = defaultSettings.blockBookServers.map(asWebsocketUrl)
+  let defaultServers = defaultSettings.serverList.map(asWebsocketUrl)
   let disableFetchingServers = !!(
     defaultSettings.disableFetchingServers ?? false
   )
@@ -212,12 +212,12 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     refreshServers,
 
     async updateServers(settings: JsonObject): Promise<void> {
-      const { blockBookServers } = settings
+      const { serverList = settings.electrumServers ?? [] } = settings
       if (typeof settings.disableFetchingServers === 'boolean') {
         disableFetchingServers = settings.disableFetchingServers
       }
-      if (Array.isArray(blockBookServers)) {
-        defaultServers = blockBookServers.map(asWebsocketUrl)
+      if (Array.isArray(serverList)) {
+        defaultServers = serverList.map(asWebsocketUrl)
       }
       const enginesToBeStopped = []
       const disconnects = []
