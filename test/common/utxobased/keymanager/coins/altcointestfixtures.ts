@@ -1091,7 +1091,7 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2pkh,
           addressType: AddressTypeEnum.p2pkh,
-          address: 'bitcoincash:qqyx49mu0kkn9ftfj6hje6g2wfer34yfnq5tahq3q6',
+          address: 'qqyx49mu0kkn9ftfj6hje6g2wfer34yfnq5tahq3q6',
           legacyAddress: '1mW6fDEMjKrDHvLvoEsaeLxSCzZBf3Bfg'
         }
       ],
@@ -1151,7 +1151,7 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2pkh,
           addressType: AddressTypeEnum.p2pkh,
-          address: 'bchtest:qqaz6s295ncfs53m86qj0uw6sl8u2kuw0ymst35fx4',
+          address: 'qqaz6s295ncfs53m86qj0uw6sl8u2kuw0ymst35fx4',
           legacyAddress: 'mkpZhYtJu2r87Js3pDiWJDmPte2NRZ8bJV'
         }
       ],
