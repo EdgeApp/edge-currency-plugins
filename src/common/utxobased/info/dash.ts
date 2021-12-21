@@ -61,12 +61,12 @@ export const coinInfo: CoinInfo = {
   segwit: false,
   coinType: 5,
   mainnetConstants: {
-    messagePrefix: 'unused',
-    wif: 0xcc,
-    legacyXPriv: 0x02fe52f8,
-    legacyXPub: 0x02fe52cc,
-    pubkeyHash: 0x4c,
-    scriptHash: 0x10
+    messagePrefix: ['unused'],
+    wif: [0xcc],
+    legacyXPriv: [0x02fe52f8],
+    legacyXPub: [0x02fe52cc],
+    pubkeyHash: [0x4c],
+    scriptHash: [0x10]
   }
 }
 
