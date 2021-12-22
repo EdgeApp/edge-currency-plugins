@@ -240,19 +240,6 @@ interface Bip32NetworkFromCoinArgs {
   forWIF?: boolean
 }
 
-function bip43PurposeTypeEnumToNumber(purpose: BIP43PurposeTypeEnum): number {
-  switch (purpose) {
-    case BIP43PurposeTypeEnum.Airbitz:
-      return 32
-    case BIP43PurposeTypeEnum.Legacy:
-      return 44
-    case BIP43PurposeTypeEnum.WrappedSegwit:
-      return 49
-    case BIP43PurposeTypeEnum.Segwit:
-      return 84
-  }
-}
-
 export function bip43PurposeNumberToTypeEnum(
   num: number
 ): BIP43PurposeTypeEnum {
@@ -285,107 +272,6 @@ export interface SelectedCoinPrefixes {
   cashaddr?: string
 }
 
-function selectedCoinPrefixes(
-  prefixes: CoinPrefixes,
-  index: number
-): SelectedCoinPrefixes {
-  return {
-    messagePrefix: indexAtProtected(prefixes.messagePrefix, index),
-    wif: indexAtProtected(prefixes.wif, index),
-    legacyXPriv: indexAtProtected(prefixes.legacyXPriv, index),
-    legacyXPub: indexAtProtected(prefixes.legacyXPub, index),
-    wrappedSegwitXPriv: indexAtProtected(prefixes.wrappedSegwitXPriv, index),
-    wrappedSegwitXPub: indexAtProtected(prefixes.wrappedSegwitXPub, index),
-    segwitXPriv: indexAtProtected(prefixes.segwitXPriv, index),
-    segwitXPub: indexAtProtected(prefixes.segwitXPub, index),
-    pubkeyHash: indexAtProtected(prefixes.pubkeyHash, index),
-    scriptHash: indexAtProtected(prefixes.scriptHash, index),
-    bech32: indexAtProtected(prefixes.bech32, index),
-    // Special handling for cashaddr to accommodate legacy addresses.
-    // By allowing them to overflow we will fallback to p2pkh.
-    cashaddr: undefinedIfEmptyString((prefixes.cashaddr ?? [])[index])
-  }
-}
-
-function bip32NetworkFromCoinPrefix(
-  sigType: BIP43PurposeTypeEnum,
-  coinPrefixes: CoinPrefixes,
-  _segwit: boolean,
-  forWIF: boolean,
-  prefixIndex: number
-): BitcoinJSNetwork {
-  let xKeyPrefixes: Bip32
-  const prefixes = selectedCoinPrefixes(coinPrefixes, prefixIndex)
-
-  switch (sigType) {
-    case BIP43PurposeTypeEnum.Segwit:
-      if (prefixes.segwitXPub == null || prefixes.segwitXPriv == null) {
-        throw new Error('segwit xpub prefix is undefined')
-      }
-      xKeyPrefixes = {
-        public: prefixes.segwitXPub,
-        private: prefixes.segwitXPriv
-      }
-      break
-    case BIP43PurposeTypeEnum.WrappedSegwit:
-      if (
-        prefixes.wrappedSegwitXPub == null ||
-        prefixes.wrappedSegwitXPriv == null
-      ) {
-        throw new Error('wrapped segwit xpub prefix is undefined')
-      }
-      xKeyPrefixes = {
-        public: prefixes.wrappedSegwitXPub,
-        private: prefixes.wrappedSegwitXPriv
-      }
-      break
-    case BIP43PurposeTypeEnum.Legacy:
-    case BIP43PurposeTypeEnum.Airbitz:
-      xKeyPrefixes = {
-        public: prefixes.legacyXPub,
-        private: prefixes.legacyXPriv
-      }
-      break
-    default:
-      throw new Error('invalid bip43 purpose type')
-  }
-
-  const bech32: string = prefixes.bech32 ?? 'bc'
-  if (forWIF) {
-    return {
-      messagePrefix: prefixes.messagePrefix,
-      wif: prefixes.wif,
-      bip32: xKeyPrefixes,
-      bech32: bech32,
-      pubKeyHash: prefixes.pubkeyHash,
-      scriptHash: prefixes.scriptHash
-    }
-  }
-  return {
-    messagePrefix: prefixes.messagePrefix,
-    wif: 0x80,
-    bip32: xKeyPrefixes,
-    bech32: bech32,
-    pubKeyHash: prefixes.pubkeyHash,
-    scriptHash: prefixes.scriptHash
-  }
-}
-
-function bip32NetworkFromCoin(
-  args: Bip32NetworkFromCoinArgs
-): BitcoinJSNetwork {
-  const sigType = args.sigType ?? BIP43PurposeTypeEnum.Legacy
-  const forWIF: boolean = args.forWIF ?? false
-  const coin: CoinInfo = getCoinFromString(args.coinString)
-  return bip32NetworkFromCoinPrefix(
-    sigType,
-    coin.mainnetConstants,
-    coin.segwit,
-    forWIF,
-    args.prefixIndex
-  )
-}
-
 const verifyAddressInternal = (
   prefixIndex: number,
   args: VerifyAddressArgs
@@ -406,59 +292,6 @@ export const verifyAddress = (args: VerifyAddressArgs): string => {
     [`Could not determine address type of ${args.address}`]
   )
   return verification ?? VerifyAddressEnum.bad
-}
-
-function getCashAddrPrefixes(coinInfo: CoinInfo): string[] {
-  return coinInfo.mainnetConstants.cashaddr ?? []
-}
-
-function guessAddressTypeFromAddress(
-  address: string,
-  network: BitcoinJSNetwork,
-  coin: string,
-  addressType: AddressTypeEnum | undefined
-): AddressTypeEnum {
-  if (addressType != null) {
-    return addressType
-  }
-  const coinClass: CoinInfo = getCoinFromString(coin)
-  try {
-    bitcoin.payments.p2pkh({
-      address,
-      network,
-      bs58DecodeFunc: coinClass.bs58DecodeFunc,
-      bs58EncodeFunc: coinClass.bs58EncodeFunc
-    })
-    return AddressTypeEnum.p2pkh
-  } catch (e) {}
-  try {
-    bitcoin.payments.p2sh({
-      address,
-      network,
-      bs58DecodeFunc: coinClass.bs58DecodeFunc,
-      bs58EncodeFunc: coinClass.bs58EncodeFunc
-    })
-    return AddressTypeEnum.p2sh
-  } catch (e) {}
-  try {
-    bitcoin.payments.p2wsh({ address, network })
-    return AddressTypeEnum.p2wsh
-  } catch (e) {}
-  try {
-    bitcoin.payments.p2wpkh({ address, network })
-    return AddressTypeEnum.p2wpkh
-  } catch (e) {}
-  const cashAddrPrefixes = getCashAddrPrefixes(coinClass)
-  if (cashAddrPrefixes.length > 0) {
-    try {
-      const info = cashAddressToHash(address, cashAddrPrefixes)
-      if (info.type === CashaddrTypeEnum.pubkeyhash) {
-        return AddressTypeEnum.p2pkh
-      }
-      return AddressTypeEnum.p2sh
-    } catch (e) {}
-  }
-  throw new Error('Could not determine address type of ' + address)
 }
 
 export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
@@ -759,35 +592,6 @@ export function scriptPubkeyToAddress(
     throw new Error('failed converting scriptPubkey to address')
   }
   return { address, legacyAddress }
-}
-
-function scriptHashToScriptPubkey(args: ScriptHashToScriptPubkeyArgs): string {
-  const network: BitcoinJSNetwork = bip32NetworkFromCoin({
-    coinString: args.coin,
-    prefixIndex: 0
-  })
-  let payment: bitcoin.payments.PaymentCreator
-  switch (args.scriptType) {
-    case ScriptTypeEnum.p2pkh:
-      payment = bitcoin.payments.p2pkh
-      break
-    case ScriptTypeEnum.p2sh:
-      payment = bitcoin.payments.p2sh
-      break
-    case ScriptTypeEnum.p2wpkh:
-      payment = bitcoin.payments.p2wpkh
-      break
-    default:
-      throw new Error('invalid address type in address to script pubkey')
-  }
-  const scriptPubkey: Buffer | undefined = payment({
-    hash: Buffer.from(args.scriptHash, 'hex'),
-    network: network
-  }).output
-  if (scriptPubkey == null) {
-    throw new Error('failed converting scriptPubkey to address')
-  }
-  return scriptPubkey.toString('hex')
 }
 
 export function scriptPubkeyToScriptHash(
@@ -1230,6 +1034,100 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
 // Internal Utilities
 // ---------------------------------------------------------------------
 
+const bip32NetworkFromCoin = (
+  args: Bip32NetworkFromCoinArgs
+): BitcoinJSNetwork => {
+  const sigType = args.sigType ?? BIP43PurposeTypeEnum.Legacy
+  const forWIF: boolean = args.forWIF ?? false
+  const coin: CoinInfo = getCoinFromString(args.coinString)
+  return bip32NetworkFromCoinPrefix(
+    sigType,
+    coin.mainnetConstants,
+    coin.segwit,
+    forWIF,
+    args.prefixIndex
+  )
+}
+
+const bip32NetworkFromCoinPrefix = (
+  sigType: BIP43PurposeTypeEnum,
+  coinPrefixes: CoinPrefixes,
+  _segwit: boolean,
+  forWIF: boolean,
+  prefixIndex: number
+): BitcoinJSNetwork => {
+  let xKeyPrefixes: Bip32
+  const prefixes = selectedCoinPrefixes(coinPrefixes, prefixIndex)
+
+  switch (sigType) {
+    case BIP43PurposeTypeEnum.Segwit:
+      if (prefixes.segwitXPub == null || prefixes.segwitXPriv == null) {
+        throw new Error('segwit xpub prefix is undefined')
+      }
+      xKeyPrefixes = {
+        public: prefixes.segwitXPub,
+        private: prefixes.segwitXPriv
+      }
+      break
+    case BIP43PurposeTypeEnum.WrappedSegwit:
+      if (
+        prefixes.wrappedSegwitXPub == null ||
+        prefixes.wrappedSegwitXPriv == null
+      ) {
+        throw new Error('wrapped segwit xpub prefix is undefined')
+      }
+      xKeyPrefixes = {
+        public: prefixes.wrappedSegwitXPub,
+        private: prefixes.wrappedSegwitXPriv
+      }
+      break
+    case BIP43PurposeTypeEnum.Legacy:
+    case BIP43PurposeTypeEnum.Airbitz:
+      xKeyPrefixes = {
+        public: prefixes.legacyXPub,
+        private: prefixes.legacyXPriv
+      }
+      break
+    default:
+      throw new Error('invalid bip43 purpose type')
+  }
+
+  const bech32: string = prefixes.bech32 ?? 'bc'
+  if (forWIF) {
+    return {
+      messagePrefix: prefixes.messagePrefix,
+      wif: prefixes.wif,
+      bip32: xKeyPrefixes,
+      bech32: bech32,
+      pubKeyHash: prefixes.pubkeyHash,
+      scriptHash: prefixes.scriptHash
+    }
+  }
+  return {
+    messagePrefix: prefixes.messagePrefix,
+    wif: 0x80,
+    bip32: xKeyPrefixes,
+    bech32: bech32,
+    pubKeyHash: prefixes.pubkeyHash,
+    scriptHash: prefixes.scriptHash
+  }
+}
+
+const bip43PurposeTypeEnumToNumber = (
+  purpose: BIP43PurposeTypeEnum
+): number => {
+  switch (purpose) {
+    case BIP43PurposeTypeEnum.Airbitz:
+      return 32
+    case BIP43PurposeTypeEnum.Legacy:
+      return 44
+    case BIP43PurposeTypeEnum.WrappedSegwit:
+      return 49
+    case BIP43PurposeTypeEnum.Segwit:
+      return 84
+  }
+}
+
 /**
  * Filters through a coin's prefixes calling a filter function for each coin
  * prefixIndex until the function returns a value.
@@ -1259,4 +1157,110 @@ const filterCoinPrefixes = <T>(
     if (out != null) break
   }
   return out
+}
+
+const getCashAddrPrefixes = (coinInfo: CoinInfo): string[] => {
+  return coinInfo.mainnetConstants.cashaddr ?? []
+}
+
+const guessAddressTypeFromAddress = (
+  address: string,
+  network: BitcoinJSNetwork,
+  coin: string,
+  addressType: AddressTypeEnum | undefined
+): AddressTypeEnum => {
+  if (addressType != null) {
+    return addressType
+  }
+  const coinClass: CoinInfo = getCoinFromString(coin)
+  try {
+    bitcoin.payments.p2pkh({
+      address,
+      network,
+      bs58DecodeFunc: coinClass.bs58DecodeFunc,
+      bs58EncodeFunc: coinClass.bs58EncodeFunc
+    })
+    return AddressTypeEnum.p2pkh
+  } catch (e) {}
+  try {
+    bitcoin.payments.p2sh({
+      address,
+      network,
+      bs58DecodeFunc: coinClass.bs58DecodeFunc,
+      bs58EncodeFunc: coinClass.bs58EncodeFunc
+    })
+    return AddressTypeEnum.p2sh
+  } catch (e) {}
+  try {
+    bitcoin.payments.p2wsh({ address, network })
+    return AddressTypeEnum.p2wsh
+  } catch (e) {}
+  try {
+    bitcoin.payments.p2wpkh({ address, network })
+    return AddressTypeEnum.p2wpkh
+  } catch (e) {}
+  const cashAddrPrefixes = getCashAddrPrefixes(coinClass)
+  if (cashAddrPrefixes.length > 0) {
+    try {
+      const info = cashAddressToHash(address, cashAddrPrefixes)
+      if (info.type === CashaddrTypeEnum.pubkeyhash) {
+        return AddressTypeEnum.p2pkh
+      }
+      return AddressTypeEnum.p2sh
+    } catch (e) {}
+  }
+  throw new Error('Could not determine address type of ' + address)
+}
+
+const selectedCoinPrefixes = (
+  prefixes: CoinPrefixes,
+  index: number
+): SelectedCoinPrefixes => {
+  return {
+    messagePrefix: indexAtProtected(prefixes.messagePrefix, index),
+    wif: indexAtProtected(prefixes.wif, index),
+    legacyXPriv: indexAtProtected(prefixes.legacyXPriv, index),
+    legacyXPub: indexAtProtected(prefixes.legacyXPub, index),
+    wrappedSegwitXPriv: indexAtProtected(prefixes.wrappedSegwitXPriv, index),
+    wrappedSegwitXPub: indexAtProtected(prefixes.wrappedSegwitXPub, index),
+    segwitXPriv: indexAtProtected(prefixes.segwitXPriv, index),
+    segwitXPub: indexAtProtected(prefixes.segwitXPub, index),
+    pubkeyHash: indexAtProtected(prefixes.pubkeyHash, index),
+    scriptHash: indexAtProtected(prefixes.scriptHash, index),
+    bech32: indexAtProtected(prefixes.bech32, index),
+    // Special handling for cashaddr to accommodate legacy addresses.
+    // By allowing them to overflow we will fallback to p2pkh.
+    cashaddr: undefinedIfEmptyString((prefixes.cashaddr ?? [])[index])
+  }
+}
+
+const scriptHashToScriptPubkey = (
+  args: ScriptHashToScriptPubkeyArgs
+): string => {
+  const network: BitcoinJSNetwork = bip32NetworkFromCoin({
+    coinString: args.coin,
+    prefixIndex: 0
+  })
+  let payment: bitcoin.payments.PaymentCreator
+  switch (args.scriptType) {
+    case ScriptTypeEnum.p2pkh:
+      payment = bitcoin.payments.p2pkh
+      break
+    case ScriptTypeEnum.p2sh:
+      payment = bitcoin.payments.p2sh
+      break
+    case ScriptTypeEnum.p2wpkh:
+      payment = bitcoin.payments.p2wpkh
+      break
+    default:
+      throw new Error('invalid address type in address to script pubkey')
+  }
+  const scriptPubkey: Buffer | undefined = payment({
+    hash: Buffer.from(args.scriptHash, 'hex'),
+    network: network
+  }).output
+  if (scriptPubkey == null) {
+    throw new Error('failed converting scriptPubkey to address')
+  }
+  return scriptPubkey.toString('hex')
 }
