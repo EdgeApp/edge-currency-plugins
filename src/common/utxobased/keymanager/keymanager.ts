@@ -1049,7 +1049,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
   const utxoPicker = coin.utxoPicker ?? utxopicker.utxoPicker
 
   const utxopicking =
-    args.forceUseUtxo != null ?? false
+    args.forceUseUtxo.length > 0
       ? utxoPicker.forceUseUtxo
       : args.subtractFee ?? false
       ? utxoPicker.subtractFee
@@ -1198,7 +1198,10 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
   const coin = getCoinFromString(args.coin)
 
   for (let i = 0; i < psbt.inputCount; i++) {
-    const privateKey = Buffer.from(args.privateKeys[i], 'hex')
+    const privateKey = Buffer.from(
+      args.privateKeys[i] ?? args.privateKeys[args.privateKeys.length - 1],
+      'hex'
+    )
     psbt.signInput(
       i,
       bitcoin.ECPair.fromPrivateKey(privateKey),

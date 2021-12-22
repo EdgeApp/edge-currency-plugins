@@ -3,7 +3,7 @@ import * as bs from 'biggystring'
 import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeGetTransactionsOptions } from 'edge-core-js/types'
 
-import { AddressPath } from '../../plugin/types'
+import { AddressPath, ChangePath } from '../../plugin/types'
 import { makeBaselets } from './makeBaselets'
 import { addressPathToPrefix, TxIdByDate } from './Models/baselet'
 import {
@@ -108,11 +108,9 @@ export interface Processor {
 
   saveAddress: (args: IAddress) => Promise<void>
   // used to calculate total number of addresses
-  numAddressesByFormatPath: (path: Omit<AddressPath, 'addressIndex'>) => number
+  numAddressesByFormatPath: (path: ChangePath) => number
   // get the last used address index for a specific format
-  lastUsedIndexByFormatPath: (
-    path: Omit<AddressPath, 'addressIndex'>
-  ) => Promise<number>
+  lastUsedIndexByFormatPath: (path: ChangePath) => Promise<number>
   fetchAddress: (args: AddressPath | string) => Promise<IAddress | undefined>
 
   /* Block processing
@@ -262,7 +260,7 @@ export async function makeProcessor(
         // Return all UTXOs if no UTXO ids are specified
         if (utxoIds.length === 0) {
           const { data } = await tables.utxoById.dumpData('')
-          return Object.values(data[''])
+          return Object.values(data[''] ?? {})
         }
 
         return await tables.utxoById.query('', utxoIds)
@@ -525,13 +523,11 @@ export async function makeProcessor(
       })
     },
 
-    numAddressesByFormatPath(path: Omit<AddressPath, 'addressIndex'>): number {
+    numAddressesByFormatPath(path: ChangePath): number {
       return baselets.all.scriptPubkeyByPath.length(addressPathToPrefix(path))
     },
 
-    async lastUsedIndexByFormatPath(
-      path: Omit<AddressPath, 'addressIndex'>
-    ): Promise<number> {
+    async lastUsedIndexByFormatPath(path: ChangePath): Promise<number> {
       const [addressIndex] = await baselets.address(async tables => {
         return await tables.lastUsedByFormatPath.query('', [
           addressPathToPrefix(path)

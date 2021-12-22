@@ -9,6 +9,7 @@ import {
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
   AddressPath,
+  ChangePath,
   CurrencyFormat,
   EngineConfig,
   EngineInfo,
@@ -76,6 +77,8 @@ export interface UtxoEngineState {
   getServerList: () => string[]
 
   setServerList: (serverList: string[]) => void
+
+  loadWifs: (wifs: string[]) => Promise<void>
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
@@ -120,19 +123,30 @@ export function makeUtxoEngineState(
     taskCache.updateTransactionCache = {}
   }
 
+  /**
+   * There are two processes that need to complete per address:
+   * 1. Address transaction processing
+   * 2. Address UTXO processing
+   **/
+  const processesPerAddress = 2
   let processedCount = 0
   let processedPercent = 0
-  const onAddressChecked = async (): Promise<void> => {
+  const updateProgressRatio = async (): Promise<void> => {
+    // We expect the total number of progress updates to equal the number of
+    // addresses multiplied the number of processes per address.
+    const expectedProccessCount =
+      Object.keys(taskCache.addressSubscribeCache).length * processesPerAddress
+
+    // Increment the processed count
     processedCount = processedCount + 1
-    const totalCount = await getTotalAddressCount(supportedFormats, processor)
 
     // If we have no addresses, we should not have not yet began processing.
-    if (totalCount === 0) throw new Error('No addresses to process')
+    if (expectedProccessCount === 0) throw new Error('No addresses to process')
 
-    const percent = processedCount / totalCount
+    const percent = processedCount / expectedProccessCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       log(
-        `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${totalCount}`
+        `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${expectedProccessCount}`
       )
       processedPercent = percent
       emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
@@ -157,7 +171,7 @@ export function makeUtxoEngineState(
     processor,
     emitter,
     taskCache,
-    onAddressChecked,
+    updateProgressRatio,
     io: config.io,
     log,
     serverStates,
@@ -210,7 +224,7 @@ export function makeUtxoEngineState(
           commonArgs,
           response.address,
           path.format,
-          path.branch,
+          path.changeIndex,
           0,
           taskCache.addressTransactionCache
         ).catch(() => {
@@ -227,46 +241,42 @@ export function makeUtxoEngineState(
   // processed by the processor. This happens only once before any call to
   // setLookAhead.
   const initializeAddressSubscriptions = async (): Promise<void> => {
-    const totalAddressCount = await getTotalAddressCount(
-      supportedFormats,
-      processor
-    )
-
-    if (
-      Object.keys(taskCache.addressSubscribeCache).length < totalAddressCount
-    ) {
-      for (const format of supportedFormats) {
-        const branches = getFormatSupportedBranches(format)
-        for (const branch of branches) {
-          const addressesToSubscribe = new Set<string>()
-          const branchAddressCount = processor.numAddressesByFormatPath({
+    for (const format of supportedFormats) {
+      const branches = getFormatSupportedBranches(format)
+      for (const branch of branches) {
+        const addressesToSubscribe = new Set<string>()
+        const branchAddressCount = processor.numAddressesByFormatPath({
+          format,
+          changeIndex: branch
+        })
+        // If the processor has not processed any addresses then the loop
+        // condition will only iterate once when branchAddressCount is 0 for the
+        // first address in the derivation path.
+        for (
+          let addressIndex = 0;
+          addressIndex < branchAddressCount;
+          addressIndex++
+        ) {
+          const processorAddress = await processor.fetchAddress({
             format,
-            changeIndex: branch
+            changeIndex: branch,
+            addressIndex
           })
-          // If the processor has not processed any addresses then the loop
-          // condition will only iterate once when branchAddressCount is 0 for the
-          // first address in the derivation path.
-          for (
-            let addressIndex = 0;
-            addressIndex < branchAddressCount;
-            addressIndex++
-          ) {
-            const { address } = walletTools.getAddress({
-              addressIndex,
-              changeIndex: branch,
-              format
-            })
-            addressesToSubscribe.add(address)
+          if (processorAddress == null) {
+            throw new Error(
+              'Missing processor during address subscription initialization'
+            )
           }
-          addToAddressSubscribeCache(
-            commonArgs.taskCache,
-            addressesToSubscribe,
-            {
-              format,
-              branch
-            }
-          )
+          const { address } = walletTools.scriptPubkeyToAddress({
+            scriptPubkey: processorAddress.scriptPubkey,
+            format
+          })
+          addressesToSubscribe.add(address)
         }
+        addToAddressSubscribeCache(commonArgs.taskCache, addressesToSubscribe, {
+          format,
+          changeIndex: branch
+        })
       }
     }
   }
@@ -295,13 +305,13 @@ export function makeUtxoEngineState(
           format: getCurrencyFormatFromPurposeType(
             BIP43PurposeTypeEnum.WrappedSegwit
           ),
-          branch: branch
+          changeIndex: branch
         })
 
         const { address: segwitAddress } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit),
-          branch: branch
+          changeIndex: branch
         })
 
         return {
@@ -320,7 +330,7 @@ export function makeUtxoEngineState(
         } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(walletPurpose),
-          branch: branch
+          changeIndex: branch
         })
 
         return {
@@ -385,6 +395,40 @@ export function makeUtxoEngineState(
     },
     setServerList(serverList: string[]) {
       serverStates.setServerList(serverList)
+    },
+
+    async loadWifs(wifs: string[]) {
+      for (const wif of wifs) {
+        for (const format of supportedFormats) {
+          const changePath: ChangePath = {
+            format,
+            changeIndex: 0
+          }
+          const path: AddressPath = {
+            ...changePath,
+            addressIndex: 0
+          }
+          const {
+            scriptPubkey,
+            redeemScript
+          } = walletTools.getScriptPubkeyFromWif(wif, format)
+          const { address } = walletTools.scriptPubkeyToAddress({
+            scriptPubkey,
+            format: path.format
+          })
+
+          // Make a new IAddress and save it
+          await processor.saveAddress(
+            makeIAddress({ scriptPubkey, redeemScript, path })
+          )
+
+          taskCache.addressSubscribeCache[address] = {
+            path: changePath,
+            processing: false
+          }
+        }
+      }
+      taskCache.addressWatching = false
     }
   }
 }
@@ -397,7 +441,7 @@ interface CommonArgs {
   processor: Processor
   emitter: EngineEmitter
   taskCache: TaskCache
-  onAddressChecked: () => void
+  updateProgressRatio: () => void
   io: EdgeIo
   log: EdgeLog
   serverStates: ServerStates
@@ -405,10 +449,6 @@ interface CommonArgs {
   lock: AwaitLock
 }
 
-interface ShortPath {
-  format: CurrencyFormat
-  branch: number
-}
 interface TaskCache {
   addressWatching: boolean
   blockWatching: boolean
@@ -424,23 +464,23 @@ interface UpdateTransactionCache {
   [key: string]: { processing: boolean }
 }
 interface AddressSubscribeCache {
-  [key: string]: { processing: boolean; path: ShortPath }
+  [key: string]: { processing: boolean; path: ChangePath }
 }
 interface AddressUtxoCache {
-  [key: string]: { processing: boolean; path: ShortPath }
+  [key: string]: { processing: boolean; path: ChangePath }
 }
 interface ProcessorUtxoCache {
   [key: string]: {
     processing: boolean
     full: boolean
     utxos: Set<IUTXO>
-    path: ShortPath
+    path: ChangePath
   }
 }
 interface RawUtxoCache {
   [key: string]: {
     processing: boolean
-    path: ShortPath
+    path: ChangePath
     address: IAddress
     requiredCount: number
   }
@@ -448,13 +488,13 @@ interface RawUtxoCache {
 interface AddressTransactionCache {
   [key: string]: {
     processing: boolean
-    path: ShortPath
+    path: ChangePath
     page: number
     blockHeight: number
   }
 }
 
-interface FormatArgs extends CommonArgs, ShortPath {}
+interface FormatArgs extends CommonArgs, ChangePath {}
 
 const setLookAhead = async (common: CommonArgs): Promise<void> => {
   const {
@@ -473,30 +513,24 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
     for (const format of supportedFormats) {
       const branches = getFormatSupportedBranches(format)
       for (const branch of branches) {
-        await deriveKeys({ format, branch })
+        await deriveKeys({ format, changeIndex: branch })
       }
     }
   } finally {
     lock.release()
   }
 
-  async function deriveKeys(shortPath: ShortPath): Promise<void> {
+  async function deriveKeys(changePath: ChangePath): Promise<void> {
     const addressesToSubscribe = new Set<string>()
-    const formatPath: Omit<AddressPath, 'addressIndex'> = {
-      format: shortPath.format,
-      changeIndex: shortPath.branch
-    }
-    const totalAddressCount = processor.numAddressesByFormatPath(formatPath)
-    let lastUsedIndex = await processor.lastUsedIndexByFormatPath({
-      ...formatPath
-    })
+    const totalAddressCount = processor.numAddressesByFormatPath(changePath)
+    let lastUsedIndex = await processor.lastUsedIndexByFormatPath(changePath)
 
     // Loop until the total address count equals the lookahead count
     let lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
     let nextAddressIndex = totalAddressCount
     while (nextAddressIndex <= lookAheadIndex) {
       const path: AddressPath = {
-        ...formatPath,
+        ...changePath,
         addressIndex: nextAddressIndex
       }
 
@@ -515,18 +549,16 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
       addressesToSubscribe.add(address)
 
       // Update the state for the loop
-      lastUsedIndex = await processor.lastUsedIndexByFormatPath({
-        ...formatPath
-      })
+      lastUsedIndex = await processor.lastUsedIndexByFormatPath(changePath)
       lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
-      nextAddressIndex = processor.numAddressesByFormatPath(formatPath)
+      nextAddressIndex = processor.numAddressesByFormatPath(changePath)
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
     addToAddressSubscribeCache(
       common.taskCache,
       addressesToSubscribe,
-      shortPath
+      changePath
     )
   }
 }
@@ -534,7 +566,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 const addToAddressSubscribeCache = (
   taskCache: TaskCache,
   addresses: Set<string>,
-  path: ShortPath
+  path: ChangePath
 ): void => {
   addresses.forEach(address => {
     taskCache.addressSubscribeCache[address] = {
@@ -567,7 +599,7 @@ const addToAddressTransactionCache = async (
     processing: false,
     path: {
       format,
-      branch
+      changeIndex: branch
     },
     page: 1, // Page starts on 1
     blockHeight
@@ -733,7 +765,7 @@ export const pickNextTask = async (
           args,
           address,
           path.format,
-          path.branch,
+          path.changeIndex,
           blockHeight,
           addressTransactionCache
         )
@@ -850,24 +882,6 @@ const updateTransactions = (
   }
 }
 
-const getTotalAddressCount = async (
-  supportedFormats: CurrencyFormat[],
-  processor: Processor
-): Promise<number> => {
-  let count = 0
-  for (const format of supportedFormats) {
-    const branches = getFormatSupportedBranches(format)
-    for (const branch of branches) {
-      const addressCount = processor.numAddressesByFormatPath({
-        format,
-        changeIndex: branch
-      })
-      count += addressCount
-    }
-  }
-  return count
-}
-
 interface DeriveScriptAddressArgs {
   walletTools: UTXOPluginWalletTools
   engineInfo: EngineInfo
@@ -917,7 +931,7 @@ const internalDeriveScriptAddress = async ({
   addresses.add(address)
   addToAddressSubscribeCache(taskCache, addresses, {
     format: path.format,
-    branch: path.changeIndex
+    changeIndex: path.changeIndex
   })
   return { address, scriptPubkey, redeemScript }
 }
@@ -932,7 +946,7 @@ interface GetFreshAddressReturn {
 const internalGetFreshAddress = async (
   args: GetFreshAddressArgs
 ): Promise<GetFreshAddressReturn> => {
-  const { format, branch, walletTools, processor } = args
+  const { format, changeIndex: branch, walletTools, processor } = args
 
   const numAddresses = processor.numAddressesByFormatPath({
     format,
@@ -964,7 +978,7 @@ interface ProcessAddressTxsArgs extends CommonArgs {
   processing: boolean
   page: number
   blockHeight: number
-  path: ShortPath
+  path: ChangePath
   address: string
   uri: string
 }
@@ -1043,8 +1057,10 @@ const processAddressTransactions = async (
 
       // Save/update the fully-processed address
       await processor.saveAddress(addressData)
-      // Invoke the callback for when an address has been fully processed
-      await args.onAddressChecked()
+
+      // Update the progress now that the transactions for an address have processed
+      await args.updateProgressRatio()
+
       // Call setLookAhead to update the lookahead
       await setLookAhead(args)
     })
@@ -1109,7 +1125,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
 
 interface ProcessAddressUtxosArgs extends CommonArgs {
   processing: boolean
-  path: ShortPath
+  path: ChangePath
   address: string
   uri: string
 }
@@ -1170,7 +1186,7 @@ const processAddressUtxos = async (
 interface ProcessUtxoTransactionArgs extends CommonArgs {
   scriptPubkey: string
   utxos: Set<IUTXO>
-  path: ShortPath
+  path: ChangePath
 }
 
 const processProcessorUtxos = async (
@@ -1226,6 +1242,10 @@ const processProcessorUtxos = async (
       used: true
     })
   }
+
+  // Update the progress now that the UTXOs for an address have been processed
+  await args.updateProgressRatio()
+
   await setLookAhead(args).catch(err => {
     log.error(err)
     throw err
@@ -1233,7 +1253,7 @@ const processProcessorUtxos = async (
 }
 
 interface ProcessRawUtxoArgs extends FormatArgs {
-  path: ShortPath
+  path: ChangePath
   requiredCount: number
   utxo: IAccountUTXO
   id: string
@@ -1351,7 +1371,7 @@ const processRawUtxo = async (
 
 const addToProcessorUtxoCache = (
   processorUtxosCache: ProcessorUtxoCache,
-  path: ShortPath,
+  path: ChangePath,
   scriptPubkey: string,
   requiredCount: number,
   utxo?: IUTXO
