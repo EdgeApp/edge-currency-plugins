@@ -1,6 +1,7 @@
 import {
   asArray,
   asBoolean,
+  asEither,
   asNumber,
   asObject,
   asOptional,
@@ -119,11 +120,20 @@ export const broadcastTxMessage = (
   }
 }
 
-export const asITransactionBroadcastResponse = asObject({
+export const asBlockbookErrorResponse = asObject({
+  error: asObject({
+    message: asString
+  })
+})
+export const asBlockbookTxBroadcastSuccess = asObject({
   result: asString
 })
-export type ITransactionBroadcastResponse = ReturnType<
-  typeof asITransactionBroadcastResponse
+export const asBlockbookTxBroadcastResponse = asEither(
+  asBlockbookErrorResponse,
+  asBlockbookTxBroadcastSuccess
+)
+export type BlockbookTxBroadcastResponse = ReturnType<
+  typeof asBlockbookTxBroadcastResponse
 >
 
 export const addressMessage = (
