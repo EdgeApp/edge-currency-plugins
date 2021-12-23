@@ -75,8 +75,7 @@ export interface CoinInfo {
   ) => bip32.BIP32Interface
   bip32FromSeedFunc?: (seed: Buffer) => bip32.BIP32Interface
   utxoPicker?: UtxoPicker
-  mainnetConstants: CoinPrefixes
-  // by default should contain the bitcoin mainnet constants, useful for networks were multiple constants were in use.
+  prefixes: CoinPrefixes
 }
 
 /*

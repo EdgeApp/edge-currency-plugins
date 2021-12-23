@@ -59,7 +59,7 @@ export const coinInfo: CoinInfo = {
   sighash: bitcoin.Psbt.BCH_SIGHASH_ALL,
   coinType: 1,
 
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x18Bitcoin Signed Message:\n'],
     wif: [0xef],
     legacyXPriv: [0x04358394],

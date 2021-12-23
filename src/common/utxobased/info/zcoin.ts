@@ -60,7 +60,7 @@ export const coinInfo: CoinInfo = {
   name: 'zcoin',
   segwit: false,
   coinType: 136,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x18Zcoin Signed Message:\n'],
     wif: [0xd2],
     legacyXPriv: [0x0488ade4],

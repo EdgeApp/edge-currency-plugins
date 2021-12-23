@@ -66,7 +66,7 @@ export const coinInfo: CoinInfo = {
   wifEncodeFunc: wifgrs.encode,
   bip32FromBase58Func: bip32grs.fromBase58,
   bip32FromSeedFunc: bip32grs.fromSeed,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x1cGroestlCoin Signed Message:\n'],
     wif: [0x80],
     legacyXPriv: [0x0488ade4],

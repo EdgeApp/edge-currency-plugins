@@ -54,7 +54,7 @@ export const coinInfo: CoinInfo = {
   name: 'uniformfiscalobject',
   segwit: true,
   coinType: 202,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x18Bitcoin Signed Message:\n'],
     wif: [0x9b],
     legacyXPriv: [0x0488ade4],

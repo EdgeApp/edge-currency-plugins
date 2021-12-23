@@ -65,7 +65,7 @@ export const coinInfo: CoinInfo = {
   name: 'litecoin',
   segwit: true,
   coinType: 2,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x18Litecoin Signed Message:\n'],
     wif: [0xb0],
     legacyXPriv: [0x019d9cfe],

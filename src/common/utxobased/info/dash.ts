@@ -60,7 +60,7 @@ export const coinInfo: CoinInfo = {
   name: 'dash',
   segwit: false,
   coinType: 5,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['unused'],
     wif: [0xcc],
     legacyXPriv: [0x02fe52f8],
