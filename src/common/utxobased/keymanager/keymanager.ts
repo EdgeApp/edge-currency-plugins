@@ -400,10 +400,7 @@ const addressToScriptPubkeyInternal = (
     coinString: args.coin,
     prefixIndex
   })
-  const selectedPrefixes = selectedCoinPrefixes(
-    coin.mainnetConstants,
-    prefixIndex
-  )
+  const selectedPrefixes = selectedCoinPrefixes(coin.prefixes, prefixIndex)
   const addressType: AddressTypeEnum = guessAddressTypeFromAddress(
     args.address,
     network,
@@ -504,7 +501,7 @@ export function scriptPubkeyToAddress(
     prefixIndex: 1 // legacy serialziation at index 1
   })
   const coinClass = getCoinFromString(args.coin)
-  const coinPrefixes = coinClass.mainnetConstants
+  const coinPrefixes = coinClass.prefixes
   const standardPrefixes = selectedCoinPrefixes(coinPrefixes, 0)
   const legacyPrefixes = selectedCoinPrefixes(coinPrefixes, 1)
   let address: string | undefined
@@ -1042,7 +1039,7 @@ const bip32NetworkFromCoin = (
   const coin: CoinInfo = getCoinFromString(args.coinString)
   return bip32NetworkFromCoinPrefix(
     sigType,
-    coin.mainnetConstants,
+    coin.prefixes,
     coin.segwit,
     forWIF,
     args.prefixIndex
@@ -1139,7 +1136,7 @@ const filterCoinPrefixes = <T>(
   filterer: (prefixIndex: number) => T,
   ignoredErrorMessages: string[] = []
 ): T | undefined => {
-  const coinPrefixes = getCoinFromString(coinName).mainnetConstants
+  const coinPrefixes = getCoinFromString(coinName).prefixes
   const maxLength = Object.values(coinPrefixes).reduce(
     (max, prefixes) => Math.max(prefixes.length, max),
     0
@@ -1160,7 +1157,7 @@ const filterCoinPrefixes = <T>(
 }
 
 const getCashAddrPrefixes = (coinInfo: CoinInfo): string[] => {
-  return coinInfo.mainnetConstants.cashaddr ?? []
+  return coinInfo.prefixes.cashaddr ?? []
 }
 
 const guessAddressTypeFromAddress = (

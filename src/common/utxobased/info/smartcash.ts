@@ -61,7 +61,7 @@ export const coinInfo: CoinInfo = {
   bs58DecodeFunc: base58smart.decode,
   bs58EncodeFunc: base58smart.encode,
   wifEncodeFunc: wifsmart.encode,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x18Bitcoin Signed Message:\n'],
     wif: [0xbf],
     legacyXPriv: [0x0488ade4],

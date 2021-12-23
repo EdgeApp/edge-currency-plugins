@@ -55,7 +55,7 @@ export const coinInfo: CoinInfo = {
   name: 'digibyte',
   segwit: true,
   coinType: 20,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x18Digibyte Signed Message:\n'],
     wif: [0x80, 0x9e],
     legacyXPriv: [0x0488ade4],

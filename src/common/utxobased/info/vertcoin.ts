@@ -61,7 +61,7 @@ export const coinInfo: CoinInfo = {
   name: 'vertcoin',
   segwit: true,
   coinType: 28,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x18Bitcoin Signed Message:\n'],
     wif: [0x80],
     legacyXPriv: [0x0488ade4],

@@ -54,7 +54,7 @@ export const coinInfo: CoinInfo = {
   name: 'eboost',
   segwit: false,
   coinType: 324,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x18Bitcoin Signed Message:\n'],
     wif: [0xdc],
     legacyXPriv: [0x0488ade4],

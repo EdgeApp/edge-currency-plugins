@@ -50,7 +50,7 @@ export const coinInfo: CoinInfo = {
   sighash: Psbt.BTG_SIGHASH_ALL,
   coinType: 1,
 
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: ['\x18Bitcoin Gold Signed Message:\n'],
     wif: [0xef],
     legacyXPriv: [0x04358394],

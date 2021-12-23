@@ -54,7 +54,7 @@ export const coinInfo: CoinInfo = {
   name: 'badcoin',
   segwit: false,
   coinType: 324,
-  mainnetConstants: {
+  prefixes: {
     messagePrefix: [
       '\x18Badcoin Signed Message:\n',
       '\x18Bitcoin Signed Message:\n'
