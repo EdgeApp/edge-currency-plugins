@@ -19,15 +19,14 @@ export const fromEdgeTransaction = (
    */
   const inputs = otherParams.psbt.inputs.map((input, n) => ({
     amount: input.value.toString(),
-    scriptPubkey: Buffer.from(input.script).toString('hex'), // [1]
+    scriptPubkey: Buffer.from(input.scriptPubkey).toString('hex'), // [1]
     n,
     txId: Buffer.from(input.hash).reverse().toString('hex'), // [1]
     outputIndex: input.index
   }))
-  const outputs = otherParams.psbt.outputs.map((input, n) => ({
-    amount: input.value.toString(),
-
-    scriptPubkey: Buffer.from(input.script).toString('hex'), // [1]
+  const outputs = otherParams.psbt.outputs.map((output, n) => ({
+    amount: output.value.toString(),
+    scriptPubkey: Buffer.from(output.scriptPubkey).toString('hex'), // [1]
     n
   }))
 
