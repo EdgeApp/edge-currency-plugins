@@ -1210,7 +1210,7 @@ const processProcessorUtxos = async (
         'Unexpected undefined utxo when processing unspent transactions'
       )
     oldBalance = add(utxo.value, oldBalance)
-    currentUtxoIds.push(utxo.txid)
+    currentUtxoIds.push(utxo.id)
   }
   await processor.removeUtxos(currentUtxoIds)
 
