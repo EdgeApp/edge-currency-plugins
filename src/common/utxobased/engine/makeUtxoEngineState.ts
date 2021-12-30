@@ -370,6 +370,14 @@ export function makeUtxoEngineState(
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<string> {
+      /*
+      The code below appears to be left-over implementation for RBF, however the
+      UTXO `spent` property has no effect within the current implementation and
+      the UTXOs are eventually removed once the transaction is broadcast and the
+      engine syncs with the network.
+
+      TODO: Figure out whether this code is still needed.
+      */
       // put spent utxos into an interim data structure (saveSpentUtxo)
       // these utxos are removed once the transaction confirms
       const [tx] = await processor.fetchTransactions({ txId: transaction.txid })
