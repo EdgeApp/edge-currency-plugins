@@ -806,6 +806,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
       index: utxo.vout,
       value: parseInt(utxo.value),
       script: Buffer.from(utxo.script, 'hex'),
+      scriptPubkey: Buffer.from(utxo.scriptPubkey, 'hex'),
       scriptType: utxo.scriptType,
       sequence,
       sighashType

@@ -12,7 +12,8 @@ export function accumulative(args: UtxoPickerArgs): UtxoPickerResult {
 
   const outputs: Output[] = targets.map(target => ({
     ...target,
-    script: Buffer.from(target.script, 'hex')
+    script: Buffer.from(target.script, 'hex'),
+    scriptPubkey: Buffer.from(target.script, 'hex')
   }))
 
   let inValue = 0

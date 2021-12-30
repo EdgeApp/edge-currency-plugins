@@ -9,11 +9,13 @@ export interface UTXO extends PsbtInput {
   sequence?: number
   value: number
   script: Buffer
+  scriptPubkey: Buffer
   scriptType: ScriptTypeEnum
 }
 
 export interface Output {
   script: Buffer
+  scriptPubkey: Buffer
   scriptType?: ScriptTypeEnum
   value: number
 }

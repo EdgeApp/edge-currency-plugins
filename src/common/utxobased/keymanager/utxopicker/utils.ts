@@ -131,6 +131,7 @@ export function finalize(
   const changeValue = inValue - (outValue + fee)
   const changeOutput: Output = {
     script: Buffer.from(changeScript, 'hex'),
+    scriptPubkey: Buffer.from(changeScript, 'hex'),
     value: changeValue
   }
   const changeFee = feeRate * outputBytes(changeOutput)
