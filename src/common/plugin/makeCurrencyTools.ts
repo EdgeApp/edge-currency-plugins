@@ -20,7 +20,7 @@ import {
   asPrivateKey,
   PrivateKey
 } from '../utxobased/keymanager/cleaners'
-import { PluginInfo } from './types'
+import { EncodeUriMetadata, PluginInfo } from './types'
 import { getFormatsForNetwork } from './utils'
 
 /**
@@ -113,7 +113,7 @@ export function makeCurrencyTools(
     },
 
     async encodeUri(
-      obj: EdgeEncodeUri,
+      obj: EdgeEncodeUri & EncodeUriMetadata,
       _customTokens?: EdgeMetaToken[]
     ): Promise<string> {
       const { publicAddress } = obj
@@ -144,6 +144,16 @@ export function makeCurrencyTools(
 
       if (obj.message != null) {
         query.push(`message=${obj.message}`)
+      }
+
+      const metadata = obj.metadata
+      if (metadata != null) {
+        if (metadata.name != null) {
+          query.push(`label=${metadata.name}`)
+        }
+        if (metadata.notes != null) {
+          query.push(`message=${metadata.notes}`)
+        }
       }
 
       return query.length > 0
