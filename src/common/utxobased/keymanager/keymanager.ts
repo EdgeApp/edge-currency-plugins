@@ -1013,15 +1013,7 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
     psbt.validateSignaturesOfInput(i)
     psbt.finalizeInput(i)
   }
-  console.log('-----------------------------------------')
   const tx = psbt.extractTransaction()
-  console.log('bytes no witness after:', tx.byteLength(false))
-  console.log('bytes witness after:', tx.byteLength())
-  console.log('vbytes after:', tx.virtualSize())
-  console.log('weight after:', tx.weight())
-  console.log('fee:', psbt.getFee())
-  console.log('feeRate:', psbt.getFeeRate())
-  console.log('-----------------------------------------')
   return {
     id: tx.getId(),
     hex: tx.toHex()

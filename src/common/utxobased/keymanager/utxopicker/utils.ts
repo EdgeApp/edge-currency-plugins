@@ -144,7 +144,6 @@ export function finalize(
   } else {
     fee += changeValue
   }
-  console.log('bytes: ', transactionBytes(inputs, outputs))
 
   return { inputs, outputs, changeUsed, fee }
 }
