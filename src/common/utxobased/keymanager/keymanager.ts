@@ -1128,7 +1128,7 @@ const bip32NetworkFromCoinPrefix = (
       throw new Error('invalid bip43 purpose type')
   }
 
-  const bech32: string = prefixes.bech32 ?? 'bc'
+  const bech32: string = prefixes.bech32 ?? ''
   if (forWIF) {
     return {
       messagePrefix: prefixes.messagePrefix,
