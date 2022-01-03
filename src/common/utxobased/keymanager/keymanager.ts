@@ -349,13 +349,13 @@ export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
   const root: bip32.BIP32Interface = bip32FromSeedFunc(seed)
   root.network = network
   // treat a detected seed as an airbitz seed
-  return isMnemonic
-    ? root
+  return purpose === 32 || !isMnemonic
+    ? root.derive(0).toBase58()
+    : root
         .deriveHardened(purpose)
         .deriveHardened(coinType)
         .deriveHardened(account)
         .toBase58()
-    : root.derive(0).toBase58()
 }
 const xprivToXPubInternal = (
   prefixIndex: number,
