@@ -34,7 +34,7 @@
   "dependencies": {
     "altcoin-js": "git://github.com/EdgeApp/altcoin-js.git#master",
     "async-mutex": "^0.2.6",
-    "baselet": "^0.2.1",
+    "baselet": "^0.2.2",
     "biggystring": "^4.0.0",
     "bip32": "^2.0.5",
     "bip32grs": "^2.0.5",
@@ -48,7 +48,7 @@
     "cleaners": "^0.3.12",
     "disklet": "^0.4.5",
     "edge-core-js": "^0.18.9",
-    "memlet": "^0.1.5",
+    "memlet": "^0.1.6",
     "uri-js": "^4.4.0",
     "url-parse": "^1.5.2",
     "wif-smart": "^2.0.0",
