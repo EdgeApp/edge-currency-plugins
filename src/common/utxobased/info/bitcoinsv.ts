@@ -60,7 +60,7 @@ const engineInfo: EngineInfo = {
 export const coinInfo: CoinInfo = {
   name: 'bitcoinsv',
   segwit: false,
-  coinType: 236,
+  coinType: 145, // Correct this by adding 236 when multiple coin types are supported
 
   prefixes: {
     messagePrefix: ['\x18Bitcoin Signed Message:\n'],

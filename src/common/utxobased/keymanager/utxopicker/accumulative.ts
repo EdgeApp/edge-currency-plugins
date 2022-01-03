@@ -37,7 +37,6 @@ export function accumulative(args: UtxoPickerArgs): UtxoPickerResult {
     inValue += utxo.value
 
     const bytes = utils.transactionBytes(inputs, outputs)
-    console.log('tx byte size - accum', bytes)
     const fee = bytes * feeRate
 
     // go again?

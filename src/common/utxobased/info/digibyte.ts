@@ -54,7 +54,7 @@ const engineInfo: EngineInfo = {
 export const coinInfo: CoinInfo = {
   name: 'digibyte',
   segwit: true,
-  coinType: 20,
+  coinType: 2, // Correct this by adding 20 when multiple coin types are supported
   prefixes: {
     messagePrefix: ['\x18Digibyte Signed Message:\n'],
     wif: [0x80, 0x9e],

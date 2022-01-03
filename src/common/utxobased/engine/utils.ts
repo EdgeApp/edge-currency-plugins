@@ -10,6 +10,8 @@ import {
   AddressTypeEnum,
   bip43PurposeNumberToTypeEnum,
   BIP43PurposeTypeEnum,
+  getAddressTypeFromAddress,
+  scriptPubkeyToAddress,
   ScriptTypeEnum,
   seedOrMnemonicToXPriv,
   verifyAddress,
@@ -210,9 +212,20 @@ export const parsePathname = (args: {
       case VerifyAddressEnum.good:
         edgeParsedUri.publicAddress = args.pathname
         break
-      case VerifyAddressEnum.legacy:
+      case VerifyAddressEnum.legacy: {
         edgeParsedUri.legacyAddress = args.pathname
+        // Get the non-legacy address (publicAddress)
+        const addressType = getAddressTypeFromAddress(args.pathname, args.coin)
+        edgeParsedUri.publicAddress = scriptPubkeyToAddress({
+          scriptPubkey: addressToScriptPubkey({
+            address: args.pathname,
+            coin: args.coin
+          }),
+          addressType,
+          coin: args.coin
+        }).address
         break
+      }
       case VerifyAddressEnum.bad:
         throw new Error('InvalidPublicAddressError')
     }

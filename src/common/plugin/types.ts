@@ -112,6 +112,13 @@ interface Bip32 {
   private: number
 }
 
+export interface EncodeUriMetadata {
+  metadata?: {
+    name?: string
+    notes?: string
+  }
+}
+
 export type FeeRates = ReturnType<typeof asFeeRates>
 export const asFeeRates = asObject({
   lowFee: asString,

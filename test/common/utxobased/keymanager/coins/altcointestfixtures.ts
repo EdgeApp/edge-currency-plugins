@@ -485,7 +485,8 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2wpkhp2sh,
           addressType: AddressTypeEnum.p2sh,
-          address: 'USM3tijpLBdWpKrvHjPsdzSSpK55k9V79A'
+          address: 'USM3tijpLBdWpKrvHjPsdzSSpK55k9V79A',
+          legacyAddress: '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i'
         },
         {
           xpub:
@@ -593,17 +594,17 @@ export const fixtures: Fixture = {
       seedToXPrivTests: [
         {
           xpriv:
-            'xprv9yjgD7qdk99UwHsGUwGeqAy1QpKrYUPuZsb2ApTfE8cv4Nuij5G7HcnCMaxPU1m4bADnR4kqHnJsvW9LHvUcoLcmKLYLzjd3FGJr1CxdxWy',
+            'xprv9xnwuEJDHfgLkhZwH8cNnSrQfRbZG287x39mVqDEePQy5SRWKjV2pLjri8x93UfBSQdsGPeJFi8qXKexJUNj5eU3gEKfHUzo6EmuK6CSgEq',
           type: BIP43PurposeTypeEnum.Legacy
         }
       ],
       xprivToXPubTests: [
         {
           xpriv:
-            'xprv9yjgD7qdk99UwHsGUwGeqAy1QpKrYUPuZsb2ApTfE8cv4Nuij5G7HcnCMaxPU1m4bADnR4kqHnJsvW9LHvUcoLcmKLYLzjd3FGJr1CxdxWy',
+            'xprv9xnwuEJDHfgLkhZwH8cNnSrQfRbZG287x39mVqDEePQy5SRWKjV2pLjri8x93UfBSQdsGPeJFi8qXKexJUNj5eU3gEKfHUzo6EmuK6CSgEq',
           type: BIP43PurposeTypeEnum.Legacy,
           xpub:
-            'xpub6Cj2cdNXaWhn9mwjaxofCJujxrALww7kw6WcyCsGnU9twBEsGcaMqR6gCtQ9b3k6awqL2egNaat2btUCVoETYzcmngU9outdn6RA2KxmNEn'
+            'xpub6BnJJjq783EdyBeQPA9P9ao9DTS3fUqyKG5NJDcrCiwwxEkesGoHN94LZRGE7rz1jgcvmmp8j55BNx573KFq1WBwKiemzkdfNKffKx6Mvku'
         }
       ],
       xpubToPubkeyTests: [
@@ -702,7 +703,7 @@ export const fixtures: Fixture = {
         },
         {
           xpriv:
-            'Ltpv7735AbcbmL1gbgDWj2ezvs59rh4RM1oTN2BKTKbfe3146FCPCNFbBBSWfuV9vCJNMXD9LuHpQnqVWpn2hbMhikqPdoGqbS3ptdPoNWEvvgR',
+            'xprv9xnwuEJDHfgLkhZwH8cNnSrQfRbZG287x39mVqDEePQy5SRWKjV2pLjri8x93UfBSQdsGPeJFi8qXKexJUNj5eU3gEKfHUzo6EmuK6CSgEq',
           type: BIP43PurposeTypeEnum.Legacy
         }
       ],
@@ -723,16 +724,16 @@ export const fixtures: Fixture = {
         },
         {
           xpriv:
-            'Ltpv7735AbcbmL1gbgDWj2ezvs59rh4RM1oTN2BKTKbfe3146FCPCNFbBBSWfuV9vCJNMXD9LuHpQnqVWpn2hbMhikqPdoGqbS3ptdPoNWEvvgR',
+            'xprv9xnwuEJDHfgLkhZwH8cNnSrQfRbZG287x39mVqDEePQy5SRWKjV2pLjri8x93UfBSQdsGPeJFi8qXKexJUNj5eU3gEKfHUzo6EmuK6CSgEq',
           type: BIP43PurposeTypeEnum.Legacy,
           xpub:
-            'Ltub2YDQmP391UYeDYvLye9P1SuNJFkcRGN7SYHM8JMxaDnegcPTXHJ2BnYmvHnFnGPGKu2WMuCga6iZV3SDxDMGrRyMcrYEfSPhrpS1EPkC43E'
+            'xpub6BnJJjq783EdyBeQPA9P9ao9DTS3fUqyKG5NJDcrCiwwxEkesGoHN94LZRGE7rz1jgcvmmp8j55BNx573KFq1WBwKiemzkdfNKffKx6Mvku'
         }
       ],
       xpubToPubkeyTests: [
         {
           xpub:
-            'Ltub2YDQmP391UYeDYvLye9P1SuNJFkcRGN7SYHM8JMxaDnegcPTXHJ2BnYmvHnFnGPGKu2WMuCga6iZV3SDxDMGrRyMcrYEfSPhrpS1EPkC43E',
+            'xpub6BnJJjq783EdyBeQPA9P9ao9DTS3fUqyKG5NJDcrCiwwxEkesGoHN94LZRGE7rz1jgcvmmp8j55BNx573KFq1WBwKiemzkdfNKffKx6Mvku',
           type: BIP43PurposeTypeEnum.Legacy,
           bip44ChangeIndex: 0,
           bip44AddressIndex: 0,
@@ -872,17 +873,17 @@ export const fixtures: Fixture = {
       seedToXPrivTests: [
         {
           xpriv:
-            'xprv9ydzpAw8scxgS53bvJyqSwDvfxDQZZtaJV98SYjZto3Pg7MCsPBjCcYqUtnWPRNayEXUcSYZDvXux545bHZwda7YUWvReJiRkx38VXathgK',
+            'xprv9xywTsqYa9uDLdJs8QpXf7xwRWgPw4rq5FtkcShsDoZTqfNQjVQ3dDCdyedXX3FqB18U8e8PfVMeFqkhzPGseKVMDjGe5rPdiUXMxy7BQNJ',
           type: BIP43PurposeTypeEnum.Legacy
         }
       ],
       xprivToXPubTests: [
         {
           xpriv:
-            'xprv9ydzpAw8scxgS53bvJyqSwDvfxDQZZtaJV98SYjZto3Pg7MCsPBjCcYqUtnWPRNayEXUcSYZDvXux545bHZwda7YUWvReJiRkx38VXathgK',
+            'xprv9xywTsqYa9uDLdJs8QpXf7xwRWgPw4rq5FtkcShsDoZTqfNQjVQ3dDCdyedXX3FqB18U8e8PfVMeFqkhzPGseKVMDjGe5rPdiUXMxy7BQNJ',
           type: BIP43PurposeTypeEnum.Legacy,
           xpub:
-            'xpub6CdMDgU2hzWyeZ852LWqp5AfDz3ty2cRfi4jEw9BT8aNYugMQvVykQsKLARZdbqKKp7yTviJdL1N9saYLmJNKD1rwVAwLTmU8r8qKeoyG4R'
+            'xpub6ByHsPNSQXTWZ7PLESMY2FufyYWtLXagSUpMQq7Un96SiThZH2iJB1X7pwviH1WtKVeDP6K8d6xxFzzoaFzF3s8BKCZx8oEDdDkNnp4owAZ'
         }
       ],
       xpubToPubkeyTests: [
@@ -939,8 +940,7 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2pkh,
           addressType: AddressTypeEnum.p2pkh,
-          address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9',
-          legacyAddress: '1McdhUQiZ2fatmKMvVn8sc8YemYpeDum1k'
+          address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9'
         },
         {
           xpub:
@@ -950,8 +950,7 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2wpkhp2sh,
           addressType: AddressTypeEnum.p2sh,
-          address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn',
-          legacyAddress: '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i'
+          address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn'
         },
         {
           xpub:
@@ -961,8 +960,7 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2wpkh,
           addressType: AddressTypeEnum.p2wpkh,
-          address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu',
-          legacyAddress: 'bc1qkwnu2phwvard2spr2n0a9d84x590ahywfczcd5'
+          address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu'
         }
       ],
       wifToPrivateKeyTests: [
