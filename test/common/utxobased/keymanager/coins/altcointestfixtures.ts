@@ -485,7 +485,8 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2wpkhp2sh,
           addressType: AddressTypeEnum.p2sh,
-          address: 'USM3tijpLBdWpKrvHjPsdzSSpK55k9V79A'
+          address: 'USM3tijpLBdWpKrvHjPsdzSSpK55k9V79A',
+          legacyAddress: '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i'
         },
         {
           xpub:

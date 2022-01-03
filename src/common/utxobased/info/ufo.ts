@@ -64,7 +64,7 @@ export const coinInfo: CoinInfo = {
     segwitXPriv: [0x04b2430c],
     segwitXPub: [0x04b24746],
     pubkeyHash: [0x1b],
-    scriptHash: [0x44],
+    scriptHash: [0x44, 0x05],
     bech32: ['uf']
   }
 }
