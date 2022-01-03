@@ -202,17 +202,20 @@
       }],
       "legacy address only": ["3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN", {
         "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
-        "metadata": {}
+        "metadata": {},
+        "publicAddress": "MLh6oJm8tWbTNKTXpiREMoAMqE3CbYzgi6"
       }],
       "legacy uri address": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN", {
         "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
-        "metadata": {}
-      }],
+        "metadata": {},
+        "publicAddress": "MLh6oJm8tWbTNKTXpiREMoAMqE3CbYzgi6"
+        }],
       "legacy uri address with amount": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN?amount=12345.6789", {
         "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
         "metadata": {},
         "nativeAmount": "1234567890000",
-        "currencyCode": "LTC"
+        "currencyCode": "LTC",
+        "publicAddress": "MLh6oJm8tWbTNKTXpiREMoAMqE3CbYzgi6"
       }],
       "legacy uri address with amount & label": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN?amount=1234.56789&label=Johnny%20Litecoin", {
         "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
@@ -220,7 +223,8 @@
           "name": "Johnny Litecoin"
         },
         "nativeAmount": "123456789000",
-        "currencyCode": "LTC"
+        "currencyCode": "LTC",
+        "publicAddress": "MLh6oJm8tWbTNKTXpiREMoAMqE3CbYzgi6"
       }],
       "legacy uri address with amount, label & message": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN?amount=1234.56789&label=Johnny%20Litecoin&message=Hello%20World,%20I%20miss%20you%20!", {
         "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
@@ -229,13 +233,15 @@
           "notes": "Hello World, I miss you !"
         },
         "nativeAmount": "123456789000",
-        "currencyCode": "LTC"
+        "currencyCode": "LTC",
+        "publicAddress": "MLh6oJm8tWbTNKTXpiREMoAMqE3CbYzgi6"
       }],
       "legacy uri address with unsupported param": ["litecoin:3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN?unsupported=helloworld&amount=12345.6789", {
         "legacyAddress": "3EUxVRMAwPk2ZpBdiqRtY9uxWXSkgVCTFN",
         "metadata": {},
         "nativeAmount": "1234567890000",
-        "currencyCode": "LTC"
+        "currencyCode": "LTC",
+        "publicAddress": "MLh6oJm8tWbTNKTXpiREMoAMqE3CbYzgi6"
       }],
       "wif 1 - Compressed": ["T5t9N5NirTH5Bo65CEm1Z5W7jyu9ezbuMvPzuD2DoPnPGJkmpq8B", {
         "metadata": {},
@@ -367,41 +373,47 @@
         "currencyCode": "BCH"
       }],
       "legacy address only": ["1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu", {
-        "publicAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu",
-        "metadata": {}
+        "publicAddress": "qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a",
+        "metadata": {},
+        "legacyAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu"
       }],
       "legacy uri address": ["bitcoincash:1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu", {
-        "publicAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu",
-        "metadata": {}
+        "publicAddress": "qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a",
+        "metadata": {},
+        "legacyAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu"
       }],
       "legacy uri address with amount": ["bitcoincash:1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu?amount=12345.6789", {
-        "publicAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu",
+        "publicAddress": "qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a",
         "metadata": {},
         "nativeAmount": "1234567890000",
-        "currencyCode": "BCH"
+        "currencyCode": "BCH",
+        "legacyAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu"
       }],
       "legacy uri address with amount & label": ["bitcoincash:1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu?amount=1234.56789&label=Johnny%20BitcoinCash", {
-        "publicAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu",
+        "publicAddress": "qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a",
         "metadata": {
           "name": "Johnny BitcoinCash"
         },
         "nativeAmount": "123456789000",
-        "currencyCode": "BCH"
+        "currencyCode": "BCH",
+        "legacyAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu"
       }],
       "legacy uri address with amount, label & message": ["bitcoincash:1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu?amount=1234.56789&label=Johnny%20BitcoinCash&message=Hello%20World,%20I%20miss%20you%20!", {
-        "publicAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu",
+        "publicAddress": "qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a",
         "metadata": {
           "name": "Johnny BitcoinCash",
           "notes": "Hello World, I miss you !"
         },
         "nativeAmount": "123456789000",
-        "currencyCode": "BCH"
+        "currencyCode": "BCH",
+        "legacyAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu"
       }],
       "legacy uri address with unsupported param": ["bitcoincash:1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu?unsupported=helloworld&amount=12345.6789", {
-        "publicAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu",
+        "publicAddress": "qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a",
         "metadata": {},
         "nativeAmount": "1234567890000",
-        "currencyCode": "BCH"
+        "currencyCode": "BCH",
+        "legacyAddress": "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu"
       }],
       "wif 1 - Compressed": ["L5FyMaAPJGqivZmCzFAEATptdvgha4UqwVWbLLZgr5iLGtQRo4x2", {
         "metadata": {},

@@ -276,22 +276,58 @@ const verifyAddressInternal = (
   prefixIndex: number,
   args: VerifyAddressArgs
 ): VerifyAddressEnum => {
+  const coinInfo: CoinInfo = getCoinFromString(args.coin)
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
     coinString: args.coin,
     prefixIndex
   })
+
+  // Special case for CashAddr
+  const cashAddrPrefixes = getCashAddrPrefixes(coinInfo)
+  if (cashAddrPrefixes.length > 0) {
+    // If coin has cashaddr prefixes, and address passes cashaddr validation,
+    // then we return as "valid", otherwise we return as "legacy" if it passes
+    // the normal guess check.
+    try {
+      cashAddressToHash(args.address, cashAddrPrefixes)
+      return VerifyAddressEnum.good
+    } catch (e) {}
+    guessAddressTypeFromAddress(args.address, network, args.coin, undefined)
+    return VerifyAddressEnum.legacy
+  }
+
+  // Normal case
   guessAddressTypeFromAddress(args.address, network, args.coin, undefined)
   // All indices above 0 are treated as legacy
   return prefixIndex === 0 ? VerifyAddressEnum.good : VerifyAddressEnum.legacy
 }
 
-export const verifyAddress = (args: VerifyAddressArgs): string => {
+export const verifyAddress = (args: VerifyAddressArgs): VerifyAddressEnum => {
   const verification = filterCoinPrefixes(
     args.coin,
     prefixIndex => verifyAddressInternal(prefixIndex, args),
     [`Could not determine address type of ${args.address}`]
   )
   return verification ?? VerifyAddressEnum.bad
+}
+
+export const getAddressTypeFromAddress = (
+  address: string,
+  coinName: string
+): AddressTypeEnum => {
+  const addressType = filterCoinPrefixes(
+    coinName,
+    prefixIndex => {
+      const network = bip32NetworkFromCoin({
+        coinString: coinName,
+        prefixIndex
+      })
+      return guessAddressTypeFromAddress(address, network, coinName)
+    },
+    [`Could not determine address type of ${address}`]
+  )
+  if (addressType == null) throw new Error('Could not determine address type')
+  return addressType
 }
 
 export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
@@ -408,42 +444,52 @@ const addressToScriptPubkeyInternal = (
     args.addressType
   )
   let payment: bitcoin.payments.PaymentCreator
+
+  const maybeScriptHashFromCashAddress = (): string | undefined => {
+    try {
+      return cashAddressToHash(
+        args.address,
+        cashAddrPrefixes
+      ).scriptHash.toString('hex')
+    } catch (e) {}
+  }
+
   switch (addressType) {
     case AddressTypeEnum.p2pkh:
       if (selectedPrefixes.cashaddr != null) {
-        const scriptPubkey = scriptHashToScriptPubkey({
-          scriptHash: cashAddressToHash(
-            args.address,
-            cashAddrPrefixes
-          ).scriptHash.toString('hex'),
-          scriptType: ScriptTypeEnum.p2pkh,
-          coin: args.coin
-        })
-        if (scriptPubkey == null) {
-          throw new Error(
-            `unable to convert address ${args.address} to script pubkey`
-          )
+        const scriptHash = maybeScriptHashFromCashAddress()
+        if (scriptHash != null) {
+          const scriptPubkey = scriptHashToScriptPubkey({
+            scriptHash,
+            scriptType: ScriptTypeEnum.p2pkh,
+            coin: args.coin
+          })
+          if (scriptPubkey == null) {
+            throw new Error(
+              `unable to convert address ${args.address} to script pubkey`
+            )
+          }
+          return scriptPubkey
         }
-        return scriptPubkey
       }
       payment = bitcoin.payments.p2pkh
       break
     case AddressTypeEnum.p2sh:
       if (selectedPrefixes.cashaddr != null) {
-        const scriptPubkey = scriptHashToScriptPubkey({
-          scriptHash: cashAddressToHash(
-            args.address,
-            cashAddrPrefixes
-          ).scriptHash.toString('hex'),
-          scriptType: ScriptTypeEnum.p2sh,
-          coin: args.coin
-        })
-        if (scriptPubkey == null) {
-          throw new Error(
-            `unable to convert address ${args.address} to script pubkey`
-          )
+        const scriptHash = maybeScriptHashFromCashAddress()
+        if (scriptHash != null) {
+          const scriptPubkey = scriptHashToScriptPubkey({
+            scriptHash,
+            scriptType: ScriptTypeEnum.p2sh,
+            coin: args.coin
+          })
+          if (scriptPubkey == null) {
+            throw new Error(
+              `unable to convert address ${args.address} to script pubkey`
+            )
+          }
+          return scriptPubkey
         }
-        return scriptPubkey
       }
       payment = bitcoin.payments.p2sh
       break
@@ -1157,7 +1203,7 @@ const guessAddressTypeFromAddress = (
   address: string,
   network: BitcoinJSNetwork,
   coin: string,
-  addressType: AddressTypeEnum | undefined
+  addressType?: AddressTypeEnum
 ): AddressTypeEnum => {
   if (addressType != null) {
     return addressType
@@ -1199,7 +1245,7 @@ const guessAddressTypeFromAddress = (
       return AddressTypeEnum.p2sh
     } catch (e) {}
   }
-  throw new Error('Could not determine address type of ' + address)
+  throw new Error(`Could not determine address type of ${address}`)
 }
 
 const selectedCoinPrefixes = (
