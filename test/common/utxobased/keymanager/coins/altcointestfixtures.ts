@@ -702,7 +702,7 @@ export const fixtures: Fixture = {
         },
         {
           xpriv:
-            'Ltpv7735AbcbmL1gbgDWj2ezvs59rh4RM1oTN2BKTKbfe3146FCPCNFbBBSWfuV9vCJNMXD9LuHpQnqVWpn2hbMhikqPdoGqbS3ptdPoNWEvvgR',
+            'xprv9xnwuEJDHfgLkhZwH8cNnSrQfRbZG287x39mVqDEePQy5SRWKjV2pLjri8x93UfBSQdsGPeJFi8qXKexJUNj5eU3gEKfHUzo6EmuK6CSgEq',
           type: BIP43PurposeTypeEnum.Legacy
         }
       ],
@@ -723,16 +723,16 @@ export const fixtures: Fixture = {
         },
         {
           xpriv:
-            'Ltpv7735AbcbmL1gbgDWj2ezvs59rh4RM1oTN2BKTKbfe3146FCPCNFbBBSWfuV9vCJNMXD9LuHpQnqVWpn2hbMhikqPdoGqbS3ptdPoNWEvvgR',
+            'xprv9xnwuEJDHfgLkhZwH8cNnSrQfRbZG287x39mVqDEePQy5SRWKjV2pLjri8x93UfBSQdsGPeJFi8qXKexJUNj5eU3gEKfHUzo6EmuK6CSgEq',
           type: BIP43PurposeTypeEnum.Legacy,
           xpub:
-            'Ltub2YDQmP391UYeDYvLye9P1SuNJFkcRGN7SYHM8JMxaDnegcPTXHJ2BnYmvHnFnGPGKu2WMuCga6iZV3SDxDMGrRyMcrYEfSPhrpS1EPkC43E'
+            'xpub6BnJJjq783EdyBeQPA9P9ao9DTS3fUqyKG5NJDcrCiwwxEkesGoHN94LZRGE7rz1jgcvmmp8j55BNx573KFq1WBwKiemzkdfNKffKx6Mvku'
         }
       ],
       xpubToPubkeyTests: [
         {
           xpub:
-            'Ltub2YDQmP391UYeDYvLye9P1SuNJFkcRGN7SYHM8JMxaDnegcPTXHJ2BnYmvHnFnGPGKu2WMuCga6iZV3SDxDMGrRyMcrYEfSPhrpS1EPkC43E',
+            'xpub6BnJJjq783EdyBeQPA9P9ao9DTS3fUqyKG5NJDcrCiwwxEkesGoHN94LZRGE7rz1jgcvmmp8j55BNx573KFq1WBwKiemzkdfNKffKx6Mvku',
           type: BIP43PurposeTypeEnum.Legacy,
           bip44ChangeIndex: 0,
           bip44AddressIndex: 0,
