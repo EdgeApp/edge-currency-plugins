@@ -73,9 +73,9 @@ export const coinInfo: CoinInfo = {
     wrappedSegwitXPub: [0x049d7cb2],
     segwitXPriv: [0x04b2430c],
     segwitXPub: [0x04b24746],
-    pubkeyHash: [0x26, 0x00],
-    scriptHash: [0x17, 0x05],
-    bech32: ['btg', 'bc']
+    pubkeyHash: [0x26],
+    scriptHash: [0x17],
+    bech32: ['btg']
   }
 }
 

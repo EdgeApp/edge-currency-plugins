@@ -940,8 +940,7 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2pkh,
           addressType: AddressTypeEnum.p2pkh,
-          address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9',
-          legacyAddress: '1McdhUQiZ2fatmKMvVn8sc8YemYpeDum1k'
+          address: 'GeTZ7bjfXtGsyEcerSSFJNUSZwLfjtCJX9'
         },
         {
           xpub:
@@ -951,8 +950,7 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2wpkhp2sh,
           addressType: AddressTypeEnum.p2sh,
-          address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn',
-          legacyAddress: '3643rsxfbpSKJ25TkJQo66HtAXqf2hGP3i'
+          address: 'AL8uaqKrP4n61pb2BrQXpMC3VcUdjmpAwn'
         },
         {
           xpub:
@@ -962,8 +960,7 @@ export const fixtures: Fixture = {
           bip44AddressIndex: 0,
           scriptType: ScriptTypeEnum.p2wpkh,
           addressType: AddressTypeEnum.p2wpkh,
-          address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu',
-          legacyAddress: 'bc1qkwnu2phwvard2spr2n0a9d84x590ahywfczcd5'
+          address: 'btg1qkwnu2phwvard2spr2n0a9d84x590ahywl3yacu'
         }
       ],
       wifToPrivateKeyTests: [
