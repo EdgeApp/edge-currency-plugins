@@ -1,0 +1,9 @@
+language: node_js
+node_js:
+  - lts/*
+install:
+  - yarn install --frozen-lockfile --ignore-optional --network-concurrency 1
+script:
+  - yarn lint
+  - yarn types
+  - yarn test
