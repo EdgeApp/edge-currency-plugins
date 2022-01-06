@@ -805,8 +805,10 @@ export const pickNextTask = async (
 
   // filled when transactions potentially changed (e.g. through new block notification)
   if (Object.keys(updateTransactionCache).length > 0) {
+    let hasProcessedAtLeastOnce = false
     for (const [txId, state] of Object.entries(updateTransactionCache)) {
       if (!state.processing && serverStates.serverCanGetTx(uri, txId)) {
+        hasProcessedAtLeastOnce = true
         state.processing = true
         removeItem(updateTransactionCache, txId)
         const updateTransactionTask = updateTransactions({ ...args, txId })
@@ -821,7 +823,8 @@ export const pickNextTask = async (
         return updateTransactionTask
       }
     }
-    return true
+    // This condition prevents infinite loops
+    if (hasProcessedAtLeastOnce) return true
   }
 
   // loop to get and process transaction history of single addresses, triggers setLookAhead
