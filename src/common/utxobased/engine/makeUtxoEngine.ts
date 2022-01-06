@@ -16,7 +16,7 @@ import {
 } from 'edge-core-js/types'
 
 import { filterUndefined } from '../../../util/filterUndefined'
-import { unixTime } from '../../../util/unixtime'
+import { unixTime } from '../../../util/unixTime'
 import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
