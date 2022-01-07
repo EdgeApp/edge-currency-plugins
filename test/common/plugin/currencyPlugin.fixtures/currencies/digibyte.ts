@@ -7,7 +7,7 @@ export const digibyte: FixtureType = {
   'Test Currency code': 'DGB',
   key,
   xpub:
-    'xpub6CUgpZYSditAHLGHepYbZzskB16AQx69mnD5iUVjd7pdWjP67ZzMNCw8n8Sg2xidi2pVAd35rbeYjxSr5CMUfEGgggFr8Z4bwm1n8YpV8Rn',
+    'xpub6D3ViKs81upgt2wCPw6DAxShnF3LDGEbS2Xdgu2ippxMucCaxFkLErfXCxJYreDwB4oAURkMtoB9zCj5JvRJgsz2gE2Xx7s1pCZtYUnmJYn',
   'invalid key name': {
     id: 'unknown',
     type: 'wallet:digibyte',
