@@ -7,7 +7,7 @@ export const bitcoinsv: FixtureType = {
   'Test Currency code': 'BSV',
   key,
   xpub:
-    'xpub6C7zQbq278xkqpJGb4Ewp9KSmJSdiqwYV45NCRDBLmgU9ighAuSsiDAicWm38ZXRUcYLnMEkH88tLF5ssfUMX3MtvrsgCmHYnmv2jHfev6z',
+    'xpub6DUTiSS733hqT58ikbarGvhNzCHXT448nTbZt7sY2uXfY5fFBE6QZjojE74rNXkbMrxG3xWugPT1q5Diqjp9wdmNoGCpuntmCg5bVqsx81K',
   'invalid key name': {
     id: 'unknown',
     type: 'wallet:bitcoinsv',
