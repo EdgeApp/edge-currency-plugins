@@ -61,6 +61,7 @@ export const coinInfo: CoinInfo = {
   segwit: true,
   coinType: 17,
   sighashFunction: crypto.sha256,
+  txHashFunction: crypto.sha256,
   bs58DecodeFunc: base58grs.decode,
   bs58EncodeFunc: base58grs.encode,
   wifEncodeFunc: wifgrs.encode,

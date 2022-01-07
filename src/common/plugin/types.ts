@@ -65,6 +65,7 @@ export interface CoinInfo {
   coinType: number
   sighash?: number
   sighashFunction?: (Hash: Buffer) => Buffer
+  txHashFunction?: (Hash: Buffer) => Buffer
   bs58DecodeFunc?: (payload: string | undefined) => Buffer
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   bs58EncodeFunc?: (payload: any) => string

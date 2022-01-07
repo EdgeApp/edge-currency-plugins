@@ -58,6 +58,7 @@ export const coinInfo: CoinInfo = {
   segwit: false,
   coinType: 224,
   sighashFunction: crypto.sha256,
+  txHashFunction: crypto.sha256,
   bs58DecodeFunc: base58smart.decode,
   bs58EncodeFunc: base58smart.encode,
   wifEncodeFunc: wifsmart.encode,
