@@ -388,7 +388,7 @@ export async function makeUtxoEngine(
         edgeSpendInfo
       }
 
-      return {
+      const transaction = {
         ourReceiveAddresses,
         otherParams,
         currencyCode: currencyInfo.currencyCode,
@@ -402,6 +402,8 @@ export async function makeUtxoEngine(
         },
         signedTx: ''
       }
+
+      return transaction
     },
 
     async resyncBlockchain(): Promise<void> {

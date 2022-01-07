@@ -1061,7 +1061,7 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
   }
   const tx = psbt.extractTransaction()
   return {
-    id: tx.getId(),
+    id: tx.getId(coin.txHashFunction),
     hex: tx.toHex()
   }
 }
