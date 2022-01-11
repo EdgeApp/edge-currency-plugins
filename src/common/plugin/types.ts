@@ -1,5 +1,5 @@
 import { bip32 } from 'altcoin-js'
-import { asNumber, asObject, asString, asValue } from 'cleaners'
+import { asNumber, asObject, asString, asValue, Cleaner } from 'cleaners'
 import { Disklet } from 'disklet'
 import {
   EdgeCurrencyEngineOptions,
@@ -53,6 +53,8 @@ export interface EngineInfo {
   mempoolSpaceFeeInfoServer?: string
   simpleFeeSettings: SimpleFeeSettings
   scriptTemplates?: ScriptTemplates
+  // Codec Cleaners
+  asBlockbookAddress?: Cleaner<string>
 }
 
 /**

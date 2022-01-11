@@ -6,7 +6,8 @@ import {
   asObject,
   asOptional,
   asString,
-  Cleaner
+  Cleaner,
+  uncleaner
 } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js/types'
 
@@ -34,17 +35,20 @@ export interface BlockbookAccountUtxo {
   address?: string
   path?: string
 }
-export const asBlockbookAccountUtxo: Cleaner<BlockbookAccountUtxo> = asObject({
-  txid: asString,
-  vout: asNumber,
-  value: asString,
-  confirmations: asOptional(asNumber),
-  coinbase: asOptional(asBoolean),
-  height: asOptional(asNumber),
-  lockTime: asOptional(asNumber),
-  address: asOptional(asString),
-  path: asOptional(asString)
-})
+export const asBlockbookAccountUtxo = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<BlockbookAccountUtxo> =>
+  asObject({
+    txid: asString,
+    vout: asNumber,
+    value: asString,
+    confirmations: asOptional(asNumber),
+    coinbase: asOptional(asBoolean),
+    height: asOptional(asNumber),
+    lockTime: asOptional(asNumber),
+    address: asOptional(asAddress),
+    path: asOptional(asString)
+  })
 
 export interface BlockbookTransaction {
   txid: string
@@ -70,34 +74,37 @@ export interface BlockbookTransaction {
     hex?: string
   }>
 }
-export const asBlockbookTransaction: Cleaner<BlockbookTransaction> = asObject({
-  txid: asString,
-  hex: asString,
-  blockHeight: asNumber,
-  confirmations: asNumber,
-  blockTime: asNumber,
-  fees: asString,
-  vin: asArray(
-    asObject({
-      txid: asString,
-      sequence: asOptional(asNumber),
-      n: asNumber,
-      vout: asOptional(asNumber, -1),
-      addresses: asArray(asString),
-      isAddress: asBoolean,
-      value: asString,
-      hex: asOptional(asString)
-    })
-  ),
-  vout: asArray(
-    asObject({
-      n: asNumber,
-      value: asString,
-      addresses: asArray(asString),
-      hex: asOptional(asString)
-    })
-  )
-})
+export const asBlockbookTransaction = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<BlockbookTransaction> =>
+  asObject({
+    txid: asString,
+    hex: asString,
+    blockHeight: asNumber,
+    confirmations: asNumber,
+    blockTime: asNumber,
+    fees: asString,
+    vin: asArray(
+      asObject({
+        txid: asString,
+        sequence: asOptional(asNumber),
+        n: asNumber,
+        vout: asOptional(asNumber, -1),
+        addresses: asArray(asAddress),
+        isAddress: asBoolean,
+        value: asString,
+        hex: asOptional(asString)
+      })
+    ),
+    vout: asArray(
+      asObject({
+        n: asNumber,
+        value: asString,
+        addresses: asArray(asAddress),
+        hex: asOptional(asString)
+      })
+    )
+  })
 
 // ---------------------------------------------------------------------
 // Blockbook API Response Types
@@ -175,30 +182,33 @@ export const asInfoResponse = asObject({
  * Get Account UTXO
  */
 export const addressUtxosMessage = (
-  account: string
+  address: string,
+  asAddress: Cleaner<string> = asString
 ): BlockbookTask<AddressUtxosResponse> => {
+  const wasAddress = uncleaner(asAddress)
   return {
     method: 'getAccountUtxo',
-    params: { descriptor: account },
-    cleaner: asBlockbookResponse(asAddressUtxosResponse)
+    params: { descriptor: wasAddress(address) },
+    cleaner: asBlockbookResponse(asAddressUtxosResponse(asAddress))
   }
 }
-export type AddressUtxosResponse = ReturnType<typeof asAddressUtxosResponse>
-export const asAddressUtxosResponse = asArray(asBlockbookAccountUtxo)
+export type AddressUtxosResponse = BlockbookAccountUtxo[]
+export const asAddressUtxosResponse = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<AddressUtxosResponse> => asArray(asBlockbookAccountUtxo(asAddress))
 
 /**
  * Get Transaction
  */
 export const transactionMessage = (
-  hash: string
-): BlockbookTask<TransactionResponse> => {
-  return {
-    method: 'getTransaction',
-    params: { txid: hash },
-    cleaner: asBlockbookResponse(asTransactionResponse)
-  }
-}
-export type TransactionResponse = ReturnType<typeof asTransactionResponse>
+  hash: string,
+  asAddress: Cleaner<string> = asString
+): BlockbookTask<TransactionResponse> => ({
+  method: 'getTransaction',
+  params: { txid: hash },
+  cleaner: asBlockbookResponse(asTransactionResponse(asAddress))
+})
+export type TransactionResponse = BlockbookTransaction
 export const asTransactionResponse = asBlockbookTransaction
 
 /**
@@ -230,15 +240,17 @@ export interface AddresssMessageParams {
 }
 export const addressMessage = (
   address: string,
+  asAddress: Cleaner<string> = asString,
   params: AddresssMessageParams = {}
 ): BlockbookTask<AddressResponse> => {
+  const wasAddress = uncleaner(asAddress)
   return {
     method: 'getAccountInfo',
     params: {
       ...{ details: 'basic', page: 1, perPage: 100, ...params },
-      descriptor: address
+      descriptor: wasAddress(address)
     },
-    cleaner: asBlockbookResponse(asAddressResponse)
+    cleaner: asBlockbookResponse(asAddressResponse(asAddress))
   }
 }
 export interface AddressResponse {
@@ -255,24 +267,26 @@ export interface AddressResponse {
   totalPages: number
   itemsOnPage: number
 }
-export const asAddressResponse: Cleaner<AddressResponse> = asObject({
-  // details: basic
-  address: asString,
-  balance: asString,
-  totalReceived: asString,
-  totalSent: asString,
-  txs: asNumber,
-  unconfirmedBalance: asString,
-  unconfirmedTxs: asNumber,
-  // details: txids
-  txids: asOptional(asArray(asString), []),
-  // details: txs
-  transactions: asOptional(asArray(asBlockbookTransaction), []),
-  // Pagination (included with txids and txs requests)
-  page: asOptional(asNumber, NaN),
-  totalPages: asOptional(asNumber, NaN),
-  itemsOnPage: asOptional(asNumber, NaN)
-})
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export const asAddressResponse = (asAddress: Cleaner<string> = asString) =>
+  asObject({
+    // details: basic
+    address: asAddress,
+    balance: asString,
+    totalReceived: asString,
+    totalSent: asString,
+    txs: asNumber,
+    unconfirmedBalance: asString,
+    unconfirmedTxs: asNumber,
+    // details: txids
+    txids: asOptional(asArray(asString), []),
+    // details: txs
+    transactions: asOptional(asArray(asBlockbookTransaction(asAddress)), []),
+    // Pagination (included with txids and txs requests)
+    page: asOptional(asNumber, NaN),
+    totalPages: asOptional(asNumber, NaN),
+    itemsOnPage: asOptional(asNumber, NaN)
+  })
 
 /**
  * Subscribe New Block
@@ -296,18 +310,26 @@ export const asSubscribeNewBlockResponse = asObject({
  * Subscribe Address
  */
 export const subscribeAddressesMessage = (
-  addresses: string[]
+  addresses: string[],
+  asAddress: Cleaner<string> = asString
 ): BlockbookTask<SubscribeAddressResponse> => {
+  const wasAddress = uncleaner(asAddress)
   return {
     method: 'subscribeAddresses',
-    params: { addresses },
-    cleaner: asBlockbookResponse(asSubscribeAddressResponse)
+    params: {
+      addresses: addresses.map(wasAddress)
+    },
+    cleaner: asBlockbookResponse(asSubscribeAddressResponse(asAddress))
   }
 }
-export type SubscribeAddressResponse = ReturnType<
-  typeof asSubscribeAddressResponse
->
-export const asSubscribeAddressResponse = asObject({
-  address: asString,
-  tx: asBlockbookTransaction
-})
+export interface SubscribeAddressResponse {
+  address: string
+  tx: BlockbookTransaction
+}
+export const asSubscribeAddressResponse = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<SubscribeAddressResponse> =>
+  asObject({
+    address: asAddress,
+    tx: asBlockbookTransaction(asAddress)
+  })

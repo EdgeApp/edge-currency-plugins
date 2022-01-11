@@ -3,6 +3,7 @@ import { parse } from 'uri-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { PluginState } from '../../plugin/pluginState'
+import { PluginInfo } from '../../plugin/types'
 import { removeItem } from '../../plugin/utils'
 import { NumbWalletInfo } from '../keymanager/cleaners'
 import { BlockBook, makeBlockBook } from '../network/BlockBook'
@@ -21,11 +22,12 @@ interface ServerState {
 }
 
 interface ServerStateConfig {
-  engineStarted: boolean
-  walletInfo: NumbWalletInfo
-  pluginState: PluginState
   engineEmitter: EngineEmitter
+  engineStarted: boolean
   log: EdgeLog
+  pluginInfo: PluginInfo
+  pluginState: PluginState
+  walletInfo: NumbWalletInfo
 }
 
 export interface ServerStates {
@@ -59,7 +61,14 @@ interface Connections {
 }
 
 export function makeServerStates(config: ServerStateConfig): ServerStates {
-  const { engineStarted, walletInfo, pluginState, engineEmitter, log } = config
+  const {
+    engineEmitter,
+    engineStarted,
+    log,
+    pluginInfo,
+    pluginState,
+    walletInfo
+  } = config
   log('Making server states')
 
   let serverStates: ServerStateCache = {}
@@ -246,7 +255,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         engineEmitter,
         log,
         onQueueSpaceCB,
-        walletId: walletInfo.id
+        walletId: walletInfo.id,
+        asAddress: pluginInfo.engineInfo.asBlockbookAddress
       })
 
       const blockBook = connections[uri]

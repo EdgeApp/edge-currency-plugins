@@ -153,6 +153,7 @@ export function makeUtxoEngineState(
   const lock = new AwaitLock()
 
   const serverStates = makeServerStates({
+    pluginInfo,
     engineStarted,
     walletInfo,
     pluginState,
@@ -1005,6 +1006,9 @@ const processAddressTransactions = async (
     serverStates,
     uri
   } = args
+  const {
+    engineInfo: { asBlockbookAddress }
+  } = pluginInfo
   const addressTransactionCache = taskCache.addressTransactionCache
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -1073,8 +1077,9 @@ const processAddressTransactions = async (
       console.error(err.toString())
       console.log(err.stack)
     })
+
   return {
-    ...addressMessage(address, {
+    ...addressMessage(address, asBlockbookAddress, {
       details: 'txs',
       from: addressData.lastQueriedBlockHeight,
       perPage: BLOCKBOOK_TXS_PER_PAGE,
@@ -1142,9 +1147,13 @@ const processAddressUtxos = async (
     processor,
     taskCache,
     path,
+    pluginInfo,
     serverStates,
     uri
   } = args
+  const {
+    engineInfo: { asBlockbookAddress }
+  } = pluginInfo
   const { addressUtxoCache, rawUtxoCache, processorUtxoCache } = taskCache
   const queryTime = Date.now()
   const deferred = new Deferred<AddressUtxosResponse>()
@@ -1179,8 +1188,9 @@ const processAddressUtxos = async (
         path
       }
     })
+
   return {
-    ...addressUtxosMessage(address),
+    ...addressUtxosMessage(address, asBlockbookAddress),
     deferred
   }
 }

@@ -1,3 +1,4 @@
+import { Cleaner } from 'cleaners'
 import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
@@ -66,6 +67,7 @@ interface BlockBookConfig {
   log: EdgeLog
   walletId: string
   onQueueSpaceCB: OnQueueSpaceCB
+  asAddress?: Cleaner<string>
 }
 
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
@@ -75,7 +77,8 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     engineEmitter,
     log,
     onQueueSpaceCB,
-    walletId
+    walletId,
+    asAddress
   } = config
   log(`makeBlockBook with uri ${wsAddress}`)
 
@@ -151,7 +154,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     address: string,
     params: AddresssMessageParams = {}
   ): Promise<AddressResponse> {
-    return await promisifyWsMessage(addressMessage(address, params))
+    return await promisifyWsMessage(addressMessage(address, asAddress, params))
   }
 
   async function watchBlocks(
@@ -180,7 +183,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
       engineEmitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, wsAddress, res)
     }
     socket.subscribe({
-      ...subscribeAddressesMessage(addresses),
+      ...subscribeAddressesMessage(addresses, asAddress),
       cb: socketCb,
       deferred: deferredAddressSub,
       subscribed: false

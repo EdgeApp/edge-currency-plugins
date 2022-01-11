@@ -296,7 +296,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
             message.task.deferred.resolve(json.data)
           }
         } catch (e) {
-          if (e instanceof TypeError) console.log(json.data)
+          if (e instanceof TypeError) console.log({ json, message })
           message.task.deferred.reject(e)
         }
       }
