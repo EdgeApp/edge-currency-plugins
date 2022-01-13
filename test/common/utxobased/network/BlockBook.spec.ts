@@ -10,7 +10,7 @@ import {
   BlockBook,
   makeBlockBook
 } from '../../../../src/common/utxobased/network/BlockBook'
-import { INewTransactionResponse } from '../../../../src/common/utxobased/network/BlockBookAPI'
+import { SubscribeAddressResponse } from '../../../../src/common/utxobased/network/BlockBookAPI'
 import Deferred from '../../../../src/common/utxobased/network/Deferred'
 import {
   SocketEmitter,
@@ -122,7 +122,7 @@ describe('BlockBook notifications tests with dummy server', function () {
 
     engineEmitter.on(
       EngineEvent.NEW_ADDRESS_TRANSACTION,
-      (_uri: string, _newTx: INewTransactionResponse) => {
+      (_uri: string, _newTx: SubscribeAddressResponse) => {
         test = true
       }
     )

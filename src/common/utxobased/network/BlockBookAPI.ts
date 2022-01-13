@@ -191,10 +191,10 @@ export const subscribeAddressesMessage = (
     params: { addresses }
   }
 }
-export type INewTransactionResponse = ReturnType<
-  typeof asINewTransactionResponse
+export type SubscribeAddressResponse = ReturnType<
+  typeof asSubscribeAddressResponse
 >
-export const asINewTransactionResponse = asObject({
+export const asSubscribeAddressResponse = asObject({
   address: asString,
   tx: asITransaction
 })

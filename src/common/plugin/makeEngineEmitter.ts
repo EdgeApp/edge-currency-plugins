@@ -1,7 +1,7 @@
 import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js/types'
 import { EventEmitter } from 'events'
 
-import { INewTransactionResponse } from '../utxobased/network/BlockBookAPI'
+import { SubscribeAddressResponse } from '../utxobased/network/BlockBookAPI'
 
 export declare interface EngineEmitter {
   emit: ((
@@ -26,7 +26,7 @@ export declare interface EngineEmitter {
     ((
       event: EngineEvent.NEW_ADDRESS_TRANSACTION,
       uri: string,
-      newTx: INewTransactionResponse
+      newTx: SubscribeAddressResponse
     ) => boolean) &
     ((event: EngineEvent.ADDRESSES_CHECKED, progressRatio: number) => boolean) &
     ((event: EngineEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => boolean)
@@ -57,7 +57,7 @@ export declare interface EngineEmitter {
       event: EngineEvent.NEW_ADDRESS_TRANSACTION,
       listener: (
         uri: string,
-        newTx: INewTransactionResponse
+        newTx: SubscribeAddressResponse
       ) => Promise<void> | void
     ) => this) &
     ((

@@ -8,19 +8,19 @@ import {
   asAddressUtxos,
   asBlockbookTxBroadcastResponse,
   asINewBlockResponse,
-  asINewTransactionResponse,
   asIServerInfo,
   asITransaction,
+  asSubscribeAddressResponse,
   BlockbookTask,
   BlockbookTxBroadcastResponse,
   broadcastTxMessage,
   INewBlockResponse,
-  INewTransactionResponse,
   infoMessage,
   IServerInfo,
   ITransaction,
   pingMessage,
   subscribeAddressesMessage,
+  SubscribeAddressResponse,
   subscribeNewBlockMessage,
   transactionMessage
 } from './BlockBookAPI'
@@ -79,7 +79,7 @@ export interface IAccountUTXO extends IUTXO {
 }
 
 export type WatchAddressesCB = (
-  response: INewTransactionResponse
+  response: SubscribeAddressResponse
 ) => void | Promise<void>
 export type WatchBlocksCB = () => void | Promise<void>
 
@@ -253,13 +253,13 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     addresses: string[],
     deferredAddressSub: Deferred<unknown>
   ): void {
-    const socketCb = async (value: INewTransactionResponse): Promise<void> => {
+    const socketCb = async (value: SubscribeAddressResponse): Promise<void> => {
       engineEmitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, wsAddress, value)
     }
     socket.subscribe({
       ...subscribeAddressesMessage(addresses),
       cb: socketCb,
-      cleaner: asINewTransactionResponse,
+      cleaner: asSubscribeAddressResponse,
       deferred: deferredAddressSub,
       subscribed: false
     })

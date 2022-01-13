@@ -40,8 +40,8 @@ import {
   addressUtxosMessage,
   asAddressUtxos,
   asITransaction,
-  INewTransactionResponse,
   ITransaction,
+  SubscribeAddressResponse,
   transactionMessage
 } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
@@ -212,7 +212,7 @@ export function makeUtxoEngineState(
 
   emitter.on(
     EngineEvent.NEW_ADDRESS_TRANSACTION,
-    async (_uri: string, response: INewTransactionResponse): Promise<void> => {
+    async (_uri: string, response: SubscribeAddressResponse): Promise<void> => {
       const state = taskCache.addressSubscribeCache[response.address]
       if (state != null) {
         const { path } = state

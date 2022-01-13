@@ -6,7 +6,7 @@ import { PluginState } from '../../plugin/pluginState'
 import { removeItem } from '../../plugin/utils'
 import { NumbWalletInfo } from '../keymanager/cleaners'
 import { BlockBook, makeBlockBook } from '../network/BlockBook'
-import { INewTransactionResponse } from '../network/BlockBookAPI'
+import { SubscribeAddressResponse } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
 import { SocketEmitter, SocketEvent } from '../network/MakeSocketEmitter'
 import { WsTask } from '../network/Socket'
@@ -119,7 +119,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   )
   engineEmitter.on(
     EngineEvent.NEW_ADDRESS_TRANSACTION,
-    (uri: string, newTx: INewTransactionResponse) => {
+    (uri: string, newTx: SubscribeAddressResponse) => {
       log(
         `${uri} received received new transaction with id ${newTx.tx.txid} to address ${newTx.address}`
       )
