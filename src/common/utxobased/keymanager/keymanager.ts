@@ -1059,7 +1059,7 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
     psbt.validateSignaturesOfInput(i)
     psbt.finalizeInput(i)
   }
-  const tx = psbt.extractTransaction()
+  const tx = psbt.extractTransaction(true)
   return {
     id: tx.getId(coin.txHashFunction),
     hex: tx.toHex()
