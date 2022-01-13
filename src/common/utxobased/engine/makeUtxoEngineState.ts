@@ -320,7 +320,7 @@ export function makeUtxoEngineState(
         }
       } else {
         // Airbitz wallets only use branch 0
-        if (walletPurpose !== BIP43PurposeTypeEnum.Airbitz) {
+        if (walletPurpose === BIP43PurposeTypeEnum.Airbitz) {
           branch = 0
         }
 
