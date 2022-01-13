@@ -668,15 +668,15 @@ export const pickNextTask = async (
   if (!serverState.subscribedBlocks) {
     serverState.subscribedBlocks = true
     const queryTime = Date.now()
-    const deferredBlockSub = new Deferred<unknown>()
-    deferredBlockSub.promise
+    const deferred = new Deferred<unknown>()
+    deferred.promise
       .then(() => {
         serverStates.serverScoreUp(uri, Date.now() - queryTime)
       })
       .catch(() => {
         serverState.subscribedBlocks = false
       })
-    serverStates.watchBlocks(uri, deferredBlockSub)
+    serverStates.watchBlocks(uri, deferred)
     return true
   }
 
@@ -784,21 +784,21 @@ export const pickNextTask = async (
     taskCache.addressWatching = true
 
     const queryTime = Date.now()
-    const deferredAddressSub = new Deferred<unknown>()
-    deferredAddressSub.promise
+    const deferred = new Deferred<unknown>()
+    deferred.promise
       .then(() => {
         serverStates.serverScoreUp(uri, Date.now() - queryTime)
       })
       .catch(() => {
         taskCache.addressWatching = false
       })
-    deferredAddressSub.promise.catch(() => {
+    deferred.promise.catch(() => {
       taskCache.addressWatching = false
     })
     serverStates.watchAddresses(
       uri,
       Array.from(Object.keys(addressSubscribeCache)),
-      deferredAddressSub
+      deferred
     )
     return true
   }
@@ -860,8 +860,8 @@ const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<ITransaction> => {
   const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
-  const deferredITransaction = new Deferred<ITransaction>()
-  deferredITransaction.promise
+  const deferred = new Deferred<ITransaction>()
+  deferred.promise
     .then(async (rawTx: ITransaction) => {
       // check if raw tx is still not confirmed, if so, don't change anything
       if (rawTx.blockHeight < 1) return
@@ -889,7 +889,7 @@ const updateTransactions = (
   return {
     ...transactionMessage(txId),
     cleaner: asITransaction,
-    deferred: deferredITransaction
+    deferred
   }
 }
 
@@ -1022,8 +1022,8 @@ const processAddressTransactions = async (
   }
 
   const queryTime = Date.now()
-  const deferredAddressResponse = new Deferred<AddressResponse>()
-  deferredAddressResponse.promise
+  const deferred = new Deferred<AddressResponse>()
+  deferred.promise
     .then(async (value: AddressResponse) => {
       serverStates.serverScoreUp(uri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
@@ -1088,7 +1088,7 @@ const processAddressTransactions = async (
       perPage: BLOCKBOOK_TXS_PER_PAGE,
       page
     }),
-    deferred: deferredAddressResponse
+    deferred
   }
 }
 
@@ -1155,8 +1155,8 @@ const processAddressUtxos = async (
   } = args
   const { addressUtxoCache, rawUtxoCache, processorUtxoCache } = taskCache
   const queryTime = Date.now()
-  const deferredIAccountUTXOs = new Deferred<IAccountUTXO[]>()
-  deferredIAccountUTXOs.promise
+  const deferred = new Deferred<IAccountUTXO[]>()
+  deferred.promise
     .then(async (utxos: IAccountUTXO[]) => {
       serverStates.serverScoreUp(uri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -1190,7 +1190,7 @@ const processAddressUtxos = async (
   return {
     ...addressUtxosMessage(address),
     cleaner: asAddressUtxos,
-    deferred: deferredIAccountUTXOs
+    deferred
   }
 }
 
@@ -1329,8 +1329,8 @@ const processRawUtxo = async (
         const [tx] = await processor.fetchTransactions({ txId: utxo.txid })
         if (tx == null) {
           const queryTime = Date.now()
-          const deferredITransaction = new Deferred<ITransaction>()
-          deferredITransaction.promise
+          const deferred = new Deferred<ITransaction>()
+          deferred.promise
             .then((rawTx: ITransaction) => {
               serverStates.serverScoreUp(uri, Date.now() - queryTime)
               const processedTx = processRawTx({ ...args, tx: rawTx })
@@ -1350,7 +1350,7 @@ const processRawUtxo = async (
             })
           return {
             ...transactionMessage(utxo.txid),
-            deferred: deferredITransaction
+            deferred
           }
         } else {
           script = tx.hex
