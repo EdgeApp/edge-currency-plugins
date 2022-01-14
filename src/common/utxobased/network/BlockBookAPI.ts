@@ -105,6 +105,8 @@ export const pingMessage = (): BlockbookTask => {
     params: undefined
   }
 }
+export type PingResponse = ReturnType<typeof asPingResponse>
+export const asPingResponse = asObject({})
 
 /**
  * Get Info
