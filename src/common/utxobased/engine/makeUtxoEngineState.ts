@@ -32,14 +32,15 @@ import {
 } from '../keymanager/keymanager'
 import {
   IAccountDetailsBasic,
-  IAccountUTXO,
   ITransactionDetailsPaginationResponse
 } from '../network/BlockBook'
 import {
   addressMessage,
   addressUtxosMessage,
+  AddressUtxosResponse,
   asAddressUtxosResponse,
   asTransactionResponse,
+  BlockbookAccountUtxo,
   SubscribeAddressResponse,
   transactionMessage,
   TransactionResponse
@@ -700,7 +701,7 @@ export const pickNextTask = async (
 
   // Loop unparsed utxos, some require a network call to get the full tx data
   for (const [utxoString, state] of Object.entries(rawUtxoCache)) {
-    const utxo: IAccountUTXO = JSON.parse(utxoString)
+    const utxo: BlockbookAccountUtxo = JSON.parse(utxoString)
     if (utxo == null) continue
     if (!state.processing) {
       // check if we need to fetch additional network content for legacy purpose type
@@ -1143,7 +1144,7 @@ interface ProcessAddressUtxosArgs extends CommonArgs {
 
 const processAddressUtxos = async (
   args: ProcessAddressUtxosArgs
-): Promise<WsTask<IAccountUTXO[]>> => {
+): Promise<WsTask<AddressUtxosResponse>> => {
   const {
     address,
     walletTools,
@@ -1155,9 +1156,9 @@ const processAddressUtxos = async (
   } = args
   const { addressUtxoCache, rawUtxoCache, processorUtxoCache } = taskCache
   const queryTime = Date.now()
-  const deferred = new Deferred<IAccountUTXO[]>()
+  const deferred = new Deferred<AddressUtxosResponse>()
   deferred.promise
-    .then(async (utxos: IAccountUTXO[]) => {
+    .then(async (utxos: AddressUtxosResponse) => {
       serverStates.serverScoreUp(uri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddress(scriptPubkey)
@@ -1266,7 +1267,7 @@ const processProcessorUtxos = async (
 interface ProcessRawUtxoArgs extends FormatArgs {
   path: ChangePath
   requiredCount: number
-  utxo: IAccountUTXO
+  utxo: BlockbookAccountUtxo
   id: string
   address: IAddress
   uri: string

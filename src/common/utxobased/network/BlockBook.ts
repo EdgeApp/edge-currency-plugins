@@ -6,6 +6,7 @@ import {
   addressMessage,
   AddresssMessageParams,
   addressUtxosMessage,
+  AddressUtxosResponse,
   asAddressUtxosResponse,
   asBroadcastTxResponse,
   asInfoResponse,
@@ -57,20 +58,6 @@ export interface ITransactionDetailsPaginationResponse
   transactions?: TransactionResponse[]
 }
 
-interface IUTXO {
-  txid: string
-  vout: number
-  value: string
-  height?: number
-  confirmations?: number
-  lockTime?: number
-}
-
-export interface IAccountUTXO extends IUTXO {
-  address?: string
-  path?: string
-}
-
 export type WatchAddressesCB = (
   response: SubscribeAddressResponse
 ) => void | Promise<void>
@@ -117,7 +104,7 @@ export interface BlockBook {
 
   watchBlocks: (deferredBlockSub: Deferred<unknown>) => void
 
-  fetchAddressUtxos: (account: string) => Promise<IAccountUTXO[]>
+  fetchAddressUtxos: (account: string) => Promise<AddressUtxosResponse>
 
   fetchTransaction: (hash: string) => Promise<TransactionResponse>
 
@@ -205,7 +192,9 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     return await promisifyWsMessage(infoMessage(), asInfoResponse)
   }
 
-  async function fetchAddressUtxos(account: string): Promise<IAccountUTXO[]> {
+  async function fetchAddressUtxos(
+    account: string
+  ): Promise<AddressUtxosResponse> {
     return await promisifyWsMessage(
       addressUtxosMessage(account),
       asAddressUtxosResponse
