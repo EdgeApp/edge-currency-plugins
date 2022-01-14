@@ -14,6 +14,7 @@ import {
   BlockbookTask,
   BlockbookTxBroadcastResponse,
   broadcastTxMessage,
+  IAccountOpts,
   infoMessage,
   IServerInfo,
   ITransaction,
@@ -54,14 +55,6 @@ export interface ITransactionDetailsPaginationResponse
   extends IAccountDetailsBasic,
     ITransactionPaginationResponse {
   transactions?: ITransaction[]
-}
-
-interface IAccountOpts {
-  details?: string
-  from?: number
-  to?: number
-  page?: number
-  perPage?: number
 }
 
 interface IUTXO {
