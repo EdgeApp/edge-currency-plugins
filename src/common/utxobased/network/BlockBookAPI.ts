@@ -1,11 +1,12 @@
 import {
   asArray,
   asBoolean,
-  asEither,
+  asMaybe,
   asNumber,
   asObject,
   asOptional,
-  asString
+  asString,
+  Cleaner
 } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js/types'
 
@@ -50,6 +51,33 @@ export const asBlockbookTransaction = asObject({
     })
   )
 })
+
+// ---------------------------------------------------------------------
+// Blockbook API Response Types
+// ---------------------------------------------------------------------
+
+/**
+ * Error Response
+ */
+export type BlockbookErrorResponse = ReturnType<typeof asBlockbookErrorResponse>
+export const asBlockbookErrorResponse = asObject({
+  error: asObject({
+    message: asString
+  })
+})
+
+/**
+ * Blockbook Response Generic
+ */
+export type BlockbookResponse<T> = T
+export const asBlockbookResponse = <T>(asT: Cleaner<T>): Cleaner<T> => raw => {
+  const errResponse = asMaybe(asBlockbookErrorResponse)(raw)
+
+  if (errResponse != null)
+    throw new Error(`Blockbook Error: ${errResponse.error.message}`)
+
+  return asT(raw)
+}
 
 // ---------------------------------------------------------------------
 // Blockbook API Messages
@@ -137,18 +165,11 @@ export const broadcastTxMessage = (
     params: { hex: transaction.signedTx }
   }
 }
-export const asBlockbookErrorResponse = asObject({
-  error: asObject({
-    message: asString
-  })
-})
-export const asBlockbookTxBroadcastSuccess = asObject({
-  result: asString
-})
 export type BroadcastTxResponse = ReturnType<typeof asBroadcastTxResponse>
-export const asBroadcastTxResponse = asEither(
-  asBlockbookErrorResponse,
-  asBlockbookTxBroadcastSuccess
+export const asBroadcastTxResponse = asBlockbookResponse(
+  asObject({
+    result: asString
+  })
 )
 
 /**

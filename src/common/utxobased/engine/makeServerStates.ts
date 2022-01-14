@@ -337,10 +337,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           .then(response => {
             if (!resolved) {
               resolved = true
-              if ('error' in response) {
-                reject(response.error)
-                return
-              }
               resolve(response.result)
             }
           })
