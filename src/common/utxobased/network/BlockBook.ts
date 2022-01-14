@@ -7,14 +7,14 @@ import {
   AddresssMessageParams,
   addressUtxosMessage,
   asAddressUtxos,
-  asBlockbookTxBroadcastResponse,
+  asBroadcastTxResponse,
   asIServerInfo,
   asITransaction,
   asSubscribeAddressResponse,
   asSubscribeNewBlockResponse,
   BlockbookTask,
-  BlockbookTxBroadcastResponse,
   broadcastTxMessage,
+  BroadcastTxResponse,
   infoMessage,
   IServerInfo,
   ITransaction,
@@ -121,9 +121,7 @@ export interface BlockBook {
 
   fetchTransaction: (hash: string) => Promise<ITransaction>
 
-  broadcastTx: (
-    transaction: EdgeTransaction
-  ) => Promise<BlockbookTxBroadcastResponse>
+  broadcastTx: (transaction: EdgeTransaction) => Promise<BroadcastTxResponse>
 }
 
 interface BlockBookConfig {
@@ -265,10 +263,10 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   async function broadcastTx(
     transaction: EdgeTransaction
-  ): Promise<BlockbookTxBroadcastResponse> {
+  ): Promise<BroadcastTxResponse> {
     return await promisifyWsMessage(
       broadcastTxMessage(transaction),
-      asBlockbookTxBroadcastResponse
+      asBroadcastTxResponse
     )
   }
 

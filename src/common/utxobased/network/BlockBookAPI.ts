@@ -145,10 +145,8 @@ export const asBlockbookErrorResponse = asObject({
 export const asBlockbookTxBroadcastSuccess = asObject({
   result: asString
 })
-export type BlockbookTxBroadcastResponse = ReturnType<
-  typeof asBlockbookTxBroadcastResponse
->
-export const asBlockbookTxBroadcastResponse = asEither(
+export type BroadcastTxResponse = ReturnType<typeof asBroadcastTxResponse>
+export const asBroadcastTxResponse = asEither(
   asBlockbookErrorResponse,
   asBlockbookTxBroadcastSuccess
 )
