@@ -129,7 +129,8 @@ export const addressUtxosMessage = (account: string): BlockbookTask => {
     params: { descriptor: account }
   }
 }
-export const asAddressUtxo = asObject({
+export type BlockbookAccountUtxo = ReturnType<typeof asBlockbookAccountUtxo>
+export const asBlockbookAccountUtxo = asObject({
   txid: asString,
   vout: asNumber,
   value: asString,
@@ -141,7 +142,7 @@ export const asAddressUtxo = asObject({
   path: asOptional(asString)
 })
 export type AddressUtxosResponse = ReturnType<typeof asAddressUtxosResponse>
-export const asAddressUtxosResponse = asArray(asAddressUtxo)
+export const asAddressUtxosResponse = asArray(asBlockbookAccountUtxo)
 
 /**
  * Get Transaction
