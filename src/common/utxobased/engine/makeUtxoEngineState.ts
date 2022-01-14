@@ -31,11 +31,8 @@ import {
   ScriptTypeEnum
 } from '../keymanager/keymanager'
 import {
-  IAccountDetailsBasic,
-  ITransactionDetailsPaginationResponse
-} from '../network/BlockBook'
-import {
   addressMessage,
+  AddressResponse,
   addressUtxosMessage,
   AddressUtxosResponse,
   asAddressUtxosResponse,
@@ -994,9 +991,6 @@ interface ProcessAddressTxsArgs extends CommonArgs {
   address: string
   uri: string
 }
-
-type AddressResponse = IAccountDetailsBasic &
-  ITransactionDetailsPaginationResponse
 
 const processAddressTransactions = async (
   args: ProcessAddressTxsArgs

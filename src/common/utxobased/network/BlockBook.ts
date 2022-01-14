@@ -4,6 +4,7 @@ import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
   addressMessage,
+  AddressResponse,
   AddresssMessageParams,
   addressUtxosMessage,
   AddressUtxosResponse,
@@ -40,24 +41,6 @@ export interface IAccountDetailsBasic {
   unconfirmedTxs: number
 }
 
-interface ITransactionPaginationResponse {
-  page: number
-  totalPages: number
-  itemsOnPage: number
-}
-
-export interface ITransactionIdPaginationResponse
-  extends IAccountDetailsBasic,
-    ITransactionPaginationResponse {
-  txids: string[]
-}
-
-export interface ITransactionDetailsPaginationResponse
-  extends IAccountDetailsBasic,
-    ITransactionPaginationResponse {
-  transactions?: TransactionResponse[]
-}
-
 export type WatchAddressesCB = (
   response: SubscribeAddressResponse
 ) => void | Promise<void>
@@ -74,28 +57,10 @@ export interface BlockBook {
 
   fetchInfo: () => Promise<InfoResponse>
 
-  fetchAddress: ((
+  fetchAddress: (
     address: string,
-    params?: AddresssMessageParams & {
-      details?: 'basic'
-    }
-  ) => Promise<IAccountDetailsBasic>) &
-    ((
-      address: string,
-      params: AddresssMessageParams & {
-        details: 'txids'
-      }
-    ) => Promise<ITransactionIdPaginationResponse>) &
-    ((
-      address: string,
-      params: AddresssMessageParams & {
-        details: 'txs'
-      }
-    ) => Promise<ITransactionDetailsPaginationResponse>) &
-    ((
-      address: string,
-      params?: AddresssMessageParams
-    ) => Promise<IAccountDetailsBasic>)
+    params?: AddresssMessageParams
+  ) => Promise<AddressResponse>
 
   watchAddresses: (
     addresses: string[],
