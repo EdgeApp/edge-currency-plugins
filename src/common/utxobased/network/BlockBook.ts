@@ -149,8 +149,8 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     return await deferred.promise
   }
 
-  async function ping(): Promise<never> {
-    return await promisifyWsMessage(pingMessage())
+  async function ping(): Promise<void> {
+    await promisifyWsMessage(pingMessage())
   }
 
   async function fetchInfo(): Promise<InfoResponse> {

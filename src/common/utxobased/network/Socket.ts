@@ -51,7 +51,7 @@ interface SocketConfig {
   walletId: string
   emitter: SocketEmitter
   log: EdgeLog
-  healthCheck: () => Promise<Record<string, unknown>> // function for heartbeat, should submit task itself
+  healthCheck: () => Promise<void> // function for heartbeat, should submit task itself
   onQueueSpaceCB: OnQueueSpaceCB
 }
 
