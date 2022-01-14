@@ -17,6 +17,44 @@ export interface BlockbookTask {
   params: unknown
 }
 
+// ---------------------------------------------------------------------
+// Blockbook Types
+// ---------------------------------------------------------------------
+
+export type BlockbookTransaction = ReturnType<typeof asBlockbookTransaction>
+export const asBlockbookTransaction = asObject({
+  txid: asString,
+  hex: asString,
+  blockHeight: asNumber,
+  confirmations: asNumber,
+  blockTime: asNumber,
+  fees: asString,
+  vin: asArray(
+    asObject({
+      txid: asString,
+      sequence: asOptional(asNumber),
+      n: asNumber,
+      vout: asOptional(asNumber, -1),
+      addresses: asArray(asString),
+      isAddress: asBoolean,
+      value: asString,
+      hex: asOptional(asString)
+    })
+  ),
+  vout: asArray(
+    asObject({
+      n: asNumber,
+      value: asString,
+      addresses: asArray(asString),
+      hex: asOptional(asString)
+    })
+  )
+})
+
+// ---------------------------------------------------------------------
+// Blockbook API Messages
+// ---------------------------------------------------------------------
+
 /**
  * Ping Message
  */
@@ -86,34 +124,7 @@ export const transactionMessage = (hash: string): BlockbookTask => {
   }
 }
 export type ITransaction = ReturnType<typeof asITransaction>
-export const asITransaction = asObject({
-  txid: asString,
-  hex: asString,
-  blockHeight: asNumber,
-  confirmations: asNumber,
-  blockTime: asNumber,
-  fees: asString,
-  vin: asArray(
-    asObject({
-      txid: asString,
-      sequence: asNumber,
-      n: asNumber,
-      vout: asOptional(asNumber, -1),
-      addresses: asArray(asString),
-      isAddress: asBoolean,
-      value: asString,
-      hex: asOptional(asString)
-    })
-  ),
-  vout: asArray(
-    asObject({
-      n: asNumber,
-      value: asString,
-      addresses: asArray(asString),
-      hex: asOptional(asString)
-    })
-  )
-})
+export const asITransaction = asBlockbookTransaction
 
 /**
  * Send Transaction
@@ -164,6 +175,25 @@ export const addressMessage = (
     }
   }
 }
+export type AddressResponse = ReturnType<typeof asAddressResponse>
+export const asAddressResponse = asObject({
+  // details: basic
+  address: asString,
+  balance: asString,
+  totalReceived: asString,
+  totalSent: asString,
+  txs: asNumber,
+  unconfirmedBalance: asString,
+  unconfirmedTxs: asNumber,
+  // details: txids
+  txids: asOptional(asArray(asString), []),
+  // details: txs
+  transactions: asOptional(asArray(asBlockbookTransaction), []),
+  // Pagination (included with txids and txs requests)
+  page: asOptional(asNumber, NaN),
+  totalPages: asOptional(asNumber, NaN),
+  itemsOnPage: asOptional(asNumber, NaN)
+})
 
 /**
  * Subscribe New Block
@@ -198,5 +228,5 @@ export type SubscribeAddressResponse = ReturnType<
 >
 export const asSubscribeAddressResponse = asObject({
   address: asString,
-  tx: asITransaction
+  tx: asBlockbookTransaction
 })
