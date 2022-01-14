@@ -23,8 +23,18 @@ export interface BlockbookTask<T> {
 // Blockbook Types
 // ---------------------------------------------------------------------
 
-export type BlockbookAccountUtxo = ReturnType<typeof asBlockbookAccountUtxo>
-export const asBlockbookAccountUtxo = asObject({
+export interface BlockbookAccountUtxo {
+  txid: string
+  vout: number
+  value: string
+  confirmations?: number
+  coinbase?: boolean
+  height?: number
+  lockTime?: number
+  address?: string
+  path?: string
+}
+export const asBlockbookAccountUtxo: Cleaner<BlockbookAccountUtxo> = asObject({
   txid: asString,
   vout: asNumber,
   value: asString,
@@ -36,8 +46,31 @@ export const asBlockbookAccountUtxo = asObject({
   path: asOptional(asString)
 })
 
-export type BlockbookTransaction = ReturnType<typeof asBlockbookTransaction>
-export const asBlockbookTransaction = asObject({
+export interface BlockbookTransaction {
+  txid: string
+  hex: string
+  blockHeight: number
+  confirmations: number
+  blockTime: number
+  fees: string
+  vin: Array<{
+    txid: string
+    sequence?: number
+    n: number
+    vout: number
+    addresses: string[]
+    isAddress: boolean
+    value: string
+    hex?: string
+  }>
+  vout: Array<{
+    n: number
+    value: string
+    addresses: string[]
+    hex?: string
+  }>
+}
+export const asBlockbookTransaction: Cleaner<BlockbookTransaction> = asObject({
   txid: asString,
   hex: asString,
   blockHeight: asNumber,
@@ -208,8 +241,21 @@ export const addressMessage = (
     cleaner: asBlockbookResponse(asAddressResponse)
   }
 }
-export type AddressResponse = ReturnType<typeof asAddressResponse>
-export const asAddressResponse = asObject({
+export interface AddressResponse {
+  address: string
+  balance: string
+  totalReceived: string
+  totalSent: string
+  txs: number
+  unconfirmedBalance: string
+  unconfirmedTxs: number
+  txids: string[]
+  transactions: BlockbookTransaction[]
+  page: number
+  totalPages: number
+  itemsOnPage: number
+}
+export const asAddressResponse: Cleaner<AddressResponse> = asObject({
   // details: basic
   address: asString,
   balance: asString,
