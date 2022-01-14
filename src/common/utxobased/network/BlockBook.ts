@@ -4,6 +4,7 @@ import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
   addressMessage,
+  AddresssMessageParams,
   addressUtxosMessage,
   asAddressUtxos,
   asBlockbookTxBroadcastResponse,
@@ -14,7 +15,6 @@ import {
   BlockbookTask,
   BlockbookTxBroadcastResponse,
   broadcastTxMessage,
-  IAccountOpts,
   infoMessage,
   IServerInfo,
   ITransaction,
@@ -89,23 +89,26 @@ export interface BlockBook {
 
   fetchAddress: ((
     address: string,
-    opts?: IAccountOpts & {
+    params?: AddresssMessageParams & {
       details?: 'basic'
     }
   ) => Promise<IAccountDetailsBasic>) &
     ((
       address: string,
-      opts: IAccountOpts & {
+      params: AddresssMessageParams & {
         details: 'txids'
       }
     ) => Promise<ITransactionIdPaginationResponse>) &
     ((
       address: string,
-      opts: IAccountOpts & {
+      params: AddresssMessageParams & {
         details: 'txs'
       }
     ) => Promise<ITransactionDetailsPaginationResponse>) &
-    ((address: string, opts?: IAccountOpts) => Promise<IAccountDetailsBasic>)
+    ((
+      address: string,
+      params?: AddresssMessageParams
+    ) => Promise<IAccountDetailsBasic>)
 
   watchAddresses: (
     addresses: string[],
@@ -217,10 +220,10 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   async function fetchAddress(
     address: string,
-    opts: IAccountOpts = {}
+    params: AddresssMessageParams = {}
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    return await promisifyWsMessage(addressMessage(address, opts))
+    return await promisifyWsMessage(addressMessage(address, params))
   }
 
   async function watchBlocks(

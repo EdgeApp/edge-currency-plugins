@@ -156,7 +156,7 @@ export const asBlockbookTxBroadcastResponse = asEither(
 /**
  * Get Account Info
  */
-export interface IAccountOpts {
+export interface AddresssMessageParams {
   details?: 'basic' | 'txids' | 'txs'
   from?: number
   to?: number
@@ -165,12 +165,12 @@ export interface IAccountOpts {
 }
 export const addressMessage = (
   address: string,
-  opts: IAccountOpts = {}
+  params: AddresssMessageParams = {}
 ): BlockbookTask => {
   return {
     method: 'getAccountInfo',
     params: {
-      ...{ details: 'basic', page: 1, perPage: 100, ...opts },
+      ...{ details: 'basic', page: 1, perPage: 100, ...params },
       descriptor: address
     }
   }
