@@ -174,8 +174,10 @@ export const subscribeNewBlockMessage = (): BlockbookTask => {
     params: {}
   }
 }
-export type INewBlockResponse = ReturnType<typeof asINewBlockResponse>
-export const asINewBlockResponse = asObject({
+export type SubscribeNewBlockResponse = ReturnType<
+  typeof asSubscribeNewBlockResponse
+>
+export const asSubscribeNewBlockResponse = asObject({
   height: asNumber,
   hash: asString
 })

@@ -7,14 +7,13 @@ import {
   addressUtxosMessage,
   asAddressUtxos,
   asBlockbookTxBroadcastResponse,
-  asINewBlockResponse,
   asIServerInfo,
   asITransaction,
   asSubscribeAddressResponse,
+  asSubscribeNewBlockResponse,
   BlockbookTask,
   BlockbookTxBroadcastResponse,
   broadcastTxMessage,
-  INewBlockResponse,
   infoMessage,
   IServerInfo,
   ITransaction,
@@ -22,6 +21,7 @@ import {
   subscribeAddressesMessage,
   SubscribeAddressResponse,
   subscribeNewBlockMessage,
+  SubscribeNewBlockResponse,
   transactionMessage
 } from './BlockBookAPI'
 import Deferred from './Deferred'
@@ -233,7 +233,9 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   async function watchBlocks(
     deferredBlockSub: Deferred<unknown>
   ): Promise<void> {
-    const socketCb = async (value: INewBlockResponse): Promise<void> => {
+    const socketCb = async (
+      value: SubscribeNewBlockResponse
+    ): Promise<void> => {
       engineEmitter.emit(
         EngineEvent.BLOCK_HEIGHT_CHANGED,
         wsAddress,
@@ -243,7 +245,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.subscribe({
       ...subscribeNewBlockMessage(),
       cb: socketCb,
-      cleaner: asINewBlockResponse,
+      cleaner: asSubscribeNewBlockResponse,
       deferred: deferredBlockSub,
       subscribed: false
     })
