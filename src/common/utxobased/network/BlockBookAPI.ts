@@ -27,7 +27,7 @@ export const asBlockbookAccountUtxo = asObject({
   txid: asString,
   vout: asNumber,
   value: asString,
-  confirmations: asNumber,
+  confirmations: asOptional(asNumber),
   coinbase: asOptional(asBoolean),
   height: asOptional(asNumber),
   lockTime: asOptional(asNumber),
