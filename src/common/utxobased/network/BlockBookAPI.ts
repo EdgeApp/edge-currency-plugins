@@ -140,7 +140,8 @@ export const asAddressUtxo = asObject({
   address: asOptional(asString),
   path: asOptional(asString)
 })
-export const asAddressUtxos = asArray(asAddressUtxo)
+export type AddressUtxosResponse = ReturnType<typeof asAddressUtxosResponse>
+export const asAddressUtxosResponse = asArray(asAddressUtxo)
 
 /**
  * Get Transaction

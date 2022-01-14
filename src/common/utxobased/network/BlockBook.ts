@@ -6,7 +6,7 @@ import {
   addressMessage,
   AddresssMessageParams,
   addressUtxosMessage,
-  asAddressUtxos,
+  asAddressUtxosResponse,
   asBroadcastTxResponse,
   asIServerInfo,
   asSubscribeAddressResponse,
@@ -208,7 +208,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   async function fetchAddressUtxos(account: string): Promise<IAccountUTXO[]> {
     return await promisifyWsMessage(
       addressUtxosMessage(account),
-      asAddressUtxos
+      asAddressUtxosResponse
     )
   }
 

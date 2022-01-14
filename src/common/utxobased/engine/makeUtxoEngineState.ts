@@ -38,7 +38,7 @@ import {
 import {
   addressMessage,
   addressUtxosMessage,
-  asAddressUtxos,
+  asAddressUtxosResponse,
   asTransactionResponse,
   SubscribeAddressResponse,
   transactionMessage,
@@ -1189,7 +1189,7 @@ const processAddressUtxos = async (
     })
   return {
     ...addressUtxosMessage(address),
-    cleaner: asAddressUtxos,
+    cleaner: asAddressUtxosResponse,
     deferred
   }
 }
