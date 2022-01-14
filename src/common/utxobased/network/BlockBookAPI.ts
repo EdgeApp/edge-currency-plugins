@@ -151,8 +151,8 @@ export const transactionMessage = (hash: string): BlockbookTask => {
     params: { txid: hash }
   }
 }
-export type ITransaction = ReturnType<typeof asITransaction>
-export const asITransaction = asBlockbookTransaction
+export type TransactionResponse = ReturnType<typeof asTransactionResponse>
+export const asTransactionResponse = asBlockbookTransaction
 
 /**
  * Send Transaction

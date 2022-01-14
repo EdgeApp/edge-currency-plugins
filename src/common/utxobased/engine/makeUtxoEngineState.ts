@@ -39,10 +39,10 @@ import {
   addressMessage,
   addressUtxosMessage,
   asAddressUtxos,
-  asITransaction,
-  ITransaction,
+  asTransactionResponse,
   SubscribeAddressResponse,
-  transactionMessage
+  transactionMessage,
+  TransactionResponse
 } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
@@ -858,11 +858,11 @@ interface UpdateTransactionsArgs extends CommonArgs {
 
 const updateTransactions = (
   args: UpdateTransactionsArgs
-): WsTask<ITransaction> => {
+): WsTask<TransactionResponse> => {
   const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
-  const deferred = new Deferred<ITransaction>()
+  const deferred = new Deferred<TransactionResponse>()
   deferred.promise
-    .then(async (rawTx: ITransaction) => {
+    .then(async (rawTx: TransactionResponse) => {
       // check if raw tx is still not confirmed, if so, don't change anything
       if (rawTx.blockHeight < 1) return
       // Create new tx from raw tx
@@ -888,7 +888,7 @@ const updateTransactions = (
     })
   return {
     ...transactionMessage(txId),
-    cleaner: asITransaction,
+    cleaner: asTransactionResponse,
     deferred
   }
 }
@@ -1093,7 +1093,7 @@ const processAddressTransactions = async (
 }
 
 interface ProcessRawTxArgs extends CommonArgs {
-  tx: ITransaction
+  tx: TransactionResponse
 }
 
 const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
@@ -1274,7 +1274,7 @@ interface ProcessRawUtxoArgs extends FormatArgs {
 
 const processRawUtxo = async (
   args: ProcessRawUtxoArgs
-): Promise<WsTask<ITransaction> | undefined> => {
+): Promise<WsTask<TransactionResponse> | undefined> => {
   const {
     utxo,
     id,
@@ -1329,9 +1329,9 @@ const processRawUtxo = async (
         const [tx] = await processor.fetchTransactions({ txId: utxo.txid })
         if (tx == null) {
           const queryTime = Date.now()
-          const deferred = new Deferred<ITransaction>()
+          const deferred = new Deferred<TransactionResponse>()
           deferred.promise
-            .then((rawTx: ITransaction) => {
+            .then((rawTx: TransactionResponse) => {
               serverStates.serverScoreUp(uri, Date.now() - queryTime)
               const processedTx = processRawTx({ ...args, tx: rawTx })
               script = processedTx.hex

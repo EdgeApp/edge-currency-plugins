@@ -9,21 +9,21 @@ import {
   asAddressUtxos,
   asBroadcastTxResponse,
   asIServerInfo,
-  asITransaction,
   asSubscribeAddressResponse,
   asSubscribeNewBlockResponse,
+  asTransactionResponse,
   BlockbookTask,
   broadcastTxMessage,
   BroadcastTxResponse,
   infoMessage,
   IServerInfo,
-  ITransaction,
   pingMessage,
   subscribeAddressesMessage,
   SubscribeAddressResponse,
   subscribeNewBlockMessage,
   SubscribeNewBlockResponse,
-  transactionMessage
+  transactionMessage,
+  TransactionResponse
 } from './BlockBookAPI'
 import Deferred from './Deferred'
 import { SocketEmitter } from './MakeSocketEmitter'
@@ -54,7 +54,7 @@ export interface ITransactionIdPaginationResponse
 export interface ITransactionDetailsPaginationResponse
   extends IAccountDetailsBasic,
     ITransactionPaginationResponse {
-  transactions?: ITransaction[]
+  transactions?: TransactionResponse[]
 }
 
 interface IUTXO {
@@ -119,7 +119,7 @@ export interface BlockBook {
 
   fetchAddressUtxos: (account: string) => Promise<IAccountUTXO[]>
 
-  fetchTransaction: (hash: string) => Promise<ITransaction>
+  fetchTransaction: (hash: string) => Promise<TransactionResponse>
 
   broadcastTx: (transaction: EdgeTransaction) => Promise<BroadcastTxResponse>
 }
@@ -212,8 +212,11 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     )
   }
 
-  async function fetchTransaction(hash: string): Promise<ITransaction> {
-    return await promisifyWsMessage(transactionMessage(hash), asITransaction)
+  async function fetchTransaction(hash: string): Promise<TransactionResponse> {
+    return await promisifyWsMessage(
+      transactionMessage(hash),
+      asTransactionResponse
+    )
   }
 
   async function fetchAddress(
