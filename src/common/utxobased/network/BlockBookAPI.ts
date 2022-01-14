@@ -156,19 +156,10 @@ export const addressMessage = (
   address: string,
   opts: IAccountOpts = {}
 ): PartialTask => {
-  opts = Object.assign(
-    {},
-    {
-      details: 'basic',
-      page: 1,
-      perPage: 100
-    },
-    opts
-  )
   return {
     method: 'getAccountInfo',
     params: {
-      ...opts,
+      ...{ details: 'basic', page: 1, perPage: 100, ...opts },
       descriptor: address
     }
   }
