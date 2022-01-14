@@ -22,6 +22,19 @@ export interface BlockbookTask {
 // Blockbook Types
 // ---------------------------------------------------------------------
 
+export type BlockbookAccountUtxo = ReturnType<typeof asBlockbookAccountUtxo>
+export const asBlockbookAccountUtxo = asObject({
+  txid: asString,
+  vout: asNumber,
+  value: asString,
+  confirmations: asNumber,
+  coinbase: asOptional(asBoolean),
+  height: asOptional(asNumber),
+  lockTime: asOptional(asNumber),
+  address: asOptional(asString),
+  path: asOptional(asString)
+})
+
 export type BlockbookTransaction = ReturnType<typeof asBlockbookTransaction>
 export const asBlockbookTransaction = asObject({
   txid: asString,
@@ -129,18 +142,6 @@ export const addressUtxosMessage = (account: string): BlockbookTask => {
     params: { descriptor: account }
   }
 }
-export type BlockbookAccountUtxo = ReturnType<typeof asBlockbookAccountUtxo>
-export const asBlockbookAccountUtxo = asObject({
-  txid: asString,
-  vout: asNumber,
-  value: asString,
-  confirmations: asNumber,
-  coinbase: asOptional(asBoolean),
-  height: asOptional(asNumber),
-  lockTime: asOptional(asNumber),
-  address: asOptional(asString),
-  path: asOptional(asString)
-})
 export type AddressUtxosResponse = ReturnType<typeof asAddressUtxosResponse>
 export const asAddressUtxosResponse = asArray(asBlockbookAccountUtxo)
 
