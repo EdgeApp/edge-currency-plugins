@@ -157,7 +157,7 @@ export const asBlockbookTxBroadcastResponse = asEither(
  * Get Account Info
  */
 export interface IAccountOpts {
-  details?: string
+  details?: 'basic' | 'txids' | 'txs'
   from?: number
   to?: number
   page?: number
