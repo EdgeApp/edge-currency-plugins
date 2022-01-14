@@ -11,6 +11,7 @@ import {
   asINewTransactionResponse,
   asIServerInfo,
   asITransaction,
+  BlockbookTask,
   BlockbookTxBroadcastResponse,
   broadcastTxMessage,
   INewBlockResponse,
@@ -18,7 +19,6 @@ import {
   infoMessage,
   IServerInfo,
   ITransaction,
-  PartialTask,
   pingMessage,
   subscribeAddressesMessage,
   subscribeNewBlockMessage,
@@ -195,7 +195,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   }
 
   async function promisifyWsMessage<T>(
-    message: PartialTask,
+    message: BlockbookTask,
     cleaner?: Cleaner<T>
   ): Promise<T> {
     const deferred = new Deferred<T>()

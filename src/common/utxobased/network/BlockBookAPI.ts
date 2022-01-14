@@ -12,7 +12,7 @@ import { EdgeTransaction } from 'edge-core-js/types'
 /**
  * Websocket Task
  */
-export interface PartialTask {
+export interface BlockbookTask {
   method: string
   params: unknown
 }
@@ -20,7 +20,7 @@ export interface PartialTask {
 /**
  * Ping Message
  */
-export const pingMessage = (): PartialTask => {
+export const pingMessage = (): BlockbookTask => {
   return {
     method: 'ping',
     params: undefined
@@ -30,7 +30,7 @@ export const pingMessage = (): PartialTask => {
 /**
  * Get Info
  */
-export const infoMessage = (): PartialTask => {
+export const infoMessage = (): BlockbookTask => {
   return {
     method: 'getInfo',
     params: {}
@@ -57,7 +57,7 @@ export const asIServerInfo = asObject({
 /**
  * Get Account UTXO
  */
-export const addressUtxosMessage = (account: string): PartialTask => {
+export const addressUtxosMessage = (account: string): BlockbookTask => {
   return {
     method: 'getAccountUtxo',
     params: { descriptor: account }
@@ -79,7 +79,7 @@ export const asAddressUtxos = asArray(asAddressUtxo)
 /**
  * Get Transaction
  */
-export const transactionMessage = (hash: string): PartialTask => {
+export const transactionMessage = (hash: string): BlockbookTask => {
   return {
     method: 'getTransaction',
     params: { txid: hash }
@@ -120,7 +120,7 @@ export const asITransaction = asObject({
  */
 export const broadcastTxMessage = (
   transaction: EdgeTransaction
-): PartialTask => {
+): BlockbookTask => {
   return {
     method: 'sendTransaction',
     params: { hex: transaction.signedTx }
@@ -155,7 +155,7 @@ interface IAccountOpts {
 export const addressMessage = (
   address: string,
   opts: IAccountOpts = {}
-): PartialTask => {
+): BlockbookTask => {
   return {
     method: 'getAccountInfo',
     params: {
@@ -168,7 +168,7 @@ export const addressMessage = (
 /**
  * Subscribe New Block
  */
-export const subscribeNewBlockMessage = (): PartialTask => {
+export const subscribeNewBlockMessage = (): BlockbookTask => {
   return {
     method: 'subscribeNewBlock',
     params: {}
@@ -183,7 +183,9 @@ export const asINewBlockResponse = asObject({
 /**
  * Subscribe Address
  */
-export const subscribeAddressesMessage = (addresses: string[]): PartialTask => {
+export const subscribeAddressesMessage = (
+  addresses: string[]
+): BlockbookTask => {
   return {
     method: 'subscribeAddresses',
     params: { addresses }
