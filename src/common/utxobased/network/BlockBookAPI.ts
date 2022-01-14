@@ -13,9 +13,10 @@ import { EdgeTransaction } from 'edge-core-js/types'
 /**
  * Websocket Task
  */
-export interface BlockbookTask {
+export interface BlockbookTask<T> {
   method: string
   params: unknown
+  cleaner: Cleaner<T>
 }
 
 // ---------------------------------------------------------------------
@@ -99,10 +100,11 @@ export const asBlockbookResponse = <T>(asT: Cleaner<T>): Cleaner<T> => raw => {
 /**
  * Ping Message
  */
-export const pingMessage = (): BlockbookTask => {
+export const pingMessage = (): BlockbookTask<PingResponse> => {
   return {
     method: 'ping',
-    params: undefined
+    params: undefined,
+    cleaner: asBlockbookResponse(asPingResponse)
   }
 }
 export type PingResponse = ReturnType<typeof asPingResponse>
@@ -111,10 +113,11 @@ export const asPingResponse = asObject({})
 /**
  * Get Info
  */
-export const infoMessage = (): BlockbookTask => {
+export const infoMessage = (): BlockbookTask<InfoResponse> => {
   return {
     method: 'getInfo',
-    params: {}
+    params: {},
+    cleaner: asBlockbookResponse(asInfoResponse)
   }
 }
 export type InfoResponse = ReturnType<typeof asInfoResponse>
@@ -138,10 +141,13 @@ export const asInfoResponse = asObject({
 /**
  * Get Account UTXO
  */
-export const addressUtxosMessage = (account: string): BlockbookTask => {
+export const addressUtxosMessage = (
+  account: string
+): BlockbookTask<AddressUtxosResponse> => {
   return {
     method: 'getAccountUtxo',
-    params: { descriptor: account }
+    params: { descriptor: account },
+    cleaner: asBlockbookResponse(asAddressUtxosResponse)
   }
 }
 export type AddressUtxosResponse = ReturnType<typeof asAddressUtxosResponse>
@@ -150,10 +156,13 @@ export const asAddressUtxosResponse = asArray(asBlockbookAccountUtxo)
 /**
  * Get Transaction
  */
-export const transactionMessage = (hash: string): BlockbookTask => {
+export const transactionMessage = (
+  hash: string
+): BlockbookTask<TransactionResponse> => {
   return {
     method: 'getTransaction',
-    params: { txid: hash }
+    params: { txid: hash },
+    cleaner: asBlockbookResponse(asTransactionResponse)
   }
 }
 export type TransactionResponse = ReturnType<typeof asTransactionResponse>
@@ -164,18 +173,17 @@ export const asTransactionResponse = asBlockbookTransaction
  */
 export const broadcastTxMessage = (
   transaction: EdgeTransaction
-): BlockbookTask => {
+): BlockbookTask<BroadcastTxResponse> => {
   return {
     method: 'sendTransaction',
-    params: { hex: transaction.signedTx }
+    params: { hex: transaction.signedTx },
+    cleaner: asBlockbookResponse(asBroadcastTxResponse)
   }
 }
 export type BroadcastTxResponse = ReturnType<typeof asBroadcastTxResponse>
-export const asBroadcastTxResponse = asBlockbookResponse(
-  asObject({
-    result: asString
-  })
-)
+export const asBroadcastTxResponse = asObject({
+  result: asString
+})
 
 /**
  * Get Account Info
@@ -190,13 +198,14 @@ export interface AddresssMessageParams {
 export const addressMessage = (
   address: string,
   params: AddresssMessageParams = {}
-): BlockbookTask => {
+): BlockbookTask<AddressResponse> => {
   return {
     method: 'getAccountInfo',
     params: {
       ...{ details: 'basic', page: 1, perPage: 100, ...params },
       descriptor: address
-    }
+    },
+    cleaner: asBlockbookResponse(asAddressResponse)
   }
 }
 export type AddressResponse = ReturnType<typeof asAddressResponse>
@@ -222,10 +231,11 @@ export const asAddressResponse = asObject({
 /**
  * Subscribe New Block
  */
-export const subscribeNewBlockMessage = (): BlockbookTask => {
+export const subscribeNewBlockMessage = (): BlockbookTask<SubscribeNewBlockResponse> => {
   return {
     method: 'subscribeNewBlock',
-    params: {}
+    params: {},
+    cleaner: asBlockbookResponse(asSubscribeNewBlockResponse)
   }
 }
 export type SubscribeNewBlockResponse = ReturnType<
@@ -241,10 +251,11 @@ export const asSubscribeNewBlockResponse = asObject({
  */
 export const subscribeAddressesMessage = (
   addresses: string[]
-): BlockbookTask => {
+): BlockbookTask<SubscribeAddressResponse> => {
   return {
     method: 'subscribeAddresses',
-    params: { addresses }
+    params: { addresses },
+    cleaner: asBlockbookResponse(asSubscribeAddressResponse)
   }
 }
 export type SubscribeAddressResponse = ReturnType<

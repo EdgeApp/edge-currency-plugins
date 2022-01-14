@@ -35,8 +35,6 @@ import {
   AddressResponse,
   addressUtxosMessage,
   AddressUtxosResponse,
-  asAddressUtxosResponse,
-  asTransactionResponse,
   BlockbookAccountUtxo,
   SubscribeAddressResponse,
   transactionMessage,
@@ -886,7 +884,6 @@ const updateTransactions = (
     })
   return {
     ...transactionMessage(txId),
-    cleaner: asTransactionResponse,
     deferred
   }
 }
@@ -1184,7 +1181,6 @@ const processAddressUtxos = async (
     })
   return {
     ...addressUtxosMessage(address),
-    cleaner: asAddressUtxosResponse,
     deferred
   }
 }

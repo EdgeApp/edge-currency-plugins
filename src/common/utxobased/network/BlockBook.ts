@@ -1,4 +1,3 @@
-import { Cleaner } from 'cleaners'
 import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
@@ -8,12 +7,6 @@ import {
   AddresssMessageParams,
   addressUtxosMessage,
   AddressUtxosResponse,
-  asAddressUtxosResponse,
-  asBroadcastTxResponse,
-  asInfoResponse,
-  asSubscribeAddressResponse,
-  asSubscribeNewBlockResponse,
-  asTransactionResponse,
   BlockbookTask,
   broadcastTxMessage,
   BroadcastTxResponse,
@@ -140,12 +133,9 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.onQueueSpace(cb)
   }
 
-  async function promisifyWsMessage<T>(
-    message: BlockbookTask,
-    cleaner?: Cleaner<T>
-  ): Promise<T> {
+  async function promisifyWsMessage<T>(message: BlockbookTask<T>): Promise<T> {
     const deferred = new Deferred<T>()
-    socket.submitTask({ ...message, cleaner, deferred })
+    socket.submitTask<T>({ ...message, deferred })
     return await deferred.promise
   }
 
@@ -154,30 +144,23 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   }
 
   async function fetchInfo(): Promise<InfoResponse> {
-    return await promisifyWsMessage(infoMessage(), asInfoResponse)
+    return await promisifyWsMessage(infoMessage())
   }
 
   async function fetchAddressUtxos(
     account: string
   ): Promise<AddressUtxosResponse> {
-    return await promisifyWsMessage(
-      addressUtxosMessage(account),
-      asAddressUtxosResponse
-    )
+    return await promisifyWsMessage(addressUtxosMessage(account))
   }
 
   async function fetchTransaction(hash: string): Promise<TransactionResponse> {
-    return await promisifyWsMessage(
-      transactionMessage(hash),
-      asTransactionResponse
-    )
+    return await promisifyWsMessage(transactionMessage(hash))
   }
 
   async function fetchAddress(
     address: string,
     params: AddresssMessageParams = {}
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
+  ): Promise<AddressResponse> {
     return await promisifyWsMessage(addressMessage(address, params))
   }
 
@@ -196,7 +179,6 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.subscribe({
       ...subscribeNewBlockMessage(),
       cb: socketCb,
-      cleaner: asSubscribeNewBlockResponse,
       deferred: deferredBlockSub,
       subscribed: false
     })
@@ -212,7 +194,6 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.subscribe({
       ...subscribeAddressesMessage(addresses),
       cb: socketCb,
-      cleaner: asSubscribeAddressResponse,
       deferred: deferredAddressSub,
       subscribed: false
     })
@@ -221,10 +202,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   async function broadcastTx(
     transaction: EdgeTransaction
   ): Promise<BroadcastTxResponse> {
-    return await promisifyWsMessage(
-      broadcastTxMessage(transaction),
-      asBroadcastTxResponse
-    )
+    return await promisifyWsMessage(broadcastTxMessage(transaction))
   }
 
   return instance
