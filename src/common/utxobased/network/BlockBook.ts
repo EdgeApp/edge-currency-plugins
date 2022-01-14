@@ -24,16 +24,6 @@ import Deferred from './Deferred'
 import { SocketEmitter } from './MakeSocketEmitter'
 import { makeSocket, OnQueueSpaceCB } from './Socket'
 
-export interface IAccountDetailsBasic {
-  address: string
-  balance: string
-  totalReceived: string
-  totalSent: string
-  txs: number
-  unconfirmedBalance: string
-  unconfirmedTxs: number
-}
-
 export type WatchAddressesCB = (
   response: SubscribeAddressResponse
 ) => void | Promise<void>
@@ -167,13 +157,11 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   async function watchBlocks(
     deferredBlockSub: Deferred<unknown>
   ): Promise<void> {
-    const socketCb = async (
-      value: SubscribeNewBlockResponse
-    ): Promise<void> => {
+    const socketCb = async (res: SubscribeNewBlockResponse): Promise<void> => {
       engineEmitter.emit(
         EngineEvent.BLOCK_HEIGHT_CHANGED,
         wsAddress,
-        value.height
+        res.height
       )
     }
     socket.subscribe({
@@ -188,8 +176,8 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     addresses: string[],
     deferredAddressSub: Deferred<unknown>
   ): void {
-    const socketCb = async (value: SubscribeAddressResponse): Promise<void> => {
-      engineEmitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, wsAddress, value)
+    const socketCb = async (res: SubscribeAddressResponse): Promise<void> => {
+      engineEmitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, wsAddress, res)
     }
     socket.subscribe({
       ...subscribeAddressesMessage(addresses),
