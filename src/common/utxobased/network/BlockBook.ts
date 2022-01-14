@@ -8,7 +8,7 @@ import {
   addressUtxosMessage,
   asAddressUtxosResponse,
   asBroadcastTxResponse,
-  asIServerInfo,
+  asInfoResponse,
   asSubscribeAddressResponse,
   asSubscribeNewBlockResponse,
   asTransactionResponse,
@@ -16,7 +16,7 @@ import {
   broadcastTxMessage,
   BroadcastTxResponse,
   infoMessage,
-  IServerInfo,
+  InfoResponse,
   pingMessage,
   subscribeAddressesMessage,
   SubscribeAddressResponse,
@@ -85,7 +85,7 @@ export interface BlockBook {
 
   onQueueSpace: (cb: OnQueueSpaceCB) => void
 
-  fetchInfo: () => Promise<IServerInfo>
+  fetchInfo: () => Promise<InfoResponse>
 
   fetchAddress: ((
     address: string,
@@ -201,8 +201,8 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     return await promisifyWsMessage(pingMessage())
   }
 
-  async function fetchInfo(): Promise<IServerInfo> {
-    return await promisifyWsMessage(infoMessage(), asIServerInfo)
+  async function fetchInfo(): Promise<InfoResponse> {
+    return await promisifyWsMessage(infoMessage(), asInfoResponse)
   }
 
   async function fetchAddressUtxos(account: string): Promise<IAccountUTXO[]> {

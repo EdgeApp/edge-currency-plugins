@@ -115,8 +115,8 @@ export const infoMessage = (): BlockbookTask => {
     params: {}
   }
 }
-export type IServerInfo = ReturnType<typeof asIServerInfo>
-export const asIServerInfo = asObject({
+export type InfoResponse = ReturnType<typeof asInfoResponse>
+export const asInfoResponse = asObject({
   name: asString,
   shortcut: asString,
   decimals: asNumber,
