@@ -149,19 +149,16 @@ export function makeUtxoEngineState(
     }
   }
 
-  const engineStarted = false
   const lock = new AwaitLock()
 
   const serverStates = makeServerStates({
-    pluginInfo,
-    engineStarted,
-    walletInfo,
-    pluginState,
     engineEmitter: emitter,
-    log
+    log,
+    pluginInfo,
+    pluginState,
+    walletInfo
   })
   const commonArgs: CommonArgs = {
-    engineStarted,
     pluginInfo,
     walletInfo,
     walletTools,
@@ -439,7 +436,6 @@ export function makeUtxoEngineState(
 }
 
 interface CommonArgs {
-  engineStarted: boolean
   pluginInfo: PluginInfo
   walletInfo: NumbWalletInfo
   walletTools: UTXOPluginWalletTools
