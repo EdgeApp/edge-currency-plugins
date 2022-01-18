@@ -24,7 +24,7 @@ interface ProcessorConfig {
 
 interface SaveTransactionArgs {
   tx: IProcessorTransaction
-  scriptPubkey?: string
+  scriptPubkeys?: string[]
 }
 
 interface FetchTransactionArgs {
@@ -270,7 +270,7 @@ export async function makeProcessor(
     async saveTransaction(
       args: SaveTransactionArgs
     ): Promise<IProcessorTransaction> {
-      const { scriptPubkey, tx } = args
+      const { scriptPubkeys = [], tx } = args
       return await baselets.tx(async tables => {
         // Check if the transaction already exists
         const processorTx = await tables.txById
@@ -287,7 +287,7 @@ export async function makeProcessor(
         const transaction = processorTx ?? tx
 
         // Mark the used inputs with the provided script pubkey
-        if (scriptPubkey != null) {
+        for (const scriptPubkey of scriptPubkeys) {
           for (const input of transaction.inputs) {
             if (input.scriptPubkey === scriptPubkey) {
               if (!transaction.ourIns.includes(input.n.toString())) {
