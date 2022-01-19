@@ -43,6 +43,75 @@ export const bitcoincash: FixtureType = {
         metadata: {}
       }
     ],
+    'Ren Bridge Legacy Gateway address': [
+      'bitcoincash://1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu',
+      {
+        publicAddress: 'qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a',
+        legacyAddress: '1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge Legacy Gateway address mixed caps': [
+      'bitCoinCash://1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu',
+      {
+        publicAddress: 'qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a',
+        legacyAddress: '1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge new Gateway address': [
+      'bitcoincash://qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a',
+      {
+        publicAddress: 'qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge mixed caps Gateway address with address prefix': [
+      'bitcoinCash://bitcoincash:pzyt5lcqp4u4wcwpwl8f8eq0hzpdnntzuy2h3nnalf',
+      {
+        publicAddress: 'pzyt5lcqp4u4wcwpwl8f8eq0hzpdnntzuy2h3nnalf',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge mixed caps Gateway address w/o address prefix': [
+      'bitcoinCash://pzyt5lcqp4u4wcwpwl8f8eq0hzpdnntzuy2h3nnalf',
+      {
+        publicAddress: 'pzyt5lcqp4u4wcwpwl8f8eq0hzpdnntzuy2h3nnalf',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge weird caps Gateway address': [
+      'BiTcOiNcAsH://bitcoincash:pzyt5lcqp4u4wcwpwl8f8eq0hzpdnntzuy2h3nnalf',
+      {
+        publicAddress: 'pzyt5lcqp4u4wcwpwl8f8eq0hzpdnntzuy2h3nnalf',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge new Gateway address with amount, label & message': [
+      'bitcoincash://qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a?amount=1234.56789&label=Johnny%20Bitcoincash&message=Hello%20World,%20I%20miss%20you%20!',
+      {
+        publicAddress: 'qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a',
+        metadata: {
+          name: 'Johnny Bitcoincash',
+          notes: 'Hello World, I miss you !',
+          gateway: true
+        },
+        nativeAmount: '123456789000',
+        currencyCode: 'BCH'
+      }
+    ],
     'uri address with amount': [
       'bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a?amount=12345.6789',
       {

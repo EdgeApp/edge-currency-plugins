@@ -1,10 +1,9 @@
-import {
-  EdgeEncodeUri,
-  EdgeParsedUri,
-  EdgeWalletInfo
-} from 'edge-core-js/types'
+import { EdgeEncodeUri, EdgeWalletInfo } from 'edge-core-js/types'
 
-import { EncodeUriMetadata } from '../../../../src/common/plugin/types'
+import {
+  EncodeUriMetadata,
+  ExtendedParseUri
+} from '../../../../src/common/plugin/types'
 
 export interface FixtureType {
   pluginId: string
@@ -16,7 +15,7 @@ export interface FixtureType {
   'invalid key name': EdgeWalletInfo
   'invalid wallet type': EdgeWalletInfo
   parseUri: {
-    [testName: string]: [string, EdgeParsedUri] | [string]
+    [testName: string]: [string, ExtendedParseUri] | [string]
   }
   encodeUri: {
     [testName: string]:

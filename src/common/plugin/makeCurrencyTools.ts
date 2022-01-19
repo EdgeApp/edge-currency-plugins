@@ -5,9 +5,7 @@ import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
-  EdgeMetadata,
   EdgeMetaToken,
-  EdgeParsedUri,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -20,7 +18,7 @@ import {
   asPrivateKey,
   PrivateKey
 } from '../utxobased/keymanager/cleaners'
-import { EncodeUriMetadata, PluginInfo } from './types'
+import { EncodeUriMetadata, ExtendedParseUri, PluginInfo } from './types'
 import { getFormatsForNetwork } from './utils'
 
 /**
@@ -59,7 +57,12 @@ export function makeCurrencyTools(
       return numbWalletInfo.keys.publicKey
     },
 
-    async parseUri(uri: string): Promise<EdgeParsedUri> {
+    async parseUri(uri: string): Promise<ExtendedParseUri> {
+      const isGateway = uri
+        .toLocaleLowerCase()
+        .startsWith(`${coinInfo.name}://`)
+      if (isGateway) uri = uri.replace('//', '')
+
       const uriObj = urlParse(uri, {}, true)
       const protocol = uriObj.protocol.replace(':', '').toLowerCase()
 
@@ -79,7 +82,7 @@ export function makeCurrencyTools(
       if (pathname === '' && query.r == null) throw new Error('InvalidUriError')
 
       // Create the returned object
-      const parsedUri: EdgeParsedUri = {}
+      const parsedUri: ExtendedParseUri = {}
       // Parse the pathname and add it to the result object
       if (pathname !== '') {
         const parsedPath = parsePathname({
@@ -92,11 +95,12 @@ export function makeCurrencyTools(
       }
 
       // Assign the query params to the parsedUri object
-      const metadata: EdgeMetadata = {}
+      const metadata: ExtendedParseUri['metadata'] = {}
       if (query.label != null) metadata.name = query.label
       if (query.message != null) metadata.notes = query.message
       if (query.category != null) metadata.category = query.category
       if (query.r != null) parsedUri.paymentProtocolUrl = query.r
+      if (isGateway) metadata.gateway = true
       Object.assign(parsedUri, { metadata })
 
       // Get amount in native denomination if exists

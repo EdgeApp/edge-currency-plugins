@@ -55,6 +55,65 @@ export const bitcoin: FixtureType = {
         metadata: {}
       }
     ],
+    'Ren Bridge p2wpkhp2sh Gateway address': [
+      'bitcoin://3Lx24A66XeL1HtegyNoku77qvNBCbEqePj',
+      {
+        publicAddress: '3Lx24A66XeL1HtegyNoku77qvNBCbEqePj',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge p2pkh Gateway address': [
+      'bitcoin://1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX',
+      {
+        publicAddress: '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge p2wpkhp2sh Gateway address mixed caps': [
+      'bitCoin://3Lx24A66XeL1HtegyNoku77qvNBCbEqePj',
+      {
+        publicAddress: '3Lx24A66XeL1HtegyNoku77qvNBCbEqePj',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge p2pkh Gateway address mixed caps': [
+      'Bitcoin://1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX',
+      {
+        publicAddress: '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
+    'Ren Bridge p2pkh Gateway address with amount, label & message': [
+      'bitcoin://1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX?amount=1234.56789&label=Johnny%20Bitcoin&message=Hello%20World,%20I%20miss%20you%20!',
+      {
+        publicAddress: '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX',
+        metadata: {
+          name: 'Johnny Bitcoin',
+          notes: 'Hello World, I miss you !',
+          gateway: true
+        },
+        nativeAmount: '123456789000',
+        currencyCode: 'BTC'
+      }
+    ],
+    'Ren Bridge bech32 Gateway address': [
+      'bitcoin://bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3',
+      {
+        publicAddress:
+          'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3',
+        metadata: {
+          gateway: true
+        }
+      }
+    ],
     'uri address with amount': [
       'bitcoin:1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX?amount=12345.6789',
       {
