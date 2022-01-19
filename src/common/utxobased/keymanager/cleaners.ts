@@ -102,7 +102,7 @@ export const getSupportedFormats = (
 /**
  * A cleaner that desensitizes the walletInfo object, excluding sensitive
  * keys (seed/mnemonic, sync key, data key, etc). By using this object type
- * internally within the plugin, we can minimize risk.
+ * internally within the plugin, we can minimize risk of leaking sensitive data.
  *
  * It also includes internal derived data (publicKey, format, supportedFormats, etc).
  * This derived data is to be used internally within the plugin and saved to disk (publicKey).
@@ -144,8 +144,8 @@ export const asNumbWalletInfo = (
 
       // Search the engineInfo's formats array for the first format that exists
       // in the publicKey data.
-      // If there is not defined formats in the engineInfo, fallback to the first
-      // format in the publicKey after sorting alphabetically.
+      // If there are no defined formats in the engineInfo, then fallback to the
+      // first format in the publicKey after sorting alphabetically.
       const format =
         (engineInfo.formats != null && engineInfo.formats.length > 0
           ? engineInfo.formats.find(format => formats.includes(format))
