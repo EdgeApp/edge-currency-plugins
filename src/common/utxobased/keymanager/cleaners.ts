@@ -109,12 +109,15 @@ export const getSupportedFormats = (
  *
  * The `walletFormats` field is a list of formats from which to derive
  * extended-keys for the wallet.
+ *
+ * The `primaryFormat` field is the default format from which to derive
+ * addresses from.
  */
 export interface NumbWalletInfo {
   id: string
   type: string
   keys: {
-    format: CurrencyFormat
+    primaryFormat: CurrencyFormat
     walletFormats: CurrencyFormat[]
     publicKey: PublicKey
   }
@@ -149,7 +152,7 @@ export const asNumbWalletInfo = (
       // in the publicKey data.
       // If there are no defined formats in the engineInfo, then fallback to the
       // first format in the publicKey after sorting alphabetically.
-      const format =
+      const primaryFormat =
         (engineInfo.formats != null && engineInfo.formats.length > 0
           ? engineInfo.formats.find(format => walletFormats.includes(format))
           : undefined) ??
@@ -159,7 +162,7 @@ export const asNumbWalletInfo = (
         id,
         type,
         keys: {
-          format,
+          primaryFormat,
           walletFormats,
           publicKey
         }
@@ -178,7 +181,7 @@ export const asNumbWalletInfo = (
         id,
         type,
         keys: {
-          format: privateKey.format,
+          primaryFormat: privateKey.format,
           walletFormats,
           publicKey: { publicKeys: publicKey }
         }

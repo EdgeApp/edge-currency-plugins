@@ -295,7 +295,9 @@ export function makeUtxoEngineState(
     },
 
     async getFreshAddress(branch = 0): Promise<EdgeFreshAddress> {
-      const walletPurpose = currencyFormatToPurposeType(walletInfo.keys.format)
+      const walletPurpose = currencyFormatToPurposeType(
+        walletInfo.keys.primaryFormat
+      )
       if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
         const { address: publicAddress } = await internalGetFreshAddress({
           ...commonArgs,
@@ -344,7 +346,7 @@ export function makeUtxoEngineState(
         engineInfo: commonArgs.pluginInfo.engineInfo,
         processor: commonArgs.processor,
         taskCache: commonArgs.taskCache,
-        format: walletInfo.keys.format,
+        format: walletInfo.keys.primaryFormat,
         script
       })
       return {

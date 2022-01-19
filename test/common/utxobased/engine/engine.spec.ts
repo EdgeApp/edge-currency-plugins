@@ -462,7 +462,7 @@ for (const fixture of fixtures) {
       assert(dataDump.walletId === id, 'walletId')
       assert(dataDump.walletType === WALLET_TYPE, 'walletType')
       assert(
-        dataDump.data.walletInfo.walletFormat === WALLET_FORMAT,
+        dataDump.data.walletInfo.primaryFormat === WALLET_FORMAT,
         'walletFormat'
       )
     })
