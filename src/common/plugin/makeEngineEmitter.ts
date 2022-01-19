@@ -1,4 +1,8 @@
-import { EdgeTransaction, EdgeTxidMap } from 'edge-core-js/types'
+import {
+  EdgeCurrencyEngineCallbacks,
+  EdgeTransaction,
+  EdgeTxidMap
+} from 'edge-core-js/types'
 import { EventEmitter } from 'events'
 
 import { INewTransactionResponse } from '../utxobased/network/BlockBookAPI'
@@ -82,4 +86,23 @@ export enum EngineEvent {
   CONNECTION_OPEN = 'connection:open',
   CONNECTION_CLOSE = 'connection:close',
   CONNECTION_TIMER = 'connection:timer'
+}
+
+export const makeEngineEmitter = (
+  callbacks: EdgeCurrencyEngineCallbacks
+): EngineEmitter => {
+  const emitter = new EngineEmitter()
+
+  emitter.on(EngineEvent.TRANSACTIONS_CHANGED, callbacks.onTransactionsChanged)
+  emitter.on(EngineEvent.WALLET_BALANCE_CHANGED, callbacks.onBalanceChanged)
+  emitter.on(
+    EngineEvent.BLOCK_HEIGHT_CHANGED,
+    (_uri: string, height: number) => {
+      callbacks.onBlockHeightChanged(height)
+    }
+  )
+  emitter.on(EngineEvent.ADDRESSES_CHECKED, callbacks.onAddressesChecked)
+  emitter.on(EngineEvent.TXIDS_CHANGED, callbacks.onTxidsChanged)
+
+  return emitter
 }
