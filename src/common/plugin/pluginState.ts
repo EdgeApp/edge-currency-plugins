@@ -8,14 +8,19 @@ import { makeMemlet } from 'memlet'
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
 import { asServerInfoCache, ServerScores } from './serverScores'
 
+// Info server endpoint to getting ServerListInfo data
 const serverListInfoUrl = 'https://info1.edge.app/v1/blockBook/'
+// The filename for ServerInfoCache data (see serverScores.ts)
+// Perhaps this should be in serverScores.ts file, but that'll take some refactoring
+const SERVER_CACHE_FILE = 'serverCache.json'
+
+// Normalizes a URL to always be a websocket URL
 const asWebsocketUrl = (raw: unknown): string => {
   const url = new URL(asString(raw))
   return `wss://${url.host}/websocket`
 }
+// ServerListInfo data structure from info server and saved to disk
 const asServerListInfo = asObject(asEither(asArray(asWebsocketUrl), asNull))
-
-const SERVER_CACHE_FILE = 'serverCache.json'
 
 /** A JSON object (as opposed to an array or primitive). */
 interface JsonObject {
