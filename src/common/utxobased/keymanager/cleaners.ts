@@ -91,9 +91,9 @@ export const getSupportedFormats = (
     case 'bip44':
       return ['bip44']
     case 'bip49':
-      return ['bip49', 'bip84']
+      return ['bip49']
     case 'bip84':
-      return ['bip49', 'bip84']
+      return ['bip84']
     default:
       throw new Error(`Unsupported format ${format}`)
   }
