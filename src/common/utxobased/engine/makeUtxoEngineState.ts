@@ -95,7 +95,7 @@ export function makeUtxoEngineState(
     pluginState
   } = config
 
-  const { supportedFormats } = walletInfo.keys
+  const { walletFormats } = walletInfo.keys
 
   const taskCache: TaskCache = {
     addressWatching: false,
@@ -172,7 +172,7 @@ export function makeUtxoEngineState(
     io: config.io,
     log,
     serverStates,
-    supportedFormats,
+    walletFormats,
     lock
   }
 
@@ -238,7 +238,7 @@ export function makeUtxoEngineState(
   // processed by the processor. This happens only once before any call to
   // setLookAhead.
   const initializeAddressSubscriptions = async (): Promise<void> => {
-    for (const format of supportedFormats) {
+    for (const format of walletFormats) {
       const branches = getFormatSupportedBranches(format)
       for (const branch of branches) {
         const addressesToSubscribe = new Set<string>()
@@ -404,7 +404,7 @@ export function makeUtxoEngineState(
 
     async loadWifs(wifs: string[]) {
       for (const wif of wifs) {
-        for (const format of supportedFormats) {
+        for (const format of walletFormats) {
           const changePath: ChangePath = {
             format,
             changeIndex: 0
@@ -450,7 +450,7 @@ interface CommonArgs {
   io: EdgeIo
   log: EdgeLog
   serverStates: ServerStates
-  supportedFormats: CurrencyFormat[]
+  walletFormats: CurrencyFormat[]
   lock: AwaitLock
 }
 
@@ -506,7 +506,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
     pluginInfo: { engineInfo },
     lock,
     processor,
-    supportedFormats,
+    walletFormats,
     walletTools
   } = common
 
@@ -515,7 +515,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
   await lock.acquireAsync()
 
   try {
-    for (const format of supportedFormats) {
+    for (const format of walletFormats) {
       const branches = getFormatSupportedBranches(format)
       for (const branch of branches) {
         await deriveKeys({ format, changeIndex: branch })

@@ -58,11 +58,7 @@ export async function makeUtxoEngine(
   const asMaybeCurrencyPrivateKey = asMaybe(asCurrencyPrivateKey)
   // This walletInfo is desensitized (numb) and should be passed around over the original walletInfo
   const walletInfo = asNumbWalletInfo(pluginInfo)(sensitiveWalletInfo)
-  const {
-    publicKey,
-    supportedFormats: walletFormatsSupported,
-    format: walletFormat
-  } = walletInfo.keys
+  const { format: walletFormat, publicKey, walletFormats } = walletInfo.keys
 
   if (
     engineInfo.formats == null ||
@@ -172,9 +168,9 @@ export async function makeUtxoEngine(
         walletType: walletInfo.type,
         data: {
           walletInfo: {
+            pluginType: currencyInfo.pluginId,
             walletFormat,
-            walletFormatsSupported,
-            pluginType: currencyInfo.pluginId
+            walletFormats
           },
           processorState: await processor.dumpData(),
           pluginState: pluginState.dumpData()
@@ -537,7 +533,7 @@ export async function makeUtxoEngine(
         type: walletInfo.type,
         keys: {
           format: walletInfo.keys.format,
-          supportedFormats: allFormats,
+          walletFormats: allFormats,
           publicKey: {
             publicKeys: {}
           }

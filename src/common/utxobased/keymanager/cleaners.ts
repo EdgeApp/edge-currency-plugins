@@ -104,15 +104,18 @@ export const getSupportedFormats = (
  * keys (seed/mnemonic, sync key, data key, etc). By using this object type
  * internally within the plugin, we can minimize risk of leaking sensitive data.
  *
- * It also includes internal derived data (publicKey, format, supportedFormats, etc).
+ * It also includes internal derived data (publicKey, format, walletFormats, etc).
  * This derived data is to be used internally within the plugin and saved to disk (publicKey).
+ *
+ * The `walletFormats` field is a list of formats from which to derive
+ * extended-keys for the wallet.
  */
 export interface NumbWalletInfo {
   id: string
   type: string
   keys: {
     format: CurrencyFormat
-    supportedFormats: CurrencyFormat[]
+    walletFormats: CurrencyFormat[]
     publicKey: PublicKey
   }
 }
@@ -127,7 +130,7 @@ export const asNumbWalletInfo = (
 
     const publicKey = asMaybe(asPublicKey)(walletInfo.keys)
     if (publicKey != null) {
-      const formats = Object.entries(publicKey.publicKeys)
+      const walletFormats = Object.entries(publicKey.publicKeys)
         // Filter out undefined values in the entries because cleaners allow
         // undefined values for optional fields.
         .filter(([, value]) => value != null)
@@ -138,7 +141,7 @@ export const asNumbWalletInfo = (
           (format?: CurrencyFormat): format is CurrencyFormat => format != null
         )
 
-      if (formats.length === 0) {
+      if (walletFormats.length === 0) {
         throw new Error('Missing wallet public keys')
       }
 
@@ -148,16 +151,16 @@ export const asNumbWalletInfo = (
       // first format in the publicKey after sorting alphabetically.
       const format =
         (engineInfo.formats != null && engineInfo.formats.length > 0
-          ? engineInfo.formats.find(format => formats.includes(format))
+          ? engineInfo.formats.find(format => walletFormats.includes(format))
           : undefined) ??
-        formats.sort((a, b) => (a === b ? 0 : a > b ? 1 : -1))[0]
+        walletFormats.sort((a, b) => (a === b ? 0 : a > b ? 1 : -1))[0]
 
       return {
         id,
         type,
         keys: {
           format,
-          supportedFormats: formats,
+          walletFormats,
           publicKey
         }
       }
@@ -169,13 +172,14 @@ export const asNumbWalletInfo = (
         privateKey,
         coin: coinInfo.name
       })
+      const walletFormats = getSupportedFormats(privateKey.format)
 
       return {
         id,
         type,
         keys: {
           format: privateKey.format,
-          supportedFormats: getSupportedFormats(privateKey.format),
+          walletFormats,
           publicKey: { publicKeys: publicKey }
         }
       }
