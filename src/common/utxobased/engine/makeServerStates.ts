@@ -166,12 +166,12 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
   const reconnect = (): void => {
     if (isEngineOn) {
-      if (reconnectCounter < 5) reconnectCounter++
       log(`attempting server reconnect number ${reconnectCounter}`)
+      const reconnectionDelay = Math.max(5, reconnectCounter++) * 1000
       reconnectTimer = setTimeout(() => {
         clearTimeout(reconnectTimer)
         refillServers()
-      }, reconnectCounter * 1000)
+      }, reconnectionDelay)
     }
   }
 
