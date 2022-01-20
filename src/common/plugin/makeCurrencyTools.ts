@@ -16,6 +16,7 @@ import { parsePathname } from '../utxobased/engine/utils'
 import {
   asNumbWalletInfo,
   asPrivateKey,
+  getPrimaryFormat,
   PrivateKey
 } from '../utxobased/keymanager/cleaners'
 import { EncodeUriMetadata, ExtendedParseUri, PluginInfo } from './types'
@@ -42,10 +43,11 @@ export function makeCurrencyTools(
       opts?: JsonObject
     ): Promise<JsonObject> {
       const mnemonic = bip39.entropyToMnemonic(Buffer.from(io.random(32)))
+      const currencyFormats = engineInfo.formats ?? (['bip44'] as ['bip44'])
 
       const privateKey: PrivateKey = {
         seed: mnemonic,
-        format: opts?.format ?? engineInfo.formats?.[0] ?? 'bip44',
+        format: getPrimaryFormat(currencyFormats, currencyFormats),
         coinType: opts?.coinType ?? coinInfo.coinType ?? 0
       }
 
