@@ -9,7 +9,7 @@ import {
 
 import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
 import { makeCurrencyTools } from './makeCurrencyTools'
-import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
+import { makeEngineEmitter } from './makeEngineEmitter'
 import { makePluginState } from './pluginState'
 import { EngineConfig, PluginInfo } from './types'
 
@@ -45,30 +45,7 @@ export function makeCurrencyPlugin(
       walletInfo: EdgeWalletInfo,
       engineOptions: EdgeCurrencyEngineOptions
     ): Promise<EdgeCurrencyEngine> {
-      const emitter = new EngineEmitter()
-      emitter.on(
-        EngineEvent.TRANSACTIONS_CHANGED,
-        engineOptions.callbacks.onTransactionsChanged
-      )
-      emitter.on(
-        EngineEvent.WALLET_BALANCE_CHANGED,
-        engineOptions.callbacks.onBalanceChanged
-      )
-      emitter.on(
-        EngineEvent.BLOCK_HEIGHT_CHANGED,
-        (_uri: string, height: number) => {
-          engineOptions.callbacks.onBlockHeightChanged(height)
-        }
-      )
-      emitter.on(
-        EngineEvent.ADDRESSES_CHECKED,
-        engineOptions.callbacks.onAddressesChecked
-      )
-      emitter.on(
-        EngineEvent.TXIDS_CHANGED,
-        engineOptions.callbacks.onTxidsChanged
-      )
-
+      const emitter = makeEngineEmitter(engineOptions.callbacks)
       const engineConfig: EngineConfig = {
         walletInfo,
         pluginInfo,
@@ -82,7 +59,6 @@ export function makeCurrencyPlugin(
         },
         pluginState: state
       }
-
       const engine: EdgeCurrencyEngine = await makeUtxoEngine(engineConfig)
 
       return engine
