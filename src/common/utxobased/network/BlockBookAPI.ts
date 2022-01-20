@@ -1,42 +1,167 @@
 import {
   asArray,
   asBoolean,
-  asEither,
+  asMaybe,
   asNumber,
   asObject,
   asOptional,
-  asString
+  asString,
+  Cleaner,
+  uncleaner
 } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js/types'
 
-export interface PartialTask {
+/**
+ * Websocket Task
+ */
+export interface BlockbookTask<T> {
   method: string
   params: unknown
+  cleaner: Cleaner<T>
 }
 
-interface IAccountOpts {
-  details?: string
-  from?: number
-  to?: number
-  page?: number
-  perPage?: number
+// ---------------------------------------------------------------------
+// Blockbook Types
+// ---------------------------------------------------------------------
+
+export interface BlockbookAccountUtxo {
+  txid: string
+  vout: number
+  value: string
+  confirmations?: number
+  coinbase?: boolean
+  height?: number
+  lockTime?: number
+  address?: string
+  path?: string
+}
+export const asBlockbookAccountUtxo = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<BlockbookAccountUtxo> =>
+  asObject({
+    txid: asString,
+    vout: asNumber,
+    value: asString,
+    confirmations: asOptional(asNumber),
+    coinbase: asOptional(asBoolean),
+    height: asOptional(asNumber),
+    lockTime: asOptional(asNumber),
+    address: asOptional(asAddress),
+    path: asOptional(asString)
+  })
+
+export interface BlockbookTransaction {
+  txid: string
+  hex: string
+  blockHeight: number
+  confirmations: number
+  blockTime: number
+  fees: string
+  vin: Array<{
+    txid: string
+    sequence?: number
+    n: number
+    vout: number
+    addresses: string[]
+    isAddress: boolean
+    value: string
+    hex?: string
+  }>
+  vout: Array<{
+    n: number
+    value: string
+    addresses: string[]
+    hex?: string
+  }>
+}
+export const asBlockbookTransaction = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<BlockbookTransaction> =>
+  asObject({
+    txid: asString,
+    hex: asString,
+    blockHeight: asNumber,
+    confirmations: asNumber,
+    blockTime: asNumber,
+    fees: asString,
+    vin: asArray(
+      asObject({
+        txid: asString,
+        sequence: asOptional(asNumber),
+        n: asNumber,
+        vout: asOptional(asNumber, -1),
+        addresses: asArray(asAddress),
+        isAddress: asBoolean,
+        value: asString,
+        hex: asOptional(asString)
+      })
+    ),
+    vout: asArray(
+      asObject({
+        n: asNumber,
+        value: asString,
+        addresses: asArray(asAddress),
+        hex: asOptional(asString)
+      })
+    )
+  })
+
+// ---------------------------------------------------------------------
+// Blockbook API Response Types
+// ---------------------------------------------------------------------
+
+/**
+ * Error Response
+ */
+export type BlockbookErrorResponse = ReturnType<typeof asBlockbookErrorResponse>
+export const asBlockbookErrorResponse = asObject({
+  error: asObject({
+    message: asString
+  })
+})
+
+/**
+ * Blockbook Response Generic
+ */
+export type BlockbookResponse<T> = T
+export const asBlockbookResponse = <T>(asT: Cleaner<T>): Cleaner<T> => raw => {
+  const errResponse = asMaybe(asBlockbookErrorResponse)(raw)
+
+  if (errResponse != null)
+    throw new Error(`Blockbook Error: ${errResponse.error.message}`)
+
+  return asT(raw)
 }
 
-export const pingMessage = (): PartialTask => {
+// ---------------------------------------------------------------------
+// Blockbook API Messages
+// ---------------------------------------------------------------------
+
+/**
+ * Ping Message
+ */
+export const pingMessage = (): BlockbookTask<PingResponse> => {
   return {
     method: 'ping',
-    params: undefined
+    params: undefined,
+    cleaner: asBlockbookResponse(asPingResponse)
   }
 }
+export type PingResponse = ReturnType<typeof asPingResponse>
+export const asPingResponse = asObject({})
 
-export const infoMessage = (): PartialTask => {
+/**
+ * Get Info
+ */
+export const infoMessage = (): BlockbookTask<InfoResponse> => {
   return {
     method: 'getInfo',
-    params: {}
+    params: {},
+    cleaner: asBlockbookResponse(asInfoResponse)
   }
 }
-
-export const asIServerInfo = asObject({
+export type InfoResponse = ReturnType<typeof asInfoResponse>
+export const asInfoResponse = asObject({
   name: asString,
   shortcut: asString,
   decimals: asNumber,
@@ -52,136 +177,159 @@ export const asIServerInfo = asObject({
     })
   )
 })
-export type IServerInfo = ReturnType<typeof asIServerInfo>
 
-export const addressUtxosMessage = (account: string): PartialTask => {
+/**
+ * Get Account UTXO
+ */
+export const addressUtxosMessage = (
+  address: string,
+  asAddress: Cleaner<string> = asString
+): BlockbookTask<AddressUtxosResponse> => {
+  const wasAddress = uncleaner(asAddress)
   return {
     method: 'getAccountUtxo',
-    params: { descriptor: account }
+    params: { descriptor: wasAddress(address) },
+    cleaner: asBlockbookResponse(asAddressUtxosResponse(asAddress))
   }
 }
+export type AddressUtxosResponse = BlockbookAccountUtxo[]
+export const asAddressUtxosResponse = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<AddressUtxosResponse> => asArray(asBlockbookAccountUtxo(asAddress))
 
-export const asAddressUtxo = asObject({
-  txid: asString,
-  vout: asNumber,
-  value: asString,
-  confirmations: asNumber,
-  coinbase: asOptional(asBoolean),
-  height: asOptional(asNumber),
-  lockTime: asOptional(asNumber),
-  address: asOptional(asString),
-  path: asOptional(asString)
+/**
+ * Get Transaction
+ */
+export const transactionMessage = (
+  hash: string,
+  asAddress: Cleaner<string> = asString
+): BlockbookTask<TransactionResponse> => ({
+  method: 'getTransaction',
+  params: { txid: hash },
+  cleaner: asBlockbookResponse(asTransactionResponse(asAddress))
 })
-export const asAddressUtxos = asArray(asAddressUtxo)
+export type TransactionResponse = BlockbookTransaction
+export const asTransactionResponse = asBlockbookTransaction
 
-export const transactionMessage = (hash: string): PartialTask => {
-  return {
-    method: 'getTransaction',
-    params: { txid: hash }
-  }
-}
-
-export const asITransaction = asObject({
-  txid: asString,
-  hex: asString,
-  blockHeight: asNumber,
-  confirmations: asNumber,
-  blockTime: asNumber,
-  fees: asString,
-  vin: asArray(
-    asObject({
-      txid: asString,
-      sequence: asNumber,
-      n: asNumber,
-      vout: asOptional(asNumber, -1),
-      addresses: asArray(asString),
-      isAddress: asBoolean,
-      value: asString,
-      hex: asOptional(asString)
-    })
-  ),
-  vout: asArray(
-    asObject({
-      n: asNumber,
-      value: asString,
-      addresses: asArray(asString),
-      hex: asOptional(asString)
-    })
-  )
-})
-export type ITransaction = ReturnType<typeof asITransaction>
-
+/**
+ * Send Transaction
+ */
 export const broadcastTxMessage = (
   transaction: EdgeTransaction
-): PartialTask => {
+): BlockbookTask<BroadcastTxResponse> => {
   return {
     method: 'sendTransaction',
-    params: { hex: transaction.signedTx }
+    params: { hex: transaction.signedTx },
+    cleaner: asBlockbookResponse(asBroadcastTxResponse)
   }
 }
-
-export const asBlockbookErrorResponse = asObject({
-  error: asObject({
-    message: asString
-  })
-})
-export const asBlockbookTxBroadcastSuccess = asObject({
+export type BroadcastTxResponse = ReturnType<typeof asBroadcastTxResponse>
+export const asBroadcastTxResponse = asObject({
   result: asString
 })
-export const asBlockbookTxBroadcastResponse = asEither(
-  asBlockbookErrorResponse,
-  asBlockbookTxBroadcastSuccess
-)
-export type BlockbookTxBroadcastResponse = ReturnType<
-  typeof asBlockbookTxBroadcastResponse
->
 
+/**
+ * Get Account Info
+ */
+export interface AddresssMessageParams {
+  details?: 'basic' | 'txids' | 'txs'
+  from?: number
+  to?: number
+  page?: number
+  perPage?: number
+}
 export const addressMessage = (
   address: string,
-  opts: IAccountOpts = {}
-): PartialTask => {
-  opts = Object.assign(
-    {},
-    {
-      details: 'basic',
-      page: 1,
-      perPage: 100
-    },
-    opts
-  )
+  asAddress: Cleaner<string> = asString,
+  params: AddresssMessageParams = {}
+): BlockbookTask<AddressResponse> => {
+  const wasAddress = uncleaner(asAddress)
   return {
     method: 'getAccountInfo',
     params: {
-      ...opts,
-      descriptor: address
-    }
+      ...{ details: 'basic', page: 1, perPage: 100, ...params },
+      descriptor: wasAddress(address)
+    },
+    cleaner: asBlockbookResponse(asAddressResponse(asAddress))
   }
 }
+export interface AddressResponse {
+  address: string
+  balance: string
+  totalReceived: string
+  totalSent: string
+  txs: number
+  unconfirmedBalance: string
+  unconfirmedTxs: number
+  txids: string[]
+  transactions: BlockbookTransaction[]
+  page: number
+  totalPages: number
+  itemsOnPage: number
+}
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export const asAddressResponse = (asAddress: Cleaner<string> = asString) =>
+  asObject({
+    // details: basic
+    address: asAddress,
+    balance: asString,
+    totalReceived: asString,
+    totalSent: asString,
+    txs: asNumber,
+    unconfirmedBalance: asString,
+    unconfirmedTxs: asNumber,
+    // details: txids
+    txids: asOptional(asArray(asString), []),
+    // details: txs
+    transactions: asOptional(asArray(asBlockbookTransaction(asAddress)), []),
+    // Pagination (included with txids and txs requests)
+    page: asOptional(asNumber, NaN),
+    totalPages: asOptional(asNumber, NaN),
+    itemsOnPage: asOptional(asNumber, NaN)
+  })
 
-export const subscribeNewBlockMessage = (): PartialTask => {
+/**
+ * Subscribe New Block
+ */
+export const subscribeNewBlockMessage = (): BlockbookTask<SubscribeNewBlockResponse> => {
   return {
     method: 'subscribeNewBlock',
-    params: {}
+    params: {},
+    cleaner: asBlockbookResponse(asSubscribeNewBlockResponse)
   }
 }
-
-export const asINewBlockResponse = asObject({
+export type SubscribeNewBlockResponse = ReturnType<
+  typeof asSubscribeNewBlockResponse
+>
+export const asSubscribeNewBlockResponse = asObject({
   height: asNumber,
   hash: asString
 })
-export type INewBlockResponse = ReturnType<typeof asINewBlockResponse>
 
-export const subscribeAddressesMessage = (addresses: string[]): PartialTask => {
+/**
+ * Subscribe Address
+ */
+export const subscribeAddressesMessage = (
+  addresses: string[],
+  asAddress: Cleaner<string> = asString
+): BlockbookTask<SubscribeAddressResponse> => {
+  const wasAddress = uncleaner(asAddress)
   return {
     method: 'subscribeAddresses',
-    params: { addresses }
+    params: {
+      addresses: addresses.map(wasAddress)
+    },
+    cleaner: asBlockbookResponse(asSubscribeAddressResponse(asAddress))
   }
 }
-
-export const asINewTransactionResponse = asObject({
-  address: asString,
-  tx: asITransaction
-})
-export type INewTransactionResponse = ReturnType<
-  typeof asINewTransactionResponse
->
+export interface SubscribeAddressResponse {
+  address: string
+  tx: BlockbookTransaction
+}
+export const asSubscribeAddressResponse = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<SubscribeAddressResponse> =>
+  asObject({
+    address: asAddress,
+    tx: asBlockbookTransaction(asAddress)
+  })

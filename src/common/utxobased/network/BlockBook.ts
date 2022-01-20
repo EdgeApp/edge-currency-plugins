@@ -4,82 +4,29 @@ import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import {
   addressMessage,
+  AddressResponse,
+  AddresssMessageParams,
   addressUtxosMessage,
-  asAddressUtxos,
-  asBlockbookTxBroadcastResponse,
-  asINewBlockResponse,
-  asINewTransactionResponse,
-  asIServerInfo,
-  asITransaction,
-  BlockbookTxBroadcastResponse,
+  AddressUtxosResponse,
+  BlockbookTask,
   broadcastTxMessage,
-  INewBlockResponse,
-  INewTransactionResponse,
+  BroadcastTxResponse,
   infoMessage,
-  IServerInfo,
-  ITransaction,
-  PartialTask,
+  InfoResponse,
   pingMessage,
   subscribeAddressesMessage,
+  SubscribeAddressResponse,
   subscribeNewBlockMessage,
-  transactionMessage
+  SubscribeNewBlockResponse,
+  transactionMessage,
+  TransactionResponse
 } from './BlockBookAPI'
 import Deferred from './Deferred'
 import { SocketEmitter } from './MakeSocketEmitter'
 import { makeSocket, OnQueueSpaceCB } from './Socket'
 
-export interface IAccountDetailsBasic {
-  address: string
-  balance: string
-  totalReceived: string
-  totalSent: string
-  txs: number
-  unconfirmedBalance: string
-  unconfirmedTxs: number
-}
-
-interface ITransactionPaginationResponse {
-  page: number
-  totalPages: number
-  itemsOnPage: number
-}
-
-export interface ITransactionIdPaginationResponse
-  extends IAccountDetailsBasic,
-    ITransactionPaginationResponse {
-  txids: string[]
-}
-
-export interface ITransactionDetailsPaginationResponse
-  extends IAccountDetailsBasic,
-    ITransactionPaginationResponse {
-  transactions?: ITransaction[]
-}
-
-interface IAccountOpts {
-  details?: string
-  from?: number
-  to?: number
-  page?: number
-  perPage?: number
-}
-
-interface IUTXO {
-  txid: string
-  vout: number
-  value: string
-  height?: number
-  confirmations?: number
-  lockTime?: number
-}
-
-export interface IAccountUTXO extends IUTXO {
-  address?: string
-  path?: string
-}
-
 export type WatchAddressesCB = (
-  response: INewTransactionResponse
+  response: SubscribeAddressResponse
 ) => void | Promise<void>
 export type WatchBlocksCB = () => void | Promise<void>
 
@@ -92,27 +39,12 @@ export interface BlockBook {
 
   onQueueSpace: (cb: OnQueueSpaceCB) => void
 
-  fetchInfo: () => Promise<IServerInfo>
+  fetchInfo: () => Promise<InfoResponse>
 
-  fetchAddress: ((
+  fetchAddress: (
     address: string,
-    opts?: IAccountOpts & {
-      details?: 'basic'
-    }
-  ) => Promise<IAccountDetailsBasic>) &
-    ((
-      address: string,
-      opts: IAccountOpts & {
-        details: 'txids'
-      }
-    ) => Promise<ITransactionIdPaginationResponse>) &
-    ((
-      address: string,
-      opts: IAccountOpts & {
-        details: 'txs'
-      }
-    ) => Promise<ITransactionDetailsPaginationResponse>) &
-    ((address: string, opts?: IAccountOpts) => Promise<IAccountDetailsBasic>)
+    params?: AddresssMessageParams
+  ) => Promise<AddressResponse>
 
   watchAddresses: (
     addresses: string[],
@@ -121,13 +53,11 @@ export interface BlockBook {
 
   watchBlocks: (deferredBlockSub: Deferred<unknown>) => void
 
-  fetchAddressUtxos: (account: string) => Promise<IAccountUTXO[]>
+  fetchAddressUtxos: (account: string) => Promise<AddressUtxosResponse>
 
-  fetchTransaction: (hash: string) => Promise<ITransaction>
+  fetchTransaction: (hash: string) => Promise<TransactionResponse>
 
-  broadcastTx: (
-    transaction: EdgeTransaction
-  ) => Promise<BlockbookTxBroadcastResponse>
+  broadcastTx: (transaction: EdgeTransaction) => Promise<BroadcastTxResponse>
 }
 
 interface BlockBookConfig {
@@ -137,6 +67,7 @@ interface BlockBookConfig {
   log: EdgeLog
   walletId: string
   onQueueSpaceCB: OnQueueSpaceCB
+  asAddress?: Cleaner<string>
 }
 
 export function makeBlockBook(config: BlockBookConfig): BlockBook {
@@ -146,7 +77,8 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     engineEmitter,
     log,
     onQueueSpaceCB,
-    walletId
+    walletId,
+    asAddress
   } = config
   log(`makeBlockBook with uri ${wsAddress}`)
 
@@ -194,56 +126,50 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     socket.onQueueSpace(cb)
   }
 
-  async function promisifyWsMessage<T>(
-    message: PartialTask,
-    cleaner?: Cleaner<T>
-  ): Promise<T> {
+  async function promisifyWsMessage<T>(message: BlockbookTask<T>): Promise<T> {
     const deferred = new Deferred<T>()
-    socket.submitTask({ ...message, cleaner, deferred })
+    socket.submitTask<T>({ ...message, deferred })
     return await deferred.promise
   }
 
-  async function ping(): Promise<never> {
-    return await promisifyWsMessage(pingMessage())
+  async function ping(): Promise<void> {
+    await promisifyWsMessage(pingMessage())
   }
 
-  async function fetchInfo(): Promise<IServerInfo> {
-    return await promisifyWsMessage(infoMessage(), asIServerInfo)
+  async function fetchInfo(): Promise<InfoResponse> {
+    return await promisifyWsMessage(infoMessage())
   }
 
-  async function fetchAddressUtxos(account: string): Promise<IAccountUTXO[]> {
-    return await promisifyWsMessage(
-      addressUtxosMessage(account),
-      asAddressUtxos
-    )
+  async function fetchAddressUtxos(
+    account: string
+  ): Promise<AddressUtxosResponse> {
+    return await promisifyWsMessage(addressUtxosMessage(account))
   }
 
-  async function fetchTransaction(hash: string): Promise<ITransaction> {
-    return await promisifyWsMessage(transactionMessage(hash), asITransaction)
+  async function fetchTransaction(hash: string): Promise<TransactionResponse> {
+    return await promisifyWsMessage(transactionMessage(hash))
   }
 
   async function fetchAddress(
     address: string,
-    opts: IAccountOpts = {}
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
-    return await promisifyWsMessage(addressMessage(address, opts))
+    params: AddresssMessageParams = {}
+  ): Promise<AddressResponse> {
+    return await promisifyWsMessage(addressMessage(address, asAddress, params))
   }
 
   async function watchBlocks(
     deferredBlockSub: Deferred<unknown>
   ): Promise<void> {
-    const socketCb = async (value: INewBlockResponse): Promise<void> => {
+    const socketCb = async (res: SubscribeNewBlockResponse): Promise<void> => {
       engineEmitter.emit(
         EngineEvent.BLOCK_HEIGHT_CHANGED,
         wsAddress,
-        value.height
+        res.height
       )
     }
     socket.subscribe({
       ...subscribeNewBlockMessage(),
       cb: socketCb,
-      cleaner: asINewBlockResponse,
       deferred: deferredBlockSub,
       subscribed: false
     })
@@ -253,13 +179,12 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     addresses: string[],
     deferredAddressSub: Deferred<unknown>
   ): void {
-    const socketCb = async (value: INewTransactionResponse): Promise<void> => {
-      engineEmitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, wsAddress, value)
+    const socketCb = async (res: SubscribeAddressResponse): Promise<void> => {
+      engineEmitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, wsAddress, res)
     }
     socket.subscribe({
-      ...subscribeAddressesMessage(addresses),
+      ...subscribeAddressesMessage(addresses, asAddress),
       cb: socketCb,
-      cleaner: asINewTransactionResponse,
       deferred: deferredAddressSub,
       subscribed: false
     })
@@ -267,11 +192,8 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   async function broadcastTx(
     transaction: EdgeTransaction
-  ): Promise<BlockbookTxBroadcastResponse> {
-    return await promisifyWsMessage(
-      broadcastTxMessage(transaction),
-      asBlockbookTxBroadcastResponse
-    )
+  ): Promise<BroadcastTxResponse> {
+    return await promisifyWsMessage(broadcastTxMessage(transaction))
   }
 
   return instance

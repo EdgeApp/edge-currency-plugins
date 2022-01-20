@@ -31,18 +31,14 @@ import {
   ScriptTypeEnum
 } from '../keymanager/keymanager'
 import {
-  IAccountDetailsBasic,
-  IAccountUTXO,
-  ITransactionDetailsPaginationResponse
-} from '../network/BlockBook'
-import {
   addressMessage,
+  AddressResponse,
   addressUtxosMessage,
-  asAddressUtxos,
-  asITransaction,
-  INewTransactionResponse,
-  ITransaction,
-  transactionMessage
+  AddressUtxosResponse,
+  BlockbookAccountUtxo,
+  SubscribeAddressResponse,
+  transactionMessage,
+  TransactionResponse
 } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
@@ -157,6 +153,7 @@ export function makeUtxoEngineState(
   const lock = new AwaitLock()
 
   const serverStates = makeServerStates({
+    pluginInfo,
     engineStarted,
     walletInfo,
     pluginState,
@@ -212,7 +209,7 @@ export function makeUtxoEngineState(
 
   emitter.on(
     EngineEvent.NEW_ADDRESS_TRANSACTION,
-    async (_uri: string, response: INewTransactionResponse): Promise<void> => {
+    async (_uri: string, response: SubscribeAddressResponse): Promise<void> => {
       const state = taskCache.addressSubscribeCache[response.address]
       if (state != null) {
         const { path } = state
@@ -668,15 +665,15 @@ export const pickNextTask = async (
   if (!serverState.subscribedBlocks) {
     serverState.subscribedBlocks = true
     const queryTime = Date.now()
-    const deferredBlockSub = new Deferred<unknown>()
-    deferredBlockSub.promise
+    const deferred = new Deferred<unknown>()
+    deferred.promise
       .then(() => {
         serverStates.serverScoreUp(uri, Date.now() - queryTime)
       })
       .catch(() => {
         serverState.subscribedBlocks = false
       })
-    serverStates.watchBlocks(uri, deferredBlockSub)
+    serverStates.watchBlocks(uri, deferred)
     return true
   }
 
@@ -700,7 +697,7 @@ export const pickNextTask = async (
 
   // Loop unparsed utxos, some require a network call to get the full tx data
   for (const [utxoString, state] of Object.entries(rawUtxoCache)) {
-    const utxo: IAccountUTXO = JSON.parse(utxoString)
+    const utxo: BlockbookAccountUtxo = JSON.parse(utxoString)
     if (utxo == null) continue
     if (!state.processing) {
       // check if we need to fetch additional network content for legacy purpose type
@@ -784,21 +781,21 @@ export const pickNextTask = async (
     taskCache.addressWatching = true
 
     const queryTime = Date.now()
-    const deferredAddressSub = new Deferred<unknown>()
-    deferredAddressSub.promise
+    const deferred = new Deferred<unknown>()
+    deferred.promise
       .then(() => {
         serverStates.serverScoreUp(uri, Date.now() - queryTime)
       })
       .catch(() => {
         taskCache.addressWatching = false
       })
-    deferredAddressSub.promise.catch(() => {
+    deferred.promise.catch(() => {
       taskCache.addressWatching = false
     })
     serverStates.watchAddresses(
       uri,
       Array.from(Object.keys(addressSubscribeCache)),
-      deferredAddressSub
+      deferred
     )
     return true
   }
@@ -858,11 +855,11 @@ interface UpdateTransactionsArgs extends CommonArgs {
 
 const updateTransactions = (
   args: UpdateTransactionsArgs
-): WsTask<ITransaction> => {
+): WsTask<TransactionResponse> => {
   const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
-  const deferredITransaction = new Deferred<ITransaction>()
-  deferredITransaction.promise
-    .then(async (rawTx: ITransaction) => {
+  const deferred = new Deferred<TransactionResponse>()
+  deferred.promise
+    .then(async (rawTx: TransactionResponse) => {
       // check if raw tx is still not confirmed, if so, don't change anything
       if (rawTx.blockHeight < 1) return
       // Create new tx from raw tx
@@ -888,8 +885,7 @@ const updateTransactions = (
     })
   return {
     ...transactionMessage(txId),
-    cleaner: asITransaction,
-    deferred: deferredITransaction
+    deferred
   }
 }
 
@@ -994,9 +990,6 @@ interface ProcessAddressTxsArgs extends CommonArgs {
   uri: string
 }
 
-type AddressResponse = IAccountDetailsBasic &
-  ITransactionDetailsPaginationResponse
-
 const processAddressTransactions = async (
   args: ProcessAddressTxsArgs
 ): Promise<WsTask<AddressResponse>> => {
@@ -1013,6 +1006,9 @@ const processAddressTransactions = async (
     serverStates,
     uri
   } = args
+  const {
+    engineInfo: { asBlockbookAddress }
+  } = pluginInfo
   const addressTransactionCache = taskCache.addressTransactionCache
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -1022,8 +1018,8 @@ const processAddressTransactions = async (
   }
 
   const queryTime = Date.now()
-  const deferredAddressResponse = new Deferred<AddressResponse>()
-  deferredAddressResponse.promise
+  const deferred = new Deferred<AddressResponse>()
+  deferred.promise
     .then(async (value: AddressResponse) => {
       serverStates.serverScoreUp(uri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
@@ -1081,19 +1077,20 @@ const processAddressTransactions = async (
       console.error(err.toString())
       console.log(err.stack)
     })
+
   return {
-    ...addressMessage(address, {
+    ...addressMessage(address, asBlockbookAddress, {
       details: 'txs',
       from: addressData.lastQueriedBlockHeight,
       perPage: BLOCKBOOK_TXS_PER_PAGE,
       page
     }),
-    deferred: deferredAddressResponse
+    deferred
   }
 }
 
 interface ProcessRawTxArgs extends CommonArgs {
-  tx: ITransaction
+  tx: TransactionResponse
 }
 
 const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
@@ -1143,21 +1140,25 @@ interface ProcessAddressUtxosArgs extends CommonArgs {
 
 const processAddressUtxos = async (
   args: ProcessAddressUtxosArgs
-): Promise<WsTask<IAccountUTXO[]>> => {
+): Promise<WsTask<AddressUtxosResponse>> => {
   const {
     address,
     walletTools,
     processor,
     taskCache,
     path,
+    pluginInfo,
     serverStates,
     uri
   } = args
+  const {
+    engineInfo: { asBlockbookAddress }
+  } = pluginInfo
   const { addressUtxoCache, rawUtxoCache, processorUtxoCache } = taskCache
   const queryTime = Date.now()
-  const deferredIAccountUTXOs = new Deferred<IAccountUTXO[]>()
-  deferredIAccountUTXOs.promise
-    .then(async (utxos: IAccountUTXO[]) => {
+  const deferred = new Deferred<AddressUtxosResponse>()
+  deferred.promise
+    .then(async (utxos: AddressUtxosResponse) => {
       serverStates.serverScoreUp(uri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddress(scriptPubkey)
@@ -1187,10 +1188,10 @@ const processAddressUtxos = async (
         path
       }
     })
+
   return {
-    ...addressUtxosMessage(address),
-    cleaner: asAddressUtxos,
-    deferred: deferredIAccountUTXOs
+    ...addressUtxosMessage(address, asBlockbookAddress),
+    deferred
   }
 }
 
@@ -1266,7 +1267,7 @@ const processProcessorUtxos = async (
 interface ProcessRawUtxoArgs extends FormatArgs {
   path: ChangePath
   requiredCount: number
-  utxo: IAccountUTXO
+  utxo: BlockbookAccountUtxo
   id: string
   address: IAddress
   uri: string
@@ -1274,7 +1275,7 @@ interface ProcessRawUtxoArgs extends FormatArgs {
 
 const processRawUtxo = async (
   args: ProcessRawUtxoArgs
-): Promise<WsTask<ITransaction> | undefined> => {
+): Promise<WsTask<TransactionResponse> | undefined> => {
   const {
     utxo,
     id,
@@ -1329,9 +1330,9 @@ const processRawUtxo = async (
         const [tx] = await processor.fetchTransactions({ txId: utxo.txid })
         if (tx == null) {
           const queryTime = Date.now()
-          const deferredITransaction = new Deferred<ITransaction>()
-          deferredITransaction.promise
-            .then((rawTx: ITransaction) => {
+          const deferred = new Deferred<TransactionResponse>()
+          deferred.promise
+            .then((rawTx: TransactionResponse) => {
               serverStates.serverScoreUp(uri, Date.now() - queryTime)
               const processedTx = processRawTx({ ...args, tx: rawTx })
               script = processedTx.hex
@@ -1350,7 +1351,7 @@ const processRawUtxo = async (
             })
           return {
             ...transactionMessage(utxo.txid),
-            deferred: deferredITransaction
+            deferred
           }
         } else {
           script = tx.hex

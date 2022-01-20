@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import * as chai from 'chai'
+import { expect } from 'chai'
 import WS from 'ws'
 
 import {
@@ -10,7 +11,7 @@ import {
   BlockBook,
   makeBlockBook
 } from '../../../../src/common/utxobased/network/BlockBook'
-import { INewTransactionResponse } from '../../../../src/common/utxobased/network/BlockBookAPI'
+import { SubscribeAddressResponse } from '../../../../src/common/utxobased/network/BlockBookAPI'
 import Deferred from '../../../../src/common/utxobased/network/Deferred'
 import {
   SocketEmitter,
@@ -122,7 +123,7 @@ describe('BlockBook notifications tests with dummy server', function () {
 
     engineEmitter.on(
       EngineEvent.NEW_ADDRESS_TRANSACTION,
-      (_uri: string, _newTx: INewTransactionResponse) => {
+      (_uri: string, _newTx: SubscribeAddressResponse) => {
         test = true
       }
     )
@@ -279,7 +280,7 @@ describe('BlockBook', function () {
       tx.vin[0].txid.should.equal(
         'fac5994d454817db2daec796cfa79cce670a372e7505fdef2a259289d5df0814'
       )
-      tx.vin[0].sequence.should.equal(2147483648)
+      expect(tx.vin[0].sequence).to.equal(2147483648)
       tx.vin[0].n.should.equal(0)
       tx.vin[0].addresses.should.eqls([
         'bc1qg6lwu6c8yqhhw7rrq69akknepxcft09agkkuqv'

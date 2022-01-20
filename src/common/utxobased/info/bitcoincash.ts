@@ -1,4 +1,5 @@
 import * as bitcoin from 'altcoin-js'
+import { asCodec, asString } from 'cleaners'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
@@ -64,7 +65,13 @@ const engineInfo: EngineInfo = {
     standardFeeLowAmount: '1000000',
     standardFeeHighAmount: '65000000'
   },
-  scriptTemplates
+  scriptTemplates,
+  asBlockbookAddress: asCodec(
+    raw => {
+      return asString(raw).split(':')[1]
+    },
+    address => `bitcoincash:${address}`
+  )
 }
 
 export const coinInfo: CoinInfo = {

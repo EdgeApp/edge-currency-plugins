@@ -51,7 +51,7 @@ interface SocketConfig {
   walletId: string
   emitter: SocketEmitter
   log: EdgeLog
-  healthCheck: () => Promise<Record<string, unknown>> // function for heartbeat, should submit task itself
+  healthCheck: () => Promise<void> // function for heartbeat, should submit task itself
   onQueueSpaceCB: OnQueueSpaceCB
 }
 
@@ -296,7 +296,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
             message.task.deferred.resolve(json.data)
           }
         } catch (e) {
-          if (e instanceof TypeError) console.log(json.data)
+          if (e instanceof TypeError) console.log({ json, message })
           message.task.deferred.reject(e)
         }
       }
