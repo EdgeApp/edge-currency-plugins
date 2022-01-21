@@ -3,6 +3,7 @@ import * as bs from 'biggystring'
 import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeGetTransactionsOptions } from 'edge-core-js/types'
 
+import { unixTime } from '../../../util/unixTime'
 import { AddressPath, ChangePath } from '../../plugin/types'
 import { makeBaselets } from './makeBaselets'
 import { addressPathToPrefix, TxIdByDate } from './Models/baselet'
@@ -372,8 +373,8 @@ export async function makeProcessor(
           } else {
             txData = await tables.txIdsByDate.query(
               '',
-              startDate.getTime(),
-              endDate.getTime()
+              unixTime(startDate.getTime()),
+              unixTime(endDate.getTime())
             )
           }
           const txIdsByOptions = await txData

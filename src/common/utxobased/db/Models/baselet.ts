@@ -63,7 +63,7 @@ export interface TxIdByDate {
 export type TxIdByDateBaselet = RangeBase<TxIdByDate, 'date', 'txid'>
 export const txIdsByDateOptions: RangeBaseOptions<'date', 'txid'> = {
   name: 'txIdsByDate',
-  bucketSize: 30 * 24 * 60 * 60 * 1000,
+  bucketSize: 30 * 24 * 60 * 60, // 30 days
   rangeKey: 'date',
   idKey: 'txid'
 }

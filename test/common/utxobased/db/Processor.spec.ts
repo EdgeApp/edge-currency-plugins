@@ -15,6 +15,7 @@ import {
   IUTXO
 } from '../../../../src/common/utxobased/db/types'
 import { ScriptTypeEnum } from '../../../../src/common/utxobased/keymanager/keymanager'
+import { unixTime } from '../../../../src/util/unixTime'
 
 chai.should()
 
@@ -543,7 +544,7 @@ describe('Processor transactions tests', () => {
       txid: 'transaction1',
       hex: '',
       blockHeight: 1,
-      date: new Date(10).getTime(),
+      date: unixTime(new Date(10_000).getTime()),
       fees: '1',
       inputs: [input1],
       outputs: [output1, output2],
@@ -592,14 +593,14 @@ describe('Processor transactions tests', () => {
     expect(tx4).not.to.be.undefined
 
     const results = await processor.fetchTransactions({
-      options: { startDate: new Date(11), endDate: new Date(15) }
+      options: { startDate: new Date(11_000), endDate: new Date(15_000) }
     })
     expect(results).to.deep.equal([])
 
     const [tx6] = await processor.fetchTransactions({
       options: {
-        startDate: new Date(9),
-        endDate: new Date(15)
+        startDate: new Date(9_000),
+        endDate: new Date(15_000)
       }
     })
     expect(tx6).not.to.be.undefined
@@ -631,7 +632,7 @@ describe('Processor transactions tests', () => {
       txid: 'transaction1',
       hex: '',
       blockHeight: 1,
-      date: new Date(10).getTime(),
+      date: unixTime(new Date(10_000).getTime()),
       fees: '1',
       inputs: [input1],
       outputs: [output1, output2],
@@ -644,7 +645,7 @@ describe('Processor transactions tests', () => {
       txid: 'transaction2',
       hex: '',
       blockHeight: 1,
-      date: new Date(20).getTime(),
+      date: unixTime(new Date(20_000).getTime()),
       fees: '1',
       inputs: [input1],
       outputs: [output1, output2],
@@ -697,16 +698,16 @@ describe('Processor transactions tests', () => {
 
     const [tx5] = await processor.fetchTransactions({
       options: {
-        startDate: new Date(11),
-        endDate: new Date(20)
+        startDate: new Date(11_000),
+        endDate: new Date(20_000)
       }
     })
     expect(tx5).not.to.be.undefined
 
     const tx6 = await processor.fetchTransactions({
       options: {
-        startDate: new Date(9),
-        endDate: new Date(21)
+        startDate: new Date(9_000),
+        endDate: new Date(21_000)
       }
     })
     expect(tx6.length).to.eqls(2)
@@ -738,7 +739,7 @@ describe('Processor transactions tests', () => {
       txid: 'transaction1',
       hex: '',
       blockHeight: 1,
-      date: new Date(10).getTime(),
+      date: unixTime(new Date(10_000).getTime()),
       fees: '1',
       inputs: [input1],
       outputs: [output1, output2],
@@ -751,7 +752,7 @@ describe('Processor transactions tests', () => {
       txid: 'transaction2',
       hex: '',
       blockHeight: 1,
-      date: new Date(20).getTime(),
+      date: unixTime(new Date(20_000).getTime()),
       fees: '1',
       inputs: [input1],
       outputs: [output1, output2],
@@ -764,7 +765,7 @@ describe('Processor transactions tests', () => {
       txid: 'transaction2',
       hex: '',
       blockHeight: 10,
-      date: new Date(20).getTime(),
+      date: unixTime(new Date(20_000).getTime()),
       fees: '1',
       inputs: [input1],
       outputs: [output1, output2],
