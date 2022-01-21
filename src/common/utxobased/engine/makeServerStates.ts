@@ -23,7 +23,6 @@ interface ServerState {
 
 interface ServerStateConfig {
   engineEmitter: EngineEmitter
-  engineStarted: boolean
   log: EdgeLog
   pluginInfo: PluginInfo
   pluginState: PluginState
@@ -61,18 +60,11 @@ interface Connections {
 }
 
 export function makeServerStates(config: ServerStateConfig): ServerStates {
-  const {
-    engineEmitter,
-    engineStarted,
-    log,
-    pluginInfo,
-    pluginState,
-    walletInfo
-  } = config
+  const { engineEmitter, log, pluginInfo, pluginState, walletInfo } = config
   log('Making server states')
 
   let serverStates: ServerStateCache = {}
-
+  let isEngineOn: boolean = true
   let connections: Connections = {}
   let serverList: string[] = []
   let reconnectCounter = 0
@@ -159,6 +151,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const stop = async (): Promise<void> => {
+    isEngineOn = false
     log(`stopping server states`)
     removeIdFromQueue(walletInfo.id)
     clearTimeout(reconnectTimer)
@@ -172,13 +165,13 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const reconnect = (): void => {
-    if (engineStarted) {
-      if (reconnectCounter < 5) reconnectCounter++
+    if (isEngineOn) {
       log(`attempting server reconnect number ${reconnectCounter}`)
+      const reconnectionDelay = Math.max(5, reconnectCounter++) * 1000
       reconnectTimer = setTimeout(() => {
         clearTimeout(reconnectTimer)
         refillServers()
-      }, reconnectCounter * 1000)
+      }, reconnectionDelay)
     }
   }
 
