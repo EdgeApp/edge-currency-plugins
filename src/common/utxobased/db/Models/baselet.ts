@@ -74,12 +74,6 @@ export const utxoByIdOptions: HashBaseOptions = {
   prefixSize: 2
 }
 
-export type BlockHashByBlockHeightBaselet = HashBase<string>
-export const blockHashByBlockHeightOptions: HashBaseOptions = {
-  name: 'blockHashByBlockHeight',
-  prefixSize: 2
-}
-
 export type UtxoIdsByScriptPubkeyBaselet = HashBase<string[]>
 export const utxoIdsByScriptPubkeyOptions: HashBaseOptions = {
   name: 'utxoIdsByScriptPubkey',
