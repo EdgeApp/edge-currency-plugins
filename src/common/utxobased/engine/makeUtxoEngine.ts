@@ -58,17 +58,13 @@ export async function makeUtxoEngine(
   const asMaybeCurrencyPrivateKey = asMaybe(asCurrencyPrivateKey)
   // This walletInfo is desensitized (numb) and should be passed around over the original walletInfo
   const walletInfo = asNumbWalletInfo(pluginInfo)(sensitiveWalletInfo)
-  const {
-    publicKey,
-    supportedFormats: walletFormatsSupported,
-    format: walletFormat
-  } = walletInfo.keys
+  const { primaryFormat, publicKey, walletFormats } = walletInfo.keys
 
   if (
     engineInfo.formats == null ||
-    !engineInfo.formats.includes(walletFormat)
+    !engineInfo.formats.includes(primaryFormat)
   ) {
-    const message = `Wallet format is not supported: ${walletFormat}`
+    const message = `Wallet format is not supported: ${primaryFormat}`
     log.error(message)
     throw new Error(message)
   }
@@ -172,9 +168,9 @@ export async function makeUtxoEngine(
         walletType: walletInfo.type,
         data: {
           walletInfo: {
-            walletFormat,
-            walletFormatsSupported,
-            pluginType: currencyInfo.pluginId
+            pluginType: currencyInfo.pluginId,
+            primaryFormat,
+            walletFormats
           },
           processorState: await processor.dumpData(),
           pluginState: pluginState.dumpData()
@@ -536,8 +532,8 @@ export async function makeUtxoEngine(
         id: walletInfo.id,
         type: walletInfo.type,
         keys: {
-          format: walletInfo.keys.format,
-          supportedFormats: allFormats,
+          primaryFormat: walletInfo.keys.primaryFormat,
+          walletFormats: allFormats,
           publicKey: {
             publicKeys: {}
           }

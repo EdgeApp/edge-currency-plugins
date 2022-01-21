@@ -91,9 +91,9 @@ export const getSupportedFormats = (
     case 'bip44':
       return ['bip44']
     case 'bip49':
-      return ['bip49', 'bip84']
+      return ['bip49']
     case 'bip84':
-      return ['bip49', 'bip84']
+      return ['bip84']
     default:
       throw new Error(`Unsupported format ${format}`)
   }
@@ -102,17 +102,23 @@ export const getSupportedFormats = (
 /**
  * A cleaner that desensitizes the walletInfo object, excluding sensitive
  * keys (seed/mnemonic, sync key, data key, etc). By using this object type
- * internally within the plugin, we can minimize risk.
+ * internally within the plugin, we can minimize risk of leaking sensitive data.
  *
- * It also includes internal derived data (publicKey, format, supportedFormats, etc).
+ * It also includes internal derived data (publicKey, format, walletFormats, etc).
  * This derived data is to be used internally within the plugin and saved to disk (publicKey).
+ *
+ * The `walletFormats` field is a list of formats from which to derive
+ * extended-keys for the wallet.
+ *
+ * The `primaryFormat` field is the default format from which to derive
+ * addresses from.
  */
 export interface NumbWalletInfo {
   id: string
   type: string
   keys: {
-    format: CurrencyFormat
-    supportedFormats: CurrencyFormat[]
+    primaryFormat: CurrencyFormat
+    walletFormats: CurrencyFormat[]
     publicKey: PublicKey
   }
 }
@@ -127,7 +133,7 @@ export const asNumbWalletInfo = (
 
     const publicKey = asMaybe(asPublicKey)(walletInfo.keys)
     if (publicKey != null) {
-      const formats = Object.entries(publicKey.publicKeys)
+      const walletFormats = Object.entries(publicKey.publicKeys)
         // Filter out undefined values in the entries because cleaners allow
         // undefined values for optional fields.
         .filter(([, value]) => value != null)
@@ -138,26 +144,26 @@ export const asNumbWalletInfo = (
           (format?: CurrencyFormat): format is CurrencyFormat => format != null
         )
 
-      if (formats.length === 0) {
+      if (walletFormats.length === 0) {
         throw new Error('Missing wallet public keys')
       }
 
       // Search the engineInfo's formats array for the first format that exists
       // in the publicKey data.
-      // If there is not defined formats in the engineInfo, fallback to the first
-      // format in the publicKey after sorting alphabetically.
-      const format =
+      // If there are no defined formats in the engineInfo, then fallback to the
+      // first format in the publicKey after sorting alphabetically.
+      const primaryFormat =
         (engineInfo.formats != null && engineInfo.formats.length > 0
-          ? engineInfo.formats.find(format => formats.includes(format))
+          ? engineInfo.formats.find(format => walletFormats.includes(format))
           : undefined) ??
-        formats.sort((a, b) => (a === b ? 0 : a > b ? 1 : -1))[0]
+        walletFormats.sort((a, b) => (a === b ? 0 : a > b ? 1 : -1))[0]
 
       return {
         id,
         type,
         keys: {
-          format,
-          supportedFormats: formats,
+          primaryFormat,
+          walletFormats,
           publicKey
         }
       }
@@ -169,13 +175,14 @@ export const asNumbWalletInfo = (
         privateKey,
         coin: coinInfo.name
       })
+      const walletFormats = getSupportedFormats(privateKey.format)
 
       return {
         id,
         type,
         keys: {
-          format: privateKey.format,
-          supportedFormats: getSupportedFormats(privateKey.format),
+          primaryFormat: privateKey.format,
+          walletFormats,
           publicKey: { publicKeys: publicKey }
         }
       }
