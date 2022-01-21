@@ -728,6 +728,18 @@ export function pubkeyToScriptPubkey(
   }
 }
 
+export const toNewFormat = (address: string, coinName: string): string => {
+  const addressType = getAddressTypeFromAddress(address, coinName)
+  return scriptPubkeyToAddress({
+    scriptPubkey: addressToScriptPubkey({
+      address: address,
+      coin: coinName
+    }),
+    addressType,
+    coin: coinName
+  }).address
+}
+
 const xprivToPrivateKeyInternal = (
   prefixIndex: number,
   args: XPrivToPrivateKeyArgs

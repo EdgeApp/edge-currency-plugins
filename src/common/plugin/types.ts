@@ -6,6 +6,7 @@ import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeIo,
+  EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
@@ -115,10 +116,17 @@ interface Bip32 {
   private: number
 }
 
+export interface ExtendedParseUri extends EdgeParsedUri {
+  metadata?: EdgeParsedUri['metadata'] & {
+    gateway?: boolean
+  }
+}
+
 export interface EncodeUriMetadata {
   metadata?: {
     name?: string
     notes?: string
+    gateway?: boolean
   }
 }
 

@@ -5,6 +5,7 @@ import { describe, it } from 'mocha'
 
 import { parsePathname } from '../../../../../src/common/utxobased/engine/utils'
 import {
+  toNewFormat,
   verifyAddress,
   VerifyAddressEnum
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
@@ -24,7 +25,7 @@ for (const fixture of fixtures) {
         )
         assert.equal(
           parsePathname({ pathname: address, coin: network }).publicAddress,
-          address
+          toNewFormat(address, network)
         )
       })
     })
@@ -51,7 +52,7 @@ for (const fixture of fixtures) {
         assert.deepEqual(parsePathname({ pathname: address, coin: network }), {
           // Uncomment this line if/when we change to always include legacy addresses
           // legacyAddress: _legacy,
-          publicAddress: address
+          publicAddress: toNewFormat(address, network)
         })
       })
     })
@@ -64,7 +65,7 @@ for (const fixture of fixtures) {
         )
         assert.deepEqual(parsePathname({ pathname: legacy, coin: network }), {
           legacyAddress: legacy,
-          publicAddress: address
+          publicAddress: toNewFormat(address, network)
         })
       })
     })
