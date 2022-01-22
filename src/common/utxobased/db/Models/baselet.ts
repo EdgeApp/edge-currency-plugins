@@ -22,7 +22,7 @@ export const scriptPubkeyByPathOptions: CountBaseOptions = {
 export type AddressByScriptPubkeyBaselet = HashBase<IAddress>
 export const addressByScriptPubkeyOptions: HashBaseOptions = {
   name: 'addressByScriptPubkey',
-  prefixSize: 2
+  prefixSize: 4
 }
 
 export type LastUsedByFormatPathBaselet = HashBase<number>
@@ -77,5 +77,5 @@ export const utxoByIdOptions: HashBaseOptions = {
 export type UtxoIdsByScriptPubkeyBaselet = HashBase<string[]>
 export const utxoIdsByScriptPubkeyOptions: HashBaseOptions = {
   name: 'utxoIdsByScriptPubkey',
-  prefixSize: 2
+  prefixSize: 4
 }
