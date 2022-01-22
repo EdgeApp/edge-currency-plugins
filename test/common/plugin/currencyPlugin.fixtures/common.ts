@@ -14,6 +14,11 @@ export interface FixtureType {
   xpub: string
   'invalid key name': EdgeWalletInfo
   'invalid wallet type': EdgeWalletInfo
+  importKey: {
+    validKeys: string[]
+    invalidKeys: string[]
+    unsupportedKeys: string[]
+  }
   parseUri: {
     [testName: string]: [string, ExtendedParseUri] | [string]
   }
@@ -27,7 +32,9 @@ export interface FixtureType {
   }
 }
 
-// chicken valve parrot park animal proof youth detail glance review artwork cluster drive more charge lunar uncle neglect brain act rose job photo spot
+// The mnemonic and key represent the same private key
+const mnemonic =
+  'chicken valve parrot park animal proof youth detail glance review artwork cluster drive more charge lunar uncle neglect brain act rose job photo spot'
 export const key = [
   39,
   190,
@@ -61,4 +68,9 @@ export const key = [
   240,
   40,
   238
+]
+export const mnemonics = [mnemonic]
+export const airbitzSeeds = ['AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=']
+export const hexSeeds = [
+  '24ffe175a5644da63141b420ff7dcd079f226a333bee5780a8c7e37901adb771'
 ]

@@ -1,4 +1,4 @@
-import { FixtureType, key } from '../common'
+import { airbitzSeeds, FixtureType, hexSeeds, key, mnemonics } from '../common'
 
 export const bitcoinsv: FixtureType = {
   pluginId: 'bitcoinsv',
@@ -20,6 +20,16 @@ export const bitcoinsv: FixtureType = {
     id: 'unknown',
     type: 'shitcoin',
     keys: { bitcoincashKeyz: '12345678abcd' }
+  },
+  importKey: {
+    validKeys: [...mnemonics, ...hexSeeds],
+    invalidKeys: [
+      ...airbitzSeeds.map(seed => seed.slice(1)),
+      ...hexSeeds.map(seed => seed.slice(1)),
+      ...mnemonics.map(mnemonic => mnemonic.split(' ').slice(1).join(' ')),
+      'bunch of garbly gook !@#$%^&*()'
+    ],
+    unsupportedKeys: airbitzSeeds
   },
   parseUri: {
     'address only': [
