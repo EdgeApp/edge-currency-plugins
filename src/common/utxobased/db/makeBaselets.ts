@@ -9,8 +9,6 @@ import { Disklet } from 'disklet'
 import {
   AddressByScriptPubkeyBaselet,
   addressByScriptPubkeyOptions,
-  BlockHashByBlockHeightBaselet,
-  blockHashByBlockHeightOptions,
   LastUsedByFormatPathBaselet,
   lastUsedByFormatPathOptions,
   ScriptPubkeyByPathBaselet,
@@ -39,7 +37,6 @@ interface AllBaselets {
   address: AddressBaselets
   tx: TransactionBaselets
   utxo: UtxoBaselets
-  block: BlockBaselets
 }
 
 interface AddressBaselets {
@@ -59,16 +56,10 @@ interface UtxoBaselets {
   utxoIdsByScriptPubkey: UtxoIdsByScriptPubkeyBaselet
 }
 
-interface BlockBaselets {
-  blockHashByBlockHeight: BlockHashByBlockHeightBaselet
-}
-
 export interface Baselets {
   address: <E extends Executor<'address'>>(fn: E) => Promise<ReturnType<E>>
   tx: <E extends Executor<'tx'>>(fn: E) => Promise<ReturnType<E>>
   utxo: <E extends Executor<'utxo'>>(fn: E) => Promise<ReturnType<E>>
-  block: <E extends Executor<'block'>>(fn: E) => Promise<ReturnType<E>>
-
   all: AddressBaselets & TransactionBaselets & UtxoBaselets
 }
 
@@ -105,12 +96,6 @@ export const makeBaselets = async (
       utxoIdsByScriptPubkeyOptions
     )
   }
-  const blockHeightBases: BlockBaselets = {
-    blockHashByBlockHeight: await createOrOpenHashBase(
-      config.disklet,
-      blockHashByBlockHeightOptions
-    )
-  }
 
   const addressMutex = new Mutex()
   const txMutex = new Mutex()
@@ -129,15 +114,10 @@ export const makeBaselets = async (
       return await utxoMutex.runExclusive(async () => await fn(utxoBases))
     },
 
-    async block(fn): Promise<ReturnType<typeof fn>> {
-      return await fn(blockHeightBases)
-    },
-
     all: {
       ...addressBases,
       ...txBases,
-      ...utxoBases,
-      ...blockHeightBases
+      ...utxoBases
     }
   }
 }
