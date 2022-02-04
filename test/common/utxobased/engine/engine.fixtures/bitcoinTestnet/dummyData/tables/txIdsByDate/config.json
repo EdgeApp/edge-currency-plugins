@@ -1,0 +1,1 @@
+{"type":"RANGE_BASE","bucketSize":2592000,"rangeKey":"date","idKey":"txid","idPrefixLength":1,"limits":{"":{"minRange":1511921755,"maxRange":1512020289}},"sizes":{"":6}}

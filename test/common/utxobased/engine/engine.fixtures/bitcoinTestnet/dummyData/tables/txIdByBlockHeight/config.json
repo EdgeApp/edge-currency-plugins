@@ -1,0 +1,1 @@
+{"type":"RANGE_BASE","bucketSize":100000,"rangeKey":"blockHeight","idKey":"txid","idPrefixLength":1,"limits":{"":{"minRange":1249371,"maxRange":1250624}},"sizes":{"":6}}
