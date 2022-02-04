@@ -303,7 +303,7 @@ describe('engine.spec', function () {
       })
     })
 
-    describe.skip('Should Add Gap Limit Addresses', function () {
+    describe('Should Add Gap Limit Addresses', function () {
       const gapAddresses = tests['Add Gap Limit']
       const derived = gapAddresses.derived ?? []
       // const future = gapAddresses.future ?? []
