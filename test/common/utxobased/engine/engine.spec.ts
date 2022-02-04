@@ -107,16 +107,18 @@ describe('engine.spec', function () {
         )
         const tools: EdgeCurrencyTools = await plugin.makeCurrencyTools()
         // Hack for now until we change all the dummy data to represent the new derivation path
-        keys = await tools.createPrivateKey(WALLET_TYPE)
-        Object.assign(keys, {
+        const privateKeys = await tools.createPrivateKey(WALLET_TYPE)
+        Object.assign(privateKeys, {
           coinType: 0,
           format: WALLET_FORMAT
         })
-        keys = await tools.derivePublicKey({
+        const publicKeys = await tools.derivePublicKey({
           type: WALLET_TYPE,
-          keys,
+          keys: privateKeys,
           id: '!'
         })
+
+        keys = { ...privateKeys, ...publicKeys }
       })
 
       it('Error when Making Engine without local folder', async function () {
@@ -398,7 +400,7 @@ describe('engine.spec', function () {
   })
   */
 
-    describe.skip(`Make Spend and Sign for Wallet type ${WALLET_TYPE}`, function () {
+    describe(`Make Spend and Sign for Wallet type ${WALLET_TYPE}`, function () {
       const spendTests = tests.Spend ?? {}
       const insufficientTests = tests.InsufficientFundsError ?? {}
 
