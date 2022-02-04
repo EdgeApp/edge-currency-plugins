@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { assert } from 'chai'
-import { downgradeDisklet, navigateDisklet } from 'disklet'
+import { makeMemoryDisklet, makeNodeDisklet } from 'disklet'
 import {
   asMaybeInsufficientFundsError,
   EdgeCorePlugin,
@@ -32,17 +32,8 @@ const fakeLogger = {
   error: noOp
 }
 
-const DATA_STORE_FOLDER = 'txEngineFolderBTC'
-
 describe('engine.spec', function () {
-  for (const fixture of fixtures) {
-    const {
-      tests,
-      dummyAddressData,
-      dummyHeadersData,
-      dummyTransactionsData
-    } = fixture
-
+  for (const tests of fixtures) {
     const WALLET_FORMAT = tests.WALLET_FORMAT
     const WALLET_TYPE = tests.WALLET_TYPE
     const TX_AMOUNT = tests.TX_AMOUNT
@@ -51,6 +42,13 @@ describe('engine.spec', function () {
     let keys: JsonObject = {}
 
     const fakeIo = makeFakeIo()
+    const fixtureDisklet = makeNodeDisklet(tests.dummyDataPath)
+    const fakeIoDisklet = makeMemoryDisklet()
+    // FOR DEBUGGING:
+    // const fakeIoDisklet = makeNodeDisklet(
+    //   join(__dirname, 'engine.fixtures/bitcoinTestnet2')
+    // )
+
     const pluginOpts: EdgeCorePluginOptions = {
       initOptions: {},
       io: {
@@ -60,14 +58,13 @@ describe('engine.spec', function () {
       },
       log: testLog,
       nativeIo: {},
-      pluginDisklet: fakeIo.disklet
+      pluginDisklet: fakeIoDisklet
     }
     const factory = edgeCorePlugins[tests.pluginId]
-    if (typeof factory !== 'function') {
-      // Skip this test if the plugin is not available
-      break
-      // throw new TypeError('Bad plugin')
-    }
+
+    // Skip this test if the plugin is not available
+    if (typeof factory !== 'function') break
+
     const corePlugin: EdgeCorePlugin = factory(pluginOpts)
     const plugin: EdgeCurrencyPlugin = corePlugin as any
 
@@ -93,11 +90,7 @@ describe('engine.spec', function () {
       onTxidsChanged() {}
     }
 
-    const walletLocalDisklet = navigateDisklet(
-      fakeIo.disklet,
-      DATA_STORE_FOLDER
-    )
-    const walletLocalFolder = downgradeDisklet(walletLocalDisklet)
+    const walletLocalDisklet = fakeIoDisklet
     const engineOpts: EdgeCurrencyEngineOptions = {
       callbacks,
       log: testLog,
@@ -166,22 +159,21 @@ describe('engine.spec', function () {
       })
     })
     describe(`Start Engine for Wallet type ${WALLET_TYPE}`, function () {
-      before('Create local cache file', async function () {
-        await walletLocalFolder
-          .file('addresses.json')
-          .setText(JSON.stringify(dummyAddressData))
-          .then(
-            async () =>
-              await walletLocalFolder
-                .file('txs.json')
-                .setText(JSON.stringify(dummyTransactionsData))
+      before('Create local cache', async function () {
+        const migrate = async (dir: string): Promise<void> => {
+          const files = await fixtureDisklet.list(dir)
+          await Promise.all(
+            Object.entries(files).map(async ([path, type]) => {
+              if (type === 'folder') await migrate(path)
+              if (type === 'file')
+                await fixtureDisklet
+                  .getText(path)
+                  .then(async data => await fakeIoDisklet.setText(path, data))
+            })
           )
-          .then(
-            async () =>
-              await walletLocalFolder
-                .file('headers.json')
-                .setText(JSON.stringify(dummyHeadersData))
-          )
+        }
+
+        await migrate('tables')
       })
 
       it('Make Engine', async function () {
