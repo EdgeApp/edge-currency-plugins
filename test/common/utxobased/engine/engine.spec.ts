@@ -275,7 +275,7 @@ describe('engine.spec', function () {
       })
     })
 
-    describe.skip(`Get Transactions from Wallet type ${WALLET_TYPE}`, function () {
+    describe(`Get Transactions from Wallet type ${WALLET_TYPE}`, function () {
       it('Should get number of transactions from cache', function () {
         assert.equal(
           engine.getNumTransactions({}),
