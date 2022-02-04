@@ -228,7 +228,7 @@ describe('engine.spec', function () {
       })
     })
 
-    describe.skip(`Is Address Used for Wallet type ${WALLET_TYPE} from cache`, function () {
+    describe(`Is Address Used for Wallet type ${WALLET_TYPE} from cache`, function () {
       const testCases = tests['Address used from cache']
       const wrongFormat = testCases.wrongFormat ?? []
       const notInWallet = testCases.notInWallet ?? []
@@ -236,21 +236,23 @@ describe('engine.spec', function () {
       const nonEmpty = testCases.nonEmpty ?? {}
 
       wrongFormat.forEach(address => {
-        it('Checking a wrong formated address', async function (done) {
+        it('Checking a wrong formated address', async function () {
           try {
             await engine.isAddressUsed(address)
           } catch (e) {
             assert(e, 'Should throw')
-            assert.equal(e.message, 'Wrong formatted address')
-            done()
+            assert.match(
+              e.message,
+              /unable to convert address \w+ to script pubkey/
+            )
           }
         })
       })
 
       notInWallet.forEach(address => {
-        it("Checking an address we don't own", function () {
+        it("Checking an address we don't own", async function () {
           try {
-            assert.equal(engine.isAddressUsed(address), false)
+            assert.equal(await engine.isAddressUsed(address), false)
           } catch (e) {
             assert(e, 'Should throw')
             assert.equal(e.message, 'Address not found in wallet')
@@ -259,16 +261,14 @@ describe('engine.spec', function () {
       })
 
       objectKeys(empty).forEach(test => {
-        it(`Checking an empty ${test}`, function (done) {
-          assert.equal(engine.isAddressUsed(empty[test]), false)
-          done()
+        it(`Checking an empty ${test}`, async function () {
+          assert.equal(await engine.isAddressUsed(empty[test]), false)
         })
       })
 
       objectKeys(nonEmpty).forEach(test => {
-        it(`Checking a non empty ${test}`, function (done) {
-          assert.equal(engine.isAddressUsed(nonEmpty[test]), true)
-          done()
+        it(`Checking a non empty ${test}`, async function () {
+          assert.equal(await engine.isAddressUsed(nonEmpty[test]), true)
         })
       })
     })
