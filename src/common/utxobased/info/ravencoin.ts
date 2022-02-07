@@ -13,7 +13,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields(['wss://blockbook.ravencoin.org']),
+    ...serverListFields(['wss://blockbook-rvn-sfo3.edge.app']),
     disableFetchingServers: false
   },
   customFeeTemplate: [
