@@ -660,18 +660,8 @@ export const pickNextTask = async (
   if (serverState == null) return
 
   // subscribe all servers to new blocks
-  if (!serverState.subscribedBlocks) {
-    serverState.subscribedBlocks = true
-    const queryTime = Date.now()
-    const deferred = new Deferred<unknown>()
-    deferred.promise
-      .then(() => {
-        serverStates.serverScoreUp(uri, Date.now() - queryTime)
-      })
-      .catch(() => {
-        serverState.subscribedBlocks = false
-      })
-    serverStates.watchBlocks(uri, deferred)
+  if (serverState.blockSubscriptionStatus === 'unsubscribed') {
+    serverStates.watchBlocks(uri)
     return true
   }
 

@@ -15,7 +15,7 @@ import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
 import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
 
 interface ServerState {
-  subscribedBlocks: boolean
+  blockSubscriptionStatus: 'unsubscribed' | 'subscribing' | 'subscribed'
   blockHeight: number
   txids: Set<string>
   addresses: Set<string>
@@ -48,7 +48,7 @@ export interface ServerStates {
     addresses: string[],
     deferredAddressSub: Deferred<unknown>
   ) => void
-  watchBlocks: (uri: string, deferredBlockSub: Deferred<unknown>) => void
+  watchBlocks: (uri: string) => void
   getBlockHeight: (uri: string) => number
 }
 
@@ -102,23 +102,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     }
   )
   engineEmitter.on(
-    EngineEvent.BLOCK_HEIGHT_CHANGED,
-    (uri: string, height: number) => {
-      log(`${uri} returned height: ${height}`)
-      const serverState = serverStates[uri]
-      if (serverState == null) {
-        serverStates[uri] = {
-          subscribedBlocks: true,
-          txids: new Set(),
-          addresses: new Set(),
-          blockHeight: 0
-        }
-      } else if (!serverState.subscribedBlocks) {
-        serverState.subscribedBlocks = true
-      }
-    }
-  )
-  engineEmitter.on(
     EngineEvent.NEW_ADDRESS_TRANSACTION,
     (uri: string, newTx: SubscribeAddressResponse) => {
       log(
@@ -143,6 +126,12 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) => Promise<boolean | WsTask<any> | undefined>
 
+  const makeServerState = (): ServerState => ({
+    blockSubscriptionStatus: 'unsubscribed',
+    txids: new Set(),
+    addresses: new Set(),
+    blockHeight: 0
+  })
   const setPickNextTaskCB = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
@@ -217,12 +206,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         continue
       }
 
-      serverStates[uri] = {
-        subscribedBlocks: false,
-        txids: new Set(),
-        addresses: new Set(),
-        blockHeight: 0
-      }
+      serverStates[uri] = makeServerState()
 
       const onQueueSpaceCB = async (): Promise<
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -367,14 +351,25 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     blockbook.watchAddresses(addresses, deferredAddressSub)
   }
 
-  const watchBlocks = (
-    uri: string,
-    deferredBlockSub: Deferred<unknown>
-  ): void => {
+  const watchBlocks = (uri: string): void => {
     const blockbook = connections[uri]
     if (blockbook == null)
       throw new Error(`No blockbook connection with ${uri}`)
-    blockbook.watchBlocks(deferredBlockSub)
+
+    const serverState = serverStates[uri] ?? makeServerState()
+    serverState.blockSubscriptionStatus = 'subscribing'
+
+    const queryTime = Date.now()
+    const deferred = new Deferred()
+    deferred.promise
+      .then(() => {
+        serverState.blockSubscriptionStatus = 'subscribed'
+        serverScoreUp(uri, Date.now() - queryTime)
+      })
+      .catch(() => {
+        serverState.blockSubscriptionStatus = 'unsubscribed'
+      })
+    blockbook.watchBlocks(deferred)
   }
 
   const getBlockHeight = (uri: string): number => {
