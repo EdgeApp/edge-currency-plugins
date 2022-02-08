@@ -9,4 +9,5 @@ export interface UtxoTxOtherParams {
     outputs: Output[]
   }
   edgeSpendInfo?: EdgeSpendInfo
+  ourScriptPubkeys: string[]
 }

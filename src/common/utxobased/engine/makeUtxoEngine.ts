@@ -364,11 +364,18 @@ export async function makeUtxoEngine(
       }
 
       let nativeAmount = '0'
+      const ourScriptPubkeys: string[] = tx.inputs.map(input =>
+        input.scriptPubkey.toString('hex')
+      )
       for (const output of tx.outputs) {
-        const scriptPubkey = output.script.toString('hex')
+        const scriptPubkey = output.scriptPubkey.toString('hex')
         const own = await processor.fetchAddress(scriptPubkey)
         if (own == null) {
+          // Not our output
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
+        } else {
+          // Our output
+          ourScriptPubkeys.push(scriptPubkey)
         }
       }
 
@@ -381,7 +388,8 @@ export async function makeUtxoEngine(
           inputs: tx.inputs,
           outputs: tx.outputs
         },
-        edgeSpendInfo
+        edgeSpendInfo,
+        ourScriptPubkeys
       }
 
       const transaction = {
@@ -428,7 +436,10 @@ export async function makeUtxoEngine(
         walletTools,
         processor
       })
-      await processor.saveTransaction({ tx })
+      await processor.saveTransaction({
+        tx,
+        scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys
+      })
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {

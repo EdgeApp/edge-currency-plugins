@@ -555,7 +555,7 @@ describe('Processor transactions tests', () => {
 
     await processor.saveTransaction({
       tx: transaction1,
-      scriptPubkey: output1.scriptPubkey
+      scriptPubkeys: [output1.scriptPubkey]
     })
 
     assertNumTransactions(1, processor)
@@ -570,7 +570,7 @@ describe('Processor transactions tests', () => {
     // insert the same transaction, but with a script pubkey referencing an input
     await processor.saveTransaction({
       tx: transaction1,
-      scriptPubkey: input1.scriptPubkey
+      scriptPubkeys: [input1.scriptPubkey]
     })
 
     const [tx2] = await processor.fetchTransactions({ txId: transaction1.txid })
@@ -581,7 +581,7 @@ describe('Processor transactions tests', () => {
     // insert the same transaction, but with a script pubkey referencing another output
     await processor.saveTransaction({
       tx: transaction1,
-      scriptPubkey: output2.scriptPubkey
+      scriptPubkeys: [output2.scriptPubkey]
     })
 
     const [tx3] = await processor.fetchTransactions({ txId: transaction1.txid })
@@ -656,11 +656,11 @@ describe('Processor transactions tests', () => {
 
     await processor.saveTransaction({
       tx: transaction1,
-      scriptPubkey: output1.scriptPubkey
+      scriptPubkeys: [output1.scriptPubkey]
     })
     await processor.saveTransaction({
       tx: transaction2,
-      scriptPubkey: output2.scriptPubkey
+      scriptPubkeys: [output2.scriptPubkey]
     })
 
     assertNumTransactions(2, processor)
@@ -675,7 +675,7 @@ describe('Processor transactions tests', () => {
 
     await processor.saveTransaction({
       tx: transaction1,
-      scriptPubkey: input1.scriptPubkey
+      scriptPubkeys: [input1.scriptPubkey]
     })
 
     const [tx2] = await processor.fetchTransactions({ txId: transaction1.txid })
@@ -685,7 +685,7 @@ describe('Processor transactions tests', () => {
 
     await processor.saveTransaction({
       tx: transaction1,
-      scriptPubkey: output2.scriptPubkey
+      scriptPubkeys: [output2.scriptPubkey]
     })
 
     const [tx3] = await processor.fetchTransactions({ txId: transaction1.txid })
@@ -776,11 +776,11 @@ describe('Processor transactions tests', () => {
 
     await processor.saveTransaction({
       tx: transaction1,
-      scriptPubkey: output1.scriptPubkey
+      scriptPubkeys: [output1.scriptPubkey]
     })
     await processor.saveTransaction({
       tx: transaction2,
-      scriptPubkey: output2.scriptPubkey
+      scriptPubkeys: [output2.scriptPubkey]
     })
 
     const txsByBlockHeight = await processor.fetchTransactions({

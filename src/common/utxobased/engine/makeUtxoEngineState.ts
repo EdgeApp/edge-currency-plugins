@@ -1033,7 +1033,7 @@ const processAddressTransactions = async (
         const tx = processRawTx({ ...args, tx: rawTx })
         const processedTx = await processor.saveTransaction({
           tx,
-          scriptPubkey
+          scriptPubkeys: [scriptPubkey]
         })
         await transactionChanged({
           emitter,
