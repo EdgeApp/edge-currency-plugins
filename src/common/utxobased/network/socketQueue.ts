@@ -11,9 +11,7 @@ const updateQueue: UpdateQueue[] = []
 let timeOut: ReturnType<typeof setTimeout>
 
 export function pushUpdate(update: UpdateQueue): void {
-  if (updateQueue.length === 0) {
-    startQueue()
-  }
+  const shouldRun = updateQueue.length === 0
   let didUpdate = false
   for (const u of updateQueue) {
     if (u.id === update.id && u.action === update.action) {
@@ -24,6 +22,9 @@ export function pushUpdate(update: UpdateQueue): void {
   }
   if (!didUpdate) {
     updateQueue.push(update)
+  }
+  if (shouldRun) {
+    startQueue()
   }
 }
 
@@ -41,19 +42,19 @@ export function removeIdFromQueue(id: string): void {
 }
 
 function startQueue(): void {
-  timeOut = setTimeout(() => {
-    const numJobs =
-      QUEUE_JOBS_PER_RUN < updateQueue.length
-        ? QUEUE_JOBS_PER_RUN
-        : updateQueue.length
-    for (let i = 0; i < numJobs; i++) {
-      if (updateQueue.length > 0) {
-        const u = updateQueue.shift()
-        u?.updateFunc()
-      }
-    }
+  const numJobs =
+    QUEUE_JOBS_PER_RUN < updateQueue.length
+      ? QUEUE_JOBS_PER_RUN
+      : updateQueue.length
+  for (let i = 0; i < numJobs; i++) {
     if (updateQueue.length > 0) {
-      startQueue()
+      const u = updateQueue.shift()
+      u?.updateFunc()
     }
-  }, QUEUE_RUN_DELAY)
+  }
+  if (updateQueue.length > 0) {
+    timeOut = setTimeout(() => {
+      startQueue()
+    }, QUEUE_RUN_DELAY)
+  }
 }

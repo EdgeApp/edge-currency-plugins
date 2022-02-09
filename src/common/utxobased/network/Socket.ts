@@ -73,6 +73,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const { emitter, log, queueSize = 50, walletId } = config
   log('makeSocket connects to', uri)
   const version = ''
+  const socketQueueId = walletId + '==' + uri
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subscriptions: Subscriptions<any> = {}
   let onQueueSpace = config.onQueueSpaceCB
@@ -100,7 +101,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     clearTimeout(timer)
     connected = false
     if (socket != null) socket.disconnect()
-    removeIdFromQueue(uri)
+    removeIdFromQueue(socketQueueId)
   }
 
   const onSocketClose = (): void => {
@@ -149,7 +150,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const wakeUp = (): void => {
     log(`wakeUp socket with server ${uri}`)
     pushUpdate({
-      id: walletId + '==' + uri,
+      id: socketQueueId,
       updateFunc: () => {
         doWakeUp().catch(err => {
           throw new Error(`wake up error from: ${err.message}`)
