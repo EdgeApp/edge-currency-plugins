@@ -245,7 +245,8 @@ export async function makeUtxoEngine(
     async isAddressUsed(address: string): Promise<boolean> {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddress(scriptPubkey)
-      return addressData?.used ?? false
+      if (addressData == null) throw new Error('Address not found in wallet')
+      return addressData.used
     },
 
     async makeSpend(

@@ -1,4 +1,7 @@
 import { EdgeSpendInfo } from 'edge-core-js/types'
+import { join } from 'path'
+
+const dummyDataPath = join(__dirname, 'dummyData')
 
 export interface SpendTests {
   [key: string]: EdgeSpendInfo
@@ -185,6 +188,7 @@ const Sweep: SpendTests = {
 }
 
 export default {
+  dummyDataPath,
   pluginId: 'bitcointestnet',
   WALLET_TYPE: 'wallet:bitcoin-testnet',
   WALLET_FORMAT: 'bip49',
