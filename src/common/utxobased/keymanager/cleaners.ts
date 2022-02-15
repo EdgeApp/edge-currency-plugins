@@ -1,4 +1,5 @@
 import {
+  asBoolean,
   asCodec,
   asMaybe,
   asNumber,
@@ -30,6 +31,7 @@ const asOptionalPrivateKeyFormat = asOptional(asPrivateKeyFormat, 'bip32')
 export interface PrivateKey {
   coinType: number
   format: CurrencyFormat
+  imported?: boolean
   seed: string
 }
 export function asPrivateKey(
@@ -41,18 +43,19 @@ export function asPrivateKey(
       if (raw == null || typeof raw !== 'object') {
         throw new TypeError('Private keys must be objects')
       }
-      const asCoinType = asOptional(asNumber, coinType)
-      return {
-        coinType: asCoinType(raw.coinType),
-        format: asOptionalPrivateKeyFormat(raw.format),
-        seed: asString(raw[`${coinName}Key`])
-      }
+      return asObject({
+        coinType: asOptional(asNumber, coinType),
+        format: asOptionalPrivateKeyFormat,
+        imported: asOptional(asBoolean),
+        seed: asString
+      })({ ...raw, seed: raw[`${coinName}Key`] })
     },
     clean => {
-      const { coinType, format, seed } = clean
+      const { coinType, format, imported, seed } = clean
       return {
         coinType,
         format,
+        imported,
         [`${coinName}Key`]: seed
       }
     }
@@ -117,9 +120,10 @@ export interface NumbWalletInfo {
   id: string
   type: string
   keys: {
+    imported?: boolean
     primaryFormat: CurrencyFormat
-    walletFormats: CurrencyFormat[]
     publicKey: PublicKey
+    walletFormats: CurrencyFormat[]
   }
 }
 export const asNumbWalletInfo = (

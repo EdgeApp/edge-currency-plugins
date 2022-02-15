@@ -44,7 +44,37 @@ export function makeCurrencyTools(
       const mnemonic = bip39.entropyToMnemonic(Buffer.from(io.random(32)))
 
       const privateKey: PrivateKey = {
+        imported: false,
         seed: mnemonic,
+        format: opts?.format ?? engineInfo.formats?.[0] ?? 'bip44',
+        coinType: opts?.coinType ?? coinInfo.coinType ?? 0
+      }
+
+      return wasCurrencyPrivateKey(privateKey)
+    },
+
+    async importPrivateKey(
+      seedOrMnemonic: string,
+      opts?: JsonObject
+    ): Promise<JsonObject> {
+      const isMnemonic = bip39.validateMnemonic(seedOrMnemonic)
+      // An Airbitz seed is a 256 bit base64 encoded string. Convert the string
+      // to a buffer and then count the bytes (32 bytes is 256 bits).
+      const isAirbitzSeed = Buffer.from(seedOrMnemonic, 'base64').length === 32
+      // An Airbitz seed is a 256 bit base64 encoded string. Convert the string
+      // to a buffer and then count the bytes (32 bytes is 256 bits).
+      const isHexSeed = Buffer.from(seedOrMnemonic, 'hex').length === 32
+
+      if (isAirbitzSeed) {
+        throw new Error('Import for Airbitz seeds is unsupported.')
+      }
+      if (!isMnemonic && !isHexSeed) {
+        throw new Error('Invalid seed or mnemonic')
+      }
+
+      const privateKey: PrivateKey = {
+        imported: true,
+        seed: seedOrMnemonic,
         format: opts?.format ?? engineInfo.formats?.[0] ?? 'bip44',
         coinType: opts?.coinType ?? coinInfo.coinType ?? 0
       }
