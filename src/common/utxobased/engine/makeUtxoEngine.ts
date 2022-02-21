@@ -375,7 +375,6 @@ export async function makeUtxoEngine(
         freshAddress.segwitAddress ??
         freshAddress.publicAddress
 
-      const setRBF = txOptions?.setRBF ?? false
       const rbfTxid = edgeSpendInfo.rbfTxid
       let maxUtxo: undefined | IUTXO
       let feeRate = parseInt(await fees.getRate(edgeSpendInfo))
@@ -422,7 +421,7 @@ export async function makeUtxoEngine(
         feeRate,
         coin: coinInfo.name,
         currencyCode: currencyInfo.currencyCode,
-        setRBF,
+        enableRbf: edgeSpendInfo.otherParams?.enableRbf ?? false,
         freshChangeAddress,
         subtractFee,
         log,

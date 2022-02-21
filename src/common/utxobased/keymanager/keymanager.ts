@@ -214,7 +214,7 @@ export interface MakeTxArgs {
   targets: MakeTxTarget[]
   memos: EdgeMemo[]
   feeRate: number
-  setRBF: boolean
+  enableRbf: boolean
   coin: string
   currencyCode: string
   freshChangeAddress: string
@@ -928,7 +928,7 @@ export function signMessageBase64(message: string, privateKey: string): string {
 export function makeTx(args: MakeTxArgs): MakeTxReturn {
   const { log, outputSort, memos } = args
   let sequence = 0xffffffff
-  if (args.setRBF) {
+  if (args.enableRbf) {
     sequence -= 2
   }
 

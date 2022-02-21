@@ -44,7 +44,6 @@ export interface AddressPath {
 export interface TxOptions {
   utxos?: IUTXO[]
   subtractFee?: boolean
-  setRBF?: boolean
   CPFP?: string
 }
 
