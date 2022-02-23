@@ -31,6 +31,7 @@ import {
   toEdgeTransaction
 } from '../db/Models/ProcessorTransaction'
 import { IProcessorTransaction, IUTXO } from '../db/types'
+import { utxoFromProcessorTransactionInput } from '../db/util/utxo'
 import {
   asPrivateKey,
   asSafeWalletInfo,
@@ -394,14 +395,11 @@ export async function makeUtxoEngine(
         const maxInput = rbfInputs.reduce((a, b) =>
           bs.gt(a.amount, b.amount) ? a : b
         )
-        const maxId = `${maxInput.txId}_${maxInput.outputIndex}`
-        maxUtxo = (await processor.fetchUtxos({ utxoIds: [maxId] }))[0]
-        if (maxUtxo == null) {
-          log.error('transaction to be replaced found, but not its input utxos')
-          throw new Error(
-            'transaction to be replaced found, but not its input utxos'
-          )
-        }
+        maxUtxo = await utxoFromProcessorTransactionInput(
+          processor,
+          rbfTx,
+          maxInput.n
+        )
       }
       if (txOptions?.CPFP != null) {
         const [childTx] = await processor.fetchTransactions({
