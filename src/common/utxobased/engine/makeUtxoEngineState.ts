@@ -1569,25 +1569,27 @@ const processRawUtxo = async (
   let redeemScript: string | undefined
 
   // Function to call once we are finished
-  const done = (): void =>
+  const done = (): void => {
+    const processorUtxo: IUTXO = {
+      id,
+      txid: utxo.txid,
+      vout: utxo.vout,
+      value: utxo.value,
+      scriptPubkey: address.scriptPubkey,
+      script,
+      redeemScript,
+      scriptType,
+      blockHeight: utxo.height ?? -1,
+      spent: false
+    }
     addToProcessorUtxoCache(
       processorUtxoCache,
       path,
       address.scriptPubkey,
       requiredCount,
-      {
-        id,
-        txid: utxo.txid,
-        vout: utxo.vout,
-        value: utxo.value,
-        scriptPubkey: address.scriptPubkey,
-        script,
-        redeemScript,
-        scriptType,
-        blockHeight: utxo.height ?? -1,
-        spent: false
-      }
+      processorUtxo
     )
+  }
 
   switch (purposeType) {
     case BIP43PurposeTypeEnum.Airbitz:
