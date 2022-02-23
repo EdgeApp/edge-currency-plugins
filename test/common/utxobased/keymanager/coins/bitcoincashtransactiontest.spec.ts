@@ -3,16 +3,14 @@ import { describe, it } from 'mocha'
 
 import { scriptTemplates } from '../../../../../src/common/utxobased/info/scriptTemplates/bitcoincashScriptTemplates'
 import {
-  addressToScriptPubkey,
   AddressTypeEnum,
-  createTx,
+  makeTx,
   privateKeyToPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   scriptPubkeyToP2SH,
   ScriptTypeEnum,
   signTx,
-  TransactionInputTypeEnum,
   wifToPrivateKey
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
 
@@ -40,16 +38,24 @@ describe('bitcoincash transaction creation and signing test', () => {
       This deserialization is not required in the usual form from the caller.
       It is enough to pass the full previous rawtransaction.
     */
-    const base64Tx: string = createTx({
+    const { psbtBase64 } = await makeTx({
+      forceUseUtxo: [],
       coin: 'bitcoincash',
-      rbf: false,
-      inputs: [
+      setRBF: false,
+      freshChangeAddress: address,
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [
         {
-          type: TransactionInputTypeEnum.Legacy,
-          prevTxid:
+          id: '0',
+          scriptType: ScriptTypeEnum.p2pkh,
+          txid:
             '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
-          // prev_tx only for non segwit inputs
-          prevTx:
+          scriptPubkey,
+          value: '80000',
+          blockHeight: 0,
+          spent: false,
+          script:
             '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
             '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
             'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
@@ -63,22 +69,13 @@ describe('bitcoincash transaction creation and signing test', () => {
             scriptPubkey +
             // locktime
             '00000000',
-          index: 0
+          vout: 0
         }
       ],
-      outputs: [
-        {
-          scriptPubkey: addressToScriptPubkey({
-            address: address,
-            addressType: AddressTypeEnum.p2pkh,
-            coin: 'bitcoin'
-          }),
-          amount: 80000
-        }
-      ]
-    }).psbt
+      targets: []
+    })
     const signedTx = await signTx({
-      psbtBase64: base64Tx,
+      psbtBase64,
       privateKeys: [privateKey],
       coin: 'bitcoincash'
     })
@@ -88,7 +85,7 @@ describe('bitcoincash transaction creation and signing test', () => {
   })
 })
 
-describe('bitcoincash replay protection transaction creation and signing test', function () {
+describe.skip('bitcoincash replay protection transaction creation and signing test', function () {
   this.timeout(10000)
 
   // key with control on the unspent output and used to sign the transaction
@@ -121,15 +118,25 @@ describe('bitcoincash replay protection transaction creation and signing test', 
       This deserialization is not required in the usual form from the caller.
       It is enough to pass the full previous rawtransaction.
     */
-    const base64Tx: string = createTx({
+    const { psbtBase64 } = await makeTx({
+      forceUseUtxo: [],
       coin: 'bitcoincash',
-      rbf: false,
-      inputs: [
+      setRBF: false,
+      freshChangeAddress: address,
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [
         {
-          type: TransactionInputTypeEnum.Legacy,
-          prevTxid:
+          id: '0',
+          scriptType: ScriptTypeEnum.replayProtectionP2SH,
+          txid:
             'E69BED1EBB212A4C2116989D9A543EBC8BA11DD753B2D1F69A963D796EC0950C',
-          prevTx:
+          scriptPubkey: scriptPubkeyP2SH,
+          value: '80000',
+          blockHeight: 0,
+          spent: false,
+          redeemScript,
+          script:
             '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
             '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
             'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
@@ -140,23 +147,13 @@ describe('bitcoincash replay protection transaction creation and signing test', 
             '17' +
             scriptPubkeyP2SH +
             '00000000',
-          index: 0,
-          redeemScript: redeemScript
+          vout: 0
         }
       ],
-      outputs: [
-        {
-          scriptPubkey: addressToScriptPubkey({
-            address: address,
-            addressType: AddressTypeEnum.p2pkh,
-            coin: 'bitcoin'
-          }),
-          amount: 80000
-        }
-      ]
-    }).psbt
+      targets: []
+    })
     const signedTx = await signTx({
-      psbtBase64: base64Tx,
+      psbtBase64,
       privateKeys: [privateKey],
       coin: 'bitcoincash'
     })

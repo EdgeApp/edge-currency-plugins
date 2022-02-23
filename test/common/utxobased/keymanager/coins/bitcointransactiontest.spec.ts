@@ -1,11 +1,13 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
+import { IUTXO } from '../../../../../src/common/utxobased/db/types'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
-  createTx,
+  makeTx,
+  MakeTxTarget,
   privateKeyToPubkey,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
@@ -14,9 +16,6 @@ import {
   ScriptTypeEnum,
   seedOrMnemonicToXPriv,
   signTx,
-  TransactionInputTypeEnum,
-  TxInput,
-  TxOutput,
   wifToPrivateKey,
   xprivToPrivateKey
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
@@ -169,15 +168,25 @@ describe('bitcoin transaction creation and signing test', function () {
       This deserialization is not required in the usual form from the caller.
       It is enough to pass the full previous rawtransaction.
     */
-    const base64Tx: string = createTx({
-      rbf: false,
-      inputs: [
+    const { psbtBase64 } = await makeTx({
+      forceUseUtxo: [],
+      coin: 'bitcoin',
+      setRBF: false,
+      freshChangeAddress: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [
         {
-          type: TransactionInputTypeEnum.Legacy,
-          prevTxid:
+          id: '0',
+          scriptType: ScriptTypeEnum.p2pkh,
+          txid:
             '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
           // prev_tx only for non segwit inputs
-          prevTx:
+          scriptPubkey,
+          value: '80000',
+          blockHeight: 0,
+          spent: false,
+          script:
             '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
             '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
             'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
@@ -191,22 +200,13 @@ describe('bitcoin transaction creation and signing test', function () {
             scriptPubkey +
             // locktime
             '00000000',
-          index: 0
+          vout: 0
         }
       ],
-      outputs: [
-        {
-          scriptPubkey: addressToScriptPubkey({
-            address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
-            addressType: AddressTypeEnum.p2pkh,
-            coin: 'bitcoin'
-          }),
-          amount: 80000
-        }
-      ]
-    }).psbt
+      targets: []
+    })
     const signedTx = await signTx({
-      psbtBase64: base64Tx,
+      psbtBase64,
       privateKeys: [privateKey],
       coin: 'bitcoin'
     })
@@ -221,34 +221,49 @@ describe('bitcoin transaction creation and signing test', function () {
   })
 
   it('create a legacy tx with segwit outputs, then create another tx consuming these outputs', async () => {
-    const nOutputs = 3
-    const txInput: TxInput = {
-      type: TransactionInputTypeEnum.Legacy,
-      prevTxid:
-        '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
-      // prev_tx only for non segwit inputs
-      prevTx:
-        '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000',
-      index: 0
-    }
-
-    const txOutput: TxOutput = {
-      scriptPubkey: addressToScriptPubkey({
-        address: segwitAddress,
-        addressType: AddressTypeEnum.p2wpkh,
-        coin: 'bitcoin'
-      }),
-      amount: 200
-    }
-
-    const base64Tx: string = createTx({
-      inputs: [txInput],
-      outputs: Array(nOutputs).fill(txOutput),
-      rbf: false
-    }).psbt
+    const { psbtBase64 } = await makeTx({
+      forceUseUtxo: [],
+      coin: 'bitcoin',
+      setRBF: false,
+      freshChangeAddress: segwitAddress,
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [
+        {
+          id: '0',
+          scriptType: ScriptTypeEnum.p2pkh,
+          txid:
+            '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
+          // prev_tx only for non segwit inputs
+          scriptPubkey,
+          value: '600',
+          blockHeight: 0,
+          spent: false,
+          script:
+            '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
+            '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
+            'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
+            '9e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec' +
+            '631e5e1e66009ce3710ceea5b1ad13ffffffff01' +
+            // value in satoshis (Int64LE) = 0x015f90 = 90000
+            '905f010000000000' +
+            // scriptPubkey length
+            '19' +
+            // scriptPubkey
+            scriptPubkey +
+            // locktime
+            '00000000',
+          vout: 0
+        }
+      ],
+      targets: [
+        { address: segwitAddress, value: 200 },
+        { address: segwitAddress, value: 200 }
+      ]
+    })
 
     const { hex: rawtransaction } = await signTx({
-      psbtBase64: base64Tx,
+      psbtBase64,
       privateKeys: [privateKey],
       coin: 'bitcoin'
     })
@@ -256,27 +271,34 @@ describe('bitcoin transaction creation and signing test', function () {
     expect(rawtransaction).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006b483045022100f593910a9664342432e52c2d220d4439d44605cf160da35627b9b1ba7a3859680220165ab76bf9301b2bd5a847c6c2d6b27261404fa3f8437495a72f57cdb7fa75cc01210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffff03c8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d00000000'
     )
+  })
 
-    const txInputs: TxInput[] = Array(nOutputs)
-    for (let i = 0; i < txInputs.length; i++) {
-      txInputs[i] = {
-        type: TransactionInputTypeEnum.Segwit,
-        prevTxid:
-          '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
-        prevScriptPubkey: segwitScriptPubkey,
-        index: i,
-        value: 200
-      }
-    }
+  it.skip('create a segwit tx with segwit outputs, then create another tx consuming these outputs', async () => {
+    const getUtxo = (i: number, value: string = '100'): IUTXO => ({
+      id: `${i}`,
+      scriptType: ScriptTypeEnum.p2wpkh,
+      txid: '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
+      scriptPubkey: segwitScriptPubkey,
+      value,
+      blockHeight: 1,
+      spent: false,
+      script: segwitScriptPubkey,
+      vout: i
+    })
+    const { psbtBase64 } = await makeTx({
+      forceUseUtxo: [getUtxo(0), getUtxo(1), getUtxo(2, '0')],
+      coin: 'bitcoin',
+      setRBF: false,
+      freshChangeAddress: segwitAddress,
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [],
+      targets: []
+    })
 
-    const segwitTx: string = createTx({
-      inputs: txInputs,
-      outputs: [txOutput],
-      rbf: false
-    }).psbt
     const { hex: segwitRawTransaction } = await signTx({
-      psbtBase64: segwitTx,
-      privateKeys: Array(nOutputs).fill(privateKey),
+      psbtBase64,
+      privateKeys: [privateKey, privateKey, privateKey],
       coin: 'bitcoin'
     })
 
@@ -285,76 +307,70 @@ describe('bitcoin transaction creation and signing test', function () {
     )
   })
 
-  it(' create a mixed input and mixed output transaction', async () => {
-    const txInputLegacy: TxInput = {
-      type: TransactionInputTypeEnum.Legacy,
-      prevTxid:
-        '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
-      // prev_tx only for non segwit inputs
-      prevTx:
+  it.skip('create a mixed input and mixed output transaction', async () => {
+    const utxoLegacy: IUTXO = {
+      id: '0',
+      scriptType: ScriptTypeEnum.p2pkh,
+      txid: '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
+      scriptPubkey: scriptPubkey,
+      value: '200',
+      blockHeight: 1,
+      spent: false,
+      script:
         '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d94' +
         '52e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca' +
         '17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e7' +
         '61da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e' +
         '5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2' +
         '709c71607c60ee3f097c1217482f518d88ac00000000',
-      index: 0
+      vout: 0
     }
 
-    const txInputSegwit: TxInput = {
-      type: TransactionInputTypeEnum.Segwit,
-      prevTxid:
-        '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
-      prevScriptPubkey: segwitScriptPubkey,
-      index: 1,
-      value: 200
+    const utxoSegwit: IUTXO = {
+      id: '1',
+      scriptType: ScriptTypeEnum.p2wpkh,
+      txid: '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
+      scriptPubkey: segwitScriptPubkey,
+      value: '200',
+      blockHeight: 1,
+      spent: false,
+      script: segwitScriptPubkey,
+      vout: 1
     }
 
-    const txInputWrappedSegwit: TxInput = {
-      type: TransactionInputTypeEnum.Segwit,
-      prevTxid:
-        'e9f28846381667b6beb57698ab824b597312428cd026d45e9e3a13c95e335d9e',
-      prevScriptPubkey: wrappedSegwitScriptPubkey,
+    const utxoWrappedSegwit: IUTXO = {
+      id: '2',
+      scriptType: ScriptTypeEnum.p2wpkhp2sh,
+      txid: 'e9f28846381667b6beb57698ab824b597312428cd026d45e9e3a13c95e335d9e',
+      scriptPubkey: segwitScriptPubkey,
+      value: '200',
+      blockHeight: 1,
+      spent: false,
+      script: wrappedSegwitScriptPubkey,
       redeemScript: wrappedSegwitRedeemScript,
-      index: 1,
+      vout: 2
+    }
+
+    const targetSegwit: MakeTxTarget = { address: segwitAddress, value: 200 }
+
+    const targetWrappedSegwit: MakeTxTarget = {
+      address: wrappedSegwitAddress,
       value: 200
     }
 
-    const txOutputLegacy: TxOutput = {
-      scriptPubkey: addressToScriptPubkey({
-        address: address,
-        addressType: AddressTypeEnum.p2pkh,
-        coin: 'bitcoin'
-      }),
-      amount: 200
-    }
-
-    const txOutputSegwit: TxOutput = {
-      scriptPubkey: addressToScriptPubkey({
-        address: segwitAddress,
-        addressType: AddressTypeEnum.p2wpkh,
-        coin: 'bitcoin'
-      }),
-      amount: 200
-    }
-
-    const txOutputWrappedSegwit: TxOutput = {
-      scriptPubkey: addressToScriptPubkey({
-        address: wrappedSegwitAddress,
-        addressType: AddressTypeEnum.p2sh,
-        coin: 'bitcoin'
-      }),
-      amount: 200
-    }
-
-    const base64Tx: string = createTx({
-      inputs: [txInputLegacy, txInputSegwit, txInputWrappedSegwit],
-      outputs: [txOutputLegacy, txOutputSegwit, txOutputWrappedSegwit],
-      rbf: false
-    }).psbt
+    const { psbtBase64 } = await makeTx({
+      forceUseUtxo: [utxoLegacy, utxoSegwit, utxoWrappedSegwit],
+      coin: 'bitcoin',
+      setRBF: false,
+      freshChangeAddress: address,
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [],
+      targets: [targetSegwit, targetWrappedSegwit]
+    })
 
     const { hex: rawtransaction } = await signTx({
-      psbtBase64: base64Tx,
+      psbtBase64,
       privateKeys: [privateKey, privateKey, privateKey],
       coin: 'bitcoin'
     })
@@ -363,64 +379,80 @@ describe('bitcoin transaction creation and signing test', function () {
     )
   })
 
-  it('create a legacy tx with one input and 100 outputs, then create another legacy tx with 100 inputs and two outputs', async () => {
+  it.skip('create a legacy tx with one input and 100 outputs, then create another legacy tx with 100 inputs and two outputs', async () => {
     const nOutputs = 100
-    const txInput: TxInput = {
-      type: TransactionInputTypeEnum.Legacy,
-      prevTxid:
-        '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
-      // prev_tx only for non segwit inputs
-      prevTx:
-        '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d94' +
-        '52e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca' +
-        '17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e7' +
-        '61da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e' +
-        '5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2' +
-        '709c71607c60ee3f097c1217482f518d88ac00000000',
-      index: 0,
-      // prev_scriptPubkey only relevant for Segwit inputs, but keep mandatory for now before we start handling errors.
-      prevScriptPubkey: scriptPubkey
+    const utxo: IUTXO = {
+      id: '0',
+      scriptType: ScriptTypeEnum.p2pkh,
+      txid: '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
+      scriptPubkey,
+      value: '90000',
+      blockHeight: 0,
+      spent: false,
+      script:
+        '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
+        '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
+        'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
+        '9e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec' +
+        '631e5e1e66009ce3710ceea5b1ad13ffffffff01' +
+        // value in satoshis (Int64LE) = 0x015f90 = 90000
+        '905f010000000000' +
+        // scriptPubkey length
+        '19' +
+        // scriptPubkey
+        scriptPubkey +
+        // locktime
+        '00000000',
+      vout: 0
     }
 
-    const txOutput: TxOutput = {
-      scriptPubkey: addressToScriptPubkey({
-        address: address,
-        addressType: AddressTypeEnum.p2pkh,
-        coin: 'bitcoin'
-      }),
-      amount: 200
-    }
+    const target: MakeTxTarget = { address, value: 200 }
 
-    const base64Tx: string = createTx({
-      inputs: [txInput],
-      outputs: Array(nOutputs).fill(txOutput),
-      rbf: false
-    }).psbt
+    const { psbtBase64 } = await makeTx({
+      forceUseUtxo: [],
+      coin: 'bitcoin',
+      setRBF: false,
+      freshChangeAddress: address,
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [utxo],
+      targets: Array(100).fill(target)
+    })
 
     const signedTx = await signTx({
-      psbtBase64: base64Tx,
+      psbtBase64,
       privateKeys: [privateKey],
       coin: 'bitcoin'
     })
 
-    const txInputs: TxInput[] = Array(nOutputs)
-    for (let i = 0; i < txInputs.length; i++) {
-      txInputs[i] = {
-        type: TransactionInputTypeEnum.Legacy,
-        prevTxid:
+    const utxos: IUTXO[] = Array(100)
+      .fill(1)
+      .map((_, i) => ({
+        id: `${i}`,
+        scriptType: ScriptTypeEnum.p2pkh,
+        txid:
           '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
-        prevTx: signedTx.hex,
-        index: i
-      }
-    }
-    const base64TxMulti: string = createTx({
-      inputs: txInputs,
-      outputs: [txOutput, txOutput],
-      rbf: false
-    }).psbt
+        scriptPubkey,
+        value: '200',
+        blockHeight: 0,
+        spent: false,
+        script: signedTx.hex,
+        vout: i
+      }))
+
+    const { psbtBase64: psbtBase64Multi } = await makeTx({
+      forceUseUtxo: [],
+      coin: 'bitcoin',
+      setRBF: false,
+      freshChangeAddress: address,
+      feeRate: 0,
+      subtractFee: false,
+      utxos: utxos,
+      targets: Array(2).fill(target)
+    })
 
     const { hex: hexTxMultiSigned } = await signTx({
-      psbtBase64: base64TxMulti,
+      psbtBase64: psbtBase64Multi,
       privateKeys: Array(nOutputs).fill(privateKey),
       coin: 'bitcoin'
     })
