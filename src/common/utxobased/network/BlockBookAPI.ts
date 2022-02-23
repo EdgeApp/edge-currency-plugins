@@ -90,7 +90,7 @@ export const asBlockbookTransaction = (
         txid: asString,
         sequence: asOptional(asNumber),
         n: asNumber,
-        vout: asOptional(asNumber, -1),
+        vout: asOptional(asNumber, 0), // If Blockbook doesn't provide vout, assume 0 (empirically observed)
         addresses: asArray(asAddress),
         isAddress: asBoolean,
         value: asString,

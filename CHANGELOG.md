@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Incorrect handling of `vout` for Blockbook transactions
+
 ## 2.4.1 (2023-10-27)
 
 - fixed: Bug with new `maximumFeeRate` entry in `FeeInfo` not applying due to disk/info-server overwriting the field.
