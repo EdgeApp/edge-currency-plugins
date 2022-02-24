@@ -71,6 +71,3 @@ export const key = [
 ]
 export const mnemonics = [mnemonic]
 export const airbitzSeeds = ['AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=']
-export const hexSeeds = [
-  '24ffe175a5644da63141b420ff7dcd079f226a333bee5780a8c7e37901adb771'
-]
