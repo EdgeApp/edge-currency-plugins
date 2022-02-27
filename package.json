@@ -52,7 +52,7 @@
     "edge-core-js": "^0.18.9",
     "memlet": "^0.1.6",
     "uri-js": "^4.4.0",
-    "url-parse": "^1.5.2",
+    "url-parse": "^1.5.8",
     "wif-smart": "^2.0.0",
     "wifgrs": "^2.0.6",
     "ws": "^7.4.6"
