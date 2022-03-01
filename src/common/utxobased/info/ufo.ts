@@ -16,7 +16,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields([]),
+    ...serverListFields(['wss://blockbook.ufobject.com']),
     disableFetchingServers: false
   },
   customFeeTemplate: [
