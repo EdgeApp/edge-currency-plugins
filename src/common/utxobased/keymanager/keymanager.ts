@@ -10,6 +10,7 @@ import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
 import { CoinInfo, CoinPrefixes } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
+import { sortInputs, sortOutputs } from './bip69'
 import {
   cashAddressToHash,
   CashaddrTypeEnum,
@@ -925,13 +926,16 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     throw new InsufficientFundsError(args.coin)
   }
 
+  const sortedInputs = sortInputs(result.inputs)
+  const sortedOutputs = sortOutputs(result.outputs)
+
   const psbt = new bitcoin.Psbt()
-  psbt.addInputs(result.inputs)
-  psbt.addOutputs(result.outputs)
+  psbt.addInputs(sortedInputs)
+  psbt.addOutputs(sortedOutputs)
 
   return {
-    inputs: result.inputs,
-    outputs: result.outputs,
+    inputs: sortedInputs,
+    outputs: sortedOutputs,
     changeUsed: result.changeUsed,
     fee: result.fee,
     psbtBase64: psbt.toBase64()
