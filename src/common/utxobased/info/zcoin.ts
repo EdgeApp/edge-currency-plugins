@@ -17,7 +17,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields(['https://blockbook.zcoin.io/']),
+    ...serverListFields(['wss://blockbook.firo.org']),
     disableFetchingServers: false
   },
   customFeeTemplate: [
