@@ -2,14 +2,11 @@ import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
 import {
-  addressToScriptPubkey,
-  AddressTypeEnum,
-  createTx,
+  makeTx,
   privateKeyToPubkey,
   pubkeyToScriptPubkey,
   ScriptTypeEnum,
   signTx,
-  TransactionInputTypeEnum,
   wifToPrivateKey
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
 
@@ -35,32 +32,32 @@ describe('groestlcoin transaction creation and signing test', function () {
       This deserialization is not required in the usual form from the caller.
       It is enough to pass the full previous rawtransaction.
     */
-    const base64Tx: string = createTx({
-      rbf: false,
-      inputs: [
+    const { psbtBase64 } = await makeTx({
+      forceUseUtxo: [],
+      coin: 'groestlcoin',
+      setRBF: false,
+      freshChangeAddress: 'Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg',
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [
         {
-          type: TransactionInputTypeEnum.Segwit,
-          prevTxid:
+          id: `0`,
+          scriptType: ScriptTypeEnum.p2wpkh,
+          txid:
             '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
-          // prev_tx only for non segwit inputs
-          prevScriptPubkey: segwitScriptPubkey,
-          value: 80000,
-          index: 0
+          scriptPubkey: segwitScriptPubkey,
+          value: '80000',
+          blockHeight: 1,
+          spent: false,
+          script: segwitScriptPubkey,
+          vout: 0
         }
       ],
-      outputs: [
-        {
-          scriptPubkey: addressToScriptPubkey({
-            address: 'Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg',
-            addressType: AddressTypeEnum.p2pkh,
-            coin: 'groestlcoin'
-          }),
-          amount: 80000
-        }
-      ]
-    }).psbt
+      targets: []
+    })
+
     const { hex: hexTxSigned } = await signTx({
-      psbtBase64: base64Tx,
+      psbtBase64,
       privateKeys: [privateKey],
       coin: 'groestlcoin'
     })
