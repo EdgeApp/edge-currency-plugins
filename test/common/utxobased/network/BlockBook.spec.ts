@@ -29,7 +29,7 @@ describe('BlockBook notifications tests with dummy server', function () {
   let engineEmitter: EngineEmitter
 
   beforeEach(async () => {
-    websocketServer = new WS.Server({ port: 8080 })
+    websocketServer = new WS.Server({ port: 8555 })
     websocketServer.on('connection', (ws: WebSocket) => {
       websocketClient = ws
       websocketClient.onmessage = event => {
@@ -80,7 +80,7 @@ describe('BlockBook notifications tests with dummy server', function () {
       log,
       walletId: '',
       onQueueSpaceCB,
-      wsAddress: 'ws://localhost:8080'
+      wsAddress: 'ws://localhost:8555'
     })
     await blockBook.connect()
     blockBook.isConnected.should.be.true
