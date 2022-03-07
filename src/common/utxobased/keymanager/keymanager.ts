@@ -7,7 +7,7 @@ import { InsufficientFundsError } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
-import { CoinInfo, CoinPrefixes } from '../../plugin/types'
+import { AddressPath, CoinInfo, CoinPrefixes } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
@@ -383,6 +383,13 @@ export function derivationLevelScriptHash(
     .slice(0, 4)
     .toString('hex')
   return parseInt(hash, 16)
+}
+
+export const isPathUsingDerivationLevelScriptHash = (
+  scriptTemplate: ScriptTemplate,
+  path: AddressPath
+): boolean => {
+  return path.changeIndex === derivationLevelScriptHash(scriptTemplate)
 }
 
 const xpubToPubkeyInternal = (

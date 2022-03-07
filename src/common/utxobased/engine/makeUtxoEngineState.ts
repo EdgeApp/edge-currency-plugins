@@ -624,7 +624,7 @@ export const transactionChanged = async (
     emitter,
     walletTools,
     processor,
-    pluginInfo: { currencyInfo },
+    pluginInfo: { currencyInfo, engineInfo },
     tx
   } = args
   emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
@@ -632,7 +632,8 @@ export const transactionChanged = async (
       tx,
       currencyCode: currencyInfo.currencyCode,
       walletTools,
-      processor
+      processor,
+      engineInfo
     })
   ])
 }

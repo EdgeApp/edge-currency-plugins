@@ -236,7 +236,8 @@ export async function makeUtxoEngine(
               tx,
               currencyCode: currencyInfo.currencyCode,
               walletTools,
-              processor
+              processor,
+              engineInfo
             })
         )
       )
