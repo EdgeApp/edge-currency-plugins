@@ -85,7 +85,7 @@ describe('bitcoincash transaction creation and signing test', () => {
   })
 })
 
-describe.skip('bitcoincash replay protection transaction creation and signing test', function () {
+describe('bitcoincash replay protection transaction creation and signing test', function () {
   this.timeout(10000)
 
   // key with control on the unspent output and used to sign the transaction
