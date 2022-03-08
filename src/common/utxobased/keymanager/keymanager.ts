@@ -7,7 +7,7 @@ import { InsufficientFundsError } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
-import { CoinInfo, CoinPrefixes } from '../../plugin/types'
+import { AddressPath, CoinInfo, CoinPrefixes } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
@@ -383,6 +383,13 @@ export function derivationLevelScriptHash(
     .slice(0, 4)
     .toString('hex')
   return parseInt(hash, 16)
+}
+
+export const isPathUsingDerivationLevelScriptHash = (
+  scriptTemplate: ScriptTemplate,
+  path: AddressPath
+): boolean => {
+  return path.changeIndex === derivationLevelScriptHash(scriptTemplate)
 }
 
 const xpubToPubkeyInternal = (
@@ -858,17 +865,32 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
       sequence,
       sighashType
     }
-    if (utxo.scriptType === ScriptTypeEnum.p2pkh) {
-      input.nonWitnessUtxo = input.script
-    } else {
-      input.witnessUtxo = {
-        script: input.script,
-        value: parseInt(utxo.value)
+    // Map script type to the correct PsbtInput UTXO field
+    switch (utxo.scriptType) {
+      // Non-segwit
+      case ScriptTypeEnum.p2pk:
+      case ScriptTypeEnum.p2pkh:
+      case ScriptTypeEnum.p2sh:
+      case ScriptTypeEnum.replayProtection:
+      case ScriptTypeEnum.replayProtectionP2SH: {
+        input.nonWitnessUtxo = input.script
+        break
       }
-
-      if (utxo.redeemScript != null) {
-        input.redeemScript = Buffer.from(utxo.redeemScript, 'hex')
+      // Segwit
+      case ScriptTypeEnum.p2wpkh:
+      case ScriptTypeEnum.p2wpkhp2sh:
+      case ScriptTypeEnum.p2wsh: {
+        input.witnessUtxo = {
+          script: input.script,
+          value: parseInt(utxo.value)
+        }
+        break
       }
+      default:
+        throw new Error(`unknown script type ${utxo.scriptType}`)
+    }
+    if (utxo.redeemScript != null) {
+      input.redeemScript = Buffer.from(utxo.redeemScript, 'hex')
     }
     let forceUsage = false
     for (const forceUtxo of args.forceUseUtxo) {
