@@ -125,9 +125,8 @@ export async function makeUtxoEngine(
       return await Promise.resolve(undefined)
     },
 
-    addGapLimitAddresses(addresses: string[]): undefined {
-      void state.addGapLimitAddresses(addresses)
-      return
+    async addGapLimitAddresses(addresses: string[]): Promise<void> {
+      return await state.addGapLimitAddresses(addresses)
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
@@ -199,10 +198,10 @@ export async function makeUtxoEngine(
       return await Promise.resolve([])
     },
 
-    getFreshAddress(
+    async getFreshAddress(
       _opts: EdgeCurrencyCodeOptions
-    ): Promise<EdgeFreshAddress> | EdgeFreshAddress {
-      return state.getFreshAddress()
+    ): Promise<EdgeFreshAddress> {
+      return await state.getFreshAddress()
     },
 
     getNumTransactions(_opts: EdgeCurrencyCodeOptions): number {

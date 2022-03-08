@@ -83,11 +83,13 @@ describe('engine.spec', function () {
         fakeLogger.info('onBlockHeightChange:', height)
         emitter.emit('onBlockHeightChange', height)
       },
+      onStakingStatusChanged() {},
       onTransactionsChanged(transactionList) {
         fakeLogger.info('onTransactionsChanged:', transactionList)
         emitter.emit('onTransactionsChanged', transactionList)
       },
-      onTxidsChanged() {}
+      onTxidsChanged() {},
+      onWcNewContractCall() {}
     }
 
     const walletLocalDisklet = fakeIoDisklet
