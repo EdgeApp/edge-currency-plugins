@@ -43,6 +43,7 @@ import {
   PrivateKeyEncoding,
   signTx
 } from '../keymanager/keymanager'
+import { transactionSizeFromHex } from '../keymanager/utxopicker/utils'
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
@@ -389,8 +390,11 @@ export async function makeUtxoEngine(
       if (rbfTxid != null) {
         const [rbfTx] = await processor.fetchTransactions({ txId: rbfTxid })
         if (rbfTx == null) throw new Error('transaction not found')
+
         // double the fee used for the RBF transaction
-        feeRate *= 2
+        const vBytes = transactionSizeFromHex(rbfTx.hex)
+        feeRate = Math.round(parseInt(rbfTx.fees) / vBytes) * 2
+
         const rbfInputs = rbfTx.inputs
         const maxInput = rbfInputs.reduce((a, b) =>
           bs.gt(a.amount, b.amount) ? a : b
