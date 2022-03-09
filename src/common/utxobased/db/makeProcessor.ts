@@ -256,12 +256,7 @@ export async function makeProcessor(
           .query('', [tx.txid])
           .then(transactions => transactions[0])
           .catch(_ => undefined)
-        if (processorTx == null) {
-          await tables.txIdsByDate.insert('', {
-            txid: tx.txid,
-            date: tx.date
-          })
-        }
+
         // Use the existing transaction if it does exist.
         const transaction = processorTx ?? tx
 
@@ -313,6 +308,14 @@ export async function makeProcessor(
 
         // Save transaction
         await tables.txById.insert('', transaction.txid, transaction)
+
+        // Save index entry only for first transaction insert
+        if (processorTx == null) {
+          await tables.txIdsByDate.insert('', {
+            txid: tx.txid,
+            date: tx.date
+          })
+        }
 
         return transaction
       })
