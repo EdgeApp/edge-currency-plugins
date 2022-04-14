@@ -421,11 +421,11 @@ export async function makeUtxoEngine(
       await metadata.clear()
       await fees.clearCache()
 
-      // Restart the engine
-      await fns.startEngine()
-
       // Refresh the servers for the engine
       await pluginState.refreshServers()
+
+      // Restart the engine
+      await fns.startEngine()
     },
 
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
