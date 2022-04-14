@@ -1461,9 +1461,9 @@ alphanum-sort@^1.0.0:
   resolved "https://registry.yarnpkg.com/alphanum-sort/-/alphanum-sort-1.0.2.tgz#97a1119649b211ad33691d9f9f486a8ec9fbe0a3"
   integrity sha1-l6ERlkmyEa0zaR2fn0hqjsn74KM=
 
-"altcoin-js@git://github.com/EdgeApp/altcoin-js.git#master":
+"altcoin-js@https://github.com/EdgeApp/altcoin-js.git#master":
   version "5.1.10"
-  resolved "git://github.com/EdgeApp/altcoin-js.git#b0a16589b50c1a88482bb98930b13d14088b44f4"
+  resolved "https://github.com/EdgeApp/altcoin-js.git#b0a16589b50c1a88482bb98930b13d14088b44f4"
   dependencies:
     bech32 "^1.1.4"
     big-integer "^1.6.44"

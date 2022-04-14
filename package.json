@@ -34,7 +34,7 @@
     "*.{js,ts,json}": "eslint"
   },
   "dependencies": {
-    "altcoin-js": "git://github.com/EdgeApp/altcoin-js.git#master",
+    "altcoin-js": "https://github.com/EdgeApp/altcoin-js.git#master",
     "async-mutex": "^0.2.6",
     "baselet": "^0.2.2",
     "biggystring": "^4.0.0",
