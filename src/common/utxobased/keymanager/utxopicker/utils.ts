@@ -126,7 +126,8 @@ export function finalize(
 ): UtxoPickerResult {
   const inValue = sumOrNaN(inputs)
   const outValue = sumOrNaN(outputs)
-  let fee = feeRate * transactionBytes(inputs, outputs)
+  const txSize = transactionBytes(inputs, outputs)
+  let fee = feeRate * txSize
 
   const changeValue = inValue - (outValue + fee)
   const changeOutput: Output = {
@@ -134,7 +135,8 @@ export function finalize(
     scriptPubkey: Buffer.from(changeScript, 'hex'),
     value: changeValue
   }
-  const changeFee = feeRate * outputBytes(changeOutput)
+  const changeOutputSize = outputBytes(changeOutput)
+  const changeFee = feeRate * changeOutputSize
   changeOutput.value -= changeFee
   let changeUsed = false
   if (changeOutput.value > dustThreshold(changeOutput, feeRate)) {
