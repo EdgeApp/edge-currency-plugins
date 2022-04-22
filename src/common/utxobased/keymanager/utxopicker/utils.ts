@@ -60,21 +60,11 @@ export function inputBytes(input: UTXO): number {
 export function outputBytes(output: Output): number {
   const base = 8 + sizeVarint(output.script.length)
 
-  let scriptSize = 0
-  switch (output.scriptType) {
-    case ScriptTypeEnum.p2pkh:
-      scriptSize = 25
-      break
-    case ScriptTypeEnum.p2wpkh:
-      scriptSize = 22
-      break
-    case ScriptTypeEnum.p2sh:
-      scriptSize = 23
-      break
-    case ScriptTypeEnum.p2wsh:
-      scriptSize = 34
-      break
-  }
+  // p2pkh: 25
+  // p2wpkh: 22
+  // p2sh: 23
+  // p2wsh: 34
+  const scriptSize = output.script.length
 
   return base + scriptSize
 }
