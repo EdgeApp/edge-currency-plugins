@@ -1071,7 +1071,7 @@ const processAddressTransactions = async (
     ...addressMessage(address, asBlockbookAddress, {
       details: 'txs',
       from: addressData.lastQueriedBlockHeight,
-      perPage: BLOCKBOOK_TXS_PER_PAGE,
+      pageSize: BLOCKBOOK_TXS_PER_PAGE,
       page
     }),
     deferred

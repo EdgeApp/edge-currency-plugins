@@ -236,7 +236,7 @@ export interface AddresssMessageParams {
   from?: number
   to?: number
   page?: number
-  perPage?: number
+  pageSize?: number
 }
 export const addressMessage = (
   address: string,
@@ -247,7 +247,7 @@ export const addressMessage = (
   return {
     method: 'getAccountInfo',
     params: {
-      ...{ details: 'basic', page: 1, perPage: 100, ...params },
+      ...{ details: 'basic', page: 1, pageSize: 100, ...params },
       descriptor: wasAddress(address)
     },
     cleaner: asBlockbookResponse(asAddressResponse(asAddress))
