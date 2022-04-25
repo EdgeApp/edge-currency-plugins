@@ -22,7 +22,7 @@
     "fix": "eslint . --fix",
     "lib": "sucrase -q -t typescript,imports -d ./lib ./src",
     "lint": "eslint .",
-    "precommit": "lint-staged && npm-run-all test prepare",
+    "precommit": "lint-staged && npm-run-all types test",
     "prepare": "husky install && npm-run-all clean -p lib types",
     "start": "node -r sucrase/register src/index.ts",
     "start.dev": "nodemon",
