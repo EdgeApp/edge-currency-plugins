@@ -19,24 +19,39 @@ export function inputBytes(input: UTXO): number {
 
   let scriptSize = sizeVarint(input.script.length)
   switch (input.scriptType) {
-    case ScriptTypeEnum.p2pkh:
-    case ScriptTypeEnum.p2wpkh:
-    case ScriptTypeEnum.p2wpkhp2sh:
+    case ScriptTypeEnum.p2pkh: {
       // signature + public key
       scriptSize += OP_CODE_SIZE + PUB_KEY_SIZE + OP_CODE_SIZE + SIGNATURE_SIZE
-    case ScriptTypeEnum.p2wpkhp2sh:
-      scriptSize /= WITNESS_SCALE
-      scriptSize += SCRIPT_HASH_SIZE * WITNESS_SCALE
-    case ScriptTypeEnum.p2sh:
-    case ScriptTypeEnum.p2wsh:
-      // 2-of-3 multisig input
-      scriptSize += 253
-    case ScriptTypeEnum.p2wpkh:
-    case ScriptTypeEnum.p2wpkhp2sh:
-    case ScriptTypeEnum.p2wsh:
+      break
+    }
+    case ScriptTypeEnum.p2wpkh: {
+      // signature + public key
+      scriptSize += OP_CODE_SIZE + PUB_KEY_SIZE + OP_CODE_SIZE + SIGNATURE_SIZE
       scriptSize += OP_CODE_VSIZE
       scriptSize /= WITNESS_SCALE
-      scriptSize = scriptSize | 0
+      scriptSize = Math.ceil(scriptSize)
+      break
+    }
+    case ScriptTypeEnum.p2wpkhp2sh: {
+      // signature + public key
+      scriptSize += OP_CODE_SIZE + PUB_KEY_SIZE + OP_CODE_SIZE + SIGNATURE_SIZE
+      scriptSize += OP_CODE_VSIZE
+      scriptSize /= WITNESS_SCALE
+      scriptSize += SCRIPT_HASH_SIZE * WITNESS_SCALE
+      scriptSize = Math.ceil(scriptSize)
+      break
+    }
+    case ScriptTypeEnum.p2sh: {
+      throw new Error('p2sh not supported, yet')
+    }
+    case ScriptTypeEnum.p2wsh: {
+      throw new Error('p2wsh not supported, yet')
+    }
+    case ScriptTypeEnum.replayProtectionP2SH:
+    case ScriptTypeEnum.replayProtection: {
+      scriptSize += 284
+      break
+    }
   }
 
   return base + scriptSize
