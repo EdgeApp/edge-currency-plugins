@@ -4,42 +4,48 @@ import { ScriptTypeEnum } from '../keymanager'
 import { Input, Output, UTXO, UtxoPickerResult } from './types'
 
 const WITNESS_SCALE = 4
-const OP_CODE_VSIZE = WITNESS_SCALE - 1
 const OP_CODE_SIZE = 1
-const SIGNATURE_SIZE = 73
+const SIGNATURE_SIZE = 72
 const PUB_KEY_SIZE = 33
-const SCRIPT_HASH_SIZE = 23
-const PREVOUT_SIZE = 40
+const P2SH_SCRIPT_HASH_SIZE = 22
+const OUTPOINT_SIZE = 36
+const N_SEQUENCE_SIZE = 4
 
 // Measures the VarInt given a size
 export const compactSize = (num: number): number =>
   num < 0xfd ? 1 : num <= 0xffff ? 3 : num <= 0xffffffff ? 5 : 9
 
-export function inputBytes(input: UTXO): number {
-  const base = PREVOUT_SIZE
+// Adds a VarInt to the size given
+export const withCompactSize = (num: number): number => {
+  return compactSize(num) + num
+}
 
-  let scriptSize = compactSize(input.script.length)
+export function inputBytes(input: UTXO): number {
+  let scriptSigSize = 0
   switch (input.scriptType) {
     case ScriptTypeEnum.p2pkh: {
-      // signature + public key
-      scriptSize += OP_CODE_SIZE + PUB_KEY_SIZE + OP_CODE_SIZE + SIGNATURE_SIZE
+      // VarInt OP_PUSH signature OP_PUSH public key
+      scriptSigSize += withCompactSize(
+        OP_CODE_SIZE + SIGNATURE_SIZE + OP_CODE_SIZE + PUB_KEY_SIZE
+      )
       break
     }
     case ScriptTypeEnum.p2wpkh: {
-      // signature + public key
-      scriptSize += OP_CODE_SIZE + PUB_KEY_SIZE + OP_CODE_SIZE + SIGNATURE_SIZE
-      scriptSize += OP_CODE_VSIZE
-      scriptSize /= WITNESS_SCALE
-      scriptSize = Math.ceil(scriptSize)
+      // VarInt OP_PUSH signature OP_PUSH public key
+      scriptSigSize += withCompactSize(
+        OP_CODE_SIZE + SIGNATURE_SIZE + OP_CODE_SIZE + PUB_KEY_SIZE
+      )
+      scriptSigSize /= WITNESS_SCALE
       break
     }
     case ScriptTypeEnum.p2wpkhp2sh: {
-      // signature + public key
-      scriptSize += OP_CODE_SIZE + PUB_KEY_SIZE + OP_CODE_SIZE + SIGNATURE_SIZE
-      scriptSize += OP_CODE_VSIZE
-      scriptSize /= WITNESS_SCALE
-      scriptSize += SCRIPT_HASH_SIZE * WITNESS_SCALE
-      scriptSize = Math.ceil(scriptSize)
+      // VarInt OP_PUSH signature OP_PUSH public key
+      scriptSigSize += withCompactSize(
+        OP_CODE_SIZE + SIGNATURE_SIZE + OP_CODE_SIZE + PUB_KEY_SIZE
+      )
+      scriptSigSize += OP_CODE_SIZE // Witness Item Count
+      scriptSigSize /= WITNESS_SCALE
+      scriptSigSize += OP_CODE_SIZE + P2SH_SCRIPT_HASH_SIZE
       break
     }
     case ScriptTypeEnum.p2sh: {
@@ -50,24 +56,26 @@ export function inputBytes(input: UTXO): number {
     }
     case ScriptTypeEnum.replayProtectionP2SH:
     case ScriptTypeEnum.replayProtection: {
-      scriptSize += 284
+      scriptSigSize += 284
       break
     }
   }
-
-  return base + scriptSize
+  return OUTPOINT_SIZE + Math.ceil(scriptSigSize) + N_SEQUENCE_SIZE
 }
 
 export function outputBytes(output: Output): number {
-  const base = 8 + compactSize(output.script.length)
+  const nValue = 8 // output value/amount
+  const scriptPubkeyLength = compactSize(output.script.length) // scriptPubKey length varint
+  /*
+    scriptPubKey bytes:
+      p2pkh: 25
+      p2wpkh: 22
+      p2sh: 23
+      p2wsh: 34
+  */
+  const scriptPubkeySize = output.script.length
 
-  // p2pkh: 25
-  // p2wpkh: 22
-  // p2sh: 23
-  // p2wsh: 34
-  const scriptSize = output.script.length
-
-  return base + scriptSize
+  return nValue + scriptPubkeyLength + scriptPubkeySize
 }
 
 export function dustThreshold(output: Output, feeRate: number): number {
@@ -89,24 +97,22 @@ function witnessCount(inputs: UTXO[]): number {
 }
 
 export function transactionBytes(inputs: UTXO[], outputs: Output[]): number {
-  let total = 0
-
-  // Calculate the size, minus the input scripts.
-  total += 4
-  total += compactSize(inputs.length)
-  total += compactSize(outputs.length)
-  total += 4
-
+  // Overhead:
+  const nVersion = 4 // fixed 4 bytes
+  const inputCount = compactSize(inputs.length) // varint
+  const outputCount = compactSize(outputs.length) // varint
+  const nLockTime = 4 // fixed 4 bytes
+  let overhead = nVersion + inputCount + outputCount + nLockTime
   const numWitnesses = witnessCount(inputs)
   if (numWitnesses > 0) {
-    total += 2
-    total += numWitnesses
+    overhead += 2 // Segwit Marker / Segwit Flag
   }
 
-  total += inputs.reduce((a, x) => a + inputBytes(x), 0)
-  total += outputs.reduce((a, x) => a + outputBytes(x), 0)
+  // Inputs/Outputs:
+  const inputsSize = inputs.reduce((a, x) => a + inputBytes(x), 0)
+  const outputsSize = outputs.reduce((a, x) => a + outputBytes(x), 0)
 
-  return total
+  return overhead + inputsSize + outputsSize
 }
 
 export function uintOrNaN(v: number): number {
@@ -132,7 +138,7 @@ export function finalize(
 ): UtxoPickerResult {
   const inValue = sumOrNaN(inputs)
   const outValue = sumOrNaN(outputs)
-  const txSize = transactionBytes(inputs, outputs)
+  let txSize = transactionBytes(inputs, outputs)
   let fee = feeRate * txSize
 
   const changeValue = inValue - (outValue + fee)
@@ -142,6 +148,7 @@ export function finalize(
     value: changeValue
   }
   const changeOutputSize = outputBytes(changeOutput)
+  txSize += changeOutputSize
   const changeFee = feeRate * changeOutputSize
   changeOutput.value -= changeFee
   let changeUsed = false
