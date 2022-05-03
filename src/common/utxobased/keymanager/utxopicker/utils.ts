@@ -3,6 +3,10 @@
 import { ScriptTypeEnum } from '../keymanager'
 import { Input, Output, UTXO, UtxoPickerResult } from './types'
 
+/*
+Reference: https://bitcoinops.org/en/tools/calc-size/
+*/
+
 const WITNESS_SCALE = 4
 const OP_CODE_SIZE = 1
 const SIGNATURE_SIZE = 72
@@ -35,6 +39,7 @@ export function inputBytes(input: UTXO): number {
       scriptSigSize += withCompactSize(
         OP_CODE_SIZE + SIGNATURE_SIZE + OP_CODE_SIZE + PUB_KEY_SIZE
       )
+      scriptSigSize += compactSize(1) // Witness Item Count
       scriptSigSize /= WITNESS_SCALE
       break
     }
@@ -43,9 +48,9 @@ export function inputBytes(input: UTXO): number {
       scriptSigSize += withCompactSize(
         OP_CODE_SIZE + SIGNATURE_SIZE + OP_CODE_SIZE + PUB_KEY_SIZE
       )
-      scriptSigSize += OP_CODE_SIZE // Witness Item Count
+      scriptSigSize += compactSize(1) // Witness Item Count
       scriptSigSize /= WITNESS_SCALE
-      scriptSigSize += OP_CODE_SIZE + P2SH_SCRIPT_HASH_SIZE
+      scriptSigSize += withCompactSize(P2SH_SCRIPT_HASH_SIZE)
       break
     }
     case ScriptTypeEnum.p2sh: {
@@ -60,7 +65,7 @@ export function inputBytes(input: UTXO): number {
       break
     }
   }
-  return OUTPOINT_SIZE + Math.ceil(scriptSigSize) + N_SEQUENCE_SIZE
+  return OUTPOINT_SIZE + scriptSigSize + N_SEQUENCE_SIZE
 }
 
 export function outputBytes(output: Output): number {
@@ -105,7 +110,8 @@ export function transactionBytes(inputs: UTXO[], outputs: Output[]): number {
   let overhead = nVersion + inputCount + outputCount + nLockTime
   const numWitnesses = witnessCount(inputs)
   if (numWitnesses > 0) {
-    overhead += 2 // Segwit Marker / Segwit Flag
+    // <segwit marker> <segwit flag> (segwit)
+    overhead += Math.ceil(2 / WITNESS_SCALE)
   }
 
   // Inputs/Outputs:
@@ -139,7 +145,7 @@ export function finalize(
   const inValue = sumOrNaN(inputs)
   const outValue = sumOrNaN(outputs)
   let txSize = transactionBytes(inputs, outputs)
-  let fee = feeRate * txSize
+  let fee = Math.ceil(feeRate * txSize)
 
   const changeValue = inValue - (outValue + fee)
   const changeOutput: Output = {
