@@ -11,13 +11,14 @@ const PUB_KEY_SIZE = 33
 const SCRIPT_HASH_SIZE = 23
 const PREVOUT_SIZE = 40
 
-export const sizeVarint = (num: number): number =>
+// Measures the VarInt given a size
+export const compactSize = (num: number): number =>
   num < 0xfd ? 1 : num <= 0xffff ? 3 : num <= 0xffffffff ? 5 : 9
 
 export function inputBytes(input: UTXO): number {
   const base = PREVOUT_SIZE
 
-  let scriptSize = sizeVarint(input.script.length)
+  let scriptSize = compactSize(input.script.length)
   switch (input.scriptType) {
     case ScriptTypeEnum.p2pkh: {
       // signature + public key
@@ -58,7 +59,7 @@ export function inputBytes(input: UTXO): number {
 }
 
 export function outputBytes(output: Output): number {
-  const base = 8 + sizeVarint(output.script.length)
+  const base = 8 + compactSize(output.script.length)
 
   // p2pkh: 25
   // p2wpkh: 22
@@ -92,8 +93,8 @@ export function transactionBytes(inputs: UTXO[], outputs: Output[]): number {
 
   // Calculate the size, minus the input scripts.
   total += 4
-  total += sizeVarint(inputs.length)
-  total += sizeVarint(outputs.length)
+  total += compactSize(inputs.length)
+  total += compactSize(outputs.length)
   total += 4
 
   const numWitnesses = witnessCount(inputs)
