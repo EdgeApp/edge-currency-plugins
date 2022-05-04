@@ -24,47 +24,36 @@ export const withCompactSize = (num: number): number => {
   return compactSize(num) + num
 }
 
-export function inputBytes(input: UTXO): number {
-  let scriptSigSize = 0
-  switch (input.scriptType) {
-    case ScriptTypeEnum.p2pkh: {
-      // VarInt OP_PUSH signature OP_PUSH public key
-      scriptSigSize += withCompactSize(
-        OP_CODE_SIZE + SIGNATURE_SIZE + OP_CODE_SIZE + PUB_KEY_SIZE
-      )
-      break
-    }
-    case ScriptTypeEnum.p2wpkh: {
-      // VarInt OP_PUSH signature OP_PUSH public key
-      scriptSigSize += withCompactSize(
-        OP_CODE_SIZE + SIGNATURE_SIZE + OP_CODE_SIZE + PUB_KEY_SIZE
-      )
-      scriptSigSize += compactSize(1) // Witness Item Count
-      scriptSigSize /= WITNESS_SCALE
-      break
-    }
-    case ScriptTypeEnum.p2wpkhp2sh: {
-      // VarInt OP_PUSH signature OP_PUSH public key
-      scriptSigSize += withCompactSize(
-        OP_CODE_SIZE + SIGNATURE_SIZE + OP_CODE_SIZE + PUB_KEY_SIZE
-      )
-      scriptSigSize += compactSize(1) // Witness Item Count
-      scriptSigSize /= WITNESS_SCALE
-      scriptSigSize += withCompactSize(P2SH_SCRIPT_HASH_SIZE)
-      break
-    }
-    case ScriptTypeEnum.p2sh: {
-      throw new Error('p2sh not supported, yet')
-    }
-    case ScriptTypeEnum.p2wsh: {
-      throw new Error('p2wsh not supported, yet')
-    }
-    case ScriptTypeEnum.replayProtectionP2SH:
-    case ScriptTypeEnum.replayProtection: {
-      scriptSigSize += 284
-      break
-    }
+const scriptSizeMap = ((): { [scriptType: string]: number } => {
+  // VarInt OP_PUSH <signature> OP_PUSH <public key>
+  const p2pkh = withCompactSize(
+    OP_CODE_SIZE + SIGNATURE_SIZE + OP_CODE_SIZE + PUB_KEY_SIZE
+  )
+  // <p2pkh> <witness count (assumed to be 1)> (segwit)
+  const p2wpkh = (p2pkh + compactSize(1)) / WITNESS_SCALE
+  // VarInt <script hash>
+  const p2shOverhead = withCompactSize(P2SH_SCRIPT_HASH_SIZE)
+  // <p2wpkh> <p2sh>
+  const p2wpkhp2sh = p2wpkh + p2shOverhead
+  // (fixed size)
+  const replayProtection = 284
+
+  // TOOD: support other p2sh (e.g. 2-3 multisig) and other p2wsh (taproot/lightning)
+  return {
+    p2pkh: p2pkh,
+    p2wpkh: p2wpkh,
+    p2wpkhp2sh: p2wpkhp2sh,
+    replayprotection: replayProtection,
+    replayprotectionp2sh: 284
   }
+})()
+
+export function inputBytes(input: UTXO): number {
+  const scriptSigSize = scriptSizeMap[input.scriptType]
+
+  if (scriptSigSize == null)
+    throw new Error(`${input.scriptType} script type not supported, yet`)
+
   return OUTPOINT_SIZE + scriptSigSize + N_SEQUENCE_SIZE
 }
 
