@@ -16,7 +16,6 @@ export interface UTXO extends PsbtInput {
 export interface Output {
   script: Buffer
   scriptPubkey: Buffer
-  scriptType?: ScriptTypeEnum
   value: number
 }
 
