@@ -20,11 +20,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     ...serverListFields([
-      'wss://btc1.trezor.io/websocket',
-      'wss://btc2.trezor.io/websocket',
-      'wss://btc3.trezor.io/websocket',
-      'wss://btc4.trezor.io/websocket',
-      'wss://btc5.trezor.io/websocket'
+      'wss://btc1.trezor.io',
+      'wss://btc2.trezor.io',
+      'wss://btc3.trezor.io',
+      'wss://btc4.trezor.io',
+      'wss://btc5.trezor.io'
     ]),
     disableFetchingServers: false
   },

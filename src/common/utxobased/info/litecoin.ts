@@ -18,11 +18,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     ...serverListFields([
-      'https://ltc1.trezor.io',
-      'https://ltc2.trezor.io',
-      'https://ltc3.trezor.io',
-      'https://ltc4.trezor.io',
-      'https://ltc5.trezor.io'
+      'wss://ltc1.trezor.io',
+      'wss://ltc2.trezor.io',
+      'wss://ltc3.trezor.io',
+      'wss://ltc4.trezor.io',
+      'wss://ltc5.trezor.io'
     ]),
     disableFetchingServers: false
   },

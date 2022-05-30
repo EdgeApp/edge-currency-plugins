@@ -92,7 +92,7 @@ export class ServerScores {
         serverScore = Math.min(serverScore, MAX_SCORE - 100)
       }
 
-      if (serverUrl.startsWith('wss') && serverScore > 0) {
+      if (serverUrl.startsWith('ws') && serverScore > 0) {
         serverScore = 0
         oldServer.responseTime = RESPONSE_TIME_UNINITIALIZED
       }
