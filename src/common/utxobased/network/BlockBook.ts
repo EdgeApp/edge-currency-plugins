@@ -96,7 +96,10 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     broadcastTx
   }
 
-  const socket = makeSocket(wsAddress, {
+  // Append "/websocket" if needed:
+  const uri = wsAddress.replace(/\/websocket\/?$/, '') + '/websocket'
+
+  const socket = makeSocket(uri, {
     healthCheck: ping,
     onQueueSpaceCB,
     log,

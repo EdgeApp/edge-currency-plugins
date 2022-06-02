@@ -14,13 +14,8 @@ const serverListInfoUrl = 'https://info1.edge.app/v1/blockBook/'
 // Perhaps this should be in serverScores.ts file, but that'll take some refactoring
 const SERVER_CACHE_FILE = 'serverCache.json'
 
-// Normalizes a URL to always be a websocket URL
-const asWebsocketUrl = (raw: unknown): string => {
-  const url = new URL(asString(raw))
-  return `wss://${url.host}/websocket`
-}
 // ServerListInfo data structure from info server and saved to disk
-const asServerListInfo = asObject(asEither(asArray(asWebsocketUrl), asNull))
+const asServerListInfo = asObject(asEither(asArray(asString), asNull))
 
 /** A JSON object (as opposed to an array or primitive). */
 interface JsonObject {
@@ -71,7 +66,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     pluginDisklet,
     log
   } = settings
-  let defaultServers = defaultSettings.serverList.map(asWebsocketUrl)
+  let defaultServers = defaultSettings.serverList
   let disableFetchingServers = !!(
     defaultSettings.disableFetchingServers ?? false
   )
@@ -222,7 +217,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
         disableFetchingServers = settings.disableFetchingServers
       }
       if (Array.isArray(serverList)) {
-        defaultServers = serverList.map(asWebsocketUrl)
+        defaultServers = serverList
       }
       const enginesToBeStopped = []
       const disconnects = []

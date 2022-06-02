@@ -175,7 +175,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const doRefillServers = (): void => {
-    const includePatterns = ['wss:']
+    const includePatterns = ['wss:', 'ws:']
     if (serverList.length === 0) {
       serverList = pluginState.getLocalServers(NEW_CONNECTIONS, includePatterns)
     }
@@ -195,7 +195,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       const parsed = parse(uri)
       if (
         parsed.scheme == null ||
-        parsed.scheme.length < 3 ||
+        parsed.scheme.length < 2 ||
         parsed.host == null
       ) {
         continue

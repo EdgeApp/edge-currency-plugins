@@ -19,10 +19,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields([
-      'wss://tbtc1.trezor.io/websocket',
-      'wss://tbtc2.trezor.io/websocket'
-    ]),
+    ...serverListFields(['wss://tbtc1.trezor.io', 'wss://tbtc2.trezor.io']),
     disableFetchingServers: false
   },
   customFeeTemplate: [

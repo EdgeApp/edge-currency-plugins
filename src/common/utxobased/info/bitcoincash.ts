@@ -22,11 +22,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     ...serverListFields([
-      'https://bch1.trezor.io',
-      'https://bch2.trezor.io',
-      'https://bch3.trezor.io',
-      'https://bch4.trezor.io',
-      'https://bch5.trezor.io'
+      'wss://bch1.trezor.io',
+      'wss://bch2.trezor.io',
+      'wss://bch3.trezor.io',
+      'wss://bch4.trezor.io',
+      'wss://bch5.trezor.io'
     ]),
     disableFetchingServers: false
   },
