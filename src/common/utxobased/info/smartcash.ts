@@ -4,7 +4,6 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import * as wifsmart from 'wif-smart'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'smartcash',
@@ -19,8 +18,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields([]),
-    disableFetchingServers: true
+    blockbookServers: [],
+    enableCustomServers: false
   },
   customFeeTemplate: [
     {

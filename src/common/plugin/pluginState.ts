@@ -6,6 +6,7 @@ import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet } from 'memlet'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
+import { UtxoUserSettings } from '../utxobased/engine/types'
 import { asServerInfoCache, ServerScores } from './serverScores'
 
 // Info server endpoint to getting ServerListInfo data
@@ -22,19 +23,13 @@ interface JsonObject {
   [name: string]: unknown
 }
 
-export interface CurrencySettings {
-  customFeeSettings: string[]
-  serverList: string[]
-  disableFetchingServers?: boolean
-}
-
 /**
  * This object holds the plugin-wide per-currency caches.
  * Engine plugins are responsible for keeping it up to date.
  */
 export interface PluginStateSettings {
   io: EdgeIo
-  defaultSettings: CurrencySettings
+  defaultSettings: UtxoUserSettings
   currencyCode: string
   pluginId: string
   pluginDisklet: Disklet
@@ -54,7 +49,7 @@ export interface PluginState {
     includePatterns: string[]
   ) => string[]
   refreshServers: () => Promise<void>
-  updateServers: (settings: JsonObject) => Promise<void>
+  updateServers: (settings: UtxoUserSettings) => Promise<void>
 }
 
 export function makePluginState(settings: PluginStateSettings): PluginState {
@@ -66,10 +61,8 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     pluginDisklet,
     log
   } = settings
-  let defaultServers = defaultSettings.serverList
-  let disableFetchingServers = !!(
-    defaultSettings.disableFetchingServers ?? false
-  )
+  let defaultServers = defaultSettings.blockbookServers
+  let enableCustomServers = defaultSettings.enableCustomServers
   let engines: UtxoEngineState[] = []
   const memlet = makeMemlet(pluginDisklet)
 
@@ -137,7 +130,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
   const refreshServers = async (): Promise<void> => {
     let serverList = defaultServers
 
-    if (!disableFetchingServers)
+    if (!enableCustomServers)
       serverList = (await fetchServers()) ?? defaultServers
 
     serverScores.serverScoresLoad(servers, serverCacheJson, serverList)
@@ -211,14 +204,10 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     refreshServers,
 
-    async updateServers(settings: JsonObject): Promise<void> {
-      const { serverList = settings.electrumServers ?? [] } = settings
-      if (typeof settings.disableFetchingServers === 'boolean') {
-        disableFetchingServers = settings.disableFetchingServers
-      }
-      if (Array.isArray(serverList)) {
-        defaultServers = serverList
-      }
+    async updateServers(settings: UtxoUserSettings): Promise<void> {
+      enableCustomServers = settings.enableCustomServers
+      defaultServers = settings.blockbookServers
+
       const enginesToBeStopped = []
       const disconnects = []
       for (const engine of engines) {

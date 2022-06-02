@@ -2,7 +2,6 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoin',
@@ -19,14 +18,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields([
+    blockbookServers: [
       'wss://btc1.trezor.io',
       'wss://btc2.trezor.io',
       'wss://btc3.trezor.io',
       'wss://btc4.trezor.io',
       'wss://btc5.trezor.io'
-    ]),
-    disableFetchingServers: false
+    ],
+    enableCustomServers: false
   },
   customFeeTemplate: [
     {

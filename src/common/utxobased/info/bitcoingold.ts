@@ -2,7 +2,6 @@ import { Psbt } from 'altcoin-js'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoingold',
@@ -18,14 +17,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields([
+    blockbookServers: [
       'wss://btg1.trezor.io',
       'wss://btg2.trezor.io',
       'wss://btg3.trezor.io',
       'wss://btg4.trezor.io',
       'wss://btg5.trezor.io'
-    ]),
-    disableFetchingServers: false
+    ],
+    enableCustomServers: false
   },
   customFeeTemplate: [
     {

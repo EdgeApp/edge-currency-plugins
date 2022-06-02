@@ -262,8 +262,8 @@ export default {
     defaultHeight: 1286739
   },
   ChangeSettings: {
-    blockBookServers: [],
-    disableFetchingServers: true
+    blockbookServers: [],
+    enableCustomServers: false
   },
   'Address used from cache': {
     wrongFormat: ['TestErrorWithWrongAddress'],

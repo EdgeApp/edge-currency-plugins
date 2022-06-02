@@ -1,7 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'ravencoin',
@@ -13,11 +12,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields([
+    blockbookServers: [
       'wss://blockbook.ravencoin.org',
       'wss://blockbook-rvn-sfo3.edge.app'
-    ]),
-    disableFetchingServers: false
+    ],
+    enableCustomServers: false
   },
   customFeeTemplate: [
     {

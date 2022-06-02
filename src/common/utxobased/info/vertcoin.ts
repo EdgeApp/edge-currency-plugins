@@ -1,7 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'vertcoin',
@@ -16,14 +15,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields([
+    blockbookServers: [
       'wss://vtc1.trezor.io',
       'wss://vtc2.trezor.io',
       'wss://vtc3.trezor.io',
       'wss://vtc4.trezor.io',
       'wss://vtc5.trezor.io'
-    ]),
-    disableFetchingServers: false
+    ],
+    enableCustomServers: false
   },
   customFeeTemplate: [
     {

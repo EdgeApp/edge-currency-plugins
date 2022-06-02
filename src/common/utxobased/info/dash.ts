@@ -1,7 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'dash',
@@ -16,14 +15,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields([
+    blockbookServers: [
       'wss://dash1.trezor.io',
       'wss://dash2.trezor.io',
       'wss://dash3.trezor.io',
       'wss://dash4.trezor.io',
       'wss://dash5.trezor.io'
-    ]),
-    disableFetchingServers: false
+    ],
+    enableCustomServers: false
   },
   customFeeTemplate: [
     {
