@@ -12,7 +12,6 @@ import {
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
-  scriptPubkeyToElectrumScriptHash,
   ScriptTypeEnum,
   seedOrMnemonicToXPriv,
   signTx,
@@ -98,23 +97,6 @@ describe('bitcoin get script pubkeys from address', () => {
     })
     expect(scriptPubkey).to.equal(
       '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262'
-    )
-  })
-})
-
-describe('bitcoin address to electrum script hash', () => {
-  it('tests as documented in https://electrumx.readthedocs.io/en/latest/protocol-basics.html', () => {
-    const scriptPubkey = addressToScriptPubkey({
-      address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-      addressType: AddressTypeEnum.p2pkh,
-      coin: 'bitcoin'
-    })
-    expect(scriptPubkey).to.equal(
-      '76a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac'
-    )
-    const electrumScriptHash = scriptPubkeyToElectrumScriptHash(scriptPubkey)
-    expect(electrumScriptHash).to.equal(
-      '8b01df4e368ea28f8dc0423bcf7a4923e3a12d307c875e47a0cfbf90b5c39161'
     )
   })
 })

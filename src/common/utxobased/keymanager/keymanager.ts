@@ -192,6 +192,7 @@ export interface MakeTxTarget {
 }
 
 interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
+  hex: string
   psbtBase64: string
 }
 
@@ -812,13 +813,6 @@ export function privateKeyToPubkey(privateKey: string): string {
   ).publicKey.toString('hex')
 }
 
-// Electrum uses the hash of the script pubkey to discover balances and transactions
-export function scriptPubkeyToElectrumScriptHash(scriptPubkey: string): string {
-  return Buffer.from(
-    bitcoin.crypto.sha256(Buffer.from(scriptPubkey, 'hex')).reverse()
-  ).toString('hex')
-}
-
 export function signMessageBase64(message: string, privateKey: string): string {
   const keyPair = bitcoin.ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'))
   if (keyPair.privateKey == null) {
@@ -948,7 +942,8 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     outputs: sortedOutputs,
     changeUsed: result.changeUsed,
     fee: result.fee,
-    psbtBase64: psbt.toBase64()
+    psbtBase64: psbt.toBase64(),
+    hex: psbt.data?.globalMap?.unsignedTx?.toBuffer()?.toString('hex')
   }
 }
 
@@ -1095,7 +1090,7 @@ const filterCoinPrefixes = <T>(
   for (let prefixIndex = 0; prefixIndex < maxLength; prefixIndex++) {
     try {
       out = filterer(prefixIndex)
-    } catch (e) {
+    } catch (e: any) {
       if (ignoredErrorMessages.includes(e.message)) {
         continue
       }

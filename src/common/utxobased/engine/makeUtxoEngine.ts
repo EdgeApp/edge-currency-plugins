@@ -398,6 +398,7 @@ export async function makeUtxoEngine(
       nativeAmount = bs.sub(nativeAmount, networkFee)
 
       const otherParams: UtxoTxOtherParams = {
+        txJson: { hex: tx.hex },
         psbt: {
           base64: tx.psbtBase64,
           inputs: tx.inputs,
