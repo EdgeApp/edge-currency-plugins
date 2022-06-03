@@ -36,7 +36,7 @@ import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
-import { UtxoTxOtherParams } from './types'
+import { asUtxoUserSettings, UtxoTxOtherParams } from './types'
 import { fetchOrDeriveXprivFromKeys, sumUtxos } from './utils'
 
 export async function makeUtxoEngine(
@@ -47,11 +47,25 @@ export async function makeUtxoEngine(
     pluginDisklet,
     // Rename to make it explicit that this is sensitive memory
     walletInfo: sensitiveWalletInfo,
-    options: { walletLocalDisklet, walletLocalEncryptedDisklet, emitter, log },
+    options,
     io,
     pluginState
   } = config
+  const {
+    walletLocalDisklet,
+    walletLocalEncryptedDisklet,
+    emitter,
+    log
+  } = options
   const { currencyInfo, engineInfo, coinInfo } = pluginInfo
+  const userSettings = asUtxoUserSettings(options.userSettings)
+
+  // We should move the active server list to the engine state,
+  // since multiple accounts can be logged in at once,
+  // each with a different list of custom servers.
+  // The Edge UI only allows for one active login, though,
+  // so this is OK for now:
+  await pluginState.updateServers(userSettings)
 
   const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
   // Private key may be missing for watch-only wallets
@@ -154,7 +168,7 @@ export async function makeUtxoEngine(
     },
 
     async changeUserSettings(userSettings: JsonObject): Promise<void> {
-      await pluginState.updateServers(userSettings)
+      await pluginState.updateServers(asUtxoUserSettings(userSettings))
     },
 
     async disableTokens(_tokens: string[]): Promise<void> {

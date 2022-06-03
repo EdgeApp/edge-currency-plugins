@@ -1,7 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'digibyte',
@@ -16,8 +15,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields(['wss://dgb1.trezor.io', 'wss://dgb2.trezor.io']),
-    disableFetchingServers: false
+    blockbookServers: ['wss://dgb1.trezor.io', 'wss://dgb2.trezor.io'],
+    enableCustomServers: false
   },
   customFeeTemplate: [
     {

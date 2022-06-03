@@ -1,7 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'eboost',
@@ -16,8 +15,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields([]),
-    disableFetchingServers: true
+    blockbookServers: [],
+    enableCustomServers: false
   },
   customFeeTemplate: [
     {

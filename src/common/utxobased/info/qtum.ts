@@ -1,7 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { serverListFields } from '../../plugin/utils'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'qtum',
@@ -13,8 +12,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    ...serverListFields(['wss://blockbook-qtum-sfo3.edge.app']),
-    disableFetchingServers: false
+    blockbookServers: ['wss://blockbook-qtum-sfo3.edge.app'],
+    enableCustomServers: false
   },
   customFeeTemplate: [
     {

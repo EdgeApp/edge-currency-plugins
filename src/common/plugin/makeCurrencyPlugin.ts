@@ -8,6 +8,7 @@ import {
 } from 'edge-core-js/types'
 
 import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
+import { asUtxoUserSettings } from '../utxobased/engine/types'
 import { makeCurrencyTools } from './makeCurrencyTools'
 import { makeEngineEmitter } from './makeEngineEmitter'
 import { makePluginState } from './pluginState'
@@ -21,22 +22,13 @@ export function makeCurrencyPlugin(
   const { io, log, pluginDisklet } = pluginOptions
   const currencyTools = makeCurrencyTools(io, pluginInfo)
   const { defaultSettings, pluginId, currencyCode } = currencyInfo
-  const {
-    customFeeSettings,
-    serverList,
-    disableFetchingServers
-  } = defaultSettings
   const state = makePluginState({
     io,
     currencyCode,
     pluginId,
     pluginDisklet,
     log,
-    defaultSettings: {
-      customFeeSettings,
-      serverList,
-      disableFetchingServers
-    }
+    defaultSettings: asUtxoUserSettings(defaultSettings)
   })
   return {
     currencyInfo,
