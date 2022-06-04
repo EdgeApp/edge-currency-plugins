@@ -98,7 +98,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       const requiredFeeRate =
         otherParams.paymentProtocolInfo?.merchant?.requiredFeeRate
       if (requiredFeeRate != null) {
-        const rate = bs.add(bs.mul(requiredFeeRate, '1.5'), '1')
+        const rate = bs.add(bs.mul(`${requiredFeeRate}`, '1.5'), '1')
         return bs.toFixed(rate, 0, 0)
       }
 
