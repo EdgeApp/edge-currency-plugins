@@ -331,10 +331,12 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
           onClose: onSocketClose
         }
 
+        // Append "/websocket" if needed:
+        const fullUri = uri.replace(/\/websocket\/?$/, '') + '/websocket'
         try {
-          socket = setupBrowser(uri, cbs)
+          socket = setupBrowser(fullUri, cbs)
         } catch {
-          socket = setupWS(uri, cbs)
+          socket = setupWS(fullUri, cbs)
         }
       })
     },
