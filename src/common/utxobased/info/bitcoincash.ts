@@ -43,7 +43,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   blockExplorer: 'https://blockchair.com/bitcoin-cash/block/%s',
   addressExplorer: 'https://blockchair.com/bitcoin-cash/address/%s',
   transactionExplorer: 'https://blockchair.com/bitcoin-cash/transaction/%s',
-  xpubExplorer: 'https://blockchair.com/bitcoin-cash/xpub/%s',
+  xpubExplorer: 'https://bch1.trezor.io/xpub/%s',
 
   // Images:
   symbolImage: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
