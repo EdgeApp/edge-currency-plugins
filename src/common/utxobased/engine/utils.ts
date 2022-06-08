@@ -4,6 +4,7 @@ import { EdgeParsedUri } from 'edge-core-js/types'
 
 import { CurrencyFormat } from '../../plugin/types'
 import { IUTXO } from '../db/types'
+import { ScriptTemplates } from '../info/scriptTemplates/types'
 import { getSupportedFormats, PrivateKey } from '../keymanager/cleaners'
 import {
   addressToScriptPubkey,
@@ -59,11 +60,23 @@ export const getAddressTypeFromPurposeType = (
 }
 
 export const getScriptTypeFromPurposeType = (
-  purpose: BIP43PurposeTypeEnum
+  purpose: BIP43PurposeTypeEnum,
+  redeemScript?: string,
+  scriptTemplates?: ScriptTemplates
 ): ScriptTypeEnum => {
   switch (purpose) {
     case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
+      if (redeemScript != null) {
+        if (scriptTemplates?.replayProtection != null) {
+          const replayProtectionPartialScript = scriptTemplates
+            .replayProtection('')
+            .slice(0, -4)
+          if (redeemScript.indexOf(replayProtectionPartialScript) === 0) {
+            return ScriptTypeEnum.replayProtection
+          }
+        }
+      }
       return ScriptTypeEnum.p2pkh
 
     case BIP43PurposeTypeEnum.WrappedSegwit:

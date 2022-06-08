@@ -37,6 +37,7 @@ import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import { asUtxoUserSettings, UtxoTxOtherParams } from './types'
+import { getOwnUtxosFromTx } from './util/getOwnUtxosFromTx'
 import { fetchOrDeriveXprivFromKeys, sumUtxos } from './utils'
 
 export async function makeUtxoEngine(
@@ -456,6 +457,12 @@ export async function makeUtxoEngine(
         tx,
         scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys
       })
+
+      /*
+      Get the wallet's UTXOs from the new transaction and save them to the processsor.
+      */
+      const utxos = await getOwnUtxosFromTx(engineInfo, processor, tx)
+      await Promise.all(utxos.map(async utxo => await processor.saveUtxo(utxo)))
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
