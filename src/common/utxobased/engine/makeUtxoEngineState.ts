@@ -703,7 +703,6 @@ export const pickNextTask = async (
       const wsTask = await processRawUtxo({
         ...args,
         ...state,
-        ...state.path,
         address: state.address,
         utxo,
         id: `${utxo.txid}_${utxo.vout}`
@@ -1253,7 +1252,7 @@ const processProcessorUtxos = async (
   })
 }
 
-interface ProcessRawUtxoArgs extends FormatArgs {
+interface ProcessRawUtxoArgs extends CommonArgs {
   path: ChangePath
   requiredCount: number
   utxo: BlockbookAccountUtxo
@@ -1269,7 +1268,6 @@ const processRawUtxo = async (
     utxo,
     id,
     address,
-    format,
     processor,
     path,
     taskCache,
@@ -1304,7 +1302,7 @@ const processRawUtxo = async (
       }
     )
 
-  switch (currencyFormatToPurposeType(format)) {
+  switch (currencyFormatToPurposeType(path.format)) {
     case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
       scriptType = ScriptTypeEnum.p2pkh
