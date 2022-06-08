@@ -30,6 +30,7 @@ import {
   derivationLevelScriptHash,
   ScriptTypeEnum
 } from '../keymanager/keymanager'
+import { Input } from '../keymanager/utxopicker/types'
 import {
   addressMessage,
   AddressResponse,
@@ -366,29 +367,24 @@ export function makeUtxoEngineState(
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<string> {
-      /*
-      The code below appears to be left-over implementation for RBF, however the
-      UTXO `spent` property has no effect within the current implementation and
-      the UTXOs are eventually removed once the transaction is broadcast and the
-      engine syncs with the network.
+      const txId = await serverStates.broadcastTx(transaction)
 
-      TODO: Figure out whether this code is still needed.
+      /*
+      After successfully broadcasting the tx, we must mark each UTXO, used as
+      an input for the tx, as spent so we don't try to reuse the UTXO.
       */
-      // put spent utxos into an interim data structure (saveSpentUtxo)
-      // these utxos are removed once the transaction confirms
-      const [tx] = await processor.fetchTransactions({ txId: transaction.txid })
-      if (tx != null) {
-        for (const inputs of tx.inputs) {
-          const [utxo] = await processor.fetchUtxos({
-            utxoIds: [`${inputs.txId}_${inputs.outputIndex}`]
-          })
-          if (utxo != null) {
-            utxo.spent = true
-            await processor.saveUtxo(utxo)
-          }
+      const txInputs: Input[] = transaction.otherParams?.psbt.inputs ?? []
+      for (const input of txInputs) {
+        const scriptPubkey = Buffer.from(input.scriptPubkey).toString('hex')
+        const [utxo] = await processor.fetchUtxos({
+          scriptPubkey
+        })
+        if (utxo != null) {
+          utxo.spent = true
+          await processor.saveUtxo(utxo)
         }
       }
-      const txId = await serverStates.broadcastTx(transaction)
+
       return txId
     },
     refillServers(): void {
