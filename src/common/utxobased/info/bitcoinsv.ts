@@ -1,3 +1,4 @@
+import * as bitcoin from 'altcoin-js'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
@@ -17,7 +18,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook-bsv-sfo3.edge.app'],
+    blockbookServers: ['wss://bsv-bbwrap1.edge.app'],
     enableCustomServers: false
   },
   customFeeTemplate: [
@@ -59,6 +60,7 @@ const engineInfo: EngineInfo = {
 export const coinInfo: CoinInfo = {
   name: 'bitcoinsv',
   segwit: false,
+  sighash: bitcoin.Psbt.BCH_SIGHASH_ALL,
   coinType: 236,
 
   prefixes: {
