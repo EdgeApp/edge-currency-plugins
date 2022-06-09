@@ -103,6 +103,31 @@ export const getSupportedFormats = (
 }
 
 /**
+ * An algorithm that defines the primary format for a wallet given all of the
+ * wallet's formats and the currency formats (from plugin info).
+ *
+ * The purpose for this algorithm is to deterministically return a single
+ * primary format regardless of the order of the wallet formats given.
+ * The algorithm effectively takes the first format in the formats from plugin
+ * info that matches one of the formats in the given wallet formats.
+ *
+ * If no wallet format matches any of the formats in the plugin info, then
+ * the primary format is the first format in the wallet format after sorting
+ * in ascending order lexicographically.
+ */
+export const getPrimaryFormat = (
+  currencyFormats: CurrencyFormat[],
+  walletFormats: CurrencyFormat[]
+): CurrencyFormat => {
+  return (
+    (currencyFormats.length > 0
+      ? currencyFormats.find(format => walletFormats.includes(format))
+      : undefined) ??
+    walletFormats.sort((a, b) => (a === b ? 0 : a > b ? 1 : -1))[0]
+  )
+}
+
+/**
  * A cleaner that desensitizes the walletInfo object, excluding sensitive
  * keys (seed/mnemonic, sync key, data key, etc). By using this object type
  * internally within the plugin, we can minimize risk of leaking sensitive data.
@@ -151,16 +176,10 @@ export const asNumbWalletInfo = (
       if (walletFormats.length === 0) {
         throw new Error('Missing wallet public keys')
       }
-
-      // Search the engineInfo's formats array for the first format that exists
-      // in the publicKey data.
-      // If there are no defined formats in the engineInfo, then fallback to the
-      // first format in the publicKey after sorting alphabetically.
-      const primaryFormat =
-        (engineInfo.formats != null && engineInfo.formats.length > 0
-          ? engineInfo.formats.find(format => walletFormats.includes(format))
-          : undefined) ??
-        walletFormats.sort((a, b) => (a === b ? 0 : a > b ? 1 : -1))[0]
+      const primaryFormat = getPrimaryFormat(
+        engineInfo.formats ?? [],
+        walletFormats
+      )
 
       return {
         id,
@@ -185,6 +204,8 @@ export const asNumbWalletInfo = (
         id,
         type,
         keys: {
+          // Private key format is the primary format because it was determined
+          // during `createPrivateKey` phase.
           primaryFormat: privateKey.format,
           walletFormats,
           publicKey: { publicKeys: publicKey }
