@@ -7,10 +7,11 @@ import {
   EdgeCurrencyTools,
   EdgeIo,
   EdgeParsedUri,
+  EdgeTransaction,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
-import { IUTXO } from '../utxobased/db/types'
+import { IProcessorTransaction, IUTXO } from '../utxobased/db/types'
 import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
 import { UtxoPicker } from '../utxobased/keymanager/utxopicker'
 import { EngineEmitter } from './makeEngineEmitter'
@@ -56,6 +57,12 @@ export interface EngineInfo {
   scriptTemplates?: ScriptTemplates
   // Codec Cleaners
   asBlockbookAddress?: Cleaner<string>
+  // Special validation rules
+  validateConfirmations?: (
+    txResponse: IProcessorTransaction,
+    blockHeight: number,
+    requiredConfirmations: number | undefined
+  ) => EdgeTransaction['confirmations']
 }
 
 /**

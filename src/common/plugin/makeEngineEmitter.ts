@@ -95,12 +95,6 @@ export const makeEngineEmitter = (
 
   emitter.on(EngineEvent.TRANSACTIONS_CHANGED, callbacks.onTransactionsChanged)
   emitter.on(EngineEvent.WALLET_BALANCE_CHANGED, callbacks.onBalanceChanged)
-  emitter.on(
-    EngineEvent.BLOCK_HEIGHT_CHANGED,
-    (_uri: string, height: number) => {
-      callbacks.onBlockHeightChanged(height)
-    }
-  )
   emitter.on(EngineEvent.ADDRESSES_CHECKED, callbacks.onAddressesChecked)
   emitter.on(EngineEvent.TXIDS_CHANGED, callbacks.onTxidsChanged)
 
