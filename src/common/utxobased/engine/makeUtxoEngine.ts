@@ -206,7 +206,9 @@ export async function makeUtxoEngine(
 
     getDisplayPublicSeed(): string | null {
       const xpubs = publicKey.publicKeys
-      return Object.values(xpubs).join('\n')
+      return Object.values(xpubs)
+        .filter(xpub => xpub != null)
+        .join('\n')
     },
 
     async getEnabledTokens(): Promise<string[]> {
