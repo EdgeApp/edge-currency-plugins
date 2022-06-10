@@ -843,11 +843,11 @@ const updateTransactions = (
   const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
   const deferred = new Deferred<TransactionResponse>()
   deferred.promise
-    .then(async (rawTx: TransactionResponse) => {
+    .then(async (txResponse: TransactionResponse) => {
       // check if raw tx is still not confirmed, if so, don't change anything
-      if (rawTx.blockHeight < 1) return
+      if (txResponse.blockHeight < 1) return
       // Create new tx from raw tx
-      const tx = processRawTx({ ...args, tx: rawTx })
+      const tx = processTransactionResponse({ ...args, txResponse })
       // Remove any existing input utxos from the processor
       for (const input of tx.inputs) {
         await processor.removeUtxos([`${input.txId}_${input.outputIndex}`])
@@ -1015,8 +1015,8 @@ const processAddressTransactions = async (
       }
 
       // Process and save the address's transactions
-      for (const rawTx of transactions) {
-        const tx = processRawTx({ ...args, tx: rawTx })
+      for (const txResponse of transactions) {
+        const tx = processTransactionResponse({ ...args, txResponse })
         const processedTx = await processor.saveTransaction({
           tx,
           scriptPubkeys: [scriptPubkey]
@@ -1073,23 +1073,25 @@ const processAddressTransactions = async (
   }
 }
 
-interface ProcessRawTxArgs extends CommonArgs {
-  tx: TransactionResponse
+interface processTransactionResponseArgs extends CommonArgs {
+  txResponse: TransactionResponse
 }
 
-const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
+const processTransactionResponse = (
+  args: processTransactionResponseArgs
+): IProcessorTransaction => {
   const {
-    tx,
+    txResponse,
     pluginInfo: { coinInfo }
   } = args
   return {
-    txid: tx.txid,
-    hex: tx.hex,
+    txid: txResponse.txid,
+    hex: txResponse.hex,
     // Blockbook can return a blockHeight of -1 when the tx is pending in the mempool
-    blockHeight: tx.blockHeight > 0 ? tx.blockHeight : 0,
-    date: tx.blockTime,
-    fees: tx.fees,
-    inputs: tx.vin.map(input => ({
+    blockHeight: txResponse.blockHeight > 0 ? txResponse.blockHeight : 0,
+    date: txResponse.blockTime,
+    fees: txResponse.fees,
+    inputs: txResponse.vin.map(input => ({
       txId: input.txid,
       outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
       n: input.n,
@@ -1099,7 +1101,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
       }),
       amount: input.value
     })),
-    outputs: tx.vout.map(output => ({
+    outputs: txResponse.vout.map(output => ({
       n: output.n,
       scriptPubkey:
         output.hex ??
@@ -1315,9 +1317,12 @@ const processRawUtxo = async (
           const queryTime = Date.now()
           const deferred = new Deferred<TransactionResponse>()
           deferred.promise
-            .then((rawTx: TransactionResponse) => {
+            .then((txResponse: TransactionResponse) => {
               serverStates.serverScoreUp(uri, Date.now() - queryTime)
-              const processedTx = processRawTx({ ...args, tx: rawTx })
+              const processedTx = processTransactionResponse({
+                ...args,
+                txResponse
+              })
               script = processedTx.hex
               // Only after we have successfully fetched the tx, set our script and call done
               done()
