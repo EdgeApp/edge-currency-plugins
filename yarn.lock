@@ -3294,10 +3294,10 @@ ecc-jsbn@~0.1.1:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
 
-edge-core-js@^0.19.10:
-  version "0.19.10"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.19.10.tgz#a03e2b805cbc4538817d6170471f2e368c605765"
-  integrity sha512-XEi0YAVIEvwOejsKMAahmDj44ogVcjwNiM3AN0Hyo4ZR+U3AL2NzJOhWItofsXz7+HB/LeHTvhvUR8vLJB0+vA==
+edge-core-js@^0.19.19:
+  version "0.19.19"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.19.19.tgz#66df9fdb60e021e01a27dbfd90f74c90c25bd07c"
+  integrity sha512-FDeuzn5AlbafxotSdC9FMhErK1aNymrKGlgPrU25AJlwAOHPCgpLaoQ3p5X9fmd3ZIwQERkP/XPfJB1/kn7dyA==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"

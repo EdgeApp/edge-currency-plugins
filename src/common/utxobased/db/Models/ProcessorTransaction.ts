@@ -1,8 +1,9 @@
 import { EdgeTransaction } from 'edge-core-js/types'
 
-import { EngineInfo } from '../../../plugin/types'
+import { PluginInfo } from '../../../plugin/types'
 import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
 import { UtxoTxOtherParams } from '../../engine/types'
+import { defaultValidateConfirmations } from '../../engine/util/defaultValidateConfirmations'
 import { isPathUsingDerivationLevelScriptHash } from '../../keymanager/keymanager'
 import { Processor } from '../makeProcessor'
 import { IProcessorTransaction } from '../types'
@@ -52,15 +53,19 @@ export const fromEdgeTransaction = (
 interface ToEdgeTransactionArgs {
   tx: IProcessorTransaction
   currencyCode: string
-  walletTools: UTXOPluginWalletTools
+  pluginInfo: PluginInfo
   processor: Processor
-  engineInfo: EngineInfo
+  walletBlockHeight: number
+  walletTools: UTXOPluginWalletTools
 }
 
 export const toEdgeTransaction = async (
   args: ToEdgeTransactionArgs
 ): Promise<EdgeTransaction> => {
-  const { tx, processor, walletTools, engineInfo } = args
+  const { tx, processor, walletBlockHeight, walletTools, pluginInfo } = args
+  const { currencyInfo, engineInfo } = pluginInfo
+  const { validateConfirmations = defaultValidateConfirmations } = engineInfo
+  const { requiredConfirmations } = currencyInfo
 
   const ourReceiveAddresses: string[] = []
   for (const out of tx.ourOuts) {
@@ -68,7 +73,7 @@ export const toEdgeTransaction = async (
     const address = await processor.fetchAddress(scriptPubkey)
 
     /*
-    Hack to set replay protection tx to the correct script type through the 
+    Hack to set replay protection tx to the correct script type through the
     address format.
 
     We use a function which can determine whether the derivationLevelScriptHash
@@ -95,9 +100,16 @@ export const toEdgeTransaction = async (
     }
   }
 
-  return {
+  const confirmations = validateConfirmations(
+    tx,
+    walletBlockHeight,
+    requiredConfirmations
+  )
+
+  const edgeTx = {
     currencyCode: args.currencyCode,
     txid: args.tx.txid,
+    confirmations,
     blockHeight: args.tx.blockHeight,
     date: args.tx.date,
     nativeAmount: args.tx.ourAmount,
@@ -105,4 +117,6 @@ export const toEdgeTransaction = async (
     signedTx: args.tx.hex,
     ourReceiveAddresses
   }
+
+  return edgeTx
 }

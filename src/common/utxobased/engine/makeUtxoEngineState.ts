@@ -173,6 +173,8 @@ export function makeUtxoEngineState(
     walletFormats,
     lock
   }
+  const { currencyInfo } = pluginInfo
+  const { requiredConfirmations = 1 } = currencyInfo
 
   const pickNextTaskCB = async (
     uri: string
@@ -194,13 +196,31 @@ export function makeUtxoEngineState(
 
   emitter.on(
     EngineEvent.BLOCK_HEIGHT_CHANGED,
-    async (_uri: string, _blockHeight: number): Promise<void> => {
-      const txs = await processor.fetchTransactions({
+    async (_uri: string, walletBlockHeight: number): Promise<void> => {
+      // Check if unconfirmed transaction have been confirmed.
+      const unconfirmedTxs = await processor.fetchTransactions({
         blockHeight: 0
       })
-      for (const tx of txs) {
+      for (const tx of unconfirmedTxs) {
         if (tx == null) continue
         taskCache.updateTransactionCache[tx.txid] = { processing: false }
+      }
+
+      // Trigger transactions change event to update its confirmation status
+      const pendingTxs = await processor.fetchTransactions({
+        blockHeight: walletBlockHeight - requiredConfirmations,
+        blockHeightMax: walletBlockHeight
+      })
+      for (const tx of pendingTxs) {
+        if (tx == null) continue
+        await transactionChanged({
+          emitter,
+          processor,
+          pluginInfo,
+          tx,
+          walletBlockHeight,
+          walletTools
+        })
       }
     }
   )
@@ -608,6 +628,7 @@ const addToAddressTransactionCache = async (
 interface TransactionChangedArgs {
   tx: IProcessorTransaction
   emitter: EngineEmitter
+  walletBlockHeight: number
   walletTools: UTXOPluginWalletTools
   pluginInfo: PluginInfo
   processor: Processor
@@ -618,18 +639,22 @@ export const transactionChanged = async (
 ): Promise<void> => {
   const {
     emitter,
+    walletBlockHeight,
     walletTools,
     processor,
-    pluginInfo: { currencyInfo, engineInfo },
+    pluginInfo,
     tx
   } = args
+  const { currencyInfo } = pluginInfo
+
   emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
     await toEdgeTransaction({
       tx,
       currencyCode: currencyInfo.currencyCode,
-      walletTools,
+      pluginInfo,
       processor,
-      engineInfo
+      walletBlockHeight: walletBlockHeight,
+      walletTools
     })
   ])
 }
@@ -680,6 +705,8 @@ export const pickNextTask = async (
     }
   }
 
+  const blockHeight = serverStates.getBlockHeight(uri)
+
   // Loop unparsed utxos, some require a network call to get the full tx data
   for (const [utxoString, state] of Object.entries(rawUtxoCache)) {
     const utxo: BlockbookAccountUtxo = JSON.parse(utxoString)
@@ -699,7 +726,6 @@ export const pickNextTask = async (
       const wsTask = await processRawUtxo({
         ...args,
         ...state,
-        address: state.address,
         utxo,
         id: `${utxo.txid}_${utxo.vout}`
       })
@@ -737,7 +763,6 @@ export const pickNextTask = async (
     Object.keys(addressSubscribeCache).length > 0 &&
     !taskCache.addressWatching
   ) {
-    const blockHeight = serverStates.getBlockHeight(uri)
     // Loop each address that needs to be subscribed
     for (const [address, state] of Object.entries(addressSubscribeCache)) {
       // Add address in the cache to the set of addresses to watch
@@ -792,7 +817,11 @@ export const pickNextTask = async (
         hasProcessedAtLeastOnce = true
         state.processing = true
         removeItem(updateTransactionCache, txId)
-        const updateTransactionTask = updateTransactions({ ...args, txId })
+        const updateTransactionTask = updateTransactions({
+          ...args,
+          walletBlockHeight: blockHeight,
+          txId
+        })
         // once resolved, add the txid to the server cache
         updateTransactionTask.deferred.promise
           .then(() => {
@@ -834,20 +863,32 @@ export const pickNextTask = async (
 }
 
 interface UpdateTransactionsArgs extends CommonArgs {
+  walletBlockHeight: number
   txId: string
 }
 
 const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<TransactionResponse> => {
-  const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
+  const {
+    walletBlockHeight,
+    emitter,
+    walletTools,
+    txId,
+    pluginInfo,
+    processor,
+    taskCache
+  } = args
   const deferred = new Deferred<TransactionResponse>()
   deferred.promise
-    .then(async (rawTx: TransactionResponse) => {
+    .then(async (txResponse: TransactionResponse) => {
       // check if raw tx is still not confirmed, if so, don't change anything
-      if (rawTx.blockHeight < 1) return
+      if (txResponse.blockHeight < 1) return
       // Create new tx from raw tx
-      const tx = processRawTx({ ...args, tx: rawTx })
+      const tx = processTransactionResponse({
+        ...args,
+        txResponse
+      })
       // Remove any existing input utxos from the processor
       for (const input of tx.inputs) {
         await processor.removeUtxos([`${input.txId}_${input.outputIndex}`])
@@ -858,10 +899,11 @@ const updateTransactions = (
       })
       await transactionChanged({
         emitter,
-        walletTools,
         processor,
         pluginInfo,
-        tx: processedTx
+        tx: processedTx,
+        walletBlockHeight,
+        walletTools
       })
     })
     .catch(() => {
@@ -980,7 +1022,7 @@ const processAddressTransactions = async (
   const {
     address,
     page = 1,
-    blockHeight,
+    blockHeight: walletBlockHeight,
     emitter,
     pluginInfo,
     processor,
@@ -1015,18 +1057,22 @@ const processAddressTransactions = async (
       }
 
       // Process and save the address's transactions
-      for (const rawTx of transactions) {
-        const tx = processRawTx({ ...args, tx: rawTx })
+      for (const txResponse of transactions) {
+        const tx = processTransactionResponse({
+          ...args,
+          txResponse
+        })
         const processedTx = await processor.saveTransaction({
           tx,
           scriptPubkeys: [scriptPubkey]
         })
         await transactionChanged({
           emitter,
-          walletTools,
           processor,
           pluginInfo,
-          tx: processedTx
+          tx: processedTx,
+          walletBlockHeight,
+          walletTools
         })
       }
 
@@ -1037,14 +1083,14 @@ const processAddressTransactions = async (
         addressTransactionCache[address] = {
           path,
           processing: false,
-          blockHeight,
+          blockHeight: walletBlockHeight,
           page: page + 1
         }
         return
       }
 
       // Update the lastQueriedBlockHeight for the address
-      addressData.lastQueriedBlockHeight = blockHeight
+      addressData.lastQueriedBlockHeight = walletBlockHeight
 
       // Save/update the fully-processed address
       await processor.saveAddress(addressData)
@@ -1073,23 +1119,24 @@ const processAddressTransactions = async (
   }
 }
 
-interface ProcessRawTxArgs extends CommonArgs {
-  tx: TransactionResponse
+interface processTransactionResponseArgs extends CommonArgs {
+  txResponse: TransactionResponse
 }
 
-const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
-  const {
-    tx,
-    pluginInfo: { coinInfo }
-  } = args
+const processTransactionResponse = (
+  args: processTransactionResponseArgs
+): IProcessorTransaction => {
+  const { txResponse, pluginInfo } = args
+  const { coinInfo } = pluginInfo
+
   return {
-    txid: tx.txid,
-    hex: tx.hex,
+    txid: txResponse.txid,
+    hex: txResponse.hex,
     // Blockbook can return a blockHeight of -1 when the tx is pending in the mempool
-    blockHeight: tx.blockHeight > 0 ? tx.blockHeight : 0,
-    date: tx.blockTime,
-    fees: tx.fees,
-    inputs: tx.vin.map(input => ({
+    blockHeight: txResponse.blockHeight > 0 ? txResponse.blockHeight : 0,
+    date: txResponse.blockTime,
+    fees: txResponse.fees,
+    inputs: txResponse.vin.map(input => ({
       txId: input.txid,
       outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
       n: input.n,
@@ -1099,7 +1146,7 @@ const processRawTx = (args: ProcessRawTxArgs): IProcessorTransaction => {
       }),
       amount: input.value
     })),
-    outputs: tx.vout.map(output => ({
+    outputs: txResponse.vout.map(output => ({
       n: output.n,
       scriptPubkey:
         output.hex ??
@@ -1315,9 +1362,12 @@ const processRawUtxo = async (
           const queryTime = Date.now()
           const deferred = new Deferred<TransactionResponse>()
           deferred.promise
-            .then((rawTx: TransactionResponse) => {
+            .then((txResponse: TransactionResponse) => {
               serverStates.serverScoreUp(uri, Date.now() - queryTime)
-              const processedTx = processRawTx({ ...args, tx: rawTx })
+              const processedTx = processTransactionResponse({
+                ...args,
+                txResponse
+              })
               script = processedTx.hex
               // Only after we have successfully fetched the tx, set our script and call done
               done()
