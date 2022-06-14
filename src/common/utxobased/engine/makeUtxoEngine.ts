@@ -119,6 +119,8 @@ export async function makeUtxoEngine(
         currencyInfo.currencyCode,
         metadata.balance
       )
+
+      pluginState.addEngine(state)
       await fees.start()
       await state.start()
     },
@@ -126,6 +128,7 @@ export async function makeUtxoEngine(
     async killEngine(): Promise<void> {
       await state.stop()
       fees.stop()
+      pluginState.removeEngine(state)
     },
 
     getBalance(_opts: EdgeCurrencyCodeOptions): string {
