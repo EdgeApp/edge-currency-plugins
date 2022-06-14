@@ -98,6 +98,8 @@ describe('engine.spec', function () {
       log: testLog,
       walletLocalDisklet,
       walletLocalEncryptedDisklet: walletLocalDisklet,
+      customTokens: {},
+      enabledTokenIds: [],
       userSettings: tests.ChangeSettings
     }
 
