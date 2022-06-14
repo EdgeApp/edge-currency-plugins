@@ -7,7 +7,12 @@ import { makeMemlet } from 'memlet'
 
 import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
 import { UtxoUserSettings } from '../utxobased/engine/types'
-import { asServerInfoCache, ServerScores } from './serverScores'
+import {
+  asServerCache,
+  ServerCache,
+  ServerList,
+  ServerScores
+} from './serverScores'
 
 // Info server endpoint to getting ServerListInfo data
 const serverListInfoUrl = 'https://info1.edge.app/v1/blockBook/'
@@ -61,19 +66,23 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     pluginDisklet,
     log
   } = settings
-  let defaultServers = defaultSettings.blockbookServers
+  const builtInServers: string[] = defaultSettings.blockbookServers
+  let customServers: string[] = []
   let enableCustomServers = defaultSettings.enableCustomServers
   let engines: UtxoEngineState[] = []
   const memlet = makeMemlet(pluginDisklet)
 
-  let serverCacheJson = {}
+  let serverCache: ServerCache = {
+    customServers: {},
+    internalServers: {}
+  }
   let serverCacheDirty = false
-  let servers = {}
+  let knownServers: ServerList = {}
 
   const saveServerCache = async (): Promise<void> => {
-    serverScores.printServers(servers)
+    serverScores.printServers(knownServers)
     if (serverCacheDirty) {
-      await memlet.setJson(SERVER_CACHE_FILE, servers).catch(e => {
+      await memlet.setJson(SERVER_CACHE_FILE, serverCache).catch(e => {
         log(`${pluginId} - ${JSON.stringify(e.toString())}`)
       })
       serverCacheDirty = false
@@ -104,7 +113,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     onDirtyServer
   })
 
-  const fetchServers = async (): Promise<string[] | null> => {
+  const fetchServers = async (): Promise<string[]> => {
     log(`${pluginId} - GET ${serverListInfoUrl}`)
 
     const response = await io.fetch(serverListInfoUrl)
@@ -124,16 +133,24 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     const serverListInfo = asServerListInfo(responseBody)
 
-    return serverListInfo[currencyCode] ?? null
+    return serverListInfo[currencyCode] ?? []
   }
 
   const refreshServers = async (): Promise<void> => {
-    let serverList = defaultServers
+    let newServers: string[]
+    if (enableCustomServers) {
+      newServers = customServers
+    } else {
+      const fetchedServers = await fetchServers()
+      newServers = fetchedServers.length > 0 ? fetchedServers : builtInServers
+    }
 
-    if (!enableCustomServers)
-      serverList = (await fetchServers()) ?? defaultServers
+    const serverCacheIndex = enableCustomServers
+      ? 'customServers'
+      : 'internalServers'
 
-    serverScores.serverScoresLoad(servers, serverCacheJson, serverList)
+    knownServers = serverCache[serverCacheIndex]
+    serverScores.serverScoresLoad(knownServers, newServers)
     await saveServerCache()
 
     // Tell the engines about the new servers:
@@ -159,15 +176,13 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     dumpData(): JsonObject {
       return {
-        'pluginState.servers_': servers
+        'pluginState.servers_': knownServers
       }
     },
 
     async load(): Promise<PluginState> {
       try {
-        serverCacheJson = asServerInfoCache(
-          await memlet.getJson(SERVER_CACHE_FILE)
-        )
+        serverCache = asServerCache(await memlet.getJson(SERVER_CACHE_FILE))
       } catch (e) {
         log(`${pluginId}: Failed to load server cache: ${JSON.stringify(e)}`)
       }
@@ -181,16 +196,16 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     },
 
     serverScoreDown(uri: string): void {
-      serverScores.serverScoreDown(servers, uri)
+      serverScores.serverScoreDown(knownServers, uri)
     },
 
     serverScoreUp(uri: string, score: number): void {
-      serverScores.serverScoreUp(servers, uri, score)
+      serverScores.serverScoreUp(knownServers, uri, score)
     },
 
     async clearCache(): Promise<void> {
       serverScores.clearServerScoreTimes()
-      servers = {}
+      knownServers = {}
       serverCacheDirty = true
       await memlet.delete(SERVER_CACHE_FILE)
     },
@@ -199,14 +214,18 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       numServersWanted: number,
       includePatterns: string[] = []
     ): string[] {
-      return serverScores.getServers(servers, numServersWanted, includePatterns)
+      return serverScores.getServers(
+        knownServers,
+        numServersWanted,
+        includePatterns
+      )
     },
 
     refreshServers,
 
     async updateServers(settings: UtxoUserSettings): Promise<void> {
       enableCustomServers = settings.enableCustomServers
-      defaultServers = settings.blockbookServers
+      customServers = settings.blockbookServers
 
       const enginesToBeStopped = []
       const disconnects = []
@@ -217,7 +236,12 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
       await Promise.all(disconnects)
       serverScores.clearServerScoreTimes()
-      serverCacheJson = {}
+      // We must always clear custom servers in order to enforce a policy of
+      // only using the exact customServers provided.
+      serverCache = {
+        ...serverCache,
+        customServers: {}
+      }
       serverCacheDirty = true
       await saveServerCache()
       await refreshServers()

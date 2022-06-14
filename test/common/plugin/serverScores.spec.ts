@@ -74,39 +74,22 @@ describe(`ServerCache`, function () {
       'server5'
     ]
 
-    // $FlowFixMe
     const scores = new ServerScores({ log: testLog, onDirtyServer: callback })
-    const cache = {}
 
-    scores.serverScoresLoad(diskServerCache, cache, newServers)
-    const result = scores.getServers(cache, 8)
+    scores.serverScoresLoad(diskServerCache, newServers)
+    const result = scores.getServers(diskServerCache, 8)
 
-    console.log('\n\n process version:', process.version, '\n\n')
-    const expected =
-      // v8 switched to a stable sort in this version:
-      process.version > 'v11'
-        ? [
-            'newServer1',
-            'newServer2',
-            'newServer3',
-            'server1',
-            'server2',
-            'server3',
-            'server4',
-            'server5'
-          ]
-        : [
-            'server1',
-            'server3',
-            'server4',
-            'server2',
-            'newServer2',
-            'newServer3',
-            'newServer1',
-            'server5'
-          ]
+    const expected = [
+      'server1',
+      'server3',
+      'server4',
+      'server2',
+      'newServer1',
+      'newServer2',
+      'newServer3',
+      'server5'
+    ]
     assert.equal(JSON.stringify(result), JSON.stringify(expected))
-    // assert.equal(outBitcoinFees.highFee, '300')
   })
 
   it('Bump score', function () {
@@ -170,12 +153,10 @@ describe(`ServerCache`, function () {
       'server7'
     ]
 
-    // $FlowFixMe
     const scores = new ServerScores({ log: testLog, onDirtyServer: callback })
-    const cache = {}
 
-    scores.serverScoresLoad(cache, diskServerCache, newServers)
-    scores.serverScoreUp(cache, 'server8', 0, 405)
+    scores.serverScoresLoad(diskServerCache, newServers)
+    scores.serverScoreUp(diskServerCache, 'server8', 0, 405)
     const control = [
       'server8',
       'server2',
@@ -186,7 +167,7 @@ describe(`ServerCache`, function () {
       'server7',
       'server1'
     ]
-    const result = scores.getServers(cache, 8)
+    const result = scores.getServers(diskServerCache, 8)
     assert.equal(JSON.stringify(result), JSON.stringify(control))
   })
 
@@ -242,37 +223,23 @@ describe(`ServerCache`, function () {
       }
     }
     const newServers = ['newServer1', 'newServer2', 'newServer3']
-    const cache = {}
 
     // $FlowFixMe
     const scores = new ServerScores({ log: testLog, onDirtyServer: callback })
 
-    scores.serverScoresLoad(cache, diskServerCache, newServers)
-    const result = scores.getServers(cache, 8)
+    scores.serverScoresLoad(diskServerCache, newServers)
+    const result = scores.getServers(diskServerCache, 8)
 
-    const expected =
-      // v8 switched to a stable sort in this version:
-      process.version > 'v11'
-        ? [
-            'newServer1',
-            'newServer2',
-            'newServer3',
-            'server1',
-            'server2',
-            'server3',
-            'server4',
-            'server5'
-          ]
-        : [
-            'newServer3',
-            'newServer1',
-            'newServer2',
-            'server4',
-            'server5',
-            'server2',
-            'server7',
-            'server8'
-          ]
+    const expected = [
+      'newServer1',
+      'newServer2',
+      'newServer3',
+      'server1',
+      'server2',
+      'server3',
+      'server4',
+      'server5'
+    ]
     assert.equal(JSON.stringify(result), JSON.stringify(expected))
   })
 })
