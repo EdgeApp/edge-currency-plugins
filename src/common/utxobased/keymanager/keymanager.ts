@@ -1,5 +1,6 @@
 /* eslint-disable camelcase */
 import * as bitcoin from 'altcoin-js'
+import { gt, lt } from 'biggystring'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
 import bitcoinMessage from 'bitcoinjs-message'
@@ -845,7 +846,11 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
       .filter(utxo => !utxo.spent)
       .reduce((map, obj) => map.set(obj.id, obj), new Map<string, IUTXO>())
       .values()
-  ]
+  ].sort((a, b) => {
+    if (a.blockHeight <= 0 && b.blockHeight > 0) return 1
+    if (b.blockHeight <= 0 && a.blockHeight > 0) return -1
+    return lt(a.value, b.value) ? 1 : gt(a.value, b.value) ? -1 : 0
+  })
 
   for (const utxo of uniqueUtxos) {
     // Cannot use a utxo without a script

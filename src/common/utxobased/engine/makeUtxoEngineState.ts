@@ -893,6 +893,16 @@ const updateTransactions = (
       for (const input of tx.inputs) {
         await processor.removeUtxos([`${input.txId}_${input.outputIndex}`])
       }
+      // Update output utxos's blockHeight any existing input utxos from the processor
+      const utxoIds = tx.outputs.map(output => `${tx.txid}_${output.n}`)
+      const utxos = await processor.fetchUtxos({
+        utxoIds
+      })
+      for (const utxo of utxos) {
+        if (utxo == null) continue
+        utxo.blockHeight = tx.blockHeight
+        await processor.saveUtxo(utxo)
+      }
       // Process and save new tx
       const processedTx = await processor.saveTransaction({
         tx
