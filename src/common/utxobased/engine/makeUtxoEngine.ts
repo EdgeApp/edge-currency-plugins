@@ -254,10 +254,9 @@ export async function makeUtxoEngine(
             await toEdgeTransaction({
               tx,
               currencyCode: currencyInfo.currencyCode,
-              pluginInfo,
+              walletTools,
               processor,
-              walletBlockHeight: metadata.lastSeenBlockHeight,
-              walletTools
+              engineInfo
             })
         )
       )
@@ -415,13 +414,12 @@ export async function makeUtxoEngine(
         ourScriptPubkeys
       }
 
-      const transaction: EdgeTransaction = {
+      const transaction = {
         ourReceiveAddresses,
         otherParams,
         currencyCode: currencyInfo.currencyCode,
         txid: '',
         date: unixTime(),
-        confirmations: 'unconfirmed',
         blockHeight: 0,
         nativeAmount,
         networkFee,
@@ -454,12 +452,11 @@ export async function makeUtxoEngine(
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
       const tx = fromEdgeTransaction(edgeTx)
       await transactionChanged({
-        emitter,
-        pluginInfo,
-        processor,
         tx,
-        walletBlockHeight: metadata.lastSeenBlockHeight,
-        walletTools
+        pluginInfo,
+        emitter,
+        walletTools,
+        processor
       })
       await processor.saveTransaction({
         tx,
