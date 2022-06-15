@@ -2,7 +2,7 @@
   "name": "edge-currency-plugins",
   "version": "1.0.0-rc.1",
   "description": "Edge currency plugins to fetch and process wallet accounts, balances and transactions.",
-  "repository": "https://github.app/EdgeApp/edge-currency-plugins",
+  "repository": "https://github.com/EdgeApp/edge-currency-plugins",
   "license": "MIT",
   "author": "Airbitz, Inc.",
   "main": "./lib/index.js",
