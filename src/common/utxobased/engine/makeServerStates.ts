@@ -53,19 +53,19 @@ export interface ServerStates {
 }
 
 interface ServerStateCache {
-  [key: string]: ServerState
+  [uri: string]: ServerState
 }
 interface Connections {
-  [key: string]: BlockBook
+  [uri: string]: BlockBook
 }
 
 export function makeServerStates(config: ServerStateConfig): ServerStates {
   const { engineEmitter, log, pluginInfo, pluginState, walletInfo } = config
   log('Making server states')
 
-  let serverStates: ServerStateCache = {}
+  const serverStates: ServerStateCache = {}
+  const connections: Connections = {}
   let isEngineOn: boolean = true
-  let connections: Connections = {}
   let serverList: string[] = []
   let reconnectCounter = 0
   let reconnectTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
@@ -148,9 +148,12 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       const blockBook = connections[uri]
       if (blockBook == null) continue
       await blockBook.disconnect()
+      removeItem(connections, uri)
     }
-    connections = {}
-    serverStates = {}
+
+    for (const uri of Object.keys(serverStates)) {
+      removeItem(serverStates, uri)
+    }
   }
 
   const reconnect = (): void => {
