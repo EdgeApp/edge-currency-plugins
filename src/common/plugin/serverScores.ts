@@ -10,8 +10,14 @@ export const asServerInfo = asObject({
   responseTime: asNumber,
   numResponseTimes: asNumber
 })
-export type ServerInfoCache = ReturnType<typeof asServerInfoCache>
-export const asServerInfoCache = asObject(asServerInfo)
+export type ServerList = ReturnType<typeof asServerList>
+export const asServerList = asObject(asServerInfo)
+
+export type ServerCache = ReturnType<typeof asServerCache>
+export const asServerCache = asObject({
+  customServers: asServerList,
+  internalServers: asServerList
+})
 
 const RESPONSE_TIME_UNINITIALIZED = 999999999
 const MAX_SCORE = 500
@@ -39,45 +45,42 @@ export class ServerScores {
   }
 
   /**
-   * Loads the server scores with new and old servers, mutates the passed in list of servers
-   * @param oldServers: Map of ServerInfo objects by serverUrl. This should come from disk
+   * Loads the server scores with new and old servers, mutates the passed in
+   * list of known servers.
+   * @param knownServers: Map of ServerInfo objects by serverUrl. This should come from disk
    * @param newServers: Array<string> of new servers downloaded from the info server
    */
-  serverScoresLoad(
-    servers: ServerInfoCache,
-    oldServers: { [serverUrl: string]: ServerInfo },
-    newServers: string[] = []
-  ): void {
+  serverScoresLoad(knownServers: ServerList, newServers: string[] = []): void {
     //
     // Add any new servers coming out of the info server
     //
     for (const newServer of newServers) {
-      if (oldServers[newServer] === undefined) {
+      if (knownServers[newServer] === undefined) {
         const serverScoreObj: ServerInfo = {
           serverUrl: newServer,
           serverScore: 0,
           responseTime: RESPONSE_TIME_UNINITIALIZED,
           numResponseTimes: 0
         }
-        oldServers[newServer] = serverScoreObj
+        knownServers[newServer] = serverScoreObj
       }
     }
 
     //
-    // If there is a known server (oldServers) that is not on the newServers array, then set it's score to -1
-    // to reduce chances of using it.
+    // If there is a known server that is not on the newServers array, then
+    // reduce it's score to reduce chances of using it.
     //
-    for (const serverUrl in oldServers) {
-      const oldServer = oldServers[serverUrl]
+    for (const knownServerUrl in knownServers) {
+      const knownServer = knownServers[knownServerUrl]
       let match = false
       for (const newServerUrl of newServers) {
-        if (newServerUrl === serverUrl) {
+        if (newServerUrl === knownServerUrl) {
           match = true
           break
         }
       }
 
-      let serverScore = oldServer.serverScore
+      let serverScore = knownServer.serverScore
       if (!match) {
         if (serverScore > DROPPED_SERVER_SCORE) {
           serverScore = DROPPED_SERVER_SCORE
@@ -92,14 +95,13 @@ export class ServerScores {
         serverScore = Math.min(serverScore, MAX_SCORE - 100)
       }
 
-      if (serverUrl.startsWith('ws') && serverScore > 0) {
+      if (knownServerUrl.startsWith('ws') && serverScore > 0) {
         serverScore = 0
-        oldServer.responseTime = RESPONSE_TIME_UNINITIALIZED
+        knownServer.responseTime = RESPONSE_TIME_UNINITIALIZED
       }
 
-      oldServer.serverScore = serverScore
-      servers[serverUrl] = oldServer
-      this.onDirtyServer(serverUrl)
+      knownServer.serverScore = serverScore
+      this.onDirtyServer(knownServerUrl)
     }
   }
 
@@ -108,7 +110,7 @@ export class ServerScores {
     this.lastScoreUpTime = Date.now()
   }
 
-  printServers(servers: ServerInfoCache): void {
+  printServers(servers: ServerList): void {
     this.log('**** printServers ****')
     const serverInfos: ServerInfo[] = []
     for (const s in servers) {
@@ -130,7 +132,7 @@ export class ServerScores {
   }
 
   serverScoreUp(
-    servers: ServerInfoCache,
+    servers: ServerList,
     serverUrl: string,
     responseTimeMilliseconds: number,
     changeScore = 1
@@ -154,7 +156,7 @@ export class ServerScores {
   }
 
   serverScoreDown(
-    servers: ServerInfoCache,
+    servers: ServerList,
     serverUrl: string,
     changeScore = 10
   ): void {
@@ -180,7 +182,7 @@ export class ServerScores {
   }
 
   setResponseTime(
-    servers: ServerInfoCache,
+    servers: ServerList,
     serverUrl: string,
     responseTimeMilliseconds: number
   ): void {
@@ -204,7 +206,7 @@ export class ServerScores {
   }
 
   getServers(
-    servers: ServerInfoCache,
+    servers: ServerList,
     numServersWanted: number,
     includePatterns: string[] = []
   ): string[] {
