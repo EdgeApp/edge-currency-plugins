@@ -723,8 +723,10 @@ export const pickNextTask = async (
         .then(() => {
           serverState.addresses.add(address)
         })
-        .catch(e => {
-          throw e
+        .catch(err => {
+          addressUtxoCache[address] = state
+          console.error(err)
+          args.log('error in addressUtxoCache:', err)
         })
       return wsTask
     }
@@ -783,8 +785,10 @@ export const pickNextTask = async (
           .then(() => {
             serverState.txids.add(txId)
           })
-          .catch(e => {
-            throw e
+          .catch(err => {
+            updateTransactionCache[txId] = state
+            console.error(err)
+            args.log('error in updateTransactionCache:', err)
           })
         return updateTransactionTask
       }
@@ -803,15 +807,17 @@ export const pickNextTask = async (
       // Fetch and process address UTXOs
       const wsTask = await processAddressTransactions({
         ...args,
-        ...state,
+        addressTransactionState: state,
         address
       })
       wsTask.deferred.promise
         .then(() => {
           serverState.addresses.add(address)
         })
-        .catch(e => {
-          throw e
+        .catch(err => {
+          addressTransactionCache[address] = state
+          console.error(err)
+          args.log('error in updateTransactionCache:', err)
         })
       return wsTask
     }
@@ -859,7 +865,9 @@ const updateTransactions = (
         tx: processedTx
       })
     })
-    .catch(() => {
+    .catch(err => {
+      console.error(err)
+      args.log('error in updateTransactions:', err)
       taskCache.updateTransactionCache[txId] = { processing: false }
     })
   return {
@@ -961,11 +969,8 @@ const internalGetFreshAddress = async (
 }
 
 interface ProcessAddressTxsArgs extends CommonArgs {
-  processing: boolean
-  page: number
-  blockHeight: number
-  path: ChangePath
   address: string
+  addressTransactionState: AddressTransactionCache[string]
   uri: string
 }
 
@@ -974,17 +979,16 @@ const processAddressTransactions = async (
 ): Promise<WsTask<AddressResponse>> => {
   const {
     address,
-    page = 1,
-    blockHeight,
+    addressTransactionState,
     emitter,
     pluginInfo,
     processor,
     walletTools,
-    path,
     taskCache,
     pluginState,
     uri
   } = args
+  const { page = 1, blockHeight } = addressTransactionState
   const {
     engineInfo: { asBlockbookAddress }
   } = pluginInfo
@@ -1030,9 +1034,8 @@ const processAddressTransactions = async (
       if (page < totalPages) {
         // Add the address back to the cache, incrementing the page
         addressTransactionCache[address] = {
-          path,
+          ...addressTransactionState,
           processing: false,
-          blockHeight,
           page: page + 1
         }
         return
@@ -1053,8 +1056,8 @@ const processAddressTransactions = async (
     .catch(err => {
       // Log the error for debugging purposes without crashing the engine
       // This will cause frozen wallet syncs
-      console.error(err.toString())
-      console.log(err.stack)
+      console.error(err)
+      addressTransactionCache[address] = addressTransactionState
     })
 
   return {
@@ -1322,9 +1325,9 @@ const processRawUtxo = async (
               // Only after we have successfully fetched the tx, set our script and call done
               done()
             })
-            .catch(e => {
+            .catch(err => {
               // If something went wrong, add the UTXO back to the queue
-              log('error in processed utxos cache, re-adding utxo to cache:', e)
+              log('error in processRawUtxo:', err)
               rawUtxoCache[JSON.stringify(utxo)] = {
                 processing: false,
                 path,
