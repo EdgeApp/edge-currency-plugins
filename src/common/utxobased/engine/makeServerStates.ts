@@ -37,6 +37,7 @@ export interface ServerStates {
   stop: () => void
   serverCanGetTx: (uri: string, txid: string) => boolean
   serverCanGetAddress: (uri: string, address: string) => boolean
+  serverIsAwareOfAddress: (uri: string, address: string) => boolean
   getServerState: (uri: string) => ServerState | undefined
   refillServers: () => void
   getServerList: () => string[]
@@ -45,7 +46,7 @@ export interface ServerStates {
   watchAddresses: (
     uri: string,
     addresses: string[],
-    deferredAddressSub: Deferred<unknown>
+    deferredAddressSub?: Deferred<unknown>
   ) => void
   watchBlocks: (uri: string) => void
   getBlockHeight: (uri: string) => number
@@ -288,6 +289,13 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     return true
   }
 
+  const serverIsAwareOfAddress = (uri: string, address: string): boolean => {
+    const serverState = serverStates[uri]
+    if (serverState == null) return false
+    if (serverState.addresses.has(address)) return true
+    return false
+  }
+
   const getServerState = (uri: string): ServerState | undefined => {
     return serverStates[uri]
   }
@@ -341,12 +349,36 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   const watchAddresses = (
     uri: string,
     addresses: string[],
-    deferredAddressSub: Deferred<unknown>
+    deferredAddressSub?: Deferred<unknown>
   ): void => {
     const blockbook = connections[uri]
     if (blockbook == null)
       throw new Error(`No blockbook connection with ${uri}`)
-    blockbook.watchAddresses(addresses, deferredAddressSub)
+
+    const serverState = serverStates[uri]
+    if (serverState == null) throw new Error(`No serverState for ${uri}`)
+
+    // Add new addresses to the set of known addresses
+    for (const address of addresses) {
+      serverState.addresses.add(address)
+    }
+
+    const queryTime = Date.now()
+    const deferred = new Deferred<unknown>()
+    deferred.promise
+      .then((value: unknown) => {
+        pluginState.serverScoreUp(uri, Date.now() - queryTime)
+        deferredAddressSub?.resolve(value)
+      })
+      .catch(() => {
+        // Remove new addresses to the set of known addresses
+        for (const address of addresses) {
+          serverState.addresses.delete(address)
+        }
+        pluginState.serverScoreDown(uri)
+        deferredAddressSub?.reject()
+      })
+    blockbook.watchAddresses(Array.from(addresses), deferred)
   }
 
   const watchBlocks = (uri: string): void => {
@@ -379,6 +411,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     stop,
     serverCanGetTx,
     serverCanGetAddress,
+    serverIsAwareOfAddress,
     getServerState,
     refillServers,
     getServerList,

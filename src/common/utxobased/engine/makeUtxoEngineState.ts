@@ -100,7 +100,6 @@ export function makeUtxoEngineState(
   const { walletFormats } = walletInfo.keys
 
   const taskCache: TaskCache = {
-    addressWatching: false,
     blockWatching: false,
     addressSubscribeCache: {},
     addressTransactionCache: {},
@@ -111,7 +110,6 @@ export function makeUtxoEngineState(
   }
 
   const clearTaskCache = (): void => {
-    taskCache.addressWatching = false
     taskCache.blockWatching = false
     taskCache.addressSubscribeCache = {}
     taskCache.addressTransactionCache = {}
@@ -430,7 +428,6 @@ export function makeUtxoEngineState(
           }
         }
       }
-      taskCache.addressWatching = false
     }
   }
 }
@@ -452,7 +449,6 @@ interface CommonArgs {
 }
 
 interface TaskCache {
-  addressWatching: boolean
   blockWatching: boolean
   addressSubscribeCache: AddressSubscribeCache
   addressUtxoCache: AddressUtxoCache
@@ -575,7 +571,6 @@ const addToAddressSubscribeCache = (
       path,
       processing: false
     }
-    taskCache.addressWatching = false
   })
 }
 
@@ -645,7 +640,7 @@ export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<WsTask<any> | undefined | boolean> => {
-  const { taskCache, uri, serverStates, pluginState } = args
+  const { taskCache, uri, serverStates } = args
 
   const {
     addressSubscribeCache,
@@ -736,55 +731,42 @@ export const pickNextTask = async (
   }
 
   // Check if there are any addresses pending to be subscribed
-  if (
-    Object.keys(addressSubscribeCache).length > 0 &&
-    !taskCache.addressWatching
-  ) {
+  if (Object.keys(addressSubscribeCache).length > 0) {
+    // These are addresse to which the server has not subscribed
+    const newAddress: string[] = []
     const blockHeight = serverStates.getBlockHeight(uri)
-    // Loop each address that needs to be subscribed
+
+    // Loop each address in the cache
     for (const [address, state] of Object.entries(addressSubscribeCache)) {
       // Add address in the cache to the set of addresses to watch
-      const { path, processing: subscribed } = state
-      // only process newly watched addresses
-      if (subscribed) continue
-      if (path != null) {
-        // Add the newly watched addresses to the UTXO cache
-        addressUtxoCache[address] = {
-          processing: false,
-          path
-        }
-        await addToAddressTransactionCache(
-          args,
-          address,
-          path.format,
-          path.changeIndex,
-          blockHeight,
-          addressTransactionCache
-        )
+      if (!serverStates.serverIsAwareOfAddress(uri, address)) {
+        newAddress.push(address)
       }
+
+      // Add to the addressTransactionCache if they're not yet added:
+      // Only process newly watched addresses
+      if (state.processing) continue
+      // Add the newly watched addresses to the UTXO cache
+      addressUtxoCache[address] = {
+        processing: false,
+        path: state.path
+      }
+      await addToAddressTransactionCache(
+        args,
+        address,
+        state.path.format,
+        state.path.changeIndex,
+        blockHeight,
+        addressTransactionCache
+      )
       state.processing = true
     }
 
-    taskCache.addressWatching = true
-
-    const queryTime = Date.now()
-    const deferred = new Deferred<unknown>()
-    deferred.promise
-      .then(() => {
-        pluginState.serverScoreUp(uri, Date.now() - queryTime)
-      })
-      .catch(() => {
-        taskCache.addressWatching = false
-      })
-    deferred.promise.catch(() => {
-      taskCache.addressWatching = false
-    })
-    serverStates.watchAddresses(
-      uri,
-      Array.from(Object.keys(addressSubscribeCache)),
-      deferred
-    )
-    return true
+    // Subscribe to any new addresses
+    if (newAddress.length > 0) {
+      serverStates.watchAddresses(uri, newAddress)
+      return true
+    }
   }
 
   // filled when transactions potentially changed (e.g. through new block notification)
