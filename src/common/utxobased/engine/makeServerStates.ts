@@ -37,7 +37,6 @@ export interface ServerStates {
   stop: () => void
   serverCanGetTx: (uri: string, txid: string) => boolean
   serverCanGetAddress: (uri: string, address: string) => boolean
-  serverScoreUp: (uri: string, score: number) => void
   getServerState: (uri: string) => ServerState | undefined
   refillServers: () => void
   getServerList: () => string[]
@@ -289,10 +288,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     return true
   }
 
-  const serverScoreUp = (uri: string, score: number): void => {
-    pluginState.serverScoreUp(uri, score)
-  }
-
   const getServerState = (uri: string): ServerState | undefined => {
     return serverStates[uri]
   }
@@ -367,7 +362,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     deferred.promise
       .then(() => {
         serverState.blockSubscriptionStatus = 'subscribed'
-        serverScoreUp(uri, Date.now() - queryTime)
+        pluginState.serverScoreUp(uri, Date.now() - queryTime)
       })
       .catch(() => {
         serverState.blockSubscriptionStatus = 'unsubscribed'
@@ -384,7 +379,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     stop,
     serverCanGetTx,
     serverCanGetAddress,
-    serverScoreUp,
     getServerState,
     refillServers,
     getServerList,

@@ -7,6 +7,7 @@ import {
 } from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import { PluginState } from '../../plugin/pluginState'
 import {
   AddressPath,
   ChangePath,
@@ -170,6 +171,7 @@ export function makeUtxoEngineState(
     io: config.io,
     log,
     serverStates,
+    pluginState,
     walletFormats,
     lock
   }
@@ -444,6 +446,7 @@ interface CommonArgs {
   io: EdgeIo
   log: EdgeLog
   serverStates: ServerStates
+  pluginState: PluginState
   walletFormats: CurrencyFormat[]
   lock: AwaitLock
 }
@@ -642,7 +645,7 @@ export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<WsTask<any> | undefined | boolean> => {
-  const { taskCache, uri, serverStates } = args
+  const { taskCache, uri, serverStates, pluginState } = args
 
   const {
     addressSubscribeCache,
@@ -768,7 +771,7 @@ export const pickNextTask = async (
     const deferred = new Deferred<unknown>()
     deferred.promise
       .then(() => {
-        serverStates.serverScoreUp(uri, Date.now() - queryTime)
+        pluginState.serverScoreUp(uri, Date.now() - queryTime)
       })
       .catch(() => {
         taskCache.addressWatching = false
@@ -997,7 +1000,7 @@ const processAddressTransactions = async (
     walletTools,
     path,
     taskCache,
-    serverStates,
+    pluginState,
     uri
   } = args
   const {
@@ -1015,7 +1018,7 @@ const processAddressTransactions = async (
   const deferred = new Deferred<AddressResponse>()
   deferred.promise
     .then(async (value: AddressResponse) => {
-      serverStates.serverScoreUp(uri, Date.now() - queryTime)
+      pluginState.serverScoreUp(uri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
       // If address is used and previously not marked as used, mark as used.
@@ -1144,7 +1147,7 @@ const processAddressUtxos = async (
     taskCache,
     path,
     pluginInfo,
-    serverStates,
+    pluginState,
     uri
   } = args
   const {
@@ -1155,7 +1158,7 @@ const processAddressUtxos = async (
   const deferred = new Deferred<AddressUtxosResponse>()
   deferred.promise
     .then(async (utxos: AddressUtxosResponse) => {
-      serverStates.serverScoreUp(uri, Date.now() - queryTime)
+      pluginState.serverScoreUp(uri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddress(scriptPubkey)
       if (addressData == null || addressData.path == null) {
@@ -1280,7 +1283,7 @@ const processRawUtxo = async (
     path,
     taskCache,
     requiredCount,
-    serverStates,
+    pluginState,
     uri,
     log
   } = args
@@ -1328,7 +1331,7 @@ const processRawUtxo = async (
           const deferred = new Deferred<TransactionResponse>()
           deferred.promise
             .then((txResponse: TransactionResponse) => {
-              serverStates.serverScoreUp(uri, Date.now() - queryTime)
+              pluginState.serverScoreUp(uri, Date.now() - queryTime)
               const processedTx = processTransactionResponse({
                 ...args,
                 txResponse
