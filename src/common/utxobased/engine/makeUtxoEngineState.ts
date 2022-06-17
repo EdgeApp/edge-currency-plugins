@@ -111,12 +111,24 @@ export function makeUtxoEngineState(
 
   const clearTaskCache = (): void => {
     taskCache.blockWatching = false
-    taskCache.addressSubscribeCache = {}
-    taskCache.addressTransactionCache = {}
-    taskCache.addressUtxoCache = {}
-    taskCache.rawUtxoCache = {}
-    taskCache.processorUtxoCache = {}
-    taskCache.updateTransactionCache = {}
+    for (const key of Object.keys(taskCache.addressSubscribeCache)) {
+      removeItem(taskCache.addressSubscribeCache, key)
+    }
+    for (const key of Object.keys(taskCache.addressTransactionCache)) {
+      removeItem(taskCache.addressTransactionCache, key)
+    }
+    for (const key of Object.keys(taskCache.addressUtxoCache)) {
+      removeItem(taskCache.addressUtxoCache, key)
+    }
+    for (const key of Object.keys(taskCache.rawUtxoCache)) {
+      removeItem(taskCache.rawUtxoCache, key)
+    }
+    for (const key of Object.keys(taskCache.processorUtxoCache)) {
+      removeItem(taskCache.processorUtxoCache, key)
+    }
+    for (const key of Object.keys(taskCache.updateTransactionCache)) {
+      removeItem(taskCache.updateTransactionCache, key)
+    }
   }
 
   /**
@@ -450,12 +462,12 @@ interface CommonArgs {
 
 interface TaskCache {
   blockWatching: boolean
-  addressSubscribeCache: AddressSubscribeCache
-  addressUtxoCache: AddressUtxoCache
-  rawUtxoCache: RawUtxoCache
-  processorUtxoCache: ProcessorUtxoCache
-  addressTransactionCache: AddressTransactionCache
-  updateTransactionCache: UpdateTransactionCache
+  readonly addressSubscribeCache: AddressSubscribeCache
+  readonly addressUtxoCache: AddressUtxoCache
+  readonly rawUtxoCache: RawUtxoCache
+  readonly processorUtxoCache: ProcessorUtxoCache
+  readonly addressTransactionCache: AddressTransactionCache
+  readonly updateTransactionCache: UpdateTransactionCache
 }
 
 interface UpdateTransactionCache {
