@@ -163,6 +163,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
   const refillServers = (): void => {
     log(`refilling servers...`)
+    isEngineOn = true
     pushUpdate({
       id: walletInfo.id,
       updateFunc: () => {
