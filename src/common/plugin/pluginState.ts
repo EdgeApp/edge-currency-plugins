@@ -227,10 +227,10 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       enableCustomServers = settings.enableCustomServers
       customServers = settings.blockbookServers
 
-      const enginesToBeStopped = []
+      const enginesToBeStarted = []
       const disconnects = []
       for (const engine of engines) {
-        enginesToBeStopped.push(engine)
+        enginesToBeStarted.push(engine)
         engine.setServerList([])
         disconnects.push(engine.stop())
       }
@@ -245,8 +245,8 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       serverCacheDirty = true
       await saveServerCache()
       await refreshServers()
-      for (const engine of enginesToBeStopped) {
-        await engine.stop()
+      for (const engine of enginesToBeStarted) {
+        await engine.start()
       }
     }
   }
