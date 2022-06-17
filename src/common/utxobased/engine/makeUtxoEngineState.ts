@@ -681,8 +681,7 @@ export const pickNextTask = async (
         await processProcessorUtxos({
           ...args,
           scriptPubkey,
-          utxos: state.utxos,
-          path: state.path
+          utxos: state.utxos
         })
         removeItem(processorUtxoCache, scriptPubkey)
         return true
@@ -1194,7 +1193,6 @@ const processAddressUtxos = async (
 interface ProcessUtxoTransactionArgs extends CommonArgs {
   scriptPubkey: string
   utxos: Set<IUTXO>
-  path: ChangePath
 }
 
 const processProcessorUtxos = async (
