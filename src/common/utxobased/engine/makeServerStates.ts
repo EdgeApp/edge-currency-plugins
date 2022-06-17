@@ -191,9 +191,10 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         reconnect()
         break
       }
-      if (connections[uri] != null) {
-        continue
-      }
+
+      // Skip reconnecting to an existing connection
+      if (connections[uri] != null) continue
+
       // Validate the URI of server to make sure it is valid
       const parsed = parse(uri)
       if (
@@ -203,52 +204,53 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       ) {
         continue
       }
+
+      // Ranomize the URI picking
       chanceToBePicked -= chanceToBePicked > 0.5 ? 0.25 : 0
       if (Math.random() > chanceToBePicked) {
         serverList.push(uri)
         continue
       }
 
+      // Make new ServerStates instance
       serverStates[uri] = makeServerState()
 
-      const onQueueSpaceCB = async (): Promise<
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        WsTask<any> | boolean | undefined
-      > => {
-        const blockBook = connections[uri]
-        if (blockBook == null) {
-          return
-        }
-        const task = await pickNextTaskCB(uri)
-        if (task != null && typeof task !== 'boolean') {
-          const taskMessage = `${task.method} params: ${JSON.stringify(
-            task.params
-          )}`
-          log(`${uri} nextTask: ${taskMessage}`)
-        }
-        return task
-      }
-
-      connections[uri] = makeBlockBook({
+      // Make new Blockbook instance
+      const blockbook = makeBlockBook({
         wsAddress: uri,
         socketEmitter,
         engineEmitter,
         log,
-        onQueueSpaceCB,
+        onQueueSpaceCB: async (): Promise<
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          WsTask<any> | boolean | undefined
+        > => {
+          // Exit if the connection is no longer active
+          if (connections[uri] == null) return
+
+          const task = await pickNextTaskCB(uri)
+          if (task != null && typeof task !== 'boolean') {
+            const taskMessage = `${task.method} params: ${JSON.stringify(
+              task.params
+            )}`
+            log(`${uri} nextTask: ${taskMessage}`)
+          }
+          return task
+        },
         walletId: walletInfo.id,
         asAddress: pluginInfo.engineInfo.asBlockbookAddress
       })
 
-      const blockBook = connections[uri]
-      if (blockBook == null) continue
+      // Add Blockbook instance to connections map
+      connections[uri] = blockbook
 
       // Initialize blockbook connection for server
-      blockBook
+      blockbook
         .connect()
         .then(async () => {
           // Fetch block height from blockbook server
           const startTime = Date.now()
-          const { bestHeight: blockHeight } = await blockBook.fetchInfo()
+          const { bestHeight: blockHeight } = await blockbook.fetchInfo()
           log('height:', blockHeight)
 
           // Update server state
