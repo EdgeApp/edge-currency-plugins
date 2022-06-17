@@ -77,6 +77,8 @@ export interface UtxoEngineState {
   setServerList: (serverList: string[]) => void
 
   loadWifs: (wifs: string[]) => Promise<void>
+
+  processUtxos: (utxos: IUTXO[]) => Promise<void>
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
@@ -439,6 +441,22 @@ export function makeUtxoEngineState(
             processing: false
           }
         }
+      }
+    },
+    async processUtxos(utxos: IUTXO[]) {
+      const utxoMap: Map<string, Set<IUTXO>> = new Map()
+      for (const utxo of utxos) {
+        const utxoSet: Set<IUTXO> = utxoMap.get(utxo.scriptPubkey) ?? new Set()
+        if (utxoMap.has(utxo.scriptPubkey) == null)
+          utxoMap.set(utxo.scriptPubkey, utxoSet)
+        utxoSet.add(utxo)
+      }
+      for (const [scriptPubkey, utxos] of utxoMap.entries()) {
+        await processProcessorUtxos({
+          ...commonArgs,
+          scriptPubkey,
+          utxos
+        })
       }
     }
   }

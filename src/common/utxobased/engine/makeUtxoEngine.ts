@@ -467,7 +467,7 @@ export async function makeUtxoEngine(
       Get the wallet's UTXOs from the new transaction and save them to the processsor.
       */
       const utxos = await getOwnUtxosFromTx(engineInfo, processor, tx)
-      await Promise.all(utxos.map(async utxo => await processor.saveUtxo(utxo)))
+      await engineState.processUtxos(utxos)
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
