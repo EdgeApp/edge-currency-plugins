@@ -52,10 +52,10 @@ export interface ServerStates {
   getBlockHeight: (uri: string) => number
 }
 
-interface ServerStateCache {
+interface ServerStatesCache {
   [uri: string]: ServerState
 }
-interface Connections {
+interface ConnectionsCache {
   [uri: string]: BlockBook
 }
 
@@ -63,8 +63,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   const { engineEmitter, log, pluginInfo, pluginState, walletInfo } = config
   log('Making server states')
 
-  const serverStates: ServerStateCache = {}
-  const connections: Connections = {}
+  const serverStatesCache: ServerStatesCache = {}
+  const connectionsCache: ConnectionsCache = {}
   let isEngineOn: boolean = true
   let serverList: string[] = []
   let reconnectCounter = 0
@@ -81,8 +81,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   socketEmitter.on(
     SocketEvent.CONNECTION_CLOSE,
     (uri: string, error?: Error) => {
-      removeItem(connections, uri)
-      removeItem(serverStates, uri)
+      removeItem(connectionsCache, uri)
+      removeItem(serverStatesCache, uri)
 
       const msg =
         error != null ? ` !! Connection ERROR !! ${error.message}` : ''
@@ -107,7 +107,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       log(
         `${uri} received received new transaction with id ${newTx.tx.txid} to address ${newTx.address}`
       )
-      const serverState = serverStates[uri]
+      const serverState = serverStatesCache[uri]
       if (serverState != null) {
         serverState.txids.add(newTx.tx.txid)
       }
@@ -117,7 +117,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     EngineEvent.BLOCK_HEIGHT_CHANGED,
     (uri: string, blockHeight: number) => {
       log(`${uri} block height changed to ${blockHeight}`)
-      serverStates[uri].blockHeight = blockHeight
+      serverStatesCache[uri].blockHeight = blockHeight
     }
   )
 
@@ -126,7 +126,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) => Promise<boolean | WsTask<any> | undefined>
 
-  const makeServerState = (): ServerState => ({
+  const makeServerStatesCacheEntry = (): ServerState => ({
     blockSubscriptionStatus: 'unsubscribed',
     txids: new Set(),
     addresses: new Set(),
@@ -144,15 +144,15 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     log(`stopping server states`)
     removeIdFromQueue(walletInfo.id)
     clearTimeout(reconnectTimer)
-    for (const uri of Object.keys(connections)) {
-      const blockBook = connections[uri]
+    for (const uri of Object.keys(connectionsCache)) {
+      const blockBook = connectionsCache[uri]
       if (blockBook == null) continue
       await blockBook.disconnect()
-      removeItem(connections, uri)
+      removeItem(connectionsCache, uri)
     }
 
-    for (const uri of Object.keys(serverStates)) {
-      removeItem(serverStates, uri)
+    for (const uri of Object.keys(serverStatesCache)) {
+      removeItem(serverStatesCache, uri)
     }
   }
 
@@ -184,7 +184,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     }
     log(`refillServers: Top ${NEW_CONNECTIONS} servers:`, serverList)
     let chanceToBePicked = 1.25
-    while (Object.keys(connections).length < MAX_CONNECTIONS) {
+    while (Object.keys(connectionsCache).length < MAX_CONNECTIONS) {
       if (serverList.length === 0) break
       const uri = serverList.shift()
       if (uri == null) {
@@ -193,7 +193,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       }
 
       // Skip reconnecting to an existing connection
-      if (connections[uri] != null) continue
+      if (connectionsCache[uri] != null) continue
 
       // Validate the URI of server to make sure it is valid
       const parsed = parse(uri)
@@ -213,7 +213,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       }
 
       // Make new ServerStates instance
-      serverStates[uri] = makeServerState()
+      serverStatesCache[uri] = makeServerStatesCacheEntry()
 
       // Make new Blockbook instance
       const blockbook = makeBlockBook({
@@ -226,7 +226,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           WsTask<any> | boolean | undefined
         > => {
           // Exit if the connection is no longer active
-          if (connections[uri] == null) return
+          if (connectionsCache[uri] == null) return
 
           const task = await pickNextTaskCB(uri)
           if (task != null && typeof task !== 'boolean') {
@@ -242,7 +242,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       })
 
       // Add Blockbook instance to connections map
-      connections[uri] = blockbook
+      connectionsCache[uri] = blockbook
 
       // Initialize blockbook connection for server
       blockbook
@@ -254,7 +254,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           log('height:', blockHeight)
 
           // Update server state
-          serverStates[uri].blockHeight = blockHeight
+          serverStatesCache[uri].blockHeight = blockHeight
 
           // Emit initial BLOCK_HEIGHT_CHANGED event
           engineEmitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, uri, blockHeight)
@@ -270,36 +270,36 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const serverCanGetTx = (uri: string, txid: string): boolean => {
-    const serverState = serverStates[uri]
+    const serverState = serverStatesCache[uri]
     if (serverState == null) return false
     if (serverState.txids.has(txid)) return true
 
-    for (const state of Object.values(serverStates)) {
+    for (const state of Object.values(serverStatesCache)) {
       if (state.txids.has(txid)) return false
     }
     return true
   }
 
   const serverCanGetAddress = (uri: string, address: string): boolean => {
-    const serverState = serverStates[uri]
+    const serverState = serverStatesCache[uri]
     if (serverState == null) return false
     if (serverState.addresses.has(address)) return true
 
-    for (const state of Object.values(serverStates)) {
+    for (const state of Object.values(serverStatesCache)) {
       if (state.addresses.has(address)) return false
     }
     return true
   }
 
   const serverIsAwareOfAddress = (uri: string, address: string): boolean => {
-    const serverState = serverStates[uri]
+    const serverState = serverStatesCache[uri]
     if (serverState == null) return false
     if (serverState.addresses.has(address)) return true
     return false
   }
 
   const getServerState = (uri: string): ServerState | undefined => {
-    return serverStates[uri]
+    return serverStatesCache[uri]
   }
 
   const getServerList = (): string[] => {
@@ -312,8 +312,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
   const broadcastTx = async (transaction: EdgeTransaction): Promise<string> => {
     return await new Promise((resolve, reject) => {
-      const uris = Object.keys(connections).filter(uri => {
-        const blockBook = connections[uri]
+      const uris = Object.keys(connectionsCache).filter(uri => {
+        const blockBook = connectionsCache[uri]
         if (blockBook == null) return false
         return blockBook.isConnected
       })
@@ -325,7 +325,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       let resolved = false
       let bad = 0
       for (const uri of uris) {
-        const blockBook = connections[uri]
+        const blockBook = connectionsCache[uri]
         if (blockBook == null) continue
         blockBook
           .broadcastTx(transaction)
@@ -353,11 +353,11 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     addresses: string[],
     deferredAddressSub?: Deferred<unknown>
   ): void => {
-    const blockbook = connections[uri]
+    const blockbook = connectionsCache[uri]
     if (blockbook == null)
       throw new Error(`No blockbook connection with ${uri}`)
 
-    const serverState = serverStates[uri]
+    const serverState = serverStatesCache[uri]
     if (serverState == null) throw new Error(`No serverState for ${uri}`)
 
     // Add new addresses to the set of known addresses
@@ -384,11 +384,11 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const watchBlocks = (uri: string): void => {
-    const blockbook = connections[uri]
+    const blockbook = connectionsCache[uri]
     if (blockbook == null)
       throw new Error(`No blockbook connection with ${uri}`)
 
-    const serverState = serverStates[uri] ?? makeServerState()
+    const serverState = serverStatesCache[uri] ?? makeServerStatesCacheEntry()
     serverState.blockSubscriptionStatus = 'subscribing'
 
     const queryTime = Date.now()
@@ -405,7 +405,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const getBlockHeight = (uri: string): number => {
-    return serverStates[uri].blockHeight
+    return serverStatesCache[uri].blockHeight
   }
 
   return {
