@@ -1,8 +1,14 @@
 import * as bitcoin from 'altcoin-js'
+import { asCodec, asString } from 'cleaners'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import {
+  addressToScriptPubkey,
+  AddressTypeEnum,
+  scriptPubkeyToAddress
+} from '../keymanager/keymanager'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoinsv',
@@ -54,7 +60,35 @@ const engineInfo: EngineInfo = {
     standardFeeHigh: '10',
     standardFeeLowAmount: '1000000',
     standardFeeHighAmount: '65000000'
-  }
+  },
+  /*
+  This is to support cashaddr and 1-addresses coming from the network.
+  We always convert to a 1-address for internal use.
+  We send 1-address to the network because all servers should support legacy 
+  address (this is the uncleaner).
+  */
+  asBlockbookAddress: asCodec(
+    raw => {
+      const networkAddress = asString(raw)
+      try {
+        // cashaddr
+        const address = networkAddress.replace('bitcoincash:', '')
+        const scriptPubkey = addressToScriptPubkey({
+          address,
+          coin: 'bitcoincash'
+        })
+        return scriptPubkeyToAddress({
+          scriptPubkey,
+          coin: 'bitcoinsv',
+          addressType: AddressTypeEnum.p2pkh
+        }).address
+      } catch (err) {
+        // 1address
+        return networkAddress
+      }
+    },
+    address => address
+  )
 }
 
 export const coinInfo: CoinInfo = {
