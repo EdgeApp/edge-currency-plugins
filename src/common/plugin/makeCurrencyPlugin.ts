@@ -22,7 +22,7 @@ export function makeCurrencyPlugin(
   const { io, log, pluginDisklet } = pluginOptions
   const currencyTools = makeCurrencyTools(io, pluginInfo)
   const { defaultSettings, pluginId, currencyCode } = currencyInfo
-  const state = makePluginState({
+  const pluginState = makePluginState({
     io,
     currencyCode,
     pluginId,
@@ -49,7 +49,7 @@ export function makeCurrencyPlugin(
           ...engineOptions,
           emitter
         },
-        pluginState: state
+        pluginState
       }
       const engine: EdgeCurrencyEngine = await makeUtxoEngine(engineConfig)
 
@@ -57,7 +57,7 @@ export function makeCurrencyPlugin(
     },
 
     async makeCurrencyTools(): Promise<EdgeCurrencyTools> {
-      state.load().catch(e => {
+      pluginState.load().catch(e => {
         throw e
       })
       return currencyTools

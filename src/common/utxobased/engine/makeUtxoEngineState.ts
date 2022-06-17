@@ -7,6 +7,7 @@ import {
 } from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import { PluginState } from '../../plugin/pluginState'
 import {
   AddressPath,
   ChangePath,
@@ -99,7 +100,6 @@ export function makeUtxoEngineState(
   const { walletFormats } = walletInfo.keys
 
   const taskCache: TaskCache = {
-    addressWatching: false,
     blockWatching: false,
     addressSubscribeCache: {},
     addressTransactionCache: {},
@@ -110,14 +110,25 @@ export function makeUtxoEngineState(
   }
 
   const clearTaskCache = (): void => {
-    taskCache.addressWatching = false
     taskCache.blockWatching = false
-    taskCache.addressSubscribeCache = {}
-    taskCache.addressTransactionCache = {}
-    taskCache.addressUtxoCache = {}
-    taskCache.rawUtxoCache = {}
-    taskCache.processorUtxoCache = {}
-    taskCache.updateTransactionCache = {}
+    for (const key of Object.keys(taskCache.addressSubscribeCache)) {
+      removeItem(taskCache.addressSubscribeCache, key)
+    }
+    for (const key of Object.keys(taskCache.addressTransactionCache)) {
+      removeItem(taskCache.addressTransactionCache, key)
+    }
+    for (const key of Object.keys(taskCache.addressUtxoCache)) {
+      removeItem(taskCache.addressUtxoCache, key)
+    }
+    for (const key of Object.keys(taskCache.rawUtxoCache)) {
+      removeItem(taskCache.rawUtxoCache, key)
+    }
+    for (const key of Object.keys(taskCache.processorUtxoCache)) {
+      removeItem(taskCache.processorUtxoCache, key)
+    }
+    for (const key of Object.keys(taskCache.updateTransactionCache)) {
+      removeItem(taskCache.updateTransactionCache, key)
+    }
   }
 
   /**
@@ -170,11 +181,10 @@ export function makeUtxoEngineState(
     io: config.io,
     log,
     serverStates,
+    pluginState,
     walletFormats,
     lock
   }
-  const { currencyInfo } = pluginInfo
-  const { requiredConfirmations = 1 } = currencyInfo
 
   const pickNextTaskCB = async (
     uri: string
@@ -196,31 +206,13 @@ export function makeUtxoEngineState(
 
   emitter.on(
     EngineEvent.BLOCK_HEIGHT_CHANGED,
-    async (_uri: string, walletBlockHeight: number): Promise<void> => {
-      // Check if unconfirmed transaction have been confirmed.
-      const unconfirmedTxs = await processor.fetchTransactions({
+    async (_uri: string, _blockHeight: number): Promise<void> => {
+      const txs = await processor.fetchTransactions({
         blockHeight: 0
       })
-      for (const tx of unconfirmedTxs) {
+      for (const tx of txs) {
         if (tx == null) continue
         taskCache.updateTransactionCache[tx.txid] = { processing: false }
-      }
-
-      // Trigger transactions change event to update its confirmation status
-      const pendingTxs = await processor.fetchTransactions({
-        blockHeight: walletBlockHeight - requiredConfirmations,
-        blockHeightMax: walletBlockHeight
-      })
-      for (const tx of pendingTxs) {
-        if (tx == null) continue
-        await transactionChanged({
-          emitter,
-          processor,
-          pluginInfo,
-          tx,
-          walletBlockHeight,
-          walletTools
-        })
       }
     }
   )
@@ -448,7 +440,6 @@ export function makeUtxoEngineState(
           }
         }
       }
-      taskCache.addressWatching = false
     }
   }
 }
@@ -464,19 +455,19 @@ interface CommonArgs {
   io: EdgeIo
   log: EdgeLog
   serverStates: ServerStates
+  pluginState: PluginState
   walletFormats: CurrencyFormat[]
   lock: AwaitLock
 }
 
 interface TaskCache {
-  addressWatching: boolean
   blockWatching: boolean
-  addressSubscribeCache: AddressSubscribeCache
-  addressUtxoCache: AddressUtxoCache
-  rawUtxoCache: RawUtxoCache
-  processorUtxoCache: ProcessorUtxoCache
-  addressTransactionCache: AddressTransactionCache
-  updateTransactionCache: UpdateTransactionCache
+  readonly addressSubscribeCache: AddressSubscribeCache
+  readonly addressUtxoCache: AddressUtxoCache
+  readonly rawUtxoCache: RawUtxoCache
+  readonly processorUtxoCache: ProcessorUtxoCache
+  readonly addressTransactionCache: AddressTransactionCache
+  readonly updateTransactionCache: UpdateTransactionCache
 }
 
 interface UpdateTransactionCache {
@@ -592,7 +583,6 @@ const addToAddressSubscribeCache = (
       path,
       processing: false
     }
-    taskCache.addressWatching = false
   })
 }
 
@@ -628,7 +618,6 @@ const addToAddressTransactionCache = async (
 interface TransactionChangedArgs {
   tx: IProcessorTransaction
   emitter: EngineEmitter
-  walletBlockHeight: number
   walletTools: UTXOPluginWalletTools
   pluginInfo: PluginInfo
   processor: Processor
@@ -639,22 +628,18 @@ export const transactionChanged = async (
 ): Promise<void> => {
   const {
     emitter,
-    walletBlockHeight,
     walletTools,
     processor,
-    pluginInfo,
+    pluginInfo: { currencyInfo, engineInfo },
     tx
   } = args
-  const { currencyInfo } = pluginInfo
-
   emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
     await toEdgeTransaction({
       tx,
       currencyCode: currencyInfo.currencyCode,
-      pluginInfo,
+      walletTools,
       processor,
-      walletBlockHeight: walletBlockHeight,
-      walletTools
+      engineInfo
     })
   ])
 }
@@ -705,8 +690,6 @@ export const pickNextTask = async (
     }
   }
 
-  const blockHeight = serverStates.getBlockHeight(uri)
-
   // Loop unparsed utxos, some require a network call to get the full tx data
   for (const [utxoString, state] of Object.entries(rawUtxoCache)) {
     const utxo: BlockbookAccountUtxo = JSON.parse(utxoString)
@@ -726,6 +709,7 @@ export const pickNextTask = async (
       const wsTask = await processRawUtxo({
         ...args,
         ...state,
+        address: state.address,
         utxo,
         id: `${utxo.txid}_${utxo.vout}`
       })
@@ -751,62 +735,52 @@ export const pickNextTask = async (
         .then(() => {
           serverState.addresses.add(address)
         })
-        .catch(e => {
-          throw e
+        .catch(err => {
+          addressUtxoCache[address] = state
+          console.error(err)
+          args.log('error in addressUtxoCache:', err)
         })
       return wsTask
     }
   }
 
   // Check if there are any addresses pending to be subscribed
-  if (
-    Object.keys(addressSubscribeCache).length > 0 &&
-    !taskCache.addressWatching
-  ) {
-    // Loop each address that needs to be subscribed
+  if (Object.keys(addressSubscribeCache).length > 0) {
+    // These are addresse to which the server has not subscribed
+    const newAddress: string[] = []
+    const blockHeight = serverStates.getBlockHeight(uri)
+
+    // Loop each address in the cache
     for (const [address, state] of Object.entries(addressSubscribeCache)) {
       // Add address in the cache to the set of addresses to watch
-      const { path, processing: subscribed } = state
-      // only process newly watched addresses
-      if (subscribed) continue
-      if (path != null) {
-        // Add the newly watched addresses to the UTXO cache
-        addressUtxoCache[address] = {
-          processing: false,
-          path
-        }
-        await addToAddressTransactionCache(
-          args,
-          address,
-          path.format,
-          path.changeIndex,
-          blockHeight,
-          addressTransactionCache
-        )
+      if (!serverStates.serverIsAwareOfAddress(uri, address)) {
+        newAddress.push(address)
       }
+
+      // Add to the addressTransactionCache if they're not yet added:
+      // Only process newly watched addresses
+      if (state.processing) continue
+      // Add the newly watched addresses to the UTXO cache
+      addressUtxoCache[address] = {
+        processing: false,
+        path: state.path
+      }
+      await addToAddressTransactionCache(
+        args,
+        address,
+        state.path.format,
+        state.path.changeIndex,
+        blockHeight,
+        addressTransactionCache
+      )
       state.processing = true
     }
 
-    taskCache.addressWatching = true
-
-    const queryTime = Date.now()
-    const deferred = new Deferred<unknown>()
-    deferred.promise
-      .then(() => {
-        serverStates.serverScoreUp(uri, Date.now() - queryTime)
-      })
-      .catch(() => {
-        taskCache.addressWatching = false
-      })
-    deferred.promise.catch(() => {
-      taskCache.addressWatching = false
-    })
-    serverStates.watchAddresses(
-      uri,
-      Array.from(Object.keys(addressSubscribeCache)),
-      deferred
-    )
-    return true
+    // Subscribe to any new addresses
+    if (newAddress.length > 0) {
+      serverStates.watchAddresses(uri, newAddress)
+      return true
+    }
   }
 
   // filled when transactions potentially changed (e.g. through new block notification)
@@ -817,18 +791,16 @@ export const pickNextTask = async (
         hasProcessedAtLeastOnce = true
         state.processing = true
         removeItem(updateTransactionCache, txId)
-        const updateTransactionTask = updateTransactions({
-          ...args,
-          walletBlockHeight: blockHeight,
-          txId
-        })
+        const updateTransactionTask = updateTransactions({ ...args, txId })
         // once resolved, add the txid to the server cache
         updateTransactionTask.deferred.promise
           .then(() => {
             serverState.txids.add(txId)
           })
-          .catch(e => {
-            throw e
+          .catch(err => {
+            updateTransactionCache[txId] = state
+            console.error(err)
+            args.log('error in updateTransactionCache:', err)
           })
         return updateTransactionTask
       }
@@ -847,15 +819,17 @@ export const pickNextTask = async (
       // Fetch and process address UTXOs
       const wsTask = await processAddressTransactions({
         ...args,
-        ...state,
+        addressTransactionState: state,
         address
       })
       wsTask.deferred.promise
         .then(() => {
           serverState.addresses.add(address)
         })
-        .catch(e => {
-          throw e
+        .catch(err => {
+          addressTransactionCache[address] = state
+          console.error(err)
+          args.log('error in updateTransactionCache:', err)
         })
       return wsTask
     }
@@ -863,32 +837,20 @@ export const pickNextTask = async (
 }
 
 interface UpdateTransactionsArgs extends CommonArgs {
-  walletBlockHeight: number
   txId: string
 }
 
 const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<TransactionResponse> => {
-  const {
-    walletBlockHeight,
-    emitter,
-    walletTools,
-    txId,
-    pluginInfo,
-    processor,
-    taskCache
-  } = args
+  const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
   const deferred = new Deferred<TransactionResponse>()
   deferred.promise
     .then(async (txResponse: TransactionResponse) => {
       // check if raw tx is still not confirmed, if so, don't change anything
       if (txResponse.blockHeight < 1) return
       // Create new tx from raw tx
-      const tx = processTransactionResponse({
-        ...args,
-        txResponse
-      })
+      const tx = processTransactionResponse({ ...args, txResponse })
       // Remove any existing input utxos from the processor
       for (const input of tx.inputs) {
         await processor.removeUtxos([`${input.txId}_${input.outputIndex}`])
@@ -909,14 +871,15 @@ const updateTransactions = (
       })
       await transactionChanged({
         emitter,
+        walletTools,
         processor,
         pluginInfo,
-        tx: processedTx,
-        walletBlockHeight,
-        walletTools
+        tx: processedTx
       })
     })
-    .catch(() => {
+    .catch(err => {
+      console.error(err)
+      args.log('error in updateTransactions:', err)
       taskCache.updateTransactionCache[txId] = { processing: false }
     })
   return {
@@ -1018,11 +981,8 @@ const internalGetFreshAddress = async (
 }
 
 interface ProcessAddressTxsArgs extends CommonArgs {
-  processing: boolean
-  page: number
-  blockHeight: number
-  path: ChangePath
   address: string
+  addressTransactionState: AddressTransactionCache[string]
   uri: string
 }
 
@@ -1031,17 +991,16 @@ const processAddressTransactions = async (
 ): Promise<WsTask<AddressResponse>> => {
   const {
     address,
-    page = 1,
-    blockHeight: walletBlockHeight,
+    addressTransactionState,
     emitter,
     pluginInfo,
     processor,
     walletTools,
-    path,
     taskCache,
-    serverStates,
+    pluginState,
     uri
   } = args
+  const { page = 1, blockHeight } = addressTransactionState
   const {
     engineInfo: { asBlockbookAddress }
   } = pluginInfo
@@ -1057,7 +1016,7 @@ const processAddressTransactions = async (
   const deferred = new Deferred<AddressResponse>()
   deferred.promise
     .then(async (value: AddressResponse) => {
-      serverStates.serverScoreUp(uri, Date.now() - queryTime)
+      pluginState.serverScoreUp(uri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
       // If address is used and previously not marked as used, mark as used.
@@ -1068,21 +1027,17 @@ const processAddressTransactions = async (
 
       // Process and save the address's transactions
       for (const txResponse of transactions) {
-        const tx = processTransactionResponse({
-          ...args,
-          txResponse
-        })
+        const tx = processTransactionResponse({ ...args, txResponse })
         const processedTx = await processor.saveTransaction({
           tx,
           scriptPubkeys: [scriptPubkey]
         })
         await transactionChanged({
           emitter,
+          walletTools,
           processor,
           pluginInfo,
-          tx: processedTx,
-          walletBlockHeight,
-          walletTools
+          tx: processedTx
         })
       }
 
@@ -1091,16 +1046,15 @@ const processAddressTransactions = async (
       if (page < totalPages) {
         // Add the address back to the cache, incrementing the page
         addressTransactionCache[address] = {
-          path,
+          ...addressTransactionState,
           processing: false,
-          blockHeight: walletBlockHeight,
           page: page + 1
         }
         return
       }
 
       // Update the lastQueriedBlockHeight for the address
-      addressData.lastQueriedBlockHeight = walletBlockHeight
+      addressData.lastQueriedBlockHeight = blockHeight
 
       // Save/update the fully-processed address
       await processor.saveAddress(addressData)
@@ -1114,8 +1068,8 @@ const processAddressTransactions = async (
     .catch(err => {
       // Log the error for debugging purposes without crashing the engine
       // This will cause frozen wallet syncs
-      console.error(err.toString())
-      console.log(err.stack)
+      console.error(err)
+      addressTransactionCache[address] = addressTransactionState
     })
 
   return {
@@ -1136,9 +1090,10 @@ interface processTransactionResponseArgs extends CommonArgs {
 const processTransactionResponse = (
   args: processTransactionResponseArgs
 ): IProcessorTransaction => {
-  const { txResponse, pluginInfo } = args
-  const { coinInfo } = pluginInfo
-
+  const {
+    txResponse,
+    pluginInfo: { coinInfo }
+  } = args
   return {
     txid: txResponse.txid,
     hex: txResponse.hex,
@@ -1189,7 +1144,7 @@ const processAddressUtxos = async (
     taskCache,
     path,
     pluginInfo,
-    serverStates,
+    pluginState,
     uri
   } = args
   const {
@@ -1200,7 +1155,7 @@ const processAddressUtxos = async (
   const deferred = new Deferred<AddressUtxosResponse>()
   deferred.promise
     .then(async (utxos: AddressUtxosResponse) => {
-      serverStates.serverScoreUp(uri, Date.now() - queryTime)
+      pluginState.serverScoreUp(uri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddress(scriptPubkey)
       if (addressData == null || addressData.path == null) {
@@ -1325,7 +1280,7 @@ const processRawUtxo = async (
     path,
     taskCache,
     requiredCount,
-    serverStates,
+    pluginState,
     uri,
     log
   } = args
@@ -1373,7 +1328,7 @@ const processRawUtxo = async (
           const deferred = new Deferred<TransactionResponse>()
           deferred.promise
             .then((txResponse: TransactionResponse) => {
-              serverStates.serverScoreUp(uri, Date.now() - queryTime)
+              pluginState.serverScoreUp(uri, Date.now() - queryTime)
               const processedTx = processTransactionResponse({
                 ...args,
                 txResponse
@@ -1382,9 +1337,9 @@ const processRawUtxo = async (
               // Only after we have successfully fetched the tx, set our script and call done
               done()
             })
-            .catch(e => {
+            .catch(err => {
               // If something went wrong, add the UTXO back to the queue
-              log('error in processed utxos cache, re-adding utxo to cache:', e)
+              log('error in processRawUtxo:', err)
               rawUtxoCache[JSON.stringify(utxo)] = {
                 processing: false,
                 path,
