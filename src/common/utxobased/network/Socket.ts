@@ -275,7 +275,12 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
             if (!subscription.subscribed) {
               subscription.deferred.reject()
             }
-            subscription.cb(subscription.cleaner(json.data))
+            try {
+              subscription.cb(subscription.cleaner(json.data))
+            } catch (error) {
+              console.log({ uri, error, json, subscription })
+              throw error
+            }
             return
           }
         }
@@ -296,9 +301,9 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
           } else {
             message.task.deferred.resolve(json.data)
           }
-        } catch (e) {
-          if (e instanceof TypeError) console.log({ json, message })
-          message.task.deferred.reject(e)
+        } catch (error) {
+          console.log({ uri, error, json, message })
+          message.task.deferred.reject(error)
         }
       }
     } catch (e) {
