@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.0.0-rc.4 (2022-06-20)
+
+- Fix: Avoid redundant ADDRESSES_CHECKED events after initial sync
+
 ## v1.0.0-rc.3 (2022-06-20)
 
 - Fix: Balance bug after sending transactions
