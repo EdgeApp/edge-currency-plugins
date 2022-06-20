@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.0.0-rc.3 (2022-06-20)
+
+- Fix: Balance bug after sending transactions
+
 ## v1.0.0-rc.2 (2022-06-17)
 
 - Fix: Improve connection states and fix reconnection bugs caused when connections are unreliable
