@@ -104,7 +104,7 @@ export async function makeUtxoEngine(
   const processor = await makeProcessor({
     disklet: walletLocalDisklet
   })
-  const state = makeUtxoEngineState({
+  const engineState = makeUtxoEngineState({
     ...config,
     walletTools,
     walletInfo,
@@ -120,15 +120,15 @@ export async function makeUtxoEngine(
         metadata.balance
       )
 
-      pluginState.addEngine(state)
+      pluginState.addEngine(engineState)
       await fees.start()
-      await state.start()
+      await engineState.start()
     },
 
     async killEngine(): Promise<void> {
-      await state.stop()
+      await engineState.stop()
       fees.stop()
-      pluginState.removeEngine(state)
+      pluginState.removeEngine(engineState)
     },
 
     getBalance(_opts: EdgeCurrencyCodeOptions): string {
@@ -144,7 +144,7 @@ export async function makeUtxoEngine(
     },
 
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
-      return await state.addGapLimitAddresses(addresses)
+      return await engineState.addGapLimitAddresses(addresses)
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
@@ -164,7 +164,7 @@ export async function makeUtxoEngine(
           )
         }
       }
-      const id = await state.broadcastTx(transaction)
+      const id = await engineState.broadcastTx(transaction)
       if (id !== transaction.txid) {
         throw new Error('broadcast response txid does not match original')
       }
@@ -221,7 +221,7 @@ export async function makeUtxoEngine(
     async getFreshAddress(
       _opts: EdgeCurrencyCodeOptions
     ): Promise<EdgeFreshAddress> {
-      return await state.getFreshAddress()
+      return await engineState.getFreshAddress()
     },
 
     getNumTransactions(_opts: EdgeCurrencyCodeOptions): number {
@@ -302,7 +302,7 @@ export async function makeUtxoEngine(
           const { script } = target.otherParams
           if (script.type === 'replayProtection') {
             // construct a replay protection p2sh address
-            const { publicAddress } = await state.deriveScriptAddress(
+            const { publicAddress } = await engineState.deriveScriptAddress(
               script.type
             )
             targets.push({
@@ -328,7 +328,7 @@ export async function makeUtxoEngine(
         throw new Error('Need to provide Spend Targets')
       }
 
-      const freshAddress = await state.getFreshAddress(1)
+      const freshAddress = await engineState.getFreshAddress(1)
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const setRBF = options?.setRBF ?? false
@@ -467,7 +467,7 @@ export async function makeUtxoEngine(
       Get the wallet's UTXOs from the new transaction and save them to the processsor.
       */
       const utxos = await getOwnUtxosFromTx(engineInfo, processor, tx)
-      await Promise.all(utxos.map(async utxo => await processor.saveUtxo(utxo)))
+      await engineState.processUtxos(utxos)
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {

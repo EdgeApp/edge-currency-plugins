@@ -77,6 +77,8 @@ export interface UtxoEngineState {
   setServerList: (serverList: string[]) => void
 
   loadWifs: (wifs: string[]) => Promise<void>
+
+  processUtxos: (utxos: IUTXO[]) => Promise<void>
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
@@ -440,6 +442,22 @@ export function makeUtxoEngineState(
           }
         }
       }
+    },
+    async processUtxos(utxos: IUTXO[]) {
+      const utxoMap: Map<string, Set<IUTXO>> = new Map()
+      for (const utxo of utxos) {
+        const utxoSet: Set<IUTXO> = utxoMap.get(utxo.scriptPubkey) ?? new Set()
+        if (utxoMap.has(utxo.scriptPubkey) == null)
+          utxoMap.set(utxo.scriptPubkey, utxoSet)
+        utxoSet.add(utxo)
+      }
+      for (const [scriptPubkey, utxos] of utxoMap.entries()) {
+        await processProcessorUtxos({
+          ...commonArgs,
+          scriptPubkey,
+          utxos
+        })
+      }
     }
   }
 }
@@ -681,8 +699,7 @@ export const pickNextTask = async (
         await processProcessorUtxos({
           ...args,
           scriptPubkey,
-          utxos: state.utxos,
-          path: state.path
+          utxos: state.utxos
         })
         removeItem(processorUtxoCache, scriptPubkey)
         return true
@@ -1194,7 +1211,6 @@ const processAddressUtxos = async (
 interface ProcessUtxoTransactionArgs extends CommonArgs {
   scriptPubkey: string
   utxos: Set<IUTXO>
-  path: ChangePath
 }
 
 const processProcessorUtxos = async (
