@@ -140,8 +140,11 @@ export function makeUtxoEngineState(
    **/
   const processesPerAddress = 2
   let processedCount = 0
-  let processedPercent = 0
+  let processedPercent = 0 // last sync ratio emitted
   const updateProgressRatio = async (): Promise<void> => {
+    // Avoid re-sending sync ratios / sending ratios larger than 1
+    if (processedPercent >= 1) return
+
     // We expect the total number of progress updates to equal the number of
     // addresses multiplied the number of processes per address.
     const expectedProccessCount =
