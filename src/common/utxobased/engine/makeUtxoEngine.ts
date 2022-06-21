@@ -274,6 +274,14 @@ export async function makeUtxoEngine(
       options?: TxOptions
     ): Promise<EdgeTransaction> {
       const { spendTargets } = edgeSpendInfo
+
+      // Use a spendProcessor which could be forced by sweepPrivateKeys.
+      // Because the receiving wallet is used to call the makeSpend routine,
+      // we must make sure the we passe the send wallet's processor.
+      // Otherwise, outputs are incorrectly assumed to to be owned by the sender
+      // and the transaction nativeAmount is incorrectly calculated.
+      const { forceProcessor: spendProcessor = processor } = options ?? {}
+
       if (options?.CPFP == null && spendTargets.length < 1) {
         throw new Error('Need to provide Spend Targets')
       }
@@ -284,7 +292,7 @@ export async function makeUtxoEngine(
       )
       const utxos =
         options?.utxos ??
-        ((await processor.fetchUtxos({ utxoIds: [] })) as IUTXO[])
+        ((await spendProcessor.fetchUtxos({ utxoIds: [] })) as IUTXO[])
 
       if (bs.gt(totalAmountToSend, `${sumUtxos(utxos)}`)) {
         throw new InsufficientFundsError(currencyInfo.currencyCode)
@@ -314,7 +322,7 @@ export async function makeUtxoEngine(
           const scriptPubkey = walletTools.addressToScriptPubkey(
             target.publicAddress
           )
-          if (processor.fetchAddress(scriptPubkey) != null) {
+          if (spendProcessor.fetchAddress(scriptPubkey) != null) {
             ourReceiveAddresses.push(target.publicAddress)
           }
           targets.push({
@@ -336,7 +344,9 @@ export async function makeUtxoEngine(
       let maxUtxo: undefined | IUTXO
       let feeRate = parseInt(await fees.getRate(edgeSpendInfo))
       if (rbfTxid != null) {
-        const [rbfTx] = await processor.fetchTransactions({ txId: rbfTxid })
+        const [rbfTx] = await spendProcessor.fetchTransactions({
+          txId: rbfTxid
+        })
         if (rbfTx == null) throw new Error('transaction not found')
         // double the fee used for the RBF transaction
         feeRate *= 2
@@ -345,7 +355,7 @@ export async function makeUtxoEngine(
           bs.gt(a.amount, b.amount) ? a : b
         )
         const maxId = `${maxInput.txId}_${maxInput.outputIndex}`
-        maxUtxo = (await processor.fetchUtxos({ utxoIds: [maxId] }))[0]
+        maxUtxo = (await spendProcessor.fetchUtxos({ utxoIds: [maxId] }))[0]
         if (maxUtxo == null) {
           log.error('transaction to be replaced found, but not its input utxos')
           throw new Error(
@@ -354,13 +364,13 @@ export async function makeUtxoEngine(
         }
       }
       if (options?.CPFP != null) {
-        const [childTx] = await processor.fetchTransactions({
+        const [childTx] = await spendProcessor.fetchTransactions({
           txId: options?.CPFP
         })
         if (childTx == null) throw new Error('transaction not found')
         const utxos: IUTXO[] = []
         for (const txid of childTx.ourOuts) {
-          const [output] = await processor.fetchUtxos({ utxoIds: [txid] })
+          const [output] = await spendProcessor.fetchUtxos({ utxoIds: [txid] })
           if (output != null) utxos.push(output)
         }
         maxUtxo = utxos.reduce((a, b) => (bs.gt(a.value, b.value) ? a : b))
@@ -390,7 +400,7 @@ export async function makeUtxoEngine(
       )
       for (const output of tx.outputs) {
         const scriptPubkey = output.scriptPubkey.toString('hex')
-        const own = await processor.fetchAddress(scriptPubkey)
+        const own = await spendProcessor.fetchAddress(scriptPubkey)
         if (own == null) {
           // Not our output
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
@@ -612,7 +622,11 @@ export async function makeUtxoEngine(
             }
             const destAddress = await this.getFreshAddress({})
             const nativeAmount = tmpMetadata.balance
-            const options: TxOptions = { utxos: tmpUtxos, subtractFee: true }
+            const options: TxOptions = {
+              utxos: tmpUtxos,
+              subtractFee: true,
+              forceProcessor: tmpProcessor
+            }
             spendInfo.spendTargets = [
               { publicAddress: destAddress.publicAddress, nativeAmount }
             ]
