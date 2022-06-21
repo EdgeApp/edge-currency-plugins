@@ -286,7 +286,10 @@ export async function makeUtxoEngine(
         options?.utxos ??
         ((await processor.fetchUtxos({ utxoIds: [] })) as IUTXO[])
 
-      if (bs.gt(totalAmountToSend, `${sumUtxos(utxos)}`)) {
+      if (
+        bs.gt(totalAmountToSend, `${sumUtxos(utxos)}`) ||
+        utxos.length === 0
+      ) {
         throw new InsufficientFundsError(currencyInfo.currencyCode)
       }
 
