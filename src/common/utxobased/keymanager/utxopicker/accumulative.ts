@@ -47,6 +47,6 @@ export function accumulative(args: UtxoPickerArgs): UtxoPickerResult {
 
   return {
     changeUsed: false,
-    fee: feeRate * utils.transactionBytes(inputs, outputs)
+    fee: Math.ceil(feeRate * utils.transactionBytes(inputs, outputs))
   }
 }
