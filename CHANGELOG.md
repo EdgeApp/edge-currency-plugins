@@ -1,5 +1,10 @@
 # edge-currency-plugins
 
+## v1.0.0-rc.6 (2022-06-21)
+
+- Fix: Fee rounding errors for some spending cases (particularly sweek keys for segwit wallets)
+- Change: Use WhatsOnChain.com as the block explorer URLs for BSV
+
 ## v1.0.0-rc.5 (2022-06-21)
 
 - Fix: Insufficient funds error for edge case (max spend on a zero-balance wallet)
