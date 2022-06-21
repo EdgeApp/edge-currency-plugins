@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.0.0-rc.5 (2022-06-21)
+
+- Fix: Insufficient funds error for edge case (max spend on a zero-balance wallet)
+
 ## v1.0.0-rc.4 (2022-06-20)
 
 - Fix: Avoid redundant ADDRESSES_CHECKED events after initial sync
