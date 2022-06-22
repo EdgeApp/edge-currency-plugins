@@ -450,7 +450,7 @@ export function makeUtxoEngineState(
       const utxoMap: Map<string, Set<IUTXO>> = new Map()
       for (const utxo of utxos) {
         const utxoSet: Set<IUTXO> = utxoMap.get(utxo.scriptPubkey) ?? new Set()
-        if (utxoMap.has(utxo.scriptPubkey) == null)
+        if (!utxoMap.has(utxo.scriptPubkey))
           utxoMap.set(utxo.scriptPubkey, utxoSet)
         utxoSet.add(utxo)
       }
