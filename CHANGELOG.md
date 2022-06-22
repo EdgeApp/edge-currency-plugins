@@ -1,5 +1,11 @@
 # edge-currency-plugins
 
+## v1.0.0 (2022-06-22)
+
+- Fix: Fix a logic error in UtxoEngineState.processUtxos
+- Change: Disable BCH to BSV splitting for now
+- Change: Add detailed logs for Socket errors caused by cleaner
+
 ## v1.0.0-rc.6 (2022-06-21)
 
 - Fix: Fee rounding errors for some spending cases (particularly sweek keys for segwit wallets)
