@@ -647,20 +647,13 @@ interface TransactionChangedArgs {
 export const transactionChanged = async (
   args: TransactionChangedArgs
 ): Promise<void> => {
-  const {
-    emitter,
-    walletTools,
-    processor,
-    pluginInfo: { currencyInfo, engineInfo },
-    tx
-  } = args
+  const { emitter, walletTools, processor, pluginInfo, tx } = args
   emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
     await toEdgeTransaction({
       tx,
-      currencyCode: currencyInfo.currencyCode,
       walletTools,
       processor,
-      engineInfo
+      pluginInfo
     })
   ])
 }

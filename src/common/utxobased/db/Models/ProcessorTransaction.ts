@@ -1,6 +1,8 @@
+import { Transaction } from 'altcoin-js'
+import BN from 'bn.js'
 import { EdgeTransaction } from 'edge-core-js/types'
 
-import { EngineInfo } from '../../../plugin/types'
+import { PluginInfo } from '../../../plugin/types'
 import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
 import { UtxoTxOtherParams } from '../../engine/types'
 import { isPathUsingDerivationLevelScriptHash } from '../../keymanager/keymanager'
@@ -51,17 +53,16 @@ export const fromEdgeTransaction = (
 
 interface ToEdgeTransactionArgs {
   tx: IProcessorTransaction
-  currencyCode: string
   walletTools: UTXOPluginWalletTools
   processor: Processor
-  engineInfo: EngineInfo
+  pluginInfo: PluginInfo
 }
 
 export const toEdgeTransaction = async (
   args: ToEdgeTransactionArgs
 ): Promise<EdgeTransaction> => {
-  const { tx, processor, walletTools, engineInfo } = args
-
+  const { tx, processor, walletTools, pluginInfo } = args
+  const { engineInfo, currencyInfo } = pluginInfo
   const ourReceiveAddresses: string[] = []
   for (const out of tx.ourOuts) {
     const { scriptPubkey } = tx.outputs[parseInt(out)]
@@ -95,14 +96,32 @@ export const toEdgeTransaction = async (
     }
   }
 
+  const feeRes = {}
+
+  try {
+    const altcoinTx = Transaction.fromHex(tx.hex)
+    const vBytes = altcoinTx.virtualSize()
+    // feeRate must be of a number type (limited to 53 bits)
+    const feeRate: number = new BN(tx.fees, 10)
+      .div(new BN(vBytes, 10))
+      .toNumber()
+    Object.assign(feeRes, {
+      feeRateUsed: {
+        // GUI repo uses satPerVByte rather than satPerByte defined in customFeeTemplate
+        satPerVByte: feeRate
+      }
+    })
+  } catch (e) {}
+
   return {
-    currencyCode: args.currencyCode,
-    txid: args.tx.txid,
-    blockHeight: args.tx.blockHeight,
-    date: args.tx.date,
-    nativeAmount: args.tx.ourAmount,
-    networkFee: args.tx.fees,
-    signedTx: args.tx.hex,
-    ourReceiveAddresses
+    currencyCode: currencyInfo.currencyCode,
+    txid: tx.txid,
+    blockHeight: tx.blockHeight,
+    date: tx.date,
+    nativeAmount: tx.ourAmount,
+    networkFee: tx.fees,
+    signedTx: tx.hex,
+    ourReceiveAddresses,
+    ...feeRes
   }
 }
