@@ -253,10 +253,9 @@ export async function makeUtxoEngine(
           async (tx: IProcessorTransaction) =>
             await toEdgeTransaction({
               tx,
-              currencyCode: currencyInfo.currencyCode,
               walletTools,
               processor,
-              engineInfo
+              pluginInfo
             })
         )
       )
