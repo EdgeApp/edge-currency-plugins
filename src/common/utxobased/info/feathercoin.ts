@@ -16,7 +16,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: [],
+    blockbookServers: ['wss://blockbook.feathercoin.com'],
     enableCustomServers: false
   },
   customFeeTemplate: [
