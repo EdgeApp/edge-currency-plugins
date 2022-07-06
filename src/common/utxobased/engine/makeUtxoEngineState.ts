@@ -31,7 +31,6 @@ import {
   derivationLevelScriptHash,
   ScriptTypeEnum
 } from '../keymanager/keymanager'
-import { Input } from '../keymanager/utxopicker/types'
 import {
   addressMessage,
   AddressResponse,
@@ -386,22 +385,6 @@ export function makeUtxoEngineState(
     async broadcastTx(transaction: EdgeTransaction): Promise<string> {
       const txId = await serverStates.broadcastTx(transaction)
 
-      /*
-      After successfully broadcasting the tx, we must mark each UTXO, used as
-      an input for the tx, as spent so we don't try to reuse the UTXO.
-      */
-      const txInputs: Input[] = transaction.otherParams?.psbt.inputs ?? []
-      for (const input of txInputs) {
-        const scriptPubkey = Buffer.from(input.scriptPubkey).toString('hex')
-        const [utxo] = await processor.fetchUtxos({
-          scriptPubkey
-        })
-        if (utxo != null) {
-          utxo.spent = true
-          await processor.saveUtxo(utxo)
-        }
-      }
-
       return txId
     },
     refillServers(): void {
@@ -447,18 +430,37 @@ export function makeUtxoEngineState(
       }
     },
     async processUtxos(utxos: IUTXO[]) {
+      // Map of scriptPubkey to IUTXOs
       const utxoMap: Map<string, IUTXO[]> = new Map()
+      const utxoIds: Set<string> = new Set()
+
+      // Map updated utxos
       for (const utxo of utxos) {
         const utxoSet = utxoMap.get(utxo.scriptPubkey) ?? []
         if (!utxoMap.has(utxo.scriptPubkey))
           utxoMap.set(utxo.scriptPubkey, utxoSet)
+        // Add utxo to set for scriptPubkey
         utxoSet.push(utxo)
+        // Add UTXO ID set
+        utxoIds.add(utxo.id)
       }
+
+      // Process UTXO sets for each scriptPubkey in map
       for (const [scriptPubkey, utxos] of utxoMap.entries()) {
+        // Get saved utxo set
+        const savedUtxos = await processor.fetchUtxos({ scriptPubkey })
+        // Filter UTXOs to de-duplicate (and undefined utxo as a type assert)
+        const filteredUtxos = savedUtxos.filter(
+          utxo => utxo != null && !utxoIds.has(utxo?.id)
+        ) as IUTXO[]
+
+        // Add updated utxos to utxo set
+        const combinedUtxos = [...filteredUtxos, ...utxos]
+
         await processProcessorUtxos({
           ...commonArgs,
           scriptPubkey,
-          utxos
+          utxos: combinedUtxos
         })
       }
     }
@@ -1221,25 +1223,71 @@ const processProcessorUtxos = async (
     pluginInfo: { currencyInfo }
   } = args
 
+  const updatedUtxos: { [utxoId: string]: IUTXO } = Object.fromEntries(
+    [...utxos].map(utxo => [utxo.id, utxo])
+  )
+  const utxoIdsToRemove: string[] = []
   const currentUtxos = await processor.fetchUtxos({ scriptPubkey })
-  const currentUtxoIds: string[] = []
+
+  //
+  // Modify existing UTXO set
+  //
+
   let oldBalance = '0'
   for (const utxo of currentUtxos) {
     if (utxo == null)
       throw new Error(
         'Unexpected undefined utxo when processing unspent transactions'
       )
-    oldBalance = add(utxo.value, oldBalance)
-    currentUtxoIds.push(utxo.id)
+    if (!utxo.spent) {
+      // Accumulate over the current address balance
+      oldBalance = add(utxo.value, oldBalance)
+    }
+
+    // If the UTXO isn't present in the update UTXO set, then it is spent.
+    if (updatedUtxos[utxo.id] == null) {
+      if (utxo.blockHeight > 0) {
+        // Delete the UTXO from the database if it's spent and confirmed
+        utxoIdsToRemove.push(utxo.id)
+      } else {
+        // Otherwise just mark it as spent.
+        updatedUtxos[utxo.id] = { ...utxo, spent: true }
+      }
+    } else {
+      /*
+      If the UTXO is present in the updated UTXO set, enforce that the UTXO 
+      remains spent in the new UTXO set. This means, we will never mark a UTXO 
+      as unspent again. UTXOs only become unspent again if the tx is dropped
+      which shall be affected by another routine.
+      */
+      // TODO: To fix this logic for dropped-tx, add a condition which uses the
+      // network's block-height to determine whether to set it back as unspend
+      updatedUtxos[utxo.id].spent = utxo.spent || updatedUtxos[utxo.id].spent
+    }
   }
-  await processor.removeUtxos(currentUtxoIds)
+
+  // Remove any spent UTXOs that have confirmations
+  await processor.removeUtxos(utxoIdsToRemove)
+
+  //
+  // Save updated UTXO set
+  //
 
   let newBalance = '0'
-  for (const utxo of utxos) {
-    newBalance = add(utxo.value, newBalance)
+  for (const utxo of Object.values(updatedUtxos)) {
+    if (!utxo.spent) {
+      // Accumulate over the new address balance
+      newBalance = add(utxo.value, newBalance)
+    }
+    // Save new UTXOs
     await processor.saveUtxo(utxo)
   }
 
+  //
+  // Balance update
+  //
+
+  // Address balance and emit address balance change event
   const diff = sub(newBalance, oldBalance)
   if (diff !== '0') {
     log('balance changed:', { scriptPubkey, diff })
