@@ -378,6 +378,7 @@ export async function makeUtxoEngine(
         targets,
         feeRate,
         coin: coinInfo.name,
+        currencyCode: currencyInfo.currencyCode,
         setRBF,
         freshChangeAddress,
         subtractFee

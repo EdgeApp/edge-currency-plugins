@@ -41,6 +41,7 @@ describe('bitcoincash transaction creation and signing test', () => {
     const { psbtBase64 } = await makeTx({
       forceUseUtxo: [],
       coin: 'bitcoincash',
+      currencyCode: 'BCH',
       setRBF: false,
       freshChangeAddress: address,
       feeRate: 0,
@@ -121,6 +122,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
     const { psbtBase64 } = await makeTx({
       forceUseUtxo: [],
       coin: 'bitcoincash',
+      currencyCode: 'BCH',
       setRBF: false,
       freshChangeAddress: address,
       feeRate: 0,

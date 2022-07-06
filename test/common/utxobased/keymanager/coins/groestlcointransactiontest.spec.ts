@@ -35,6 +35,7 @@ describe('groestlcoin transaction creation and signing test', function () {
     const { psbtBase64 } = await makeTx({
       forceUseUtxo: [],
       coin: 'groestlcoin',
+      currencyCode: 'GRS',
       setRBF: false,
       freshChangeAddress: 'Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg',
       feeRate: 0,
