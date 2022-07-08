@@ -116,24 +116,21 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
   const fetchServers = async (): Promise<string[]> => {
     log(`${pluginId} - GET ${serverListInfoUrl}`)
 
-    const response = await io.fetch(serverListInfoUrl)
-    const responseBody = await (async () => {
-      try {
-        if (response.ok) {
-          return await response.json()
-        }
-        log(
-          `${pluginId} - Fetching ${serverListInfoUrl} failed with status ${response.status}`
-        )
-      } catch (err) {
-        log(`${pluginId} - Fetching ${serverListInfoUrl} failed: ${err}`)
+    try {
+      const response = await io.fetch(serverListInfoUrl)
+      if (!response.ok) {
+        throw new Error(`Failed with status ${response.status}`)
       }
-      return {}
-    })()
+      const responseBody = await response.json()
+      const serverListInfo = asServerListInfo(responseBody)
 
-    const serverListInfo = asServerListInfo(responseBody)
-
-    return serverListInfo[currencyCode] ?? []
+      return serverListInfo[currencyCode] ?? []
+    } catch (error) {
+      log.warn(
+        `${pluginId} - GET ${serverListInfoUrl} failed: ${error.toString()}`
+      )
+      return []
+    }
   }
 
   const refreshServers = async (): Promise<void> => {
