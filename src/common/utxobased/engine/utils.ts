@@ -236,4 +236,7 @@ export const parsePathname = (args: {
 }
 
 export const sumUtxos = (utxos: IUTXO[]): string =>
-  utxos.reduce((sum, { value }) => bs.add(sum, value), '0')
+  utxos.reduce(
+    (sum, { spent, value }) => (spent ? sum : bs.add(sum, value)),
+    '0'
+  )
