@@ -12,7 +12,29 @@ export const getOwnUtxosFromTx = async (
   processor: Processor,
   tx: IProcessorTransaction
 ): Promise<IUTXO[]> => {
-  const utxos: IUTXO[] = []
+  const ownUtxos: IUTXO[] = []
+
+  //
+  // Spent UTXOs (Inputs)
+  //
+
+  const inputUtxoIds = tx.inputs.map(
+    input => `${input.txId}_${input.outputIndex}`
+  )
+  const inputUtxos = await processor.fetchUtxos({
+    utxoIds: inputUtxoIds
+  })
+  for (const utxo of inputUtxos) {
+    if (utxo == null) continue
+    // Must create a new IUTXO object when mutating processor objects because
+    // memlet may keep a reference in memory.
+    ownUtxos.push({ ...utxo, spent: true })
+  }
+
+  //
+  // Unspent UTXOs (Outputs)
+  //
+
   for (const output of tx.outputs) {
     const scriptPubkey = output.scriptPubkey
     const address = await processor.fetchAddress(scriptPubkey)
@@ -46,9 +68,10 @@ export const getOwnUtxosFromTx = async (
           blockHeight: tx.blockHeight,
           spent: false
         }
-        utxos.push(utxo)
+        ownUtxos.push(utxo)
       }
     }
   }
-  return utxos
+
+  return ownUtxos
 }

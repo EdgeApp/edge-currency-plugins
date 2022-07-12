@@ -378,6 +378,7 @@ export async function makeUtxoEngine(
         targets,
         feeRate,
         coin: coinInfo.name,
+        currencyCode: currencyInfo.currencyCode,
         setRBF,
         freshChangeAddress,
         subtractFee
@@ -468,8 +469,8 @@ export async function makeUtxoEngine(
       /*
       Get the wallet's UTXOs from the new transaction and save them to the processsor.
       */
-      const utxos = await getOwnUtxosFromTx(engineInfo, processor, tx)
-      await engineState.processUtxos(utxos)
+      const ownUtxos = await getOwnUtxosFromTx(engineInfo, processor, tx)
+      await engineState.processUtxos(ownUtxos)
     },
 
     async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {

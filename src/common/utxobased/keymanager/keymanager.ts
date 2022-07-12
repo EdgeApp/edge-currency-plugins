@@ -183,6 +183,7 @@ export interface MakeTxArgs {
   feeRate: number
   setRBF: boolean
   coin: string
+  currencyCode: string
   freshChangeAddress: string
   subtractFee?: boolean
 }
@@ -933,7 +934,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     changeScript
   })
   if (result.inputs == null || result.outputs == null) {
-    throw new InsufficientFundsError(args.coin)
+    throw new InsufficientFundsError(args.currencyCode)
   }
 
   const sortedInputs = sortInputs(result.inputs)

@@ -371,7 +371,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         pluginState.serverScoreDown(uri)
         deferredAddressSub?.reject()
       })
-    blockbook.watchAddresses(Array.from(addresses), deferred)
+    blockbook.watchAddresses(Array.from(serverState.addresses), deferred)
   }
 
   const watchBlocks = (uri: string): void => {
