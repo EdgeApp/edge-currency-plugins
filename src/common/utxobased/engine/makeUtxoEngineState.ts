@@ -447,12 +447,12 @@ export function makeUtxoEngineState(
       }
     },
     async processUtxos(utxos: IUTXO[]) {
-      const utxoMap: Map<string, Set<IUTXO>> = new Map()
+      const utxoMap: Map<string, IUTXO[]> = new Map()
       for (const utxo of utxos) {
-        const utxoSet: Set<IUTXO> = utxoMap.get(utxo.scriptPubkey) ?? new Set()
+        const utxoSet = utxoMap.get(utxo.scriptPubkey) ?? []
         if (!utxoMap.has(utxo.scriptPubkey))
           utxoMap.set(utxo.scriptPubkey, utxoSet)
-        utxoSet.add(utxo)
+        utxoSet.push(utxo)
       }
       for (const [scriptPubkey, utxos] of utxoMap.entries()) {
         await processProcessorUtxos({
@@ -504,7 +504,7 @@ interface ProcessorUtxoCache {
   [key: string]: {
     processing: boolean
     full: boolean
-    utxos: Set<IUTXO>
+    utxos: IUTXO[]
     path: ChangePath
   }
 }
@@ -1206,7 +1206,7 @@ const processAddressUtxos = async (
 
 interface ProcessUtxoTransactionArgs extends CommonArgs {
   scriptPubkey: string
-  utxos: Set<IUTXO>
+  utxos: IUTXO[]
 }
 
 const processProcessorUtxos = async (
@@ -1235,7 +1235,7 @@ const processProcessorUtxos = async (
   await processor.removeUtxos(currentUtxoIds)
 
   let newBalance = '0'
-  for (const utxo of Array.from(utxos)) {
+  for (const utxo of utxos) {
     newBalance = add(utxo.value, newBalance)
     await processor.saveUtxo(utxo)
   }
@@ -1399,12 +1399,12 @@ const addToProcessorUtxoCache = (
   utxo?: IUTXO
 ): void => {
   const processorUtxos = processorUtxoCache[scriptPubkey] ?? {
-    utxos: new Set(),
+    utxos: [],
     processing: false,
     path,
     full: false
   }
-  if (utxo != null) processorUtxos.utxos.add(utxo)
+  if (utxo != null) processorUtxos.utxos.push(utxo)
   processorUtxoCache[scriptPubkey] = processorUtxos
-  processorUtxos.full = processorUtxos.utxos.size >= requiredCount
+  processorUtxos.full = processorUtxos.utxos.length >= requiredCount
 }
