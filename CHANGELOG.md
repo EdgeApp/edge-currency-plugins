@@ -1,5 +1,11 @@
 # edge-currency-plugins
 
+## v1.1.1 (2022-07-12)
+
+- Fix: Add feathercoin blockbook server
+- Fix: Engine crashs on fetching server list network failure
+- Fix: Spend issues caused by not saving UTXOs locally without needing a network event
+
 ## v1.1.0 (2022-06-29)
 
 - Change: Computes the sat/vByte used for a given transaction, and adds feeRateUsed object to the EdgeTransaction output.
