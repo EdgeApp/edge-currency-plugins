@@ -1392,19 +1392,19 @@ const processRawUtxo = async (
 }
 
 const addToProcessorUtxoCache = (
-  processorUtxosCache: ProcessorUtxoCache,
+  processorUtxoCache: ProcessorUtxoCache,
   path: ChangePath,
   scriptPubkey: string,
   requiredCount: number,
   utxo?: IUTXO
 ): void => {
-  const processorUtxos = processorUtxosCache[scriptPubkey] ?? {
+  const processorUtxos = processorUtxoCache[scriptPubkey] ?? {
     utxos: new Set(),
     processing: false,
     path,
     full: false
   }
   if (utxo != null) processorUtxos.utxos.add(utxo)
-  processorUtxosCache[scriptPubkey] = processorUtxos
+  processorUtxoCache[scriptPubkey] = processorUtxos
   processorUtxos.full = processorUtxos.utxos.size >= requiredCount
 }
