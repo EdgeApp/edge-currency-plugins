@@ -311,7 +311,8 @@ export async function makeUtxoEngine(
             )
             targets.push({
               address: publicAddress,
-              value: parseInt(target.nativeAmount)
+              value: parseInt(target.nativeAmount),
+              memo: target.memo
             })
           }
         } else {
@@ -323,7 +324,8 @@ export async function makeUtxoEngine(
           }
           targets.push({
             address: target.publicAddress,
-            value: parseInt(target.nativeAmount)
+            value: parseInt(target.nativeAmount),
+            memo: target.memo
           })
         }
       }
