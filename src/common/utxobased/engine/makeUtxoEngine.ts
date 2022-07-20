@@ -66,7 +66,9 @@ export async function makeUtxoEngine(
   // each with a different list of custom servers.
   // The Edge UI only allows for one active login, though,
   // so this is OK for now:
-  await pluginState.updateServers(userSettings)
+  pluginState.updateServers(userSettings).catch(err => {
+    log.error(err)
+  })
 
   const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
   // Private key may be missing for watch-only wallets
