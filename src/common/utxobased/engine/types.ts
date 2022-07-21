@@ -10,7 +10,7 @@ export const asUtxoUserSettings = asObject({
 export type UtxoUserSettings = ReturnType<typeof asUtxoUserSettings>
 
 export interface UtxoTxOtherParams {
-  txJson?: { hex?: string }
+  unsignedTx: string // hex
   psbt?: {
     base64: string
     inputs: Input[]
