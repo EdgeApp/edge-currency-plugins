@@ -10,6 +10,7 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
+import { Processor } from '../utxobased/db/makeProcessor'
 import { IUTXO } from '../utxobased/db/types'
 import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
 import { UtxoPicker } from '../utxobased/keymanager/utxopicker'
@@ -36,6 +37,7 @@ export interface TxOptions {
   subtractFee?: boolean
   setRBF?: boolean
   CPFP?: string
+  forceProcessor: Processor
 }
 
 export interface PluginInfo {
