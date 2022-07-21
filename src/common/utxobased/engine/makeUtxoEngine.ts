@@ -376,7 +376,7 @@ export async function makeUtxoEngine(
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
         options?.subtractFee != null ? options.subtractFee : false
-      const tx = await makeTx({
+      const tx = makeTx({
         utxos,
         forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
         targets,

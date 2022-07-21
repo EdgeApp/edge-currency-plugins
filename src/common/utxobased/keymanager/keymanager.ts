@@ -827,7 +827,7 @@ export function signMessageBase64(message: string, privateKey: string): string {
     .toString('base64')
 }
 
-export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
+export function makeTx(args: MakeTxArgs): MakeTxReturn {
   let sequence = 0xffffffff
   if (args.setRBF) {
     sequence -= 2
@@ -921,7 +921,7 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     if (target.memo != null) {
       const memoHex = Buffer.from(target.memo, 'utf8').toString('hex')
       // check if hex string is within 80 bytes
-      const validatedMemo = await validateMemo(memoHex)
+      const validatedMemo = validateMemo(memoHex)
       if (!validatedMemo.passed) {
         throw new Error('Memo size exceeds 80 bytes')
       }

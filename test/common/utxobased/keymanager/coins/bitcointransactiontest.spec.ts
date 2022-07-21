@@ -150,7 +150,7 @@ describe('bitcoin transaction creation and signing test', function () {
       This deserialization is not required in the usual form from the caller.
       It is enough to pass the full previous rawtransaction.
     */
-    const { psbtBase64 } = await makeTx({
+    const { psbtBase64 } = makeTx({
       forceUseUtxo: [],
       coin: 'bitcoin',
       currencyCode: 'BTC',
@@ -204,7 +204,7 @@ describe('bitcoin transaction creation and signing test', function () {
   })
 
   it('create a legacy tx with segwit outputs, then create another tx consuming these outputs', async () => {
-    const { psbtBase64 } = await makeTx({
+    const { psbtBase64 } = makeTx({
       forceUseUtxo: [],
       coin: 'bitcoin',
       currencyCode: 'BTC',
@@ -269,7 +269,7 @@ describe('bitcoin transaction creation and signing test', function () {
       script: segwitScriptPubkey,
       vout: i
     })
-    const { psbtBase64 } = await makeTx({
+    const { psbtBase64 } = makeTx({
       forceUseUtxo: [getUtxo(0), getUtxo(1), getUtxo(2, '0')],
       coin: 'bitcoin',
       currencyCode: 'BTC',
@@ -343,7 +343,7 @@ describe('bitcoin transaction creation and signing test', function () {
       value: 200
     }
 
-    const { psbtBase64 } = await makeTx({
+    const { psbtBase64 } = makeTx({
       forceUseUtxo: [utxoLegacy, utxoSegwit, utxoWrappedSegwit],
       coin: 'bitcoin',
       currencyCode: 'BTC',
@@ -394,7 +394,7 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const target: MakeTxTarget = { address, value: 200 }
 
-    const { psbtBase64 } = await makeTx({
+    const { psbtBase64 } = makeTx({
       forceUseUtxo: [],
       coin: 'bitcoin',
       currencyCode: 'BTC',
@@ -427,7 +427,7 @@ describe('bitcoin transaction creation and signing test', function () {
         vout: i
       }))
 
-    const { psbtBase64: psbtBase64Multi } = await makeTx({
+    const { psbtBase64: psbtBase64Multi } = makeTx({
       forceUseUtxo: [],
       coin: 'bitcoin',
       currencyCode: 'BTC',
