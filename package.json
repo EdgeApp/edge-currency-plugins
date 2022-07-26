@@ -49,6 +49,7 @@
     "cleaners": "^0.3.12",
     "disklet": "^0.4.5",
     "edge-core-js": "^0.19.20",
+    "edge-sync-client": "^0.2.7",
     "memlet": "^0.1.6",
     "uri-js": "^4.4.0",
     "url-parse": "^1.5.2",
