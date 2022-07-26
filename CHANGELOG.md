@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.1.2 (2022-07-26)
+
+- Fix: Upgrade edge-sync-client to include patch
+ 
 ## v1.1.1 (2022-07-12)
 
 - Fix: Add feathercoin blockbook server
