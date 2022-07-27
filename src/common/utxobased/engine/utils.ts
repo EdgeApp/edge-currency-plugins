@@ -1,6 +1,6 @@
 import * as bs from 'biggystring'
 import { Disklet } from 'disklet'
-import { EdgeParsedUri } from 'edge-core-js/types'
+import { EdgeMemoRules, EdgeParsedUri } from 'edge-core-js/types'
 
 import { CurrencyFormat } from '../../plugin/types'
 import { IUTXO } from '../db/types'
@@ -33,6 +33,19 @@ export const getCurrencyFormatFromPurposeType = (
     case BIP43PurposeTypeEnum.Segwit:
       return 'bip84'
   }
+}
+
+// Expect memo to be a hex string
+export const validateMemo = (memo: string): EdgeMemoRules => {
+  const result: EdgeMemoRules = {
+    passed: true,
+    tooLarge: false
+  }
+  if (Math.ceil(memo.length / 2) > 80) {
+    result.passed = false
+    result.tooLarge = true
+  }
+  return result
 }
 
 export const getAddressTypeFromKeys = (

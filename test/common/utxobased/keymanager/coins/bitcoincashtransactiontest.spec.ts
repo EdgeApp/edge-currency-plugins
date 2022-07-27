@@ -38,7 +38,7 @@ describe('bitcoincash transaction creation and signing test', () => {
       This deserialization is not required in the usual form from the caller.
       It is enough to pass the full previous rawtransaction.
     */
-    const { psbtBase64 } = await makeTx({
+    const { psbtBase64 } = makeTx({
       forceUseUtxo: [],
       coin: 'bitcoincash',
       currencyCode: 'BCH',
@@ -119,7 +119,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
       This deserialization is not required in the usual form from the caller.
       It is enough to pass the full previous rawtransaction.
     */
-    const { psbtBase64 } = await makeTx({
+    const { psbtBase64 } = makeTx({
       forceUseUtxo: [],
       coin: 'bitcoincash',
       currencyCode: 'BCH',

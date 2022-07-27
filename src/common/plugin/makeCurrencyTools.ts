@@ -5,6 +5,7 @@ import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
+  EdgeMemoRules,
   EdgeMetaToken,
   EdgeWalletInfo,
   JsonObject
@@ -12,7 +13,7 @@ import {
 import * as uri from 'uri-js'
 import urlParse from 'url-parse'
 
-import { parsePathname } from '../utxobased/engine/utils'
+import { parsePathname, validateMemo } from '../utxobased/engine/utils'
 import {
   asNumbWalletInfo,
   asPrivateKey,
@@ -78,6 +79,10 @@ export function makeCurrencyTools(
       }
 
       return wasCurrencyPrivateKey(privateKey)
+    },
+
+    async validateMemo(memo: string): Promise<EdgeMemoRules> {
+      return validateMemo(memo)
     },
 
     async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {

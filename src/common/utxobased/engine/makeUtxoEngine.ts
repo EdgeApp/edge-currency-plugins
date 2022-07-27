@@ -297,7 +297,10 @@ export async function makeUtxoEngine(
       let targets: MakeTxTarget[] = []
       const ourReceiveAddresses: string[] = []
       for (const target of spendTargets) {
-        if (target.publicAddress == null || target.nativeAmount == null) {
+        if (
+          target.memo == null &&
+          (target.publicAddress == null || target.nativeAmount == null)
+        ) {
           throw new Error('Invalid spend target')
         }
 
@@ -311,19 +314,29 @@ export async function makeUtxoEngine(
             )
             targets.push({
               address: publicAddress,
-              value: parseInt(target.nativeAmount)
+              value:
+                target.nativeAmount == null
+                  ? undefined
+                  : parseInt(target.nativeAmount),
+              memo: target.memo
             })
           }
         } else {
-          const scriptPubkey = walletTools.addressToScriptPubkey(
-            target.publicAddress
-          )
-          if (processor.fetchAddress(scriptPubkey) != null) {
-            ourReceiveAddresses.push(target.publicAddress)
+          if (target.publicAddress != null) {
+            const scriptPubkey = walletTools.addressToScriptPubkey(
+              target.publicAddress
+            )
+            if (processor.fetchAddress(scriptPubkey) != null) {
+              ourReceiveAddresses.push(target.publicAddress)
+            }
           }
           targets.push({
             address: target.publicAddress,
-            value: parseInt(target.nativeAmount)
+            value:
+              target.nativeAmount == null
+                ? undefined
+                : parseInt(target.nativeAmount),
+            memo: target.memo
           })
         }
       }
@@ -374,7 +387,7 @@ export async function makeUtxoEngine(
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
         options?.subtractFee != null ? options.subtractFee : false
-      const tx = await makeTx({
+      const tx = makeTx({
         utxos,
         forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
         targets,

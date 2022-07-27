@@ -10,6 +10,7 @@ import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
 import { AddressPath, CoinInfo, CoinPrefixes } from '../../plugin/types'
 import { IUTXO } from '../db/types'
+import { validateMemo } from '../engine/utils'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
 import {
@@ -189,8 +190,9 @@ export interface MakeTxArgs {
 }
 
 export interface MakeTxTarget {
-  address: string
-  value: number
+  address?: string
+  value?: number
+  memo?: string | null
 }
 
 interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
@@ -825,7 +827,7 @@ export function signMessageBase64(message: string, privateKey: string): string {
     .toString('base64')
 }
 
-export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
+export function makeTx(args: MakeTxArgs): MakeTxReturn {
   let sequence = 0xffffffff
   if (args.setRBF) {
     sequence -= 2
@@ -903,16 +905,36 @@ export async function makeTx(args: MakeTxArgs): Promise<MakeTxReturn> {
     if (!forceUsage) mappedUtxos.push(input)
   }
 
-  const targets: utxopicker.Target[] = args.targets.map(target => {
-    const script = addressToScriptPubkey({
-      address: target.address,
-      coin: coin.name
-    })
-    return {
-      script,
-      value: target.value
+  const targets: utxopicker.Target[] = []
+  for (const target of args.targets) {
+    if (target.address != null && target.value != null) {
+      const script = addressToScriptPubkey({
+        address: target.address,
+        coin: coin.name
+      })
+      targets.push({
+        script,
+        value: target.value
+      })
     }
-  })
+
+    if (target.memo != null) {
+      const memoHex = Buffer.from(target.memo, 'utf8').toString('hex')
+      // check if hex string is within 80 bytes
+      const validatedMemo = validateMemo(memoHex)
+      if (!validatedMemo.passed) {
+        throw new Error('Memo size exceeds 80 bytes')
+      }
+      const script = bitcoin.script
+        .compile([bitcoin.opcodes.OP_RETURN, Buffer.from(target.memo, 'utf8')])
+        .toString('hex')
+      targets.push({
+        script,
+        value: 0
+      })
+    }
+  }
+
   const changeScript = addressToScriptPubkey({
     address: args.freshChangeAddress,
     coin: coin.name
