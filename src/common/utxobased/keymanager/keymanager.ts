@@ -190,8 +190,8 @@ export interface MakeTxArgs {
 }
 
 export interface MakeTxTarget {
-  address: string
-  value: number
+  address?: string
+  value?: number
   memo?: string | null
 }
 
