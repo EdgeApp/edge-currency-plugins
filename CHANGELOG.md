@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.1.3 (2022-08-04)
+
+- Add support for adding an OP_RETURN output
+
 ## v1.1.2 (2022-07-26)
 
 - Fix: Upgrade edge-sync-client to include patch
