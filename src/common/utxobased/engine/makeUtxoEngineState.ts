@@ -1244,25 +1244,10 @@ const processProcessorUtxos = async (
       oldBalance = add(utxo.value, oldBalance)
     }
 
-    // If the UTXO isn't present in the update UTXO set, then it is spent.
+    // If the UTXO isn't present in the update UTXO set, then it is spent or dropped.
+    // Remove it from the database if so
     if (updatedUtxos[utxo.id] == null) {
-      if (utxo.blockHeight > 0) {
-        // Delete the UTXO from the database if it's spent and confirmed
-        utxoIdsToRemove.push(utxo.id)
-      } else {
-        // Otherwise just mark it as spent.
-        updatedUtxos[utxo.id] = { ...utxo, spent: true }
-      }
-    } else {
-      /*
-      If the UTXO is present in the updated UTXO set, enforce that the UTXO 
-      remains spent in the new UTXO set. This means, we will never mark a UTXO 
-      as unspent again. UTXOs only become unspent again if the tx is dropped
-      which shall be affected by another routine.
-      */
-      // TODO: To fix this logic for dropped-tx, add a condition which uses the
-      // network's block-height to determine whether to set it back as unspend
-      updatedUtxos[utxo.id].spent = utxo.spent || updatedUtxos[utxo.id].spent
+      utxoIdsToRemove.push(utxo.id)
     }
   }
 
