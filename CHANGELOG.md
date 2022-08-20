@@ -1,5 +1,10 @@
 # edge-currency-plugins
 
+## v1.1.4 (2022-09-19)
+
+- Fix: Always delete a UTXO that's missing from the network
+- Add: Extra logging for failed makeSpend caused by altcoin-js
+
 ## v1.1.3 (2022-08-04)
 
 - Add support for adding an OP_RETURN output
@@ -7,7 +12,7 @@
 ## v1.1.2 (2022-07-26)
 
 - Fix: Upgrade edge-sync-client to include patch
- 
+
 ## v1.1.1 (2022-07-12)
 
 - Fix: Add feathercoin blockbook server
