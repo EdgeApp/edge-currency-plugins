@@ -4,7 +4,7 @@ import { gt, lt } from 'biggystring'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
 import bitcoinMessage from 'bitcoinjs-message'
-import { InsufficientFundsError } from 'edge-core-js/types'
+import { EdgeLog, InsufficientFundsError } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
@@ -187,6 +187,7 @@ export interface MakeTxArgs {
   currencyCode: string
   freshChangeAddress: string
   subtractFee?: boolean
+  log?: EdgeLog
 }
 
 export interface MakeTxTarget {
@@ -828,6 +829,7 @@ export function signMessageBase64(message: string, privateKey: string): string {
 }
 
 export function makeTx(args: MakeTxArgs): MakeTxReturn {
+  const { log } = args
   let sequence = 0xffffffff
   if (args.setRBF) {
     sequence -= 2
@@ -963,8 +965,13 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
   const sortedOutputs = sortOutputs(result.outputs)
 
   const psbt = new bitcoin.Psbt()
-  psbt.addInputs(sortedInputs)
-  psbt.addOutputs(sortedOutputs)
+  try {
+    psbt.addInputs(sortedInputs)
+    psbt.addOutputs(sortedOutputs)
+  } catch (error) {
+    log?.error(`Failed makeTx: ${String(error)}`)
+    throw error
+  }
 
   return {
     inputs: sortedInputs,
