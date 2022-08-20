@@ -396,7 +396,8 @@ export async function makeUtxoEngine(
         currencyCode: currencyInfo.currencyCode,
         setRBF,
         freshChangeAddress,
-        subtractFee
+        subtractFee,
+        log
       })
       if (tx.changeUsed) {
         ourReceiveAddresses.push(freshChangeAddress)
