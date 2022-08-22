@@ -920,7 +920,7 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
       })
     }
 
-    if (target.memo != null) {
+    if (target.memo != null && target.memo !== '') {
       const memoHex = Buffer.from(target.memo, 'utf8').toString('hex')
       // check if hex string is within 80 bytes
       const validatedMemo = validateMemo(memoHex)
