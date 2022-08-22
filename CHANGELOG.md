@@ -1,6 +1,10 @@
 # edge-currency-plugins
 
-## v1.1.4 (2022-09-19)
+## v1.1.5 (2022-08-22)
+
+- Fix: Broken max-spend caused by support for memos in OP_RETURN
+
+## v1.1.4 (2022-08-19)
 
 - Fix: Always delete a UTXO that's missing from the network
 - Add: Extra logging for failed makeSpend caused by altcoin-js
