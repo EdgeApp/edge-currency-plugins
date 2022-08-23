@@ -275,6 +275,8 @@ export async function makeUtxoEngine(
       options?: TxOptions
     ): Promise<EdgeTransaction> {
       const { spendTargets } = edgeSpendInfo
+      const { outputSort = 'bip69' } = edgeSpendInfo.otherParams ?? {}
+
       if (options?.CPFP == null && spendTargets.length < 1) {
         throw new Error('Need to provide Spend Targets')
       }
@@ -397,7 +399,8 @@ export async function makeUtxoEngine(
         setRBF,
         freshChangeAddress,
         subtractFee,
-        log
+        log,
+        outputSort
       })
       if (tx.changeUsed) {
         ourReceiveAddresses.push(freshChangeAddress)
