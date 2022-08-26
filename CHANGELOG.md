@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.1.6 (2022-08-26)
+
+- Fix: Broken processing of Taproot addresses in the inputs of receiving transactions
+
 ## v1.1.5 (2022-08-22)
 
 - Fix: Broken max-spend caused by support for memos in OP_RETURN

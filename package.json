@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-plugins",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Edge currency plugins to fetch and process wallet accounts, balances and transactions.",
   "repository": "https://github.com/EdgeApp/edge-currency-plugins",
   "license": "MIT",
