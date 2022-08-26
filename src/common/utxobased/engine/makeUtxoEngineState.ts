@@ -1,4 +1,5 @@
 import { add, sub } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeFreshAddress,
   EdgeIo,
@@ -1110,7 +1111,10 @@ const processTransactionResponse = (
     pluginInfo: { coinInfo }
   } = args
   const inputs = txResponse.vin.map(input => {
-    const scriptPubkey = validScriptPubkeyFromAddress({
+    const scriptPubkey = asMaybe(
+      raw => validScriptPubkeyFromAddress(raw),
+      'unknown'
+    )({
       address: input.addresses[0],
       coin: coinInfo.name
     })
@@ -1125,7 +1129,10 @@ const processTransactionResponse = (
   const outputs = txResponse.vout.map(output => {
     const scriptPubkey =
       output.hex ??
-      validScriptPubkeyFromAddress({
+      asMaybe(
+        raw => validScriptPubkeyFromAddress(raw),
+        'unknown'
+      )({
         address: output.addresses[0],
         coin: coinInfo.name
       })
