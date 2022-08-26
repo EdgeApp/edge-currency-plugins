@@ -1109,26 +1109,32 @@ const processTransactionResponse = (
     txResponse,
     pluginInfo: { coinInfo }
   } = args
-  const inputs = txResponse.vin.map(input => ({
-    txId: input.txid,
-    outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
-    n: input.n,
-    scriptPubkey: validScriptPubkeyFromAddress({
+  const inputs = txResponse.vin.map(input => {
+    const scriptPubkey = validScriptPubkeyFromAddress({
       address: input.addresses[0],
       coin: coinInfo.name
-    }),
-    amount: input.value
-  }))
-  const outputs = txResponse.vout.map(output => ({
-    n: output.n,
-    scriptPubkey:
+    })
+    return {
+      txId: input.txid,
+      outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
+      n: input.n,
+      scriptPubkey,
+      amount: input.value
+    }
+  })
+  const outputs = txResponse.vout.map(output => {
+    const scriptPubkey =
       output.hex ??
       validScriptPubkeyFromAddress({
         address: output.addresses[0],
         coin: coinInfo.name
-      }),
-    amount: output.value
-  }))
+      })
+    return {
+      n: output.n,
+      scriptPubkey,
+      amount: output.value
+    }
+  })
   return {
     txid: txResponse.txid,
     hex: txResponse.hex,
