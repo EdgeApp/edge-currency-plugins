@@ -1,4 +1,5 @@
 import { add, sub } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeFreshAddress,
   EdgeIo,
@@ -1109,6 +1110,42 @@ const processTransactionResponse = (
     txResponse,
     pluginInfo: { coinInfo }
   } = args
+  const inputs = txResponse.vin.map(vin => {
+    const scriptPubkey =
+      // Note: Blockbook has empirically not sent a hex value as the
+      // scriptPubkey for vins. If we discover this to be changed for some
+      // cases, we may want to use the `hex` field as an optimization.
+      asMaybe(
+        raw => validScriptPubkeyFromAddress(raw),
+        'unknown'
+      )({
+        address: vin.addresses[0],
+        coin: coinInfo.name
+      })
+    return {
+      txId: vin.txid,
+      outputIndex: vin.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
+      n: vin.n,
+      scriptPubkey,
+      amount: vin.value
+    }
+  })
+  const outputs = txResponse.vout.map(vout => {
+    const scriptPubkey =
+      vout.hex ??
+      asMaybe(
+        raw => validScriptPubkeyFromAddress(raw),
+        'unknown'
+      )({
+        address: vout.addresses[0],
+        coin: coinInfo.name
+      })
+    return {
+      n: vout.n,
+      scriptPubkey,
+      amount: vout.value
+    }
+  })
   return {
     txid: txResponse.txid,
     hex: txResponse.hex,
@@ -1116,26 +1153,8 @@ const processTransactionResponse = (
     blockHeight: txResponse.blockHeight > 0 ? txResponse.blockHeight : 0,
     date: txResponse.blockTime,
     fees: txResponse.fees,
-    inputs: txResponse.vin.map(input => ({
-      txId: input.txid,
-      outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
-      n: input.n,
-      scriptPubkey: validScriptPubkeyFromAddress({
-        address: input.addresses[0],
-        coin: coinInfo.name
-      }),
-      amount: input.value
-    })),
-    outputs: txResponse.vout.map(output => ({
-      n: output.n,
-      scriptPubkey:
-        output.hex ??
-        validScriptPubkeyFromAddress({
-          address: output.addresses[0],
-          coin: coinInfo.name
-        }),
-      amount: output.value
-    })),
+    inputs,
+    outputs,
     ourIns: [],
     ourOuts: [],
     ourAmount: '0'
