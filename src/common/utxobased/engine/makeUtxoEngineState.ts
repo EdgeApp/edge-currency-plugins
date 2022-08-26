@@ -1111,13 +1111,17 @@ const processTransactionResponse = (
     pluginInfo: { coinInfo }
   } = args
   const inputs = txResponse.vin.map(input => {
-    const scriptPubkey = asMaybe(
-      raw => validScriptPubkeyFromAddress(raw),
-      'unknown'
-    )({
-      address: input.addresses[0],
-      coin: coinInfo.name
-    })
+    const scriptPubkey =
+      // Note: Blockbook has empirically not sent a hex value as the
+      // scriptPubkey for vins. If we discover this to be changed for some
+      // cases, we may want to use the `hex` field as an optimization.
+      asMaybe(
+        raw => validScriptPubkeyFromAddress(raw),
+        'unknown'
+      )({
+        address: input.addresses[0],
+        coin: coinInfo.name
+      })
     return {
       txId: input.txid,
       outputIndex: input.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
