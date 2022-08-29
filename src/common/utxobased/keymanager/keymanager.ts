@@ -188,6 +188,7 @@ export interface MakeTxArgs {
   freshChangeAddress: string
   subtractFee?: boolean
   log?: EdgeLog
+  outputSort: 'bip69' | 'targets'
 }
 
 export interface MakeTxTarget {
@@ -829,7 +830,7 @@ export function signMessageBase64(message: string, privateKey: string): string {
 }
 
 export function makeTx(args: MakeTxArgs): MakeTxReturn {
-  const { log } = args
+  const { log, outputSort } = args
   let sequence = 0xffffffff
   if (args.setRBF) {
     sequence -= 2
@@ -962,7 +963,14 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
   }
 
   const sortedInputs = sortInputs(result.inputs)
-  const sortedOutputs = sortOutputs(result.outputs)
+  const sortedOutputs: utxopicker.Output[] = (() => {
+    switch (outputSort) {
+      case 'bip69':
+        return sortOutputs(result.outputs)
+      case 'targets':
+        return result.outputs
+    }
+  })()
 
   const psbt = new bitcoin.Psbt()
   try {

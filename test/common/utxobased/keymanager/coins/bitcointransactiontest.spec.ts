@@ -186,7 +186,8 @@ describe('bitcoin transaction creation and signing test', function () {
           vout: 0
         }
       ],
-      targets: []
+      targets: [],
+      outputSort: 'bip69'
     })
     const signedTx = await signTx({
       psbtBase64,
@@ -200,6 +201,128 @@ describe('bitcoin transaction creation and signing test', function () {
         '9f8596dd89b720a26b4d501210365db9da3f8a260078a7e8f8b708a1161468fb2323f' +
         'fda5ec16b261ec1056f455ffffffff0180380100000000001976a914ca0d36044e0dc' +
         '08a22724efa6f6a07b0ec4c79aa88ac00000000'
+    )
+  })
+
+  it('Create transaction three outputs using bip69 outputSort', async () => {
+    /*
+      This here is the rawtransaction as assembled below:
+      0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000
+      The test case deconstructs the value, script pubkey and locktime values to show some deserialized values.
+      This deserialization is not required in the usual form from the caller.
+      It is enough to pass the full previous rawtransaction.
+    */
+    const { psbtBase64 } = makeTx({
+      forceUseUtxo: [],
+      coin: 'bitcoin',
+      currencyCode: 'BTC',
+      setRBF: false,
+      freshChangeAddress: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [
+        {
+          id: '0',
+          scriptType: ScriptTypeEnum.p2pkh,
+          txid:
+            '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
+          // prev_tx only for non segwit inputs
+          scriptPubkey,
+          value: '80000',
+          blockHeight: 0,
+          spent: false,
+          script:
+            '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
+            '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
+            'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
+            '9e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec' +
+            '631e5e1e66009ce3710ceea5b1ad13ffffffff01' +
+            // value in satoshis (Int64LE) = 0x015f90 = 90000
+            '905f010000000000' +
+            // scriptPubkey length
+            '19' +
+            // scriptPubkey
+            scriptPubkey +
+            // locktime
+            '00000000',
+          vout: 0
+        }
+      ],
+      targets: [
+        { address: segwitAddress, value: 300 },
+        { address: segwitAddress, value: 200 },
+        { address: segwitAddress, value: 100 }
+      ],
+      outputSort: 'bip69'
+    })
+    const signedTx = await signTx({
+      psbtBase64,
+      privateKeys: [privateKey],
+      coin: 'bitcoin'
+    })
+    expect(signedTx.hex).to.equal(
+      '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006b4830450221009f9e6c80a05d3af0425c6169ad09ec48e65d1d96436a64c7724c40576cdf9fe502206227c33d4087b05ff0b5e1f0b447569a439cd9418b82abd80440d43ddde3427301210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffff0464000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d2c010000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d28360100000000001976a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac00000000'
+    )
+  })
+
+  it('Create transaction three outputs using targets outputSort', async () => {
+    /*
+      This here is the rawtransaction as assembled below:
+      0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc5660209e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec631e5e1e66009ce3710ceea5b1ad13ffffffff01905f0100000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88ac00000000
+      The test case deconstructs the value, script pubkey and locktime values to show some deserialized values.
+      This deserialization is not required in the usual form from the caller.
+      It is enough to pass the full previous rawtransaction.
+    */
+    const { psbtBase64 } = makeTx({
+      forceUseUtxo: [],
+      coin: 'bitcoin',
+      currencyCode: 'BTC',
+      setRBF: false,
+      freshChangeAddress: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [
+        {
+          id: '0',
+          scriptType: ScriptTypeEnum.p2pkh,
+          txid:
+            '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
+          // prev_tx only for non segwit inputs
+          scriptPubkey,
+          value: '80000',
+          blockHeight: 0,
+          spent: false,
+          script:
+            '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
+            '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
+            'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
+            '9e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec' +
+            '631e5e1e66009ce3710ceea5b1ad13ffffffff01' +
+            // value in satoshis (Int64LE) = 0x015f90 = 90000
+            '905f010000000000' +
+            // scriptPubkey length
+            '19' +
+            // scriptPubkey
+            scriptPubkey +
+            // locktime
+            '00000000',
+          vout: 0
+        }
+      ],
+      targets: [
+        { address: segwitAddress, value: 300 },
+        { address: segwitAddress, value: 200 },
+        { address: segwitAddress, value: 100 }
+      ],
+      outputSort: 'targets'
+    })
+    const signedTx = await signTx({
+      psbtBase64,
+      privateKeys: [privateKey],
+      coin: 'bitcoin'
+    })
+    expect(signedTx.hex).to.equal(
+      '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006a47304402203d4b4d8f7be9219914e822684ce72001367081101654aaeeaa734e6aa934972e022072154039d101819e8c78fc3a11132e5a46a3538546db68c8a7818128b02de88101210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffff042c010000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d64000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d28360100000000001976a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac00000000'
     )
   })
 
@@ -243,7 +366,8 @@ describe('bitcoin transaction creation and signing test', function () {
       targets: [
         { address: segwitAddress, value: 200 },
         { address: segwitAddress, value: 200 }
-      ]
+      ],
+      outputSort: 'bip69'
     })
 
     const { hex: rawtransaction } = await signTx({
@@ -278,7 +402,8 @@ describe('bitcoin transaction creation and signing test', function () {
       feeRate: 0,
       subtractFee: false,
       utxos: [],
-      targets: []
+      targets: [],
+      outputSort: 'bip69'
     })
 
     const { hex: segwitRawTransaction } = await signTx({
@@ -352,7 +477,8 @@ describe('bitcoin transaction creation and signing test', function () {
       feeRate: 0,
       subtractFee: false,
       utxos: [],
-      targets: [targetSegwit, targetWrappedSegwit]
+      targets: [targetSegwit, targetWrappedSegwit],
+      outputSort: 'bip69'
     })
 
     const { hex: rawtransaction } = await signTx({
@@ -403,7 +529,8 @@ describe('bitcoin transaction creation and signing test', function () {
       feeRate: 0,
       subtractFee: false,
       utxos: [utxo],
-      targets: Array(100).fill(target)
+      targets: Array(100).fill(target),
+      outputSort: 'bip69'
     })
 
     const signedTx = await signTx({
@@ -436,7 +563,8 @@ describe('bitcoin transaction creation and signing test', function () {
       feeRate: 0,
       subtractFee: false,
       utxos: utxos,
-      targets: Array(2).fill(target)
+      targets: Array(2).fill(target),
+      outputSort: 'bip69'
     })
 
     const { hex: hexTxMultiSigned } = await signTx({
