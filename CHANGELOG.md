@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.2.0 (2022-09-02)
+
+- Add: outputSort param for makeSpend to allow for sorting outputs
+
 ## v1.1.6 (2022-08-26)
 
 - Fix: Broken processing of Taproot addresses in the inputs of receiving transactions
