@@ -513,8 +513,8 @@ export async function makeUtxoEngine(
       // PBST inputs.
       const privateKeys = await (async () => {
         if (edgeSpendInfo.privateKeys != null) {
-          return edgeSpendInfo.privateKeys.map(wif =>
-            walletTools.getPrivateKeyFromWif(wif)
+          return edgeSpendInfo.privateKeys.map(
+            wif => walletTools.getPrivateKeyEncodingFromWif(wif).hex
           )
         } else {
           return await Promise.all(

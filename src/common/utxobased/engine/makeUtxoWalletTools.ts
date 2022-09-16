@@ -3,12 +3,13 @@ import { ScriptTemplate } from '../info/scriptTemplates/types'
 import { PublicKey } from '../keymanager/cleaners'
 import {
   addressToScriptPubkey,
-  privateKeyToPubkey,
+  PrivateKeyEncoding,
+  privateKeyEncodingToPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   scriptPubkeyToP2SH,
   signMessageBase64,
-  wifToPrivateKey,
+  wifToPrivateKeyEncoding,
   xprivToPrivateKey,
   xpubToPubkey
 } from '../keymanager/keymanager'
@@ -42,7 +43,7 @@ export interface UTXOPluginWalletTools {
 
   getPrivateKey: (args: GetPrivateKeyArgs) => string
 
-  getPrivateKeyFromWif: (wif: string) => string
+  getPrivateKeyEncodingFromWif: (wif: string) => PrivateKeyEncoding
 
   getScriptAddress: (args: GetScriptAddressArgs) => GetScriptAddressReturn
 
@@ -125,8 +126,8 @@ export function makeUtxoWalletTools(
     ): ScriptPubkeyReturn {
       const purposeType = currencyFormatToPurposeType(format)
       const scriptType = getScriptTypeFromPurposeType(purposeType)
-      const pubkey = privateKeyToPubkey(
-        wifToPrivateKey({
+      const pubkey = privateKeyEncodingToPubkey(
+        wifToPrivateKeyEncoding({
           wifKey,
           coin
         })
@@ -179,8 +180,8 @@ export function makeUtxoWalletTools(
       })
     },
 
-    getPrivateKeyFromWif(wifKey: string): string {
-      return wifToPrivateKey({
+    getPrivateKeyEncodingFromWif(wifKey: string): PrivateKeyEncoding {
+      return wifToPrivateKeyEncoding({
         wifKey,
         coin
       })

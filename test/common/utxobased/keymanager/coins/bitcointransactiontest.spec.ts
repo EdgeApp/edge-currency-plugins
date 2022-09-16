@@ -8,14 +8,14 @@ import {
   BIP43PurposeTypeEnum,
   makeTx,
   MakeTxTarget,
-  privateKeyToPubkey,
+  privateKeyEncodingToPubkey,
   privateKeyToWIF,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   ScriptTypeEnum,
   seedOrMnemonicToXPriv,
   signTx,
-  wifToPrivateKey,
+  wifToPrivateKeyEncoding,
   xprivToPrivateKey
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
 
@@ -106,24 +106,24 @@ describe('bitcoin transaction creation and signing test', function () {
 
   // key with control on the unspent output and used to sign the transaction
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
-  const privateKey = wifToPrivateKey({
+  const privateKeyEncoding = wifToPrivateKeyEncoding({
     wifKey,
     coin: 'bitcoin'
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
-    pubkey: privateKeyToPubkey(privateKey),
+    pubkey: privateKeyEncodingToPubkey(privateKeyEncoding),
     scriptType: ScriptTypeEnum.p2pkh
   }).scriptPubkey
   const segwitScriptPubkey: string = pubkeyToScriptPubkey({
-    pubkey: privateKeyToPubkey(privateKey),
+    pubkey: privateKeyEncodingToPubkey(privateKeyEncoding),
     scriptType: ScriptTypeEnum.p2wpkh
   }).scriptPubkey
   const wrappedSegwitScriptPubkey: string = pubkeyToScriptPubkey({
-    pubkey: privateKeyToPubkey(privateKey),
+    pubkey: privateKeyEncodingToPubkey(privateKeyEncoding),
     scriptType: ScriptTypeEnum.p2wpkhp2sh
   }).scriptPubkey
   const wrappedSegwitRedeemScript: string | undefined = pubkeyToScriptPubkey({
-    pubkey: privateKeyToPubkey(privateKey),
+    pubkey: privateKeyEncodingToPubkey(privateKeyEncoding),
     scriptType: ScriptTypeEnum.p2wpkhp2sh
   }).redeemScript
   const address: string = scriptPubkeyToAddress({
@@ -190,7 +190,7 @@ describe('bitcoin transaction creation and signing test', function () {
     })
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [privateKey],
+      privateKeys: [privateKeyEncoding.hex],
       coin: 'bitcoin'
     })
     expect(signedTx.hex).to.equal(
@@ -248,7 +248,7 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const { hex: rawtransaction } = await signTx({
       psbtBase64,
-      privateKeys: [privateKey],
+      privateKeys: [privateKeyEncoding.hex],
       coin: 'bitcoin'
     })
 
@@ -283,7 +283,11 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const { hex: segwitRawTransaction } = await signTx({
       psbtBase64,
-      privateKeys: [privateKey, privateKey, privateKey],
+      privateKeys: [
+        privateKeyEncoding.hex,
+        privateKeyEncoding.hex,
+        privateKeyEncoding.hex
+      ],
       coin: 'bitcoin'
     })
 
@@ -357,7 +361,11 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const { hex: rawtransaction } = await signTx({
       psbtBase64,
-      privateKeys: [privateKey, privateKey, privateKey],
+      privateKeys: [
+        privateKeyEncoding.hex,
+        privateKeyEncoding.hex,
+        privateKeyEncoding.hex
+      ],
       coin: 'bitcoin'
     })
     expect(rawtransaction).to.equal(
@@ -408,7 +416,7 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [privateKey],
+      privateKeys: [privateKeyEncoding.hex],
       coin: 'bitcoin'
     })
 
@@ -441,7 +449,7 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const { hex: hexTxMultiSigned } = await signTx({
       psbtBase64: psbtBase64Multi,
-      privateKeys: Array(nOutputs).fill(privateKey),
+      privateKeys: Array(nOutputs).fill(privateKeyEncoding),
       coin: 'bitcoin'
     })
 

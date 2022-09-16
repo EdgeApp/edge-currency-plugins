@@ -16,7 +16,7 @@ import {
   toNewFormat,
   verifyAddress,
   VerifyAddressEnum,
-  wifToPrivateKey,
+  wifToPrivateKeyEncoding,
   xprivToXPub
 } from '../keymanager/keymanager'
 
@@ -221,7 +221,7 @@ export const parsePathname = (args: {
 
   // Check if the pathname type is a wif
   try {
-    wifToPrivateKey({
+    wifToPrivateKeyEncoding({
       wifKey: args.pathname,
       coin: args.coin
     })
