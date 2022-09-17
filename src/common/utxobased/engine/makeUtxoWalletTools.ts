@@ -3,6 +3,7 @@ import { ScriptTemplate } from '../info/scriptTemplates/types'
 import { PublicKey } from '../keymanager/cleaners'
 import {
   addressToScriptPubkey,
+  BIP43PurposeTypeEnum,
   PrivateKeyEncoding,
   privateKeyEncodingToPubkey,
   pubkeyToScriptPubkey,
@@ -126,12 +127,24 @@ export function makeUtxoWalletTools(
     ): ScriptPubkeyReturn {
       const purposeType = currencyFormatToPurposeType(format)
       const scriptType = getScriptTypeFromPurposeType(purposeType)
-      const pubkey = privateKeyEncodingToPubkey(
-        wifToPrivateKeyEncoding({
-          wifKey,
-          coin
-        })
-      )
+      const privateKeyEncoding = wifToPrivateKeyEncoding({
+        wifKey,
+        coin
+      })
+
+      // Restrict only compressed keys for segwit pubkeys as per BIP143
+      // (see https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki#restrictions-on-public-key-type)
+      if (
+        [
+          BIP43PurposeTypeEnum.Segwit,
+          BIP43PurposeTypeEnum.WrappedSegwit
+        ].includes(purposeType) &&
+        !privateKeyEncoding.compressed
+      ) {
+        privateKeyEncoding.compressed = true
+      }
+
+      const pubkey = privateKeyEncodingToPubkey(privateKeyEncoding)
       return pubkeyToScriptPubkey({
         pubkey: pubkey,
         scriptType
