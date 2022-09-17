@@ -207,7 +207,7 @@ interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
 }
 
 export interface SignTxArgs {
-  privateKeys: string[]
+  privateKeyEncodings: PrivateKeyEncoding[]
   psbtBase64: string
   coin: string
 }
@@ -1003,13 +1003,13 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
   const coin = getCoinFromString(args.coin)
 
   for (let i = 0; i < psbt.inputCount; i++) {
-    const privateKey = Buffer.from(
-      args.privateKeys[i] ?? args.privateKeys[args.privateKeys.length - 1],
-      'hex'
-    )
+    const privateKeyEncoding =
+      args.privateKeyEncodings[i] ??
+      args.privateKeyEncodings[args.privateKeyEncodings.length - 1]
+    const { hex, compressed } = privateKeyEncoding
     psbt.signInput(
       i,
-      bitcoin.ECPair.fromPrivateKey(privateKey),
+      bitcoin.ECPair.fromPrivateKey(Buffer.from(hex, 'hex'), { compressed }),
       bitcoin.Psbt.DEFAULT_SIGHASHES,
       coin.sighashFunction
     )

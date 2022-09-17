@@ -59,7 +59,7 @@ describe('groestlcoin transaction creation and signing test', function () {
 
     const { hex: hexTxSigned } = await signTx({
       psbtBase64,
-      privateKeys: [privateKeyEncoding.hex],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'groestlcoin'
     })
     expect(hexTxSigned).to.equal(

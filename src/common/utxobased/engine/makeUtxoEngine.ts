@@ -32,7 +32,12 @@ import {
   asPrivateKey,
   NumbWalletInfo
 } from '../keymanager/cleaners'
-import { makeTx, MakeTxTarget, signTx } from '../keymanager/keymanager'
+import {
+  makeTx,
+  MakeTxTarget,
+  PrivateKeyEncoding,
+  signTx
+} from '../keymanager/keymanager'
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
@@ -511,10 +516,12 @@ export async function makeUtxoEngine(
 
       // Use the privateKeys (WIFs) from spendInfo, otherwise get them from the
       // PBST inputs.
-      const privateKeys = await (async () => {
+      const privateKeyEncodings = await (async (): Promise<
+        PrivateKeyEncoding[]
+      > => {
         if (edgeSpendInfo.privateKeys != null) {
-          return edgeSpendInfo.privateKeys.map(
-            wif => walletTools.getPrivateKeyEncodingFromWif(wif).hex
+          return edgeSpendInfo.privateKeys.map(wif =>
+            walletTools.getPrivateKeyEncodingFromWif(wif)
           )
         } else {
           return await Promise.all(
@@ -530,10 +537,14 @@ export async function makeUtxoEngine(
               if (address?.path == null)
                 throw new Error('Invalid script pubkey')
 
-              return walletTools.getPrivateKey({
+              const privateKey = walletTools.getPrivateKey({
                 path: address.path,
                 xprivKeys
               })
+              return {
+                hex: privateKey,
+                compressed: true // We shouldn't ever be storing/deriving uncompressed keys
+              }
             })
           )
         }
@@ -541,7 +552,7 @@ export async function makeUtxoEngine(
       const signedTx = await signTx({
         psbtBase64: psbt.base64,
         coin: coinInfo.name,
-        privateKeys
+        privateKeyEncodings: privateKeyEncodings
       })
       transaction.txid = signedTx.id
       transaction.signedTx = signedTx.hex

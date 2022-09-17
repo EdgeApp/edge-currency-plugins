@@ -190,7 +190,7 @@ describe('bitcoin transaction creation and signing test', function () {
     })
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [privateKeyEncoding.hex],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'bitcoin'
     })
     expect(signedTx.hex).to.equal(
@@ -248,7 +248,7 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const { hex: rawtransaction } = await signTx({
       psbtBase64,
-      privateKeys: [privateKeyEncoding.hex],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'bitcoin'
     })
 
@@ -283,10 +283,10 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const { hex: segwitRawTransaction } = await signTx({
       psbtBase64,
-      privateKeys: [
-        privateKeyEncoding.hex,
-        privateKeyEncoding.hex,
-        privateKeyEncoding.hex
+      privateKeyEncodings: [
+        privateKeyEncoding,
+        privateKeyEncoding,
+        privateKeyEncoding
       ],
       coin: 'bitcoin'
     })
@@ -361,10 +361,10 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const { hex: rawtransaction } = await signTx({
       psbtBase64,
-      privateKeys: [
-        privateKeyEncoding.hex,
-        privateKeyEncoding.hex,
-        privateKeyEncoding.hex
+      privateKeyEncodings: [
+        privateKeyEncoding,
+        privateKeyEncoding,
+        privateKeyEncoding
       ],
       coin: 'bitcoin'
     })
@@ -416,7 +416,7 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [privateKeyEncoding.hex],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'bitcoin'
     })
 
@@ -449,7 +449,7 @@ describe('bitcoin transaction creation and signing test', function () {
 
     const { hex: hexTxMultiSigned } = await signTx({
       psbtBase64: psbtBase64Multi,
-      privateKeys: Array(nOutputs).fill(privateKeyEncoding),
+      privateKeyEncodings: Array(nOutputs).fill(privateKeyEncoding),
       coin: 'bitcoin'
     })
 

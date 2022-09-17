@@ -17,12 +17,12 @@ import {
 describe('bitcoincash transaction creation and signing test', () => {
   // key with control on the unspent output and used to sign the transaction
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
-  const keyPair = wifToPrivateKeyEncoding({
+  const privateKeyEncoding = wifToPrivateKeyEncoding({
     wifKey,
     coin: 'bitcoin'
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
-    pubkey: privateKeyEncodingToPubkey(keyPair),
+    pubkey: privateKeyEncodingToPubkey(privateKeyEncoding),
     scriptType: ScriptTypeEnum.p2pkh
   }).scriptPubkey
   const address: string = scriptPubkeyToAddress({
@@ -77,7 +77,7 @@ describe('bitcoincash transaction creation and signing test', () => {
     })
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [keyPair.hex],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'bitcoincash'
     })
     expect(signedTx.hex).to.equal(
@@ -156,7 +156,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
     })
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [privateKeyEncoding.hex],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'bitcoincash'
     })
     expect(signedTx.hex).to.equal(
