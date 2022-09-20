@@ -5,24 +5,24 @@ import { scriptTemplates } from '../../../../../src/common/utxobased/info/script
 import {
   AddressTypeEnum,
   makeTx,
-  privateKeyToPubkey,
+  privateKeyEncodingToPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   scriptPubkeyToP2SH,
   ScriptTypeEnum,
   signTx,
-  wifToPrivateKey
+  wifToPrivateKeyEncoding
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
 
 describe('bitcoincash transaction creation and signing test', () => {
   // key with control on the unspent output and used to sign the transaction
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
-  const privateKey = wifToPrivateKey({
+  const privateKeyEncoding = wifToPrivateKeyEncoding({
     wifKey,
     coin: 'bitcoin'
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
-    pubkey: privateKeyToPubkey(privateKey),
+    pubkey: privateKeyEncodingToPubkey(privateKeyEncoding),
     scriptType: ScriptTypeEnum.p2pkh
   }).scriptPubkey
   const address: string = scriptPubkeyToAddress({
@@ -78,7 +78,7 @@ describe('bitcoincash transaction creation and signing test', () => {
     })
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [privateKey],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'bitcoincash'
     })
     expect(signedTx.hex).to.equal(
@@ -92,17 +92,17 @@ describe('bitcoincash replay protection transaction creation and signing test', 
 
   // key with control on the unspent output and used to sign the transaction
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
-  const privateKey = wifToPrivateKey({
+  const privateKeyEncoding = wifToPrivateKeyEncoding({
     wifKey,
     coin: 'bitcoin'
   })
   const scriptPubkey: string = pubkeyToScriptPubkey({
-    pubkey: privateKeyToPubkey(privateKey),
+    pubkey: privateKeyEncodingToPubkey(privateKeyEncoding),
     scriptType: ScriptTypeEnum.p2pkh
   }).scriptPubkey
   const info = scriptPubkeyToP2SH({
     scriptPubkey: scriptTemplates.replayProtection(
-      privateKeyToPubkey(privateKey)
+      privateKeyEncodingToPubkey(privateKeyEncoding)
     )
   })
   const scriptPubkeyP2SH = info.scriptPubkey
@@ -158,7 +158,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
     })
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [privateKey],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'bitcoincash'
     })
     expect(signedTx.hex).to.equal(

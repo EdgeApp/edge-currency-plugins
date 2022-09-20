@@ -3,12 +3,14 @@ import { ScriptTemplate } from '../info/scriptTemplates/types'
 import { PublicKey } from '../keymanager/cleaners'
 import {
   addressToScriptPubkey,
-  privateKeyToPubkey,
+  BIP43PurposeTypeEnum,
+  PrivateKeyEncoding,
+  privateKeyEncodingToPubkey,
   pubkeyToScriptPubkey,
   scriptPubkeyToAddress,
   scriptPubkeyToP2SH,
   signMessageBase64,
-  wifToPrivateKey,
+  wifToPrivateKeyEncoding,
   xprivToPrivateKey,
   xpubToPubkey
 } from '../keymanager/keymanager'
@@ -42,7 +44,7 @@ export interface UTXOPluginWalletTools {
 
   getPrivateKey: (args: GetPrivateKeyArgs) => string
 
-  getPrivateKeyFromWif: (wif: string) => string
+  getPrivateKeyEncodingFromWif: (wif: string) => PrivateKeyEncoding
 
   getScriptAddress: (args: GetScriptAddressArgs) => GetScriptAddressReturn
 
@@ -125,12 +127,24 @@ export function makeUtxoWalletTools(
     ): ScriptPubkeyReturn {
       const purposeType = currencyFormatToPurposeType(format)
       const scriptType = getScriptTypeFromPurposeType(purposeType)
-      const pubkey = privateKeyToPubkey(
-        wifToPrivateKey({
-          wifKey,
-          coin
-        })
-      )
+      const privateKeyEncoding = wifToPrivateKeyEncoding({
+        wifKey,
+        coin
+      })
+
+      // Restrict only compressed keys for segwit pubkeys as per BIP143
+      // (see https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki#restrictions-on-public-key-type)
+      if (
+        [
+          BIP43PurposeTypeEnum.Segwit,
+          BIP43PurposeTypeEnum.WrappedSegwit
+        ].includes(purposeType) &&
+        !privateKeyEncoding.compressed
+      ) {
+        privateKeyEncoding.compressed = true
+      }
+
+      const pubkey = privateKeyEncodingToPubkey(privateKeyEncoding)
       return pubkeyToScriptPubkey({
         pubkey: pubkey,
         scriptType
@@ -179,8 +193,8 @@ export function makeUtxoWalletTools(
       })
     },
 
-    getPrivateKeyFromWif(wifKey: string): string {
-      return wifToPrivateKey({
+    getPrivateKeyEncodingFromWif(wifKey: string): PrivateKeyEncoding {
+      return wifToPrivateKeyEncoding({
         wifKey,
         coin
       })

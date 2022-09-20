@@ -77,8 +77,8 @@ describe('wallet tools wif test', () => {
     }
   })
   it('can get private key from wif', () => {
-    const privateKey = walletTools.getPrivateKeyFromWif(wifKey)
-    expect(privateKey).to.equal(
+    const privateKeyEncoding = walletTools.getPrivateKeyEncodingFromWif(wifKey)
+    expect(privateKeyEncoding.hex).to.equal(
       'a99962febe363fa89fdef8aac28a19194670465548e732d3f866df3c5fc49248'
     )
   })

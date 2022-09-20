@@ -3,11 +3,11 @@ import { describe, it } from 'mocha'
 
 import {
   makeTx,
-  privateKeyToPubkey,
+  privateKeyEncodingToPubkey,
   pubkeyToScriptPubkey,
   ScriptTypeEnum,
   signTx,
-  wifToPrivateKey
+  wifToPrivateKeyEncoding
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
 
 describe('groestlcoin transaction creation and signing test', function () {
@@ -15,12 +15,12 @@ describe('groestlcoin transaction creation and signing test', function () {
 
   // key with control on the unspent output and used to sign the transaction
   const wifKey = 'KyeNA49yfj4JDoMEWtpQiosP6eig55att3cTv6NBXCeFNsHoNnyM'
-  const privateKey = wifToPrivateKey({
+  const privateKeyEncoding = wifToPrivateKeyEncoding({
     wifKey,
     coin: 'groestlcoin'
   })
   const segwitScriptPubkey: string = pubkeyToScriptPubkey({
-    pubkey: privateKeyToPubkey(privateKey),
+    pubkey: privateKeyEncodingToPubkey(privateKeyEncoding),
     scriptType: ScriptTypeEnum.p2wpkh
   }).scriptPubkey
 
@@ -60,7 +60,7 @@ describe('groestlcoin transaction creation and signing test', function () {
 
     const { hex: hexTxSigned } = await signTx({
       psbtBase64,
-      privateKeys: [privateKey],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'groestlcoin'
     })
     expect(hexTxSigned).to.equal(

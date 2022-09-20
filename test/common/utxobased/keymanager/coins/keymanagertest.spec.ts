@@ -9,7 +9,7 @@ import {
   scriptPubkeyToAddress,
   seedOrMnemonicToXPriv,
   signMessageBase64,
-  wifToPrivateKey,
+  wifToPrivateKeyEncoding,
   xprivToPrivateKey,
   xprivToXPub,
   xpubToPubkey
@@ -74,20 +74,20 @@ describe('altcoin test fixtures', () => {
     if (typeof f.wifToPrivateKeyTests !== 'undefined') {
       f.wifToPrivateKeyTests.forEach(j => {
         it(`${f.name} WIF to private key to WIF`, () => {
-          const privateKey = wifToPrivateKey({
+          const privateKeyEncoding = wifToPrivateKeyEncoding({
             wifKey: j.wifKey,
             coin: f.name
           })
           const wifKey = privateKeyToWIF({
-            privateKey: privateKey,
+            privateKey: privateKeyEncoding.hex,
             coin: f.name
           })
-          const privateKeyRoundTrip = wifToPrivateKey({
+          const privateKeyEncodingRoundTrip = wifToPrivateKeyEncoding({
             wifKey,
             coin: f.name
           })
           const wifKeyRoundTrip = privateKeyToWIF({
-            privateKey: privateKeyRoundTrip,
+            privateKey: privateKeyEncodingRoundTrip.hex,
             coin: f.name
           })
           expect(wifKey).to.be.equal(wifKeyRoundTrip)

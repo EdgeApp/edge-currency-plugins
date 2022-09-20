@@ -152,9 +152,14 @@ interface ScriptHashToScriptPubkeyArgs {
   coin: string
 }
 
-export interface WIFToPrivateKeyArgs {
+export interface WIFToPrivateKeyEncodingArgs {
   wifKey: string
   coin: string
+}
+
+export interface PrivateKeyEncoding {
+  hex: string
+  compressed: boolean
 }
 
 export interface PrivateKeyToWIFArgs {
@@ -203,7 +208,7 @@ interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
 }
 
 export interface SignTxArgs {
-  privateKeys: string[]
+  privateKeyEncodings: PrivateKeyEncoding[]
   psbtBase64: string
   coin: string
 }
@@ -785,38 +790,48 @@ export function privateKeyToWIF(args: PrivateKeyToWIFArgs): string {
   }).toWIF(coinClass.wifEncodeFunc)
 }
 
-const wifToPrivateKeyInternal = (
+const wifToPrivateKeyEncodingInternal = (
   prefixIndex: number,
-  args: WIFToPrivateKeyArgs
-): string | undefined => {
+  args: WIFToPrivateKeyEncodingArgs
+): PrivateKeyEncoding | undefined => {
   const coin = getCoinFromString(args.coin)
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
     coinString: args.coin,
     forWIF: true,
     prefixIndex
   })
-  return bitcoin.ECPair.fromWIF(
+  const ecPair = bitcoin.ECPair.fromWIF(
     args.wifKey,
     network,
     coin.bs58DecodeFunc
-  ).privateKey?.toString('hex')
+  )
+  if (ecPair.privateKey == null) return
+  return {
+    hex: ecPair.privateKey.toString('hex'),
+    compressed: ecPair.compressed
+  }
 }
-export const wifToPrivateKey = (args: WIFToPrivateKeyArgs): string => {
-  const privateKey = filterCoinPrefixes(
+export const wifToPrivateKeyEncoding = (
+  args: WIFToPrivateKeyEncodingArgs
+): PrivateKeyEncoding => {
+  const privateKeyEncoding = filterCoinPrefixes(
     args.coin,
-    prefixIndex => wifToPrivateKeyInternal(prefixIndex, args),
+    prefixIndex => wifToPrivateKeyEncodingInternal(prefixIndex, args),
     ['Invalid network version']
   )
-  if (privateKey == null) {
+  if (privateKeyEncoding == null) {
     throw new Error('Failed to convert WIF key to private key')
   }
-  return privateKey
+  return privateKeyEncoding
 }
 
-export function privateKeyToPubkey(privateKey: string): string {
-  return bitcoin.ECPair.fromPrivateKey(
-    Buffer.from(privateKey, 'hex')
-  ).publicKey.toString('hex')
+export function privateKeyEncodingToPubkey(
+  privateKeyEncoding: PrivateKeyEncoding
+): string {
+  const { hex, compressed } = privateKeyEncoding
+  return bitcoin.ECPair.fromPrivateKey(Buffer.from(hex, 'hex'), {
+    compressed
+  }).publicKey.toString('hex')
 }
 
 export function signMessageBase64(message: string, privateKey: string): string {
@@ -996,13 +1011,13 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
   const coin = getCoinFromString(args.coin)
 
   for (let i = 0; i < psbt.inputCount; i++) {
-    const privateKey = Buffer.from(
-      args.privateKeys[i] ?? args.privateKeys[args.privateKeys.length - 1],
-      'hex'
-    )
+    const privateKeyEncoding =
+      args.privateKeyEncodings[i] ??
+      args.privateKeyEncodings[args.privateKeyEncodings.length - 1]
+    const { hex, compressed } = privateKeyEncoding
     psbt.signInput(
       i,
-      bitcoin.ECPair.fromPrivateKey(privateKey),
+      bitcoin.ECPair.fromPrivateKey(Buffer.from(hex, 'hex'), { compressed }),
       bitcoin.Psbt.DEFAULT_SIGHASHES,
       coin.sighashFunction
     )
