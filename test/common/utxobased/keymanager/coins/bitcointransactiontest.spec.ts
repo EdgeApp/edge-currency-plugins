@@ -257,7 +257,7 @@ describe('bitcoin transaction creation and signing test', function () {
     })
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [privateKey],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'bitcoin'
     })
     expect(signedTx.hex).to.equal(
@@ -318,7 +318,7 @@ describe('bitcoin transaction creation and signing test', function () {
     })
     const signedTx = await signTx({
       psbtBase64,
-      privateKeys: [privateKey],
+      privateKeyEncodings: [privateKeyEncoding],
       coin: 'bitcoin'
     })
     expect(signedTx.hex).to.equal(
