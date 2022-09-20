@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.2.1 (2022-09-19)
+
+- Fix: Correctly import uncompressed WIFs
+
 ## v1.2.0 (2022-09-02)
 
 - Add: outputSort param for makeSpend to allow for sorting outputs
