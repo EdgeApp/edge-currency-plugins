@@ -6,6 +6,7 @@ import {
   asObject,
   asOptional,
   asString,
+  asUnknown,
   Cleaner,
   uncleaner
 } from 'cleaners'
@@ -210,6 +211,17 @@ export const transactionMessage = (
 })
 export type TransactionResponse = BlockbookTransaction
 export const asTransactionResponse = asBlockbookTransaction
+
+/**
+ * Get Transaction Specific
+ */
+export const transactionMessageSpecific = (
+  hash: string
+): BlockbookTask<unknown> => ({
+  method: 'getTransactionSpecific',
+  params: { txid: hash },
+  cleaner: asBlockbookResponse(asUnknown)
+})
 
 /**
  * Send Transaction
