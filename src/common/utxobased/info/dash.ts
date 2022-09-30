@@ -1,6 +1,8 @@
+import { asBoolean, asMaybe, asObject, asOptional } from 'cleaners'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { IProcessorTransaction } from '../db/types'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'dash',
@@ -52,6 +54,21 @@ const engineInfo: EngineInfo = {
     standardFeeHigh: '200',
     standardFeeLowAmount: '20000000',
     standardFeeHighAmount: '981000000'
+  },
+  txSpecificHandling: (
+    tx: IProcessorTransaction,
+    txSpecific: unknown
+  ): IProcessorTransaction => {
+    const asDashTransactionSpecific = asObject({
+      instantlock: asOptional(asBoolean)
+    })
+    const cleanedTxSpecific = asMaybe(asDashTransactionSpecific)(txSpecific)
+
+    if (cleanedTxSpecific?.instantlock === true) {
+      tx.confirmations = 'confirmed'
+    }
+
+    return tx
   }
 }
 

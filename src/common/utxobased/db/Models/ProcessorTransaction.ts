@@ -117,6 +117,7 @@ export const toEdgeTransaction = async (
     currencyCode: currencyInfo.currencyCode,
     txid: tx.txid,
     blockHeight: tx.blockHeight,
+    confirmations: tx.confirmations,
     date: tx.date,
     nativeAmount: tx.ourAmount,
     networkFee: tx.fees,

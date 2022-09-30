@@ -46,6 +46,7 @@ export interface IProcessorTransaction {
   txid: string
   hex: string
   blockHeight: number
+  confirmations?: 'confirmed' | 'unconfirmed' | 'dropped' | number
   date: number
   fees: string
   inputs: ITransactionInput[]
