@@ -678,7 +678,7 @@ export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<WsTask<any> | undefined | boolean> => {
-  const { taskCache, uri, serverStates } = args
+  const { pluginInfo, taskCache, uri, serverStates } = args
 
   const {
     addressSubscribeCache,
@@ -689,6 +689,13 @@ export const pickNextTask = async (
     updateTransactionCache,
     updateTransactionSpecificCache
   } = taskCache
+
+  /**
+   * Some currencies require an additional blockbook payload 'getTransactionSpecific' in order
+   * to provide all relevant transaction data. Since this is currency-specific, we can limit
+   * the useage to currencies that require it.
+   **/
+  const needsTxSpecific = pluginInfo.engineInfo.txSpecificHandling != null
 
   const serverState = serverStates.getServerState(uri)
   if (serverState == null) return
@@ -848,7 +855,11 @@ export const pickNextTask = async (
         hasProcessedAtLeastOnce = true
         state.processing = true
         removeItem(updateTransactionCache, txId)
-        const updateTransactionTask = updateTransactions({ ...args, txId })
+        const updateTransactionTask = updateTransactions({
+          ...args,
+          txId,
+          needsTxSpecific
+        })
         // once resolved, add the txid to the server cache
         updateTransactionTask.deferred.promise
           .then(() => {
@@ -877,7 +888,8 @@ export const pickNextTask = async (
       const wsTask = await processAddressTransactions({
         ...args,
         addressTransactionState: state,
-        address
+        address,
+        needsTxSpecific
       })
       wsTask.deferred.promise
         .then(() => {
@@ -938,10 +950,23 @@ const updateTransactionsSpecific = (
   }
 }
 
+interface UpdateTransactionsArgs extends CommonArgs {
+  txId: string
+  needsTxSpecific: boolean
+}
+
 const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<TransactionResponse> => {
-  const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
+  const {
+    emitter,
+    walletTools,
+    txId,
+    needsTxSpecific,
+    pluginInfo,
+    processor,
+    taskCache
+  } = args
   const deferred = new Deferred<TransactionResponse>()
   deferred.promise
     .then(async (txResponse: TransactionResponse) => {
@@ -976,9 +1001,11 @@ const updateTransactions = (
         tx: processedTx
       })
 
-      // Add task to grab transactionSpecific payload
-      taskCache.updateTransactionSpecificCache[txId] = {
-        processing: false
+      if (needsTxSpecific) {
+        // Add task to grab transactionSpecific payload
+        taskCache.updateTransactionSpecificCache[txId] = {
+          processing: false
+        }
       }
     })
     .catch(err => {
@@ -1088,6 +1115,7 @@ interface ProcessAddressTxsArgs extends CommonArgs {
   address: string
   addressTransactionState: AddressTransactionCache[string]
   uri: string
+  needsTxSpecific: boolean
 }
 
 const processAddressTransactions = async (
@@ -1097,6 +1125,7 @@ const processAddressTransactions = async (
     address,
     addressTransactionState,
     emitter,
+    needsTxSpecific,
     pluginInfo,
     processor,
     walletTools,
@@ -1144,9 +1173,11 @@ const processAddressTransactions = async (
           tx: processedTx
         })
 
-        // Add task to grab transactionSpecific payload
-        taskCache.updateTransactionSpecificCache[tx.txid] = {
-          processing: false
+        if (needsTxSpecific) {
+          // Add task to grab transactionSpecific payload
+          taskCache.updateTransactionSpecificCache[tx.txid] = {
+            processing: false
+          }
         }
       }
 
