@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.2.2 (2022-10-14)
+
+- Dash: Add InstantSend detection
+
 ## v1.2.1 (2022-09-19)
 
 - Fix: Correctly import uncompressed WIFs
