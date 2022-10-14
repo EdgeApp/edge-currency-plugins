@@ -40,6 +40,7 @@ import {
   BlockbookAccountUtxo,
   SubscribeAddressResponse,
   transactionMessage,
+  transactionMessageSpecific,
   TransactionResponse
 } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
@@ -108,7 +109,8 @@ export function makeUtxoEngineState(
     addressUtxoCache: {},
     rawUtxoCache: {},
     processorUtxoCache: {},
-    updateTransactionCache: {}
+    updateTransactionCache: {},
+    updateTransactionSpecificCache: {}
   }
 
   const clearTaskCache = (): void => {
@@ -130,6 +132,9 @@ export function makeUtxoEngineState(
     }
     for (const key of Object.keys(taskCache.updateTransactionCache)) {
       removeItem(taskCache.updateTransactionCache, key)
+    }
+    for (const key of Object.keys(taskCache.updateTransactionSpecificCache)) {
+      removeItem(taskCache.updateTransactionSpecificCache, key)
     }
   }
 
@@ -492,9 +497,13 @@ interface TaskCache {
   readonly processorUtxoCache: ProcessorUtxoCache
   readonly addressTransactionCache: AddressTransactionCache
   readonly updateTransactionCache: UpdateTransactionCache
+  readonly updateTransactionSpecificCache: UpdateTransactionSpecificCache
 }
 
 interface UpdateTransactionCache {
+  [key: string]: { processing: boolean }
+}
+interface UpdateTransactionSpecificCache {
   [key: string]: { processing: boolean }
 }
 interface AddressSubscribeCache {
@@ -669,7 +678,7 @@ export const pickNextTask = async (
   args: NextTaskArgs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<WsTask<any> | undefined | boolean> => {
-  const { taskCache, uri, serverStates } = args
+  const { pluginInfo, taskCache, uri, serverStates } = args
 
   const {
     addressSubscribeCache,
@@ -677,8 +686,16 @@ export const pickNextTask = async (
     rawUtxoCache,
     processorUtxoCache,
     addressTransactionCache,
-    updateTransactionCache
+    updateTransactionCache,
+    updateTransactionSpecificCache
   } = taskCache
+
+  /**
+   * Some currencies require an additional blockbook payload 'getTransactionSpecific' in order
+   * to provide all relevant transaction data. Since this is currency-specific, we can limit
+   * the useage to currencies that require it.
+   **/
+  const needsTxSpecific = pluginInfo.engineInfo.txSpecificHandling != null
 
   const serverState = serverStates.getServerState(uri)
   if (serverState == null) return
@@ -800,6 +817,37 @@ export const pickNextTask = async (
   }
 
   // filled when transactions potentially changed (e.g. through new block notification)
+  if (Object.keys(updateTransactionSpecificCache).length > 0) {
+    let hasProcessedAtLeastOnce = false
+    for (const [txId, state] of Object.entries(
+      updateTransactionSpecificCache
+    )) {
+      if (!state.processing && serverStates.serverCanGetTx(uri, txId)) {
+        hasProcessedAtLeastOnce = true
+        state.processing = true
+        removeItem(updateTransactionSpecificCache, txId)
+        const updateTransactionSpecificTask = updateTransactionsSpecific({
+          ...args,
+          txId
+        })
+        // once resolved, add the txid to the server cache
+        updateTransactionSpecificTask.deferred.promise
+          .then(() => {
+            serverState.txids.add(txId)
+          })
+          .catch(err => {
+            updateTransactionSpecificCache[txId] = state
+            console.error(err)
+            args.log('error in updateTransactionSpecificCache:', err)
+          })
+        return updateTransactionSpecificTask
+      }
+    }
+    // This condition prevents infinite loops
+    if (hasProcessedAtLeastOnce) return true
+  }
+
+  // filled when transactions potentially changed (e.g. through new block notification)
   if (Object.keys(updateTransactionCache).length > 0) {
     let hasProcessedAtLeastOnce = false
     for (const [txId, state] of Object.entries(updateTransactionCache)) {
@@ -807,7 +855,11 @@ export const pickNextTask = async (
         hasProcessedAtLeastOnce = true
         state.processing = true
         removeItem(updateTransactionCache, txId)
-        const updateTransactionTask = updateTransactions({ ...args, txId })
+        const updateTransactionTask = updateTransactions({
+          ...args,
+          txId,
+          needsTxSpecific
+        })
         // once resolved, add the txid to the server cache
         updateTransactionTask.deferred.promise
           .then(() => {
@@ -836,7 +888,8 @@ export const pickNextTask = async (
       const wsTask = await processAddressTransactions({
         ...args,
         addressTransactionState: state,
-        address
+        address,
+        needsTxSpecific
       })
       wsTask.deferred.promise
         .then(() => {
@@ -852,14 +905,68 @@ export const pickNextTask = async (
   }
 }
 
+interface UpdateTransactionsSpecificArgs extends CommonArgs {
+  txId: string
+}
+
+const updateTransactionsSpecific = (
+  args: UpdateTransactionsSpecificArgs
+): WsTask<unknown> => {
+  const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
+  const deferred = new Deferred<unknown>()
+  deferred.promise
+    .then(async (txResponse: unknown) => {
+      // Grab tx to update it
+      const txs = await processor.fetchTransactions({ txId })
+      let tx = txs[0]
+      if (tx == null) return
+
+      if (pluginInfo.engineInfo.txSpecificHandling != null) {
+        // Do coin-specific things to it
+        tx = pluginInfo.engineInfo.txSpecificHandling(tx, txResponse)
+      }
+
+      // Process and save new tx
+      const processedTx = await processor.saveTransaction({
+        tx
+      })
+
+      await transactionChanged({
+        emitter,
+        walletTools,
+        processor,
+        pluginInfo,
+        tx: processedTx
+      })
+    })
+    .catch(err => {
+      console.error(err)
+      args.log('error in updateTransactionsSpecific:', err)
+      taskCache.updateTransactionSpecificCache[txId] = { processing: false }
+    })
+  return {
+    ...transactionMessageSpecific(txId),
+    deferred
+  }
+}
+
 interface UpdateTransactionsArgs extends CommonArgs {
   txId: string
+  needsTxSpecific: boolean
 }
 
 const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<TransactionResponse> => {
-  const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
+  const {
+    emitter,
+    walletTools,
+    txId,
+    needsTxSpecific,
+    pluginInfo,
+    processor,
+    taskCache
+  } = args
   const deferred = new Deferred<TransactionResponse>()
   deferred.promise
     .then(async (txResponse: TransactionResponse) => {
@@ -885,6 +992,7 @@ const updateTransactions = (
       const processedTx = await processor.saveTransaction({
         tx
       })
+
       await transactionChanged({
         emitter,
         walletTools,
@@ -892,6 +1000,13 @@ const updateTransactions = (
         pluginInfo,
         tx: processedTx
       })
+
+      if (needsTxSpecific) {
+        // Add task to grab transactionSpecific payload
+        taskCache.updateTransactionSpecificCache[txId] = {
+          processing: false
+        }
+      }
     })
     .catch(err => {
       console.error(err)
@@ -1000,6 +1115,7 @@ interface ProcessAddressTxsArgs extends CommonArgs {
   address: string
   addressTransactionState: AddressTransactionCache[string]
   uri: string
+  needsTxSpecific: boolean
 }
 
 const processAddressTransactions = async (
@@ -1009,6 +1125,7 @@ const processAddressTransactions = async (
     address,
     addressTransactionState,
     emitter,
+    needsTxSpecific,
     pluginInfo,
     processor,
     walletTools,
@@ -1055,6 +1172,13 @@ const processAddressTransactions = async (
           pluginInfo,
           tx: processedTx
         })
+
+        if (needsTxSpecific) {
+          // Add task to grab transactionSpecific payload
+          taskCache.updateTransactionSpecificCache[tx.txid] = {
+            processing: false
+          }
+        }
       }
 
       // Halt on finishing the processing of address transaction until
