@@ -1,4 +1,4 @@
-import { add, sub } from 'biggystring'
+import { add } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
   EdgeFreshAddress,
@@ -1292,13 +1292,13 @@ const processProcessorUtxos = async (
   //
 
   // Address balance and emit address balance change event
-  const diff = sub(newBalance, oldBalance)
-  if (diff !== '0') {
-    log('balance changed:', { scriptPubkey, diff })
+  if (newBalance !== oldBalance) {
+    log('address balance changed:', { scriptPubkey, oldBalance, newBalance })
     emitter.emit(
       EngineEvent.ADDRESS_BALANCE_CHANGED,
       currencyInfo.currencyCode,
-      diff
+      scriptPubkey,
+      newBalance
     )
 
     // Update balances for address that have this scriptPubkey

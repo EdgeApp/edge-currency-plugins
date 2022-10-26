@@ -1,4 +1,4 @@
-import * as bs from 'biggystring'
+import { add } from 'biggystring'
 import { Disklet } from 'disklet'
 import { EdgeLog } from 'edge-core-js/types'
 import { makeMemlet } from 'memlet'
@@ -6,6 +6,7 @@ import { makeMemlet } from 'memlet'
 import AwaitLock from '../utxobased/engine/await-lock'
 import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
 import { asLocalWalletMetadata, LocalWalletMetadata } from './types'
+import { removeItem } from './utils'
 
 const metadataPath = `metadata.json`
 
@@ -27,6 +28,9 @@ export const makeMetadata = async (
   const lock = new AwaitLock()
 
   const instance: Metadata = {
+    get addressBalances() {
+      return cache.addressBalances
+    },
     get balance() {
       return cache.balance
     },
@@ -40,18 +44,32 @@ export const makeMetadata = async (
     }
   }
 
+  const updateWalletBalance = async (currencyCode: string): Promise<void> => {
+    const cumulativeBalance = Object.values(cache.addressBalances).reduce(
+      (sum, addressBalance) => add(sum, addressBalance),
+      '0'
+    )
+    cache.balance = cumulativeBalance
+    await setMetadata(cache)
+    emitter.emit(
+      EngineEvent.WALLET_BALANCE_CHANGED,
+      currencyCode,
+      cumulativeBalance
+    )
+  }
+
   emitter.on(
     EngineEvent.ADDRESS_BALANCE_CHANGED,
-    async (currencyCode: string, balanceDiff: string) => {
+    async (currencyCode: string, scriptPubkey: string, newBalance: string) => {
       await lock.acquireAsync()
       try {
-        cache.balance = bs.add(cache.balance, balanceDiff)
-        emitter.emit(
-          EngineEvent.WALLET_BALANCE_CHANGED,
-          currencyCode,
-          cache.balance
-        )
-        await setMetadata(cache)
+        if (newBalance === '0') {
+          removeItem(cache.addressBalances, scriptPubkey)
+        } else {
+          cache.addressBalances[scriptPubkey] = newBalance
+        }
+
+        await updateWalletBalance(currencyCode)
       } catch (err) {
         log.error(err)
       } finally {
@@ -83,6 +101,7 @@ export const makeMetadata = async (
   const resetMetadata = async (): Promise<LocalWalletMetadata> => {
     const data: LocalWalletMetadata = {
       balance: '0',
+      addressBalances: {},
       lastSeenBlockHeight: 0
     }
     await memlet.setJson(metadataPath, data)

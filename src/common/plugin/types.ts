@@ -162,5 +162,7 @@ export interface EngineOptions extends EdgeCurrencyEngineOptions {
 export type LocalWalletMetadata = ReturnType<typeof asLocalWalletMetadata>
 export const asLocalWalletMetadata = asObject({
   balance: asString,
+  // scriptPubkey -> balance
+  addressBalances: asObject(asString),
   lastSeenBlockHeight: asNumber
 })
