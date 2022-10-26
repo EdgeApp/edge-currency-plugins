@@ -16,7 +16,8 @@ interface MetadataConfig {
   log: EdgeLog
 }
 
-export interface Metadata extends LocalWalletMetadata {
+export interface Metadata {
+  state: LocalWalletMetadata
   clear: () => Promise<void>
 }
 
@@ -28,14 +29,8 @@ export const makeMetadata = async (
   const lock = new AwaitLock()
 
   const instance: Metadata = {
-    get addressBalances() {
-      return cache.addressBalances
-    },
-    get balance() {
-      return cache.balance
-    },
-    get lastSeenBlockHeight() {
-      return cache.lastSeenBlockHeight
+    get state() {
+      return cache
     },
     clear: async () => {
       await memlet.delete(metadataPath)

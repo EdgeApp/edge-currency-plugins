@@ -124,7 +124,7 @@ export async function makeUtxoEngine(
       emitter.emit(
         EngineEvent.WALLET_BALANCE_CHANGED,
         currencyInfo.currencyCode,
-        metadata.balance
+        metadata.state.balance
       )
 
       pluginState.addEngine(engineState)
@@ -139,11 +139,11 @@ export async function makeUtxoEngine(
     },
 
     getBalance(_opts: EdgeCurrencyCodeOptions): string {
-      return metadata.balance
+      return metadata.state.balance
     },
 
     getBlockHeight(): number {
-      return metadata.lastSeenBlockHeight
+      return metadata.state.lastSeenBlockHeight
     },
 
     async addCustomToken(_token: EdgeTokenInfo): Promise<void> {
@@ -196,6 +196,7 @@ export async function makeUtxoEngine(
             primaryFormat,
             walletFormats
           },
+          metadataState: metadata.state,
           processorState: await processor.dumpData(),
           pluginState: pluginState.dumpData()
         }
@@ -644,7 +645,7 @@ export async function makeUtxoEngine(
               throw new Error('Private key has no funds')
             }
             const destAddress = await this.getFreshAddress({})
-            const nativeAmount = tmpMetadata.balance
+            const nativeAmount = tmpMetadata.state.balance
             const options: TxOptions = { utxos: tmpUtxos, subtractFee: true }
             spendInfo.spendTargets = [
               { publicAddress: destAddress.publicAddress, nativeAmount }

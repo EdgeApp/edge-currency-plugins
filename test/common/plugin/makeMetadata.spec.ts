@@ -37,15 +37,15 @@ describe('makeMetadata', () => {
     it('should only ever increase the block height', async function () {
       this.timeout(3000)
 
-      metadata.lastSeenBlockHeight.should.eql(0)
+      metadata.state.lastSeenBlockHeight.should.eql(0)
 
       emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, '', 10)
       await wait(1)
-      metadata.lastSeenBlockHeight.should.eql(10)
+      metadata.state.lastSeenBlockHeight.should.eql(10)
 
       emitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, '', 5)
       await wait(1)
-      metadata.lastSeenBlockHeight.should.eql(10)
+      metadata.state.lastSeenBlockHeight.should.eql(10)
     })
   })
 })
