@@ -60,14 +60,19 @@ export const makeMetadata = async (
 
   emitter.on(
     EngineEvent.ADDRESS_BALANCE_CHANGED,
-    async (currencyCode: string, scriptPubkey: string, newBalance: string) => {
+    async (
+      currencyCode: string,
+      addressBalanceChanges: Array<{ scriptPubkey: string; balance: string }>
+    ) => {
       await lock.acquireAsync()
       try {
-        if (newBalance === '0') {
-          removeItem(cache.addressBalances, scriptPubkey)
-        } else {
-          cache.addressBalances[scriptPubkey] = newBalance
-        }
+        addressBalanceChanges.forEach(({ scriptPubkey, balance }) => {
+          if (balance === '0') {
+            removeItem(cache.addressBalances, scriptPubkey)
+          } else {
+            cache.addressBalances[scriptPubkey] = balance
+          }
+        })
 
         await updateWalletBalance(currencyCode)
       } catch (err) {

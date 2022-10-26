@@ -1297,8 +1297,12 @@ const processProcessorUtxos = async (
     emitter.emit(
       EngineEvent.ADDRESS_BALANCE_CHANGED,
       currencyInfo.currencyCode,
-      scriptPubkey,
-      newBalance
+      [
+        {
+          scriptPubkey,
+          balance: newBalance
+        }
+      ]
     )
 
     // Update balances for address that have this scriptPubkey

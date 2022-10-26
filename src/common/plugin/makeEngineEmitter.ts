@@ -15,8 +15,7 @@ export declare interface EngineEmitter {
     ((
       event: EngineEvent.ADDRESS_BALANCE_CHANGED,
       currencyCode: string,
-      scriptPubkey: string,
-      balance: string
+      addressBalanceChanges: Array<{ scriptPubkey: string; balance: string }>
     ) => boolean) &
     ((
       event: EngineEvent.WALLET_BALANCE_CHANGED,
@@ -44,8 +43,7 @@ export declare interface EngineEmitter {
       event: EngineEvent.ADDRESS_BALANCE_CHANGED,
       listener: (
         currencyCode: string,
-        scriptPubkey: string,
-        balance: string
+        addressBalanceChanges: Array<{ scriptPubkey: string; balance: string }>
       ) => Promise<void> | void
     ) => this) &
     ((
