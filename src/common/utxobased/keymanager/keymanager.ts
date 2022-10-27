@@ -693,13 +693,34 @@ export function scriptPubkeyToP2SH(
       output: Buffer.from(scriptPubkey, 'hex')
     }
   })
-  if (p2sh.output == null || p2sh.redeem?.output == null) {
+  const scriptPubkeyFromLib = p2sh.output?.toString('hex')
+  const redeemScript = p2sh.redeem?.output?.toString('hex')
+  const scriptHash = p2sh.hash?.toString('hex')
+
+  if (scriptPubkeyFromLib == null || redeemScript == null) {
     throw new Error('unable to convert script to p2sh')
   }
+
+  let address: string | undefined = p2sh.address
+
+  // Special cashaddr handling
+  if (coin != null && scriptHash != null) {
+    const coinClass = getCoinFromString(coin)
+    const coinPrefixes = coinClass.prefixes
+    const standardPrefixes = selectedCoinPrefixes(coinPrefixes, 0)
+    if (standardPrefixes.cashaddr != null) {
+      address = hashToCashAddress(
+        scriptHash,
+        CashaddrTypeEnum.scripthash,
+        standardPrefixes.cashaddr
+      )
+    }
+  }
+
   return {
-    scriptPubkey: p2sh.output.toString('hex'),
-    redeemScript: p2sh.redeem.output.toString('hex'),
-    address: p2sh.address
+    scriptPubkey: scriptPubkeyFromLib,
+    redeemScript: redeemScript,
+    address
   }
 }
 
