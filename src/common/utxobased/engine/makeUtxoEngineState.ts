@@ -830,14 +830,14 @@ export const pickNextTask = async (
   // Check if there are any addresses pending to be subscribed
   if (Object.keys(addressSubscribeCache).length > 0) {
     // These are addresse to which the server has not subscribed
-    const newAddress: string[] = []
+    const newAddresses: string[] = []
     const blockHeight = serverStates.getBlockHeight(uri)
 
     // Loop each address in the cache
     for (const [address, state] of Object.entries(addressSubscribeCache)) {
       // Add address in the cache to the set of addresses to watch
       if (!serverStates.serverIsAwareOfAddress(uri, address)) {
-        newAddress.push(address)
+        newAddresses.push(address)
       }
 
       // Add to the addressTransactionCache if they're not yet added:
@@ -860,8 +860,8 @@ export const pickNextTask = async (
     }
 
     // Subscribe to any new addresses
-    if (newAddress.length > 0) {
-      serverStates.watchAddresses(uri, newAddress)
+    if (newAddresses.length > 0) {
+      serverStates.watchAddresses(uri, newAddresses)
       return true
     }
   }
