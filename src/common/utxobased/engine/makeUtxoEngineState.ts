@@ -1,4 +1,4 @@
-import { add, sub } from 'biggystring'
+import { add } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
   EdgeFreshAddress,
@@ -258,6 +258,11 @@ export function makeUtxoEngineState(
   // processed by the processor. This happens only once before any call to
   // setLookAhead.
   const initializeAddressSubscriptions = async (): Promise<void> => {
+    const addressBalanceChanges: Array<{
+      scriptPubkey: string
+      balance: string
+    }> = []
+
     for (const format of walletFormats) {
       const branches = getFormatSupportedBranches(format)
       for (const branch of branches) {
@@ -289,6 +294,10 @@ export function makeUtxoEngineState(
             format
           })
           addressesToSubscribe.add(address)
+          addressBalanceChanges.push({
+            scriptPubkey: processorAddress.scriptPubkey,
+            balance: processorAddress.balance
+          })
         }
         addToAddressSubscribeCache(commonArgs.taskCache, addressesToSubscribe, {
           format,
@@ -296,6 +305,15 @@ export function makeUtxoEngineState(
         })
       }
     }
+
+    // Only emit address balance events after processing all initial addresses
+    // because we want to only propagate the wallet balance change event after
+    // initialization is complete.
+    emitter.emit(
+      EngineEvent.ADDRESS_BALANCE_CHANGED,
+      pluginInfo.currencyInfo.currencyCode,
+      addressBalanceChanges
+    )
   }
 
   return {
@@ -1416,13 +1434,17 @@ const processProcessorUtxos = async (
   //
 
   // Address balance and emit address balance change event
-  const diff = sub(newBalance, oldBalance)
-  if (diff !== '0') {
-    log('balance changed:', { scriptPubkey, diff })
+  if (newBalance !== oldBalance) {
+    log('address balance changed:', { scriptPubkey, oldBalance, newBalance })
     emitter.emit(
       EngineEvent.ADDRESS_BALANCE_CHANGED,
       currencyInfo.currencyCode,
-      diff
+      [
+        {
+          scriptPubkey,
+          balance: newBalance
+        }
+      ]
     )
 
     // Update balances for address that have this scriptPubkey
