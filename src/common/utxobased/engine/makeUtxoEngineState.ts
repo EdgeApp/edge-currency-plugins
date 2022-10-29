@@ -30,6 +30,7 @@ import { NumbWalletInfo } from '../keymanager/cleaners'
 import {
   BIP43PurposeTypeEnum,
   derivationLevelScriptHash,
+  isPathUsingDerivationLevelScriptHash,
   ScriptTypeEnum
 } from '../keymanager/keymanager'
 import {
@@ -1598,6 +1599,22 @@ const processRawUtxo = async (
       if (address.redeemScript != null) {
         scriptType = ScriptTypeEnum.p2sh
         redeemScript = address.redeemScript
+
+        // Custom Script Template Handling
+        const scriptTemplates = args.pluginInfo.engineInfo.scriptTemplates
+        if (scriptTemplates != null && address.path != null) {
+          // TODO: Change ScriptTemplates map type to couple the key to the ScriptTypeEnum; make this algorithm generic and move it to key-manager
+          // Handle each hard-coded case for the supported script templates
+          if (
+            scriptTemplates.replayProtection != null &&
+            isPathUsingDerivationLevelScriptHash(
+              scriptTemplates.replayProtection,
+              address.path
+            )
+          ) {
+            scriptType = ScriptTypeEnum.replayProtection
+          }
+        }
       }
 
       // Legacy UTXOs need the previous transaction hex as the script
