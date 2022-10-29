@@ -1,9 +1,16 @@
-import { AddressPath, CurrencyFormat } from '../../plugin/types'
+import {
+  AddressPath,
+  ChangePath,
+  CurrencyFormat,
+  PluginInfo
+} from '../../plugin/types'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
 import { PublicKey } from '../keymanager/cleaners'
 import {
   addressToScriptPubkey,
+  AddressTypeEnum,
   BIP43PurposeTypeEnum,
+  isPathUsingDerivationLevelScriptHash,
   PrivateKeyEncoding,
   privateKeyEncodingToPubkey,
   pubkeyToScriptPubkey,
@@ -22,8 +29,8 @@ import {
 } from './utils'
 
 export interface WalletToolsConfig {
+  pluginInfo: PluginInfo
   publicKey: PublicKey
-  coin: string
 }
 
 export interface UTXOPluginWalletTools {
@@ -57,8 +64,8 @@ interface ScriptPubkeyReturn {
 }
 
 interface ScriptPubkeyToAddressArgs {
+  changePath: ChangePath
   scriptPubkey: string
-  format: CurrencyFormat
 }
 
 interface GetPrivateKeyArgs {
@@ -91,7 +98,8 @@ interface SignMessageArgs {
 export function makeUtxoWalletTools(
   config: WalletToolsConfig
 ): UTXOPluginWalletTools {
-  const { coin, publicKey } = config
+  const { pluginInfo, publicKey } = config
+  const { name: coin } = pluginInfo.coinInfo
 
   const xpubKeys = publicKey.publicKeys
 
@@ -167,8 +175,21 @@ export function makeUtxoWalletTools(
     },
 
     scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): AddressReturn {
-      const purposeType = currencyFormatToPurposeType(args.format)
-      const addressType = getAddressTypeFromPurposeType(purposeType)
+      const { scriptTemplates } = pluginInfo.engineInfo
+      const { changePath } = args
+
+      const isPathForScriptTemplate =
+        scriptTemplates != null
+          ? Object.values(scriptTemplates).some(scriptTemplate =>
+              isPathUsingDerivationLevelScriptHash(scriptTemplate, changePath)
+            )
+          : false
+
+      const purposeType = currencyFormatToPurposeType(changePath.format)
+      const addressType = isPathForScriptTemplate
+        ? AddressTypeEnum.p2sh
+        : getAddressTypeFromPurposeType(purposeType)
+
       return scriptPubkeyToAddress({
         scriptPubkey: args.scriptPubkey,
         addressType,

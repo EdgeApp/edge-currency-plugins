@@ -70,8 +70,8 @@ export const toEdgeTransaction = async (
 
     if (address?.path != null) {
       const { address: addrStr } = walletTools.scriptPubkeyToAddress({
-        scriptPubkey,
-        format: address.path.format
+        changePath: address.path,
+        scriptPubkey
       })
       ourReceiveAddresses.push(addrStr)
     }

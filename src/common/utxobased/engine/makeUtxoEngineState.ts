@@ -271,10 +271,13 @@ export function makeUtxoEngineState(
       const branches = getFormatSupportedBranches(format)
       for (const branch of branches) {
         const addressesToSubscribe = new Set<string>()
-        const branchAddressCount = processor.numAddressesByFormatPath({
+        const changePath = {
           format,
           changeIndex: branch
-        })
+        }
+        const branchAddressCount = processor.numAddressesByFormatPath(
+          changePath
+        )
         // If the processor has not processed any addresses then the loop
         // condition will only iterate once when branchAddressCount is 0 for the
         // first address in the derivation path.
@@ -294,8 +297,8 @@ export function makeUtxoEngineState(
             )
           }
           const { address } = walletTools.scriptPubkeyToAddress({
-            scriptPubkey: processorAddress.scriptPubkey,
-            format
+            changePath,
+            scriptPubkey: processorAddress.scriptPubkey
           })
           addressesToSubscribe.add(address)
           addressBalanceChanges.push({
@@ -468,8 +471,8 @@ export function makeUtxoEngineState(
             redeemScript
           } = walletTools.getScriptPubkeyFromWif(wif, format)
           const { address } = walletTools.scriptPubkeyToAddress({
-            scriptPubkey,
-            format: path.format
+            changePath: path,
+            scriptPubkey
           })
 
           // Make a new IAddress and save it
@@ -628,8 +631,8 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 
       const { scriptPubkey, redeemScript } = walletTools.getScriptPubkey(path)
       const { address } = walletTools.scriptPubkeyToAddress({
-        scriptPubkey,
-        format: path.format
+        changePath: path,
+        scriptPubkey
       })
 
       // Make a new IAddress and save it
@@ -1189,8 +1192,8 @@ const internalGetFreshAddress = async (
     throw new Error('Unknown address path')
   }
   const address = walletTools.scriptPubkeyToAddress({
-    scriptPubkey,
-    format
+    changePath: path,
+    scriptPubkey
   })
 
   return {

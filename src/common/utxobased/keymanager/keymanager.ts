@@ -8,7 +8,7 @@ import { EdgeLog, InsufficientFundsError } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
-import { AddressPath, CoinInfo, CoinPrefixes } from '../../plugin/types'
+import { ChangePath, CoinInfo, CoinPrefixes } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import { validateMemo } from '../engine/utils'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
@@ -399,7 +399,7 @@ export function derivationLevelScriptHash(
 
 export const isPathUsingDerivationLevelScriptHash = (
   scriptTemplate: ScriptTemplate,
-  path: AddressPath
+  path: ChangePath
 ): boolean => {
   return path.changeIndex === derivationLevelScriptHash(scriptTemplate)
 }
