@@ -510,12 +510,18 @@ const addressToScriptPubkeyInternal = (
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
-  const scriptPubkey = payment({
-    address: args.address,
-    network: network,
-    bs58DecodeFunc: coin.bs58DecodeFunc,
-    bs58EncodeFunc: coin.bs58EncodeFunc
-  }).output
+  let scriptPubkey: Buffer | undefined
+  try {
+    scriptPubkey = payment({
+      address: args.address,
+      network: network,
+      bs58DecodeFunc: coin.bs58DecodeFunc,
+      bs58EncodeFunc: coin.bs58EncodeFunc
+    }).output
+  } catch (error) {
+    console.trace(error)
+    throw error
+  }
   if (scriptPubkey == null) {
     throw new Error('failed converting address to scriptPubkey')
   }
@@ -621,23 +627,28 @@ export function scriptPubkeyToAddress(
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
-  address =
-    address ??
-    payment({
-      output: Buffer.from(args.scriptPubkey, 'hex'),
-      network: network,
-      bs58DecodeFunc: coinClass.bs58DecodeFunc,
-      bs58EncodeFunc: coinClass.bs58EncodeFunc
-    }).address
+  try {
+    address =
+      address ??
+      payment({
+        output: Buffer.from(args.scriptPubkey, 'hex'),
+        network: network,
+        bs58DecodeFunc: coinClass.bs58DecodeFunc,
+        bs58EncodeFunc: coinClass.bs58EncodeFunc
+      }).address
 
-  legacyAddress =
-    legacyAddress ??
-    payment({
-      output: Buffer.from(args.scriptPubkey, 'hex'),
-      network: legacyNetwork,
-      bs58DecodeFunc: coinClass.bs58DecodeFunc,
-      bs58EncodeFunc: coinClass.bs58EncodeFunc
-    }).address
+    legacyAddress =
+      legacyAddress ??
+      payment({
+        output: Buffer.from(args.scriptPubkey, 'hex'),
+        network: legacyNetwork,
+        bs58DecodeFunc: coinClass.bs58DecodeFunc,
+        bs58EncodeFunc: coinClass.bs58EncodeFunc
+      }).address
+  } catch (error) {
+    console.trace(error)
+    throw error
+  }
 
   if (address == null || legacyAddress == null) {
     throw new Error('failed converting scriptPubkey to address')
@@ -666,10 +677,16 @@ export function scriptPubkeyToScriptHash(
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
-  const scriptHash: Buffer | undefined = payment({
-    output: Buffer.from(args.scriptPubkey, 'hex'),
-    network: network
-  }).hash
+  let scriptHash: Buffer | undefined
+  try {
+    scriptHash = payment({
+      output: Buffer.from(args.scriptPubkey, 'hex'),
+      network: network
+    }).hash
+  } catch (error) {
+    console.trace(error)
+    throw error
+  }
   if (scriptHash == null) {
     throw new Error('failed converting scriptPubkey to address')
   }
@@ -1277,10 +1294,16 @@ const scriptHashToScriptPubkey = (
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
-  const scriptPubkey: Buffer | undefined = payment({
-    hash: Buffer.from(args.scriptHash, 'hex'),
-    network: network
-  }).output
+  let scriptPubkey: Buffer | undefined
+  try {
+    scriptPubkey = payment({
+      hash: Buffer.from(args.scriptHash, 'hex'),
+      network: network
+    }).output
+  } catch (error) {
+    console.trace(error)
+    throw error
+  }
   if (scriptPubkey == null) {
     throw new Error('failed converting scriptPubkey to address')
   }
