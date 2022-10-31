@@ -1,5 +1,12 @@
 # edge-currency-plugins
 
+## v1.2.3 (2022-10-31)
+
+- Rewrite wallet balance update algorithm
+- Change ADDRESS_BALANCE_CHANGED event to take an array of balances
+- Emit address balance update event after initializing addresses
+- Add metadataState to dumpData
+
 ## v1.2.2 (2022-10-14)
 
 - Dash: Add InstantSend detection
