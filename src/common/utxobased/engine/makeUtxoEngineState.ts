@@ -30,7 +30,6 @@ import { NumbWalletInfo } from '../keymanager/cleaners'
 import {
   BIP43PurposeTypeEnum,
   derivationLevelScriptHash,
-  isPathUsingDerivationLevelScriptHash,
   ScriptTypeEnum
 } from '../keymanager/keymanager'
 import {
@@ -54,6 +53,8 @@ import {
   currencyFormatToPurposeType,
   getCurrencyFormatFromPurposeType,
   getFormatSupportedBranches,
+  getScriptTypeFromPurposeType,
+  pathToPurposeType,
   validScriptPubkeyFromAddress
 } from './utils'
 
@@ -268,7 +269,7 @@ export function makeUtxoEngineState(
     }> = []
 
     for (const format of walletFormats) {
-      const branches = getFormatSupportedBranches(format)
+      const branches = getFormatSupportedBranches(pluginInfo.engineInfo, format)
       for (const branch of branches) {
         const addressesToSubscribe = new Set<string>()
         const changePath = {
@@ -606,7 +607,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 
   try {
     for (const format of walletFormats) {
-      const branches = getFormatSupportedBranches(format)
+      const branches = getFormatSupportedBranches(engineInfo, format)
       for (const branch of branches) {
         await deriveKeys({ format, changeIndex: branch })
       }
@@ -783,10 +784,14 @@ export const pickNextTask = async (
     if (utxo == null) continue
     if (!state.processing) {
       // check if we need to fetch additional network content for legacy purpose type
-      const purposeType = currencyFormatToPurposeType(state.path.format)
+      const purposeType = pathToPurposeType(
+        state.path,
+        pluginInfo.engineInfo.scriptTemplates
+      )
       if (
         purposeType === BIP43PurposeTypeEnum.Airbitz ||
-        purposeType === BIP43PurposeTypeEnum.Legacy
+        purposeType === BIP43PurposeTypeEnum.Legacy ||
+        purposeType === BIP43PurposeTypeEnum.ReplayProtection
       ) {
         // if we do need to make a network call, check with the serverState
         if (!serverStates.serverCanGetTx(uri, utxo.txid)) return
@@ -1561,6 +1566,7 @@ const processRawUtxo = async (
     utxo,
     id,
     address,
+    pluginInfo,
     processor,
     path,
     taskCache,
@@ -1570,7 +1576,11 @@ const processRawUtxo = async (
     log
   } = args
   const { rawUtxoCache, processorUtxoCache } = taskCache
-  let scriptType: ScriptTypeEnum
+  const purposeType = pathToPurposeType(
+    path,
+    pluginInfo.engineInfo.scriptTemplates
+  )
+  const scriptType: ScriptTypeEnum = getScriptTypeFromPurposeType(purposeType)
   let script: string
   let redeemScript: string | undefined
 
@@ -1595,30 +1605,11 @@ const processRawUtxo = async (
       }
     )
 
-  switch (currencyFormatToPurposeType(path.format)) {
+  switch (purposeType) {
     case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
-      scriptType = ScriptTypeEnum.p2pkh
-      if (address.redeemScript != null) {
-        scriptType = ScriptTypeEnum.p2sh
-        redeemScript = address.redeemScript
-
-        // Custom Script Template Handling
-        const scriptTemplates = args.pluginInfo.engineInfo.scriptTemplates
-        if (scriptTemplates != null && address.path != null) {
-          // TODO: Change ScriptTemplates map type to couple the key to the ScriptTypeEnum; make this algorithm generic and move it to key-manager
-          // Handle each hard-coded case for the supported script templates
-          if (
-            scriptTemplates.replayProtection != null &&
-            isPathUsingDerivationLevelScriptHash(
-              scriptTemplates.replayProtection,
-              address.path
-            )
-          ) {
-            scriptType = ScriptTypeEnum.replayProtection
-          }
-        }
-      }
+    case BIP43PurposeTypeEnum.ReplayProtection:
+      redeemScript = address.redeemScript
 
       // Legacy UTXOs need the previous transaction hex as the script
       // If we do not currently have it, add it to the queue to fetch it
@@ -1659,7 +1650,6 @@ const processRawUtxo = async (
 
       break
     case BIP43PurposeTypeEnum.WrappedSegwit:
-      scriptType = ScriptTypeEnum.p2wpkhp2sh
       script = address.scriptPubkey
       if (address.redeemScript == null) {
         throw new Error(
@@ -1670,7 +1660,6 @@ const processRawUtxo = async (
 
       break
     case BIP43PurposeTypeEnum.Segwit:
-      scriptType = ScriptTypeEnum.p2wpkh
       script = address.scriptPubkey
 
       break

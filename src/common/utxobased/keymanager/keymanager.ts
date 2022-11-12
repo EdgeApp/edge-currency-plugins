@@ -11,7 +11,7 @@ import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
 import { ChangePath, CoinInfo, CoinPrefixes } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import { validateMemo } from '../engine/utils'
-import { ScriptTemplate } from '../info/scriptTemplates/types'
+import { ScriptTemplate, ScriptTemplates } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
 import {
   cashAddressToHash,
@@ -27,7 +27,8 @@ export enum BIP43PurposeTypeEnum {
   Airbitz = 'airbitz',
   Legacy = 'legacy', // xpub/xprv tpub/tprv etc.
   Segwit = 'segwit', // zpub/zprv vpub/vprv etc.
-  WrappedSegwit = 'wrappedSegwit' // ypub/yprv upub/uprv etc.
+  WrappedSegwit = 'wrappedSegwit', // ypub/yprv upub/uprv etc.
+  ReplayProtection = 'replayProtection'
 }
 
 // supported address types.
@@ -104,6 +105,7 @@ export interface AddressToScriptPubkeyArgs {
 
 export interface PubkeyToScriptPubkeyArgs {
   pubkey: string
+  scriptTemplates?: ScriptTemplates
   scriptType: ScriptTypeEnum
 }
 
@@ -769,6 +771,14 @@ export function pubkeyToScriptPubkey(
         throw new Error('failed converting pubkey to script pubkey')
       }
       return { scriptPubkey: payment.output.toString('hex') }
+    case ScriptTypeEnum.replayProtection: {
+      if (args.scriptTemplates == null)
+        throw new Error('Missing replayProtection script template')
+      const redeemScript = args.scriptTemplates.replayProtection(args.pubkey)
+      return scriptPubkeyToP2SH({
+        scriptPubkey: redeemScript
+      })
+    }
     default:
       throw new Error('invalid address type in pubkey to script pubkey')
   }
@@ -1164,6 +1174,8 @@ const bip43PurposeTypeEnumToNumber = (
       return 49
     case BIP43PurposeTypeEnum.Segwit:
       return 84
+    case BIP43PurposeTypeEnum.ReplayProtection:
+      return 44 // Only bip44 formatted wallets contain this purpose type (BCH)
   }
 }
 
