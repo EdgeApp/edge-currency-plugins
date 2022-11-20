@@ -6,6 +6,7 @@ import {
   EdgeCurrencyEngine,
   EdgeDataDump,
   EdgeFreshAddress,
+  EdgeGetReceiveAddressOptions,
   EdgeGetTransactionsOptions,
   EdgePaymentProtocolInfo,
   EdgeSpendInfo,
@@ -227,9 +228,10 @@ export async function makeUtxoEngine(
     },
 
     async getFreshAddress(
-      _opts: EdgeCurrencyCodeOptions
+      opts: EdgeGetReceiveAddressOptions
     ): Promise<EdgeFreshAddress> {
-      return await engineState.getFreshAddress()
+      const { forceIndex } = opts
+      return await engineState.getFreshAddress({ forceIndex })
     },
 
     getNumTransactions(_opts: EdgeCurrencyCodeOptions): number {
@@ -354,7 +356,7 @@ export async function makeUtxoEngine(
         throw new Error('Need to provide Spend Targets')
       }
 
-      const freshAddress = await engineState.getFreshAddress(1)
+      const freshAddress = await engineState.getFreshAddress({ branch: 1 })
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
       const setRBF = options?.setRBF ?? false

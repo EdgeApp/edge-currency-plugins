@@ -65,7 +65,10 @@ export interface UtxoEngineState {
 
   deriveScriptAddress: (script: string) => Promise<EdgeFreshAddress>
 
-  getFreshAddress: (branch?: number) => Promise<EdgeFreshAddress>
+  getFreshAddress: (params: {
+    branch?: number
+    forceIndex?: number
+  }) => Promise<EdgeFreshAddress>
 
   addGapLimitAddresses: (addresses: string[]) => Promise<void>
 
@@ -332,7 +335,10 @@ export function makeUtxoEngineState(
       running = false
     },
 
-    async getFreshAddress(branch = 0): Promise<EdgeFreshAddress> {
+    async getFreshAddress({
+      branch = 0,
+      forceIndex
+    }): Promise<EdgeFreshAddress> {
       const walletPurpose = currencyFormatToPurposeType(
         walletInfo.keys.primaryFormat
       )
@@ -342,12 +348,14 @@ export function makeUtxoEngineState(
           format: getCurrencyFormatFromPurposeType(
             BIP43PurposeTypeEnum.WrappedSegwit
           ),
+          forceIndex,
           changeIndex: branch
         })
 
         const { address: segwitAddress } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit),
+          forceIndex,
           changeIndex: branch
         })
 
@@ -367,6 +375,7 @@ export function makeUtxoEngineState(
         } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(walletPurpose),
+          forceIndex,
           changeIndex: branch
         })
 
@@ -1104,7 +1113,9 @@ const internalDeriveScriptAddress = async ({
   return { address, scriptPubkey, redeemScript }
 }
 
-interface GetFreshAddressArgs extends FormatArgs {}
+interface GetFreshAddressArgs extends FormatArgs {
+  forceIndex?: number
+}
 
 interface GetFreshAddressReturn {
   address: string
@@ -1114,7 +1125,13 @@ interface GetFreshAddressReturn {
 const internalGetFreshAddress = async (
   args: GetFreshAddressArgs
 ): Promise<GetFreshAddressReturn> => {
-  const { format, changeIndex: branch, walletTools, processor } = args
+  const {
+    format,
+    changeIndex: branch,
+    walletTools,
+    processor,
+    forceIndex
+  } = args
 
   const numAddresses = processor.numAddressesByFormatPath({
     format,
@@ -1130,6 +1147,10 @@ const internalGetFreshAddress = async (
       0
     )
   }
+  if (forceIndex != null) {
+    path.addressIndex = forceIndex
+  }
+
   const { scriptPubkey } =
     (await processor.fetchAddress(path)) ??
     (await walletTools.getScriptPubkey(path))
