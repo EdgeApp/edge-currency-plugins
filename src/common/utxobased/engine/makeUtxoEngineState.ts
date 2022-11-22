@@ -574,6 +574,7 @@ interface ProcessorUtxoCache {
 }
 interface RawUtxoCache {
   [key: string]: {
+    blockbookUtxo: BlockbookAccountUtxo
     processing: boolean
     path: ChangePath
     address: IAddress
@@ -774,8 +775,8 @@ export const pickNextTask = async (
   }
 
   // Loop unparsed utxos, some require a network call to get the full tx data
-  for (const [utxoString, state] of Object.entries(rawUtxoCache)) {
-    const utxo: BlockbookAccountUtxo = JSON.parse(utxoString)
+  for (const [utxoId, state] of Object.entries(rawUtxoCache)) {
+    const utxo = state.blockbookUtxo
     if (utxo == null) continue
     if (!state.processing) {
       // check if we need to fetch additional network content for legacy purpose type
@@ -792,7 +793,7 @@ export const pickNextTask = async (
         if (!serverStates.serverCanGetTx(uri, utxo.txid)) return
       }
       state.processing = true
-      removeItem(rawUtxoCache, utxoString)
+      removeItem(rawUtxoCache, utxoId)
       const wsTask = await processRawUtxo({
         ...args,
         ...state,
@@ -1427,7 +1428,9 @@ const processAddressUtxos = async (
       }
 
       for (const utxo of utxos) {
-        rawUtxoCache[JSON.stringify(utxo)] = {
+        const utxoId = `${utxo.txid}_${utxo.vout}`
+        rawUtxoCache[utxoId] = {
+          blockbookUtxo: utxo,
           processing: false,
           requiredCount: utxos.length,
           path,
@@ -1617,7 +1620,9 @@ const processRawUtxo = async (
       // Legacy UTXOs need the previous transaction hex as the script
       // If we do not currently have it, add it to the queue to fetch it
       {
-        const [tx] = await processor.fetchTransactions({ txId: utxo.txid })
+        const [tx] = await processor.fetchTransactions({
+          txId: utxo.txid
+        })
         if (tx == null) {
           const queryTime = Date.now()
           const deferred = new Deferred<TransactionResponse>()
@@ -1635,7 +1640,9 @@ const processRawUtxo = async (
             .catch(err => {
               // If something went wrong, add the UTXO back to the queue
               log('error in processRawUtxo:', err)
-              rawUtxoCache[JSON.stringify(utxo)] = {
+              const utxoId = `${utxo.txid}_${utxo.vout}`
+              rawUtxoCache[utxoId] = {
+                blockbookUtxo: utxo,
                 processing: false,
                 path,
                 address,
