@@ -844,19 +844,28 @@ export const pickNextTask = async (
 
     // Loop each address in the cache
     for (const [address, state] of Object.entries(addressSubscribeCache)) {
+      const isAddressNewlySubscribed = !serverStates.serverIsAwareOfAddress(
+        uri,
+        address
+      )
+
       // Add address in the cache to the set of addresses to watch
-      if (!serverStates.serverIsAwareOfAddress(uri, address)) {
+      if (isAddressNewlySubscribed) {
         newAddresses.push(address)
       }
 
       // Add to the addressTransactionCache if they're not yet added:
       // Only process newly watched addresses
       if (state.processing) continue
+
       // Add the newly watched addresses to the UTXO cache
-      addressUtxoCache[address] = {
-        processing: false,
-        path: state.path
+      if (isAddressNewlySubscribed) {
+        addressUtxoCache[address] = {
+          processing: false,
+          path: state.path
+        }
       }
+
       await addToAddressTransactionCache(
         args,
         address,
