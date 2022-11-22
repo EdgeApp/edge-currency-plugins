@@ -245,8 +245,7 @@ export function makeUtxoEngineState(
         addToAddressTransactionCache(
           commonArgs,
           response.address,
-          path.format,
-          path.changeIndex,
+          path,
           0,
           taskCache.addressTransactionCache
         ).catch(() => {
@@ -673,14 +672,13 @@ const addToAddressSubscribeCache = (
 }
 
 const addToAddressTransactionCache = async (
-  args: CommonArgs,
+  common: CommonArgs,
   address: string,
-  format: CurrencyFormat,
-  branch: number,
+  changePath: ChangePath,
   blockHeight: number,
   addressTransactionCache: AddressTransactionCache
 ): Promise<void> => {
-  const { walletTools, processor } = args
+  const { walletTools, processor } = common
   // Fetch the blockHeight for the address from the database
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
 
@@ -692,10 +690,7 @@ const addToAddressTransactionCache = async (
 
   addressTransactionCache[address] = {
     processing: false,
-    path: {
-      format,
-      changeIndex: branch
-    },
+    path: changePath,
     page: 1, // Page starts on 1
     blockHeight
   }
@@ -869,8 +864,7 @@ export const pickNextTask = async (
       await addToAddressTransactionCache(
         args,
         address,
-        state.path.format,
-        state.path.changeIndex,
+        state.path,
         blockHeight,
         addressTransactionCache
       )
