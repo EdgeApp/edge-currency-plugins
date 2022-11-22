@@ -838,7 +838,7 @@ export const pickNextTask = async (
 
   // Check if there are any addresses pending to be subscribed
   if (Object.keys(addressSubscribeCache).length > 0) {
-    // These are addresse to which the server has not subscribed
+    // These are addresses to which the server has not subscribed
     const newAddresses: string[] = []
     const blockHeight = serverStates.getBlockHeight(uri)
 
