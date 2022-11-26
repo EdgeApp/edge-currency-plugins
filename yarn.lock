@@ -964,6 +964,13 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
+"@babel/runtime@^7.9.2":
+  version "7.20.1"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.20.1.tgz#1148bb33ab252b165a06698fde7576092a78b4a9"
+  integrity sha512-mrzLkl6U9YLF8qpqI7TB82PESyEGjm/0Ly91jG575eVxMMlb8fYfOXFZIJ8XfLrJZQbm7dlKry2bJmXBUEkdFg==
+  dependencies:
+    regenerator-runtime "^0.13.10"
+
 "@babel/template@^7.10.4", "@babel/template@^7.12.7", "@babel/template@^7.4.4":
   version "7.12.7"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.12.7.tgz#c817233696018e39fbb6c491d2fb684e05ed43bc"
@@ -1826,13 +1833,6 @@ big-integer@^1.6.44:
   version "1.6.48"
   resolved "https://registry.yarnpkg.com/big-integer/-/big-integer-1.6.48.tgz#8fd88bd1632cba4a1c8c3e3d7159f08bb95b4b9e"
   integrity sha512-j51egjPa7/i+RdiRuJbPdJ2FIUYYPhvYLjzoYbcMMm62ooO6F94fETG4MTs46zPAF9Brs04OajboA/qTGuz78w==
-
-biggystring@^3.0.2:
-  version "3.0.2"
-  resolved "https://registry.yarnpkg.com/biggystring/-/biggystring-3.0.2.tgz#e9a8cd1ada0ec54b377a621cde53dea5e19085b6"
-  integrity sha512-Sl1Ek3XwFliCf08nIaypxQtW+XwocfF33h5WC2baU5xVBf/LBctiK28cB3hmhWOBeArtZp0FbNk4hgDFCP3Fag==
-  dependencies:
-    bn.js "^4.11.7"
 
 biggystring@^4.0.0:
   version "4.0.0"
@@ -3294,44 +3294,32 @@ ecc-jsbn@~0.1.1:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
 
-edge-core-js@^0.19.20:
-  version "0.19.20"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.19.20.tgz#b5f23339b183b24e3cc291840cc256ac02f7b053"
-  integrity sha512-sWPAKqVsBUnfDtT7RdULMR2iZdPetNzchQczbEhuv9fDa8kDvzGEmVcaI/lFEbaewQJvnHrngK4FLecuTKJlzA==
+edge-core-js@^0.19.33:
+  version "0.19.33"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.19.33.tgz#55129d6d15d3da4dd3221eedc62684e071b99d3d"
+  integrity sha512-OIXQAGYS3cxAsU64lMA7ppU539sAGFdpv/Ss7RI3L4SJQhom5J2m74nvm1Y7vSXj78tH5bTNHqh9nClck34VsQ==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"
-    biggystring "^3.0.2"
+    biggystring "^4.0.0"
     cleaners "^0.3.11"
     currency-codes "^1.1.2"
     disklet "^0.5.2"
-    edge-sync-client "^0.2.6"
+    edge-sync-client "^0.2.7"
     elliptic "^6.4.0"
     ethereumjs-tx "^1.3.7"
     ethereumjs-util "^5.2.0"
     hash.js "^1.1.7"
     hmac-drbg "^1.0.1"
     node-fetch "^2.6.1"
-    redux "^3.6.0"
-    redux-keto "^0.3.4"
+    redux "^4.2.0"
+    redux-keto "^0.3.5"
     redux-pixies "^0.3.6"
     rfc4648 "^1.4.0"
     scrypt-js "^2.0.3"
     serverlet "^0.1.0"
-    yaob "^0.3.7"
+    yaob "^0.3.8"
     yavent "^0.1.3"
-
-edge-sync-client@^0.2.6:
-  version "0.2.6"
-  resolved "https://registry.yarnpkg.com/edge-sync-client/-/edge-sync-client-0.2.6.tgz#4425e14edd0f85f41a0ebe702e0e27274111cc90"
-  integrity sha512-UNaxgXD87QJDEMYRs6fycOj1+Tt2WNPpNPcm4O4l2JCtPdqSHbjSHfGruS5/VWq5nGYPGX1boH15ekaLYCqo0w==
-  dependencies:
-    base-x "^1.0.4"
-    cleaners "^0.3.9"
-    cross-fetch "^3.1.4"
-    hash.js "^1.1.7"
-    rfc4648 "^1.5.0"
-    serverlet "^0.1.0"
 
 edge-sync-client@^0.2.7:
   version "0.2.7"
@@ -5403,11 +5391,6 @@ locate-path@^6.0.0:
   dependencies:
     p-locate "^5.0.0"
 
-lodash-es@^4.2.1:
-  version "4.17.20"
-  resolved "https://registry.yarnpkg.com/lodash-es/-/lodash-es-4.17.20.tgz#29f6332eefc60e849f869c264bc71126ad61e8f7"
-  integrity sha512-JD1COMZsq8maT6mnuz1UMV0jvYD0E0aUsSOdrr1/nAG3dhqQXwRRgeW0cSqH1U43INKcqxaiVIQNOUDld7gRDA==
-
 lodash.clone@^4.5.0:
   version "4.5.0"
   resolved "https://registry.yarnpkg.com/lodash.clone/-/lodash.clone-4.5.0.tgz#195870450f5a13192478df4bc3d23d2dea1907b6"
@@ -5453,7 +5436,7 @@ lodash.uniq@^4.5.0:
   resolved "https://registry.yarnpkg.com/lodash.uniq/-/lodash.uniq-4.5.0.tgz#d0225373aeb652adc1bc82e4945339a842754773"
   integrity sha1-0CJTc662Uq3BvILklFM5qEJ1R3M=
 
-lodash@^4.17.15, lodash@^4.17.19, lodash@^4.17.20, lodash@^4.17.4, lodash@^4.2.1:
+lodash@^4.17.15, lodash@^4.17.19, lodash@^4.17.20, lodash@^4.17.4:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
@@ -5482,7 +5465,7 @@ log-update@^4.0.0:
     slice-ansi "^4.0.0"
     wrap-ansi "^6.2.0"
 
-loose-envify@^1.1.0, loose-envify@^1.4.0:
+loose-envify@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/loose-envify/-/loose-envify-1.4.0.tgz#71ee51fa7be4caec1a63839f7e682d8132d30caf"
   integrity sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==
@@ -7274,25 +7257,22 @@ readdirp@~3.6.0:
   dependencies:
     picomatch "^2.2.1"
 
-redux-keto@^0.3.4:
-  version "0.3.4"
-  resolved "https://registry.yarnpkg.com/redux-keto/-/redux-keto-0.3.4.tgz#1bf78a36736dc181dd419b10e57116dea17fa3a5"
-  integrity sha512-16q/QujMkv+zdsVRExJuGbl6grXZLoRakBbQR5E9DmEAPIeJoXtjmc6L3bCMUVjBfF+0XFQyJDZwjhS2guh+ng==
+redux-keto@^0.3.5:
+  version "0.3.5"
+  resolved "https://registry.yarnpkg.com/redux-keto/-/redux-keto-0.3.5.tgz#dc87f93483d134d0dc3693dc052374901c6f9a69"
+  integrity sha512-TcFK6zefcBMRjRGBEjmQOGjG7nLxKsKUY8ZPbm/qHLlP9HPXZFhJI1TB5uTuRka0l3JP7yyhn1qMGhsRyM/djg==
 
 redux-pixies@^0.3.6:
   version "0.3.6"
   resolved "https://registry.yarnpkg.com/redux-pixies/-/redux-pixies-0.3.6.tgz#b2ea20a559ba9238a020f0f329afe7e6abf18e4c"
   integrity sha512-RXOEaCKEWa2/qTnUX3GZdziVkgCK1CgzPb739Un/fl2Tam+fJo0MOmyqhxewsz+bj0GaqzYfxIJaaNvEKGL/Yg==
 
-redux@^3.6.0:
-  version "3.7.2"
-  resolved "https://registry.yarnpkg.com/redux/-/redux-3.7.2.tgz#06b73123215901d25d065be342eb026bc1c8537b"
-  integrity sha512-pNqnf9q1hI5HHZRBkj3bAngGZW/JMCmexDlOxw4XagXY2o1327nHH54LoTjiPJ0gizoqPDRqWyX/00g0hD6w+A==
+redux@^4.2.0:
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/redux/-/redux-4.2.0.tgz#46f10d6e29b6666df758780437651eeb2b969f13"
+  integrity sha512-oSBmcKKIuIR4ME29/AeNUnl5L+hvBq7OaJWzaptTQJAntaPvxIJqfnjbaEiCzzaIz+XmVILfqAM3Ob0aXLPfjA==
   dependencies:
-    lodash "^4.2.1"
-    lodash-es "^4.2.1"
-    loose-envify "^1.1.0"
-    symbol-observable "^1.0.3"
+    "@babel/runtime" "^7.9.2"
 
 regenerate-unicode-properties@^8.2.0:
   version "8.2.0"
@@ -7310,6 +7290,11 @@ regenerator-runtime@^0.11.0:
   version "0.11.1"
   resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.11.1.tgz#be05ad7f9bf7d22e056f9726cee5017fbf19e2e9"
   integrity sha512-MguG95oij0fC3QV3URf4V2SDYGJhJnJGqvIIgdECeODCT98wSWDAJ94SSuVpYQUoTcGUIL6L4yNB7j1DFFHSBg==
+
+regenerator-runtime@^0.13.10:
+  version "0.13.11"
+  resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.13.11.tgz#f6dca3e7ceec20590d07ada785636a90cdca17f9"
+  integrity sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==
 
 regenerator-runtime@^0.13.4:
   version "0.13.7"
@@ -8294,11 +8279,6 @@ svgo@^1.0.0, svgo@^1.3.2:
     unquote "~1.1.1"
     util.promisify "~1.0.0"
 
-symbol-observable@^1.0.3:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/symbol-observable/-/symbol-observable-1.2.0.tgz#c22688aed4eab3cdc2dfeacbb561660560a00804"
-  integrity sha512-e900nM8RRtGhlV36KGEU9k65K3mPb1WV70OdjfxlG2EAuM1noi/E/BaW/uMhL7bPEssK8QV57vN3esixjUvcXQ==
-
 symbol-tree@^3.2.2:
   version "3.2.4"
   resolved "https://registry.yarnpkg.com/symbol-tree/-/symbol-tree-3.2.4.tgz#430637d248ba77e078883951fb9aa0eed7c63fa2"
@@ -9084,10 +9064,10 @@ yaml@^1.10.0:
   resolved "https://registry.yarnpkg.com/yaml/-/yaml-1.10.0.tgz#3b593add944876077d4d683fee01081bd9fff31e"
   integrity sha512-yr2icI4glYaNG+KWONODapy2/jDdMSDnrONSjblABjD9B4Z5LgiircSt8m8sRZFNi08kG9Sm0uSHtEmP3zaEGg==
 
-yaob@^0.3.7:
-  version "0.3.7"
-  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.7.tgz#f33f6a7869a8cabaec761a31ae577aaee659d9d0"
-  integrity sha512-r48BLEBGUhkUHBVudB4X+JvID4ZczwzPJg0zDynZ3gbBguEwtO7WE+djKQSY1uclVOB6a7Y51oB8OhAyhQNCxg==
+yaob@^0.3.8:
+  version "0.3.8"
+  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.8.tgz#a359fd092dbf42d07f82eb2fb0b00bdb87f1c4cc"
+  integrity sha512-6ocTmk7fVAB7TOc8ot7sdt5o+UK3d8qtDtd61IBIVe++V1xGmhP3Y8FYOCrzmo6ywzGJPaDS66orZIwnw5NwEw==
   dependencies:
     rfc4648 "^1.1.0"
 

@@ -260,6 +260,7 @@ export async function makeUtxoEngine(
         txs.map(
           async (tx: IProcessorTransaction) =>
             await toEdgeTransaction({
+              walletId: walletInfo.id,
               tx,
               walletTools,
               processor,
@@ -443,6 +444,7 @@ export async function makeUtxoEngine(
       }
 
       const transaction = {
+        walletId: walletInfo.id,
         ourReceiveAddresses,
         otherParams,
         currencyCode: currencyInfo.currencyCode,
@@ -480,6 +482,7 @@ export async function makeUtxoEngine(
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
       const tx = fromEdgeTransaction(edgeTx)
       await transactionChanged({
+        walletId: walletInfo.id,
         tx,
         pluginInfo,
         emitter,
@@ -568,6 +571,7 @@ export async function makeUtxoEngine(
           transaction.signedTx,
           transaction.currencyCode
         )
+        if (transaction.otherParams == null) transaction.otherParams = {}
         Object.assign(transaction.otherParams, {
           paymentProtocolInfo: {
             ...paymentProtocolInfo,

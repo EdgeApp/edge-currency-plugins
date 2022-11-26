@@ -667,6 +667,7 @@ const addToAddressTransactionCache = async (
 }
 
 interface TransactionChangedArgs {
+  walletId: string
   tx: IProcessorTransaction
   emitter: EngineEmitter
   walletTools: UTXOPluginWalletTools
@@ -677,9 +678,10 @@ interface TransactionChangedArgs {
 export const transactionChanged = async (
   args: TransactionChangedArgs
 ): Promise<void> => {
-  const { emitter, walletTools, processor, pluginInfo, tx } = args
+  const { emitter, walletTools, processor, pluginInfo, tx, walletId } = args
   emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
     await toEdgeTransaction({
+      walletId,
       tx,
       walletTools,
       processor,
@@ -930,7 +932,15 @@ interface UpdateTransactionsSpecificArgs extends CommonArgs {
 const updateTransactionsSpecific = (
   args: UpdateTransactionsSpecificArgs
 ): WsTask<unknown> => {
-  const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
+  const {
+    walletInfo,
+    emitter,
+    walletTools,
+    txId,
+    pluginInfo,
+    processor,
+    taskCache
+  } = args
   const deferred = new Deferred<unknown>()
   deferred.promise
     .then(async (txResponse: unknown) => {
@@ -950,6 +960,7 @@ const updateTransactionsSpecific = (
       })
 
       await transactionChanged({
+        walletId: walletInfo.id,
         emitter,
         walletTools,
         processor,
@@ -977,6 +988,7 @@ const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<TransactionResponse> => {
   const {
+    walletInfo,
     emitter,
     walletTools,
     txId,
@@ -1012,6 +1024,7 @@ const updateTransactions = (
       })
 
       await transactionChanged({
+        walletId: walletInfo.id,
         emitter,
         walletTools,
         processor,
@@ -1140,6 +1153,7 @@ const processAddressTransactions = async (
   args: ProcessAddressTxsArgs
 ): Promise<WsTask<AddressResponse>> => {
   const {
+    walletInfo,
     address,
     addressTransactionState,
     emitter,
@@ -1184,6 +1198,7 @@ const processAddressTransactions = async (
           scriptPubkeys: [scriptPubkey]
         })
         await transactionChanged({
+          walletId: walletInfo.id,
           emitter,
           walletTools,
           processor,
