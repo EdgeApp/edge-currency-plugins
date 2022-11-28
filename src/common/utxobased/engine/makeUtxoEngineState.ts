@@ -65,7 +65,10 @@ export interface UtxoEngineState {
 
   deriveScriptAddress: (script: string) => Promise<EdgeFreshAddress>
 
-  getFreshAddress: (branch?: number) => Promise<EdgeFreshAddress>
+  getFreshAddress: (params: {
+    branch?: number
+    forceIndex?: number
+  }) => Promise<EdgeFreshAddress>
 
   addGapLimitAddresses: (addresses: string[]) => Promise<void>
 
@@ -332,28 +335,48 @@ export function makeUtxoEngineState(
       running = false
     },
 
-    async getFreshAddress(branch = 0): Promise<EdgeFreshAddress> {
+    async getFreshAddress({
+      branch = 0,
+      forceIndex
+    }): Promise<EdgeFreshAddress> {
       const walletPurpose = currencyFormatToPurposeType(
         walletInfo.keys.primaryFormat
       )
       if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
-        const { address: publicAddress } = await internalGetFreshAddress({
+        const {
+          address: publicAddress,
+          nativeBalance = '0',
+          legacyAddress
+        } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(
             BIP43PurposeTypeEnum.WrappedSegwit
           ),
+          forceIndex,
           changeIndex: branch
         })
 
-        const { address: segwitAddress } = await internalGetFreshAddress({
+        const {
+          address: segwitAddress,
+          nativeBalance: segwitNativeBalance = '0'
+        } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit),
+          forceIndex,
           changeIndex: branch
         })
 
         return {
+          nativeBalance,
           publicAddress,
-          segwitAddress
+          legacyNativeBalance:
+            legacyAddress !== publicAddress ? nativeBalance : undefined,
+          // Legacy address is just a different encoding of the standard public address
+          // and therefore would have the same balance
+          legacyAddress:
+            legacyAddress !== publicAddress ? legacyAddress : undefined,
+          segwitAddress,
+          segwitNativeBalance
         }
       } else {
         // Airbitz wallets only use branch 0
@@ -363,15 +386,22 @@ export function makeUtxoEngineState(
 
         const {
           address: publicAddress,
+          nativeBalance = '0',
           legacyAddress
         } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(walletPurpose),
+          forceIndex,
           changeIndex: branch
         })
 
         return {
+          nativeBalance,
           publicAddress,
+          legacyNativeBalance:
+            legacyAddress !== publicAddress ? nativeBalance : undefined,
+          // Legacy address is just a different encoding of the standard public address
+          // and therefore would have the same balance
           legacyAddress:
             legacyAddress !== publicAddress ? legacyAddress : undefined
         }
@@ -667,6 +697,7 @@ const addToAddressTransactionCache = async (
 }
 
 interface TransactionChangedArgs {
+  walletId: string
   tx: IProcessorTransaction
   emitter: EngineEmitter
   walletTools: UTXOPluginWalletTools
@@ -677,9 +708,10 @@ interface TransactionChangedArgs {
 export const transactionChanged = async (
   args: TransactionChangedArgs
 ): Promise<void> => {
-  const { emitter, walletTools, processor, pluginInfo, tx } = args
+  const { emitter, walletTools, processor, pluginInfo, tx, walletId } = args
   emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
     await toEdgeTransaction({
+      walletId,
       tx,
       walletTools,
       processor,
@@ -930,7 +962,15 @@ interface UpdateTransactionsSpecificArgs extends CommonArgs {
 const updateTransactionsSpecific = (
   args: UpdateTransactionsSpecificArgs
 ): WsTask<unknown> => {
-  const { emitter, walletTools, txId, pluginInfo, processor, taskCache } = args
+  const {
+    walletInfo,
+    emitter,
+    walletTools,
+    txId,
+    pluginInfo,
+    processor,
+    taskCache
+  } = args
   const deferred = new Deferred<unknown>()
   deferred.promise
     .then(async (txResponse: unknown) => {
@@ -950,6 +990,7 @@ const updateTransactionsSpecific = (
       })
 
       await transactionChanged({
+        walletId: walletInfo.id,
         emitter,
         walletTools,
         processor,
@@ -977,6 +1018,7 @@ const updateTransactions = (
   args: UpdateTransactionsArgs
 ): WsTask<TransactionResponse> => {
   const {
+    walletInfo,
     emitter,
     walletTools,
     txId,
@@ -1012,6 +1054,7 @@ const updateTransactions = (
       })
 
       await transactionChanged({
+        walletId: walletInfo.id,
         emitter,
         walletTools,
         processor,
@@ -1091,17 +1134,26 @@ const internalDeriveScriptAddress = async ({
   return { address, scriptPubkey, redeemScript }
 }
 
-interface GetFreshAddressArgs extends FormatArgs {}
+interface GetFreshAddressArgs extends FormatArgs {
+  forceIndex?: number
+}
 
 interface GetFreshAddressReturn {
   address: string
   legacyAddress: string
+  nativeBalance?: string
 }
 
 const internalGetFreshAddress = async (
   args: GetFreshAddressArgs
 ): Promise<GetFreshAddressReturn> => {
-  const { format, changeIndex: branch, walletTools, processor } = args
+  const {
+    format,
+    changeIndex: branch,
+    walletTools,
+    processor,
+    forceIndex
+  } = args
 
   const numAddresses = processor.numAddressesByFormatPath({
     format,
@@ -1117,16 +1169,33 @@ const internalGetFreshAddress = async (
       0
     )
   }
-  const { scriptPubkey } =
-    (await processor.fetchAddress(path)) ??
-    (await walletTools.getScriptPubkey(path))
+  if (forceIndex != null) {
+    path.addressIndex = forceIndex
+  }
+
+  let nativeBalance = '0'
+  let scriptPubkey
+  const iAddress = await processor.fetchAddress(path)
+  if (iAddress != null) {
+    nativeBalance = iAddress.balance
+    scriptPubkey = iAddress.scriptPubkey
+  } else {
+    const scriptPubKeyRet = await walletTools.getScriptPubkey(path)
+    scriptPubkey = scriptPubKeyRet.scriptPubkey
+  }
+
   if (scriptPubkey == null) {
     throw new Error('Unknown address path')
   }
-  return walletTools.scriptPubkeyToAddress({
+  const address = walletTools.scriptPubkeyToAddress({
     scriptPubkey,
     format
   })
+
+  return {
+    ...address,
+    nativeBalance
+  }
 }
 
 interface ProcessAddressTxsArgs extends CommonArgs {
@@ -1140,6 +1209,7 @@ const processAddressTransactions = async (
   args: ProcessAddressTxsArgs
 ): Promise<WsTask<AddressResponse>> => {
   const {
+    walletInfo,
     address,
     addressTransactionState,
     emitter,
@@ -1184,6 +1254,7 @@ const processAddressTransactions = async (
           scriptPubkeys: [scriptPubkey]
         })
         await transactionChanged({
+          walletId: walletInfo.id,
           emitter,
           walletTools,
           processor,

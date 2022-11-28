@@ -6,6 +6,7 @@ import {
   EdgeCurrencyEngine,
   EdgeDataDump,
   EdgeFreshAddress,
+  EdgeGetReceiveAddressOptions,
   EdgeGetTransactionsOptions,
   EdgePaymentProtocolInfo,
   EdgeSpendInfo,
@@ -227,9 +228,10 @@ export async function makeUtxoEngine(
     },
 
     async getFreshAddress(
-      _opts: EdgeCurrencyCodeOptions
+      opts: EdgeGetReceiveAddressOptions
     ): Promise<EdgeFreshAddress> {
-      return await engineState.getFreshAddress()
+      const { forceIndex } = opts
+      return await engineState.getFreshAddress({ forceIndex })
     },
 
     getNumTransactions(_opts: EdgeCurrencyCodeOptions): number {
@@ -260,6 +262,7 @@ export async function makeUtxoEngine(
         txs.map(
           async (tx: IProcessorTransaction) =>
             await toEdgeTransaction({
+              walletId: walletInfo.id,
               tx,
               walletTools,
               processor,
@@ -281,7 +284,13 @@ export async function makeUtxoEngine(
       options?: TxOptions
     ): Promise<EdgeTransaction> {
       const { spendTargets } = edgeSpendInfo
-      const { outputSort = 'bip69' } = edgeSpendInfo.otherParams ?? {}
+      const { outputSort = 'bip69', utxoSourceAddress, forceChangeAddress } =
+        edgeSpendInfo.otherParams ?? {}
+
+      let utxoScriptPubkey: string | undefined
+      if (utxoSourceAddress != null) {
+        utxoScriptPubkey = walletTools.addressToScriptPubkey(utxoSourceAddress)
+      }
 
       if (options?.CPFP == null && spendTargets.length < 1) {
         throw new Error('Need to provide Spend Targets')
@@ -293,7 +302,12 @@ export async function makeUtxoEngine(
       )
       const utxos =
         options?.utxos ??
-        ((await processor.fetchUtxos({ utxoIds: [] })) as IUTXO[])
+        filterUndefined(
+          (await processor.fetchUtxos({
+            scriptPubkey: utxoScriptPubkey,
+            utxoIds: []
+          })) as IUTXO[]
+        )
 
       if (
         bs.gt(totalAmountToSend, `${sumUtxos(utxos)}`) ||
@@ -353,9 +367,12 @@ export async function makeUtxoEngine(
         throw new Error('Need to provide Spend Targets')
       }
 
-      const freshAddress = await engineState.getFreshAddress(1)
+      const freshAddress = await engineState.getFreshAddress({ branch: 1 })
       const freshChangeAddress =
-        freshAddress.segwitAddress ?? freshAddress.publicAddress
+        forceChangeAddress ??
+        freshAddress.segwitAddress ??
+        freshAddress.publicAddress
+
       const setRBF = options?.setRBF ?? false
       const rbfTxid = edgeSpendInfo.rbfTxid
       let maxUtxo: undefined | IUTXO
@@ -443,6 +460,7 @@ export async function makeUtxoEngine(
       }
 
       const transaction = {
+        walletId: walletInfo.id,
         ourReceiveAddresses,
         otherParams,
         currencyCode: currencyInfo.currencyCode,
@@ -480,6 +498,7 @@ export async function makeUtxoEngine(
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
       const tx = fromEdgeTransaction(edgeTx)
       await transactionChanged({
+        walletId: walletInfo.id,
         tx,
         pluginInfo,
         emitter,
@@ -568,6 +587,7 @@ export async function makeUtxoEngine(
           transaction.signedTx,
           transaction.currencyCode
         )
+        if (transaction.otherParams == null) transaction.otherParams = {}
         Object.assign(transaction.otherParams, {
           paymentProtocolInfo: {
             ...paymentProtocolInfo,

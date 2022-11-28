@@ -52,6 +52,7 @@ export const fromEdgeTransaction = (
 }
 
 interface ToEdgeTransactionArgs {
+  walletId: string
   tx: IProcessorTransaction
   walletTools: UTXOPluginWalletTools
   processor: Processor
@@ -61,7 +62,7 @@ interface ToEdgeTransactionArgs {
 export const toEdgeTransaction = async (
   args: ToEdgeTransactionArgs
 ): Promise<EdgeTransaction> => {
-  const { tx, processor, walletTools, pluginInfo } = args
+  const { tx, processor, walletTools, pluginInfo, walletId } = args
   const { engineInfo, currencyInfo } = pluginInfo
   const ourReceiveAddresses: string[] = []
   for (const out of tx.ourOuts) {
@@ -69,7 +70,7 @@ export const toEdgeTransaction = async (
     const address = await processor.fetchAddress(scriptPubkey)
 
     /*
-    Hack to set replay protection tx to the correct script type through the 
+    Hack to set replay protection tx to the correct script type through the
     address format.
 
     We use a function which can determine whether the derivationLevelScriptHash
@@ -114,6 +115,7 @@ export const toEdgeTransaction = async (
   } catch (e) {}
 
   return {
+    walletId,
     currencyCode: currencyInfo.currencyCode,
     txid: tx.txid,
     blockHeight: tx.blockHeight,
