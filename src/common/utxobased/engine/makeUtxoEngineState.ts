@@ -343,7 +343,11 @@ export function makeUtxoEngineState(
         walletInfo.keys.primaryFormat
       )
       if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
-        const { address: publicAddress } = await internalGetFreshAddress({
+        const {
+          address: publicAddress,
+          nativeBalance = '0',
+          legacyAddress
+        } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(
             BIP43PurposeTypeEnum.WrappedSegwit
@@ -352,7 +356,10 @@ export function makeUtxoEngineState(
           changeIndex: branch
         })
 
-        const { address: segwitAddress } = await internalGetFreshAddress({
+        const {
+          address: segwitAddress,
+          nativeBalance: segwitNativeBalance = '0'
+        } = await internalGetFreshAddress({
           ...commonArgs,
           format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit),
           forceIndex,
@@ -360,8 +367,16 @@ export function makeUtxoEngineState(
         })
 
         return {
+          nativeBalance,
           publicAddress,
-          segwitAddress
+          legacyNativeBalance:
+            legacyAddress !== publicAddress ? nativeBalance : undefined,
+          // Legacy address is just a different encoding of the standard public address
+          // and therefore would have the same balance
+          legacyAddress:
+            legacyAddress !== publicAddress ? legacyAddress : undefined,
+          segwitAddress,
+          segwitNativeBalance
         }
       } else {
         // Airbitz wallets only use branch 0
@@ -371,6 +386,7 @@ export function makeUtxoEngineState(
 
         const {
           address: publicAddress,
+          nativeBalance = '0',
           legacyAddress
         } = await internalGetFreshAddress({
           ...commonArgs,
@@ -380,7 +396,12 @@ export function makeUtxoEngineState(
         })
 
         return {
+          nativeBalance,
           publicAddress,
+          legacyNativeBalance:
+            legacyAddress !== publicAddress ? nativeBalance : undefined,
+          // Legacy address is just a different encoding of the standard public address
+          // and therefore would have the same balance
           legacyAddress:
             legacyAddress !== publicAddress ? legacyAddress : undefined
         }
@@ -1120,6 +1141,7 @@ interface GetFreshAddressArgs extends FormatArgs {
 interface GetFreshAddressReturn {
   address: string
   legacyAddress: string
+  nativeBalance?: string
 }
 
 const internalGetFreshAddress = async (
@@ -1151,16 +1173,29 @@ const internalGetFreshAddress = async (
     path.addressIndex = forceIndex
   }
 
-  const { scriptPubkey } =
-    (await processor.fetchAddress(path)) ??
-    (await walletTools.getScriptPubkey(path))
+  let nativeBalance = '0'
+  let scriptPubkey
+  const iAddress = await processor.fetchAddress(path)
+  if (iAddress != null) {
+    nativeBalance = iAddress.balance
+    scriptPubkey = iAddress.scriptPubkey
+  } else {
+    const scriptPubKeyRet = await walletTools.getScriptPubkey(path)
+    scriptPubkey = scriptPubKeyRet.scriptPubkey
+  }
+
   if (scriptPubkey == null) {
     throw new Error('Unknown address path')
   }
-  return walletTools.scriptPubkeyToAddress({
+  const address = walletTools.scriptPubkeyToAddress({
     scriptPubkey,
     format
   })
+
+  return {
+    ...address,
+    nativeBalance
+  }
 }
 
 interface ProcessAddressTxsArgs extends CommonArgs {
