@@ -1,5 +1,12 @@
 # edge-currency-plugins
 
+## v1.3.0 (2022-11-28)
+
+- add: forceIndex option to getReceiveAddress to get specific derivation index
+- add: Return balance of address with getReceiveAddress
+- add: utxoSourceAddress option to makeSpend to only use UTXOs from a specific address
+- add: forceChangeAddress option to makeSpend to force change to go to specific address
+
 ## v1.2.3 (2022-10-31)
 
 - Rewrite wallet balance update algorithm
