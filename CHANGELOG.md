@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.3.1 (2022-11-29)
+
+- fix: Enable and fix BCH to BSV splitting
+
 ## v1.3.0 (2022-11-28)
 
 - add: forceIndex option to getReceiveAddress to get specific derivation index
