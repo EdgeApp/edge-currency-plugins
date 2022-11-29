@@ -2,10 +2,7 @@ import { EngineInfo } from '../../../plugin/types'
 import { Processor } from '../../db/makeProcessor'
 import { IProcessorTransaction, IUTXO } from '../../db/types'
 import { BIP43PurposeTypeEnum } from '../../keymanager/keymanager'
-import {
-  currencyFormatToPurposeType,
-  getScriptTypeFromPurposeType
-} from '../utils'
+import { getScriptTypeFromPurposeType, pathToPurposeType } from '../utils'
 
 export const getOwnUtxosFromTx = async (
   engineInfo: EngineInfo,
@@ -43,18 +40,15 @@ export const getOwnUtxosFromTx = async (
       const path = address.path
       if (path != null) {
         const redeemScript = address.redeemScript
-        const purposeType = currencyFormatToPurposeType(path.format)
+        const purposeType = pathToPurposeType(path, engineInfo.scriptTemplates)
 
         const isAirbitzOrLegacy = [
           BIP43PurposeTypeEnum.Airbitz,
-          BIP43PurposeTypeEnum.Legacy
+          BIP43PurposeTypeEnum.Legacy,
+          BIP43PurposeTypeEnum.ReplayProtection
         ].includes(purposeType)
 
-        const scriptType = getScriptTypeFromPurposeType(
-          purposeType,
-          redeemScript,
-          engineInfo.scriptTemplates
-        )
+        const scriptType = getScriptTypeFromPurposeType(purposeType)
         const script = isAirbitzOrLegacy ? tx.hex : address.scriptPubkey
         const utxo: IUTXO = {
           id,

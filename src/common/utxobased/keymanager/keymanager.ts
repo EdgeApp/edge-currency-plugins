@@ -8,10 +8,10 @@ import { EdgeLog, InsufficientFundsError } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
-import { AddressPath, CoinInfo, CoinPrefixes } from '../../plugin/types'
+import { ChangePath, CoinInfo, CoinPrefixes } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import { validateMemo } from '../engine/utils'
-import { ScriptTemplate } from '../info/scriptTemplates/types'
+import { ScriptTemplate, ScriptTemplates } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
 import {
   cashAddressToHash,
@@ -27,7 +27,8 @@ export enum BIP43PurposeTypeEnum {
   Airbitz = 'airbitz',
   Legacy = 'legacy', // xpub/xprv tpub/tprv etc.
   Segwit = 'segwit', // zpub/zprv vpub/vprv etc.
-  WrappedSegwit = 'wrappedSegwit' // ypub/yprv upub/uprv etc.
+  WrappedSegwit = 'wrappedSegwit', // ypub/yprv upub/uprv etc.
+  ReplayProtection = 'replayProtection'
 }
 
 // supported address types.
@@ -104,6 +105,7 @@ export interface AddressToScriptPubkeyArgs {
 
 export interface PubkeyToScriptPubkeyArgs {
   pubkey: string
+  scriptTemplates?: ScriptTemplates
   scriptType: ScriptTypeEnum
 }
 
@@ -399,7 +401,7 @@ export function derivationLevelScriptHash(
 
 export const isPathUsingDerivationLevelScriptHash = (
   scriptTemplate: ScriptTemplate,
-  path: AddressPath
+  path: ChangePath
 ): boolean => {
   return path.changeIndex === derivationLevelScriptHash(scriptTemplate)
 }
@@ -510,12 +512,18 @@ const addressToScriptPubkeyInternal = (
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
-  const scriptPubkey = payment({
-    address: args.address,
-    network: network,
-    bs58DecodeFunc: coin.bs58DecodeFunc,
-    bs58EncodeFunc: coin.bs58EncodeFunc
-  }).output
+  let scriptPubkey: Buffer | undefined
+  try {
+    scriptPubkey = payment({
+      address: args.address,
+      network: network,
+      bs58DecodeFunc: coin.bs58DecodeFunc,
+      bs58EncodeFunc: coin.bs58EncodeFunc
+    }).output
+  } catch (error) {
+    console.trace(error)
+    throw error
+  }
   if (scriptPubkey == null) {
     throw new Error('failed converting address to scriptPubkey')
   }
@@ -621,23 +629,28 @@ export function scriptPubkeyToAddress(
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
-  address =
-    address ??
-    payment({
-      output: Buffer.from(args.scriptPubkey, 'hex'),
-      network: network,
-      bs58DecodeFunc: coinClass.bs58DecodeFunc,
-      bs58EncodeFunc: coinClass.bs58EncodeFunc
-    }).address
+  try {
+    address =
+      address ??
+      payment({
+        output: Buffer.from(args.scriptPubkey, 'hex'),
+        network: network,
+        bs58DecodeFunc: coinClass.bs58DecodeFunc,
+        bs58EncodeFunc: coinClass.bs58EncodeFunc
+      }).address
 
-  legacyAddress =
-    legacyAddress ??
-    payment({
-      output: Buffer.from(args.scriptPubkey, 'hex'),
-      network: legacyNetwork,
-      bs58DecodeFunc: coinClass.bs58DecodeFunc,
-      bs58EncodeFunc: coinClass.bs58EncodeFunc
-    }).address
+    legacyAddress =
+      legacyAddress ??
+      payment({
+        output: Buffer.from(args.scriptPubkey, 'hex'),
+        network: legacyNetwork,
+        bs58DecodeFunc: coinClass.bs58DecodeFunc,
+        bs58EncodeFunc: coinClass.bs58EncodeFunc
+      }).address
+  } catch (error) {
+    console.trace(error)
+    throw error
+  }
 
   if (address == null || legacyAddress == null) {
     throw new Error('failed converting scriptPubkey to address')
@@ -666,10 +679,16 @@ export function scriptPubkeyToScriptHash(
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
-  const scriptHash: Buffer | undefined = payment({
-    output: Buffer.from(args.scriptPubkey, 'hex'),
-    network: network
-  }).hash
+  let scriptHash: Buffer | undefined
+  try {
+    scriptHash = payment({
+      output: Buffer.from(args.scriptPubkey, 'hex'),
+      network: network
+    }).hash
+  } catch (error) {
+    console.trace(error)
+    throw error
+  }
   if (scriptHash == null) {
     throw new Error('failed converting scriptPubkey to address')
   }
@@ -693,13 +712,34 @@ export function scriptPubkeyToP2SH(
       output: Buffer.from(scriptPubkey, 'hex')
     }
   })
-  if (p2sh.output == null || p2sh.redeem?.output == null) {
+  const scriptPubkeyFromLib = p2sh.output?.toString('hex')
+  const redeemScript = p2sh.redeem?.output?.toString('hex')
+  const scriptHash = p2sh.hash?.toString('hex')
+
+  if (scriptPubkeyFromLib == null || redeemScript == null) {
     throw new Error('unable to convert script to p2sh')
   }
+
+  let address: string | undefined = p2sh.address
+
+  // Special cashaddr handling
+  if (coin != null && scriptHash != null) {
+    const coinClass = getCoinFromString(coin)
+    const coinPrefixes = coinClass.prefixes
+    const standardPrefixes = selectedCoinPrefixes(coinPrefixes, 0)
+    if (standardPrefixes.cashaddr != null) {
+      address = hashToCashAddress(
+        scriptHash,
+        CashaddrTypeEnum.scripthash,
+        standardPrefixes.cashaddr
+      )
+    }
+  }
+
   return {
-    scriptPubkey: p2sh.output.toString('hex'),
-    redeemScript: p2sh.redeem.output.toString('hex'),
-    address: p2sh.address
+    scriptPubkey: scriptPubkeyFromLib,
+    redeemScript: redeemScript,
+    address
   }
 }
 
@@ -731,6 +771,14 @@ export function pubkeyToScriptPubkey(
         throw new Error('failed converting pubkey to script pubkey')
       }
       return { scriptPubkey: payment.output.toString('hex') }
+    case ScriptTypeEnum.replayProtection: {
+      if (args.scriptTemplates == null)
+        throw new Error('Missing replayProtection script template')
+      const redeemScript = args.scriptTemplates.replayProtection(args.pubkey)
+      return scriptPubkeyToP2SH({
+        scriptPubkey: redeemScript
+      })
+    }
     default:
       throw new Error('invalid address type in pubkey to script pubkey')
   }
@@ -1126,6 +1174,8 @@ const bip43PurposeTypeEnumToNumber = (
       return 49
     case BIP43PurposeTypeEnum.Segwit:
       return 84
+    case BIP43PurposeTypeEnum.ReplayProtection:
+      return 44 // Only bip44 formatted wallets contain this purpose type (BCH)
   }
 }
 
@@ -1256,10 +1306,16 @@ const scriptHashToScriptPubkey = (
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
-  const scriptPubkey: Buffer | undefined = payment({
-    hash: Buffer.from(args.scriptHash, 'hex'),
-    network: network
-  }).output
+  let scriptPubkey: Buffer | undefined
+  try {
+    scriptPubkey = payment({
+      hash: Buffer.from(args.scriptHash, 'hex'),
+      network: network
+    }).output
+  } catch (error) {
+    console.trace(error)
+    throw error
+  }
   if (scriptPubkey == null) {
     throw new Error('failed converting scriptPubkey to address')
   }

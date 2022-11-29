@@ -1,9 +1,11 @@
 import { expect } from 'chai'
 
 import { makeUtxoWalletTools } from '../../../../src/common/utxobased/engine/makeUtxoWalletTools'
+import { info as pluginInfo } from '../../../../src/common/utxobased/info/bitcoin'
 
 describe('wallet tools tests', () => {
   const walletTools = makeUtxoWalletTools({
+    pluginInfo,
     publicKey: {
       publicKeys: {
         bip49:
@@ -11,8 +13,7 @@ describe('wallet tools tests', () => {
         bip84:
           'zpub6qmK2GdQoxXphTU8DjQNBFc9xKc3XnoNBUhKHKfKchMmVLENqeVn8GcwL9ThKYme2Qqnvq8RSrJh2PkpPGhy5rXmizkRBZ7naCd33hHSpaN'
       }
-    },
-    coin: 'bitcoin'
+    }
   })
 
   it('Get Address test', () => {
@@ -38,8 +39,8 @@ describe('wallet tools tests', () => {
 describe('wallet tools wif test', () => {
   const wifKey = 'L2uPYXe17xSTqbCjZvL2DsyXPCbXspvcu5mHLDYUgzdUbZGSKrSr'
   const walletTools = makeUtxoWalletTools({
-    publicKey: {} as any,
-    coin: 'bitcoin'
+    pluginInfo,
+    publicKey: {} as any
   })
 
   it('can get scriptPubkey from WIF', () => {
@@ -70,8 +71,8 @@ describe('wallet tools wif test', () => {
         format
       )
       const address = walletTools.scriptPubkeyToAddress({
-        scriptPubkey,
-        format
+        changePath: { format, changeIndex: 0 },
+        scriptPubkey
       })
       expect(address.legacyAddress).to.equal(expectation)
     }

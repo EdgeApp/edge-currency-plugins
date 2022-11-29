@@ -5,7 +5,6 @@ import { EdgeTransaction } from 'edge-core-js/types'
 import { PluginInfo } from '../../../plugin/types'
 import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
 import { UtxoTxOtherParams } from '../../engine/types'
-import { isPathUsingDerivationLevelScriptHash } from '../../keymanager/keymanager'
 import { Processor } from '../makeProcessor'
 import { IProcessorTransaction } from '../types'
 
@@ -63,35 +62,16 @@ export const toEdgeTransaction = async (
   args: ToEdgeTransactionArgs
 ): Promise<EdgeTransaction> => {
   const { tx, processor, walletTools, pluginInfo, walletId } = args
-  const { engineInfo, currencyInfo } = pluginInfo
+  const { currencyInfo } = pluginInfo
   const ourReceiveAddresses: string[] = []
   for (const out of tx.ourOuts) {
     const { scriptPubkey } = tx.outputs[parseInt(out)]
     const address = await processor.fetchAddress(scriptPubkey)
 
-    /*
-    Hack to set replay protection tx to the correct script type through the
-    address format.
-
-    We use a function which can determine whether the derivationLevelScriptHash
-    was used for the path's change index in order to detect whether an address
-    is used for replay protection. We need to detect this because we must treat
-    the address format as bip49 because the script is P2SH even though the
-    address is on the bip44 derivation chain.
-    */
-    const scriptTemplate = engineInfo.scriptTemplates?.replayProtection
-    if (
-      scriptTemplate != null &&
-      address?.path != null &&
-      isPathUsingDerivationLevelScriptHash(scriptTemplate, address.path)
-    ) {
-      address.path.format = 'bip49'
-    }
-
     if (address?.path != null) {
       const { address: addrStr } = walletTools.scriptPubkeyToAddress({
-        scriptPubkey,
-        format: address.path.format
+        changePath: address.path,
+        scriptPubkey
       })
       ourReceiveAddresses.push(addrStr)
     }

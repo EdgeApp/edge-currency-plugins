@@ -93,8 +93,8 @@ export async function makeUtxoEngine(
   }
 
   const walletTools = makeUtxoWalletTools({
-    publicKey,
-    coin: coinInfo.name
+    pluginInfo,
+    publicKey
   })
 
   const fees = await makeFees({
@@ -648,8 +648,8 @@ export async function makeUtxoEngine(
       const tmpMetadata = await makeMetadata(tmpConfig)
       const tmpProcessor = await makeProcessor(tmpConfig)
       const tmpWalletTools = makeUtxoWalletTools({
-        publicKey: tmpWalletInfo.keys.publicKey,
-        coin: coinInfo.name
+        pluginInfo,
+        publicKey: tmpWalletInfo.keys.publicKey
       })
 
       // Max spend after imported wallet finishes sync

@@ -53,6 +53,8 @@ import {
   currencyFormatToPurposeType,
   getCurrencyFormatFromPurposeType,
   getFormatSupportedBranches,
+  getScriptTypeFromPurposeType,
+  pathToPurposeType,
   validScriptPubkeyFromAddress
 } from './utils'
 
@@ -243,8 +245,7 @@ export function makeUtxoEngineState(
         addToAddressTransactionCache(
           commonArgs,
           response.address,
-          path.format,
-          path.changeIndex,
+          path,
           0,
           taskCache.addressTransactionCache
         ).catch(() => {
@@ -267,13 +268,16 @@ export function makeUtxoEngineState(
     }> = []
 
     for (const format of walletFormats) {
-      const branches = getFormatSupportedBranches(format)
+      const branches = getFormatSupportedBranches(pluginInfo.engineInfo, format)
       for (const branch of branches) {
         const addressesToSubscribe = new Set<string>()
-        const branchAddressCount = processor.numAddressesByFormatPath({
+        const changePath = {
           format,
           changeIndex: branch
-        })
+        }
+        const branchAddressCount = processor.numAddressesByFormatPath(
+          changePath
+        )
         // If the processor has not processed any addresses then the loop
         // condition will only iterate once when branchAddressCount is 0 for the
         // first address in the derivation path.
@@ -293,8 +297,8 @@ export function makeUtxoEngineState(
             )
           }
           const { address } = walletTools.scriptPubkeyToAddress({
-            scriptPubkey: processorAddress.scriptPubkey,
-            format
+            changePath,
+            scriptPubkey: processorAddress.scriptPubkey
           })
           addressesToSubscribe.add(address)
           addressBalanceChanges.push({
@@ -467,8 +471,8 @@ export function makeUtxoEngineState(
             redeemScript
           } = walletTools.getScriptPubkeyFromWif(wif, format)
           const { address } = walletTools.scriptPubkeyToAddress({
-            scriptPubkey,
-            format: path.format
+            changePath: path,
+            scriptPubkey
           })
 
           // Make a new IAddress and save it
@@ -570,6 +574,7 @@ interface ProcessorUtxoCache {
 }
 interface RawUtxoCache {
   [key: string]: {
+    blockbookUtxo: BlockbookAccountUtxo
     processing: boolean
     path: ChangePath
     address: IAddress
@@ -602,7 +607,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 
   try {
     for (const format of walletFormats) {
-      const branches = getFormatSupportedBranches(format)
+      const branches = getFormatSupportedBranches(engineInfo, format)
       for (const branch of branches) {
         await deriveKeys({ format, changeIndex: branch })
       }
@@ -627,8 +632,8 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 
       const { scriptPubkey, redeemScript } = walletTools.getScriptPubkey(path)
       const { address } = walletTools.scriptPubkeyToAddress({
-        scriptPubkey,
-        format: path.format
+        changePath: path,
+        scriptPubkey
       })
 
       // Make a new IAddress and save it
@@ -668,14 +673,13 @@ const addToAddressSubscribeCache = (
 }
 
 const addToAddressTransactionCache = async (
-  args: CommonArgs,
+  common: CommonArgs,
   address: string,
-  format: CurrencyFormat,
-  branch: number,
+  changePath: ChangePath,
   blockHeight: number,
   addressTransactionCache: AddressTransactionCache
 ): Promise<void> => {
-  const { walletTools, processor } = args
+  const { walletTools, processor } = common
   // Fetch the blockHeight for the address from the database
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
 
@@ -687,10 +691,7 @@ const addToAddressTransactionCache = async (
 
   addressTransactionCache[address] = {
     processing: false,
-    path: {
-      format,
-      changeIndex: branch
-    },
+    path: changePath,
     page: 1, // Page starts on 1
     blockHeight
   }
@@ -774,21 +775,25 @@ export const pickNextTask = async (
   }
 
   // Loop unparsed utxos, some require a network call to get the full tx data
-  for (const [utxoString, state] of Object.entries(rawUtxoCache)) {
-    const utxo: BlockbookAccountUtxo = JSON.parse(utxoString)
+  for (const [utxoId, state] of Object.entries(rawUtxoCache)) {
+    const utxo = state.blockbookUtxo
     if (utxo == null) continue
     if (!state.processing) {
       // check if we need to fetch additional network content for legacy purpose type
-      const purposeType = currencyFormatToPurposeType(state.path.format)
+      const purposeType = pathToPurposeType(
+        state.path,
+        pluginInfo.engineInfo.scriptTemplates
+      )
       if (
         purposeType === BIP43PurposeTypeEnum.Airbitz ||
-        purposeType === BIP43PurposeTypeEnum.Legacy
+        purposeType === BIP43PurposeTypeEnum.Legacy ||
+        purposeType === BIP43PurposeTypeEnum.ReplayProtection
       ) {
         // if we do need to make a network call, check with the serverState
         if (!serverStates.serverCanGetTx(uri, utxo.txid)) return
       }
       state.processing = true
-      removeItem(rawUtxoCache, utxoString)
+      removeItem(rawUtxoCache, utxoId)
       const wsTask = await processRawUtxo({
         ...args,
         ...state,
@@ -829,30 +834,38 @@ export const pickNextTask = async (
 
   // Check if there are any addresses pending to be subscribed
   if (Object.keys(addressSubscribeCache).length > 0) {
-    // These are addresse to which the server has not subscribed
-    const newAddress: string[] = []
+    // These are addresses to which the server has not subscribed
+    const newAddresses: string[] = []
     const blockHeight = serverStates.getBlockHeight(uri)
 
     // Loop each address in the cache
     for (const [address, state] of Object.entries(addressSubscribeCache)) {
+      const isAddressNewlySubscribed = !serverStates.serverIsAwareOfAddress(
+        uri,
+        address
+      )
+
       // Add address in the cache to the set of addresses to watch
-      if (!serverStates.serverIsAwareOfAddress(uri, address)) {
-        newAddress.push(address)
+      if (isAddressNewlySubscribed) {
+        newAddresses.push(address)
       }
 
       // Add to the addressTransactionCache if they're not yet added:
       // Only process newly watched addresses
       if (state.processing) continue
+
       // Add the newly watched addresses to the UTXO cache
-      addressUtxoCache[address] = {
-        processing: false,
-        path: state.path
+      if (isAddressNewlySubscribed) {
+        addressUtxoCache[address] = {
+          processing: false,
+          path: state.path
+        }
       }
+
       await addToAddressTransactionCache(
         args,
         address,
-        state.path.format,
-        state.path.changeIndex,
+        state.path,
         blockHeight,
         addressTransactionCache
       )
@@ -860,8 +873,8 @@ export const pickNextTask = async (
     }
 
     // Subscribe to any new addresses
-    if (newAddress.length > 0) {
-      serverStates.watchAddresses(uri, newAddress)
+    if (newAddresses.length > 0) {
+      serverStates.watchAddresses(uri, newAddresses)
       return true
     }
   }
@@ -1188,8 +1201,8 @@ const internalGetFreshAddress = async (
     throw new Error('Unknown address path')
   }
   const address = walletTools.scriptPubkeyToAddress({
-    scriptPubkey,
-    format
+    changePath: path,
+    scriptPubkey
   })
 
   return {
@@ -1415,7 +1428,9 @@ const processAddressUtxos = async (
       }
 
       for (const utxo of utxos) {
-        rawUtxoCache[JSON.stringify(utxo)] = {
+        const utxoId = `${utxo.txid}_${utxo.vout}`
+        rawUtxoCache[utxoId] = {
+          blockbookUtxo: utxo,
           processing: false,
           requiredCount: utxos.length,
           path,
@@ -1557,6 +1572,7 @@ const processRawUtxo = async (
     utxo,
     id,
     address,
+    pluginInfo,
     processor,
     path,
     taskCache,
@@ -1566,7 +1582,11 @@ const processRawUtxo = async (
     log
   } = args
   const { rawUtxoCache, processorUtxoCache } = taskCache
-  let scriptType: ScriptTypeEnum
+  const purposeType = pathToPurposeType(
+    path,
+    pluginInfo.engineInfo.scriptTemplates
+  )
+  const scriptType: ScriptTypeEnum = getScriptTypeFromPurposeType(purposeType)
   let script: string
   let redeemScript: string | undefined
 
@@ -1591,19 +1611,18 @@ const processRawUtxo = async (
       }
     )
 
-  switch (currencyFormatToPurposeType(path.format)) {
+  switch (purposeType) {
     case BIP43PurposeTypeEnum.Airbitz:
     case BIP43PurposeTypeEnum.Legacy:
-      scriptType = ScriptTypeEnum.p2pkh
-      if (address.redeemScript != null) {
-        scriptType = ScriptTypeEnum.p2sh
-        redeemScript = address.redeemScript
-      }
+    case BIP43PurposeTypeEnum.ReplayProtection:
+      redeemScript = address.redeemScript
 
       // Legacy UTXOs need the previous transaction hex as the script
       // If we do not currently have it, add it to the queue to fetch it
       {
-        const [tx] = await processor.fetchTransactions({ txId: utxo.txid })
+        const [tx] = await processor.fetchTransactions({
+          txId: utxo.txid
+        })
         if (tx == null) {
           const queryTime = Date.now()
           const deferred = new Deferred<TransactionResponse>()
@@ -1621,7 +1640,9 @@ const processRawUtxo = async (
             .catch(err => {
               // If something went wrong, add the UTXO back to the queue
               log('error in processRawUtxo:', err)
-              rawUtxoCache[JSON.stringify(utxo)] = {
+              const utxoId = `${utxo.txid}_${utxo.vout}`
+              rawUtxoCache[utxoId] = {
+                blockbookUtxo: utxo,
                 processing: false,
                 path,
                 address,
@@ -1639,7 +1660,6 @@ const processRawUtxo = async (
 
       break
     case BIP43PurposeTypeEnum.WrappedSegwit:
-      scriptType = ScriptTypeEnum.p2wpkhp2sh
       script = address.scriptPubkey
       if (address.redeemScript == null) {
         throw new Error(
@@ -1650,7 +1670,6 @@ const processRawUtxo = async (
 
       break
     case BIP43PurposeTypeEnum.Segwit:
-      scriptType = ScriptTypeEnum.p2wpkh
       script = address.scriptPubkey
 
       break

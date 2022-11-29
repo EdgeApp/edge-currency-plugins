@@ -1470,7 +1470,7 @@ alphanum-sort@^1.0.0:
 
 "altcoin-js@https://github.com/EdgeApp/altcoin-js.git#master":
   version "5.1.10"
-  resolved "https://github.com/EdgeApp/altcoin-js.git#b0a16589b50c1a88482bb98930b13d14088b44f4"
+  resolved "https://github.com/EdgeApp/altcoin-js.git#02c16e9686c87a3fee7ae4144e89bcf43d47c8d1"
   dependencies:
     bech32 "^1.1.4"
     big-integer "^1.6.44"

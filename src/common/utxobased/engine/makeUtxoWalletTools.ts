@@ -1,4 +1,9 @@
-import { AddressPath, CurrencyFormat } from '../../plugin/types'
+import {
+  AddressPath,
+  ChangePath,
+  CurrencyFormat,
+  PluginInfo
+} from '../../plugin/types'
 import { ScriptTemplate } from '../info/scriptTemplates/types'
 import { PublicKey } from '../keymanager/cleaners'
 import {
@@ -18,12 +23,13 @@ import {
   CurrencyFormatKeys,
   currencyFormatToPurposeType,
   getAddressTypeFromPurposeType,
-  getScriptTypeFromPurposeType
+  getScriptTypeFromPurposeType,
+  pathToPurposeType
 } from './utils'
 
 export interface WalletToolsConfig {
+  pluginInfo: PluginInfo
   publicKey: PublicKey
-  coin: string
 }
 
 export interface UTXOPluginWalletTools {
@@ -57,8 +63,8 @@ interface ScriptPubkeyReturn {
 }
 
 interface ScriptPubkeyToAddressArgs {
+  changePath: ChangePath
   scriptPubkey: string
-  format: CurrencyFormat
 }
 
 interface GetPrivateKeyArgs {
@@ -91,7 +97,9 @@ interface SignMessageArgs {
 export function makeUtxoWalletTools(
   config: WalletToolsConfig
 ): UTXOPluginWalletTools {
-  const { coin, publicKey } = config
+  const { pluginInfo, publicKey } = config
+  const { engineInfo } = pluginInfo
+  const { name: coin } = pluginInfo.coinInfo
 
   const xpubKeys = publicKey.publicKeys
 
@@ -112,10 +120,11 @@ export function makeUtxoWalletTools(
     },
 
     getScriptPubkey(args: AddressPath): ScriptPubkeyReturn {
-      const purposeType = currencyFormatToPurposeType(args.format)
+      const purposeType = pathToPurposeType(args, engineInfo.scriptTemplates)
       const scriptType = getScriptTypeFromPurposeType(purposeType)
       return pubkeyToScriptPubkey({
         pubkey: fns.getPubkey(args),
+        scriptTemplates: engineInfo.scriptTemplates,
         scriptType
       })
     },
@@ -147,12 +156,16 @@ export function makeUtxoWalletTools(
       const pubkey = privateKeyEncodingToPubkey(privateKeyEncoding)
       return pubkeyToScriptPubkey({
         pubkey: pubkey,
+        scriptTemplates: engineInfo.scriptTemplates,
         scriptType
       })
     },
 
     getAddress(args: AddressPath): AddressReturn {
-      const purposeType = currencyFormatToPurposeType(args.format)
+      const purposeType = pathToPurposeType(
+        args,
+        pluginInfo.engineInfo.scriptTemplates
+      )
       const { scriptPubkey } = fns.getScriptPubkey(args)
       const addressType = getAddressTypeFromPurposeType(purposeType)
       return scriptPubkeyToAddress({
@@ -167,8 +180,13 @@ export function makeUtxoWalletTools(
     },
 
     scriptPubkeyToAddress(args: ScriptPubkeyToAddressArgs): AddressReturn {
-      const purposeType = currencyFormatToPurposeType(args.format)
+      const { changePath } = args
+      const purposeType = pathToPurposeType(
+        changePath,
+        pluginInfo.engineInfo.scriptTemplates
+      )
       const addressType = getAddressTypeFromPurposeType(purposeType)
+
       return scriptPubkeyToAddress({
         scriptPubkey: args.scriptPubkey,
         addressType,
