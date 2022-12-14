@@ -29,9 +29,9 @@ interface MakeBaseletsConfig {
   disklet: Disklet
 }
 
-type Executor<BaseletName extends keyof AllBaselets> = (
+type Executor<BaseletName extends keyof AllBaselets, T> = (
   tables: AllBaselets[BaseletName]
-) => Promise<unknown>
+) => Promise<T>
 
 interface AllBaselets {
   address: AddressBaselets
@@ -57,9 +57,9 @@ interface UtxoBaselets {
 }
 
 export interface Baselets {
-  address: <E extends Executor<'address'>>(fn: E) => Promise<ReturnType<E>>
-  tx: <E extends Executor<'tx'>>(fn: E) => Promise<ReturnType<E>>
-  utxo: <E extends Executor<'utxo'>>(fn: E) => Promise<ReturnType<E>>
+  address: <T>(fn: Executor<'address', T>) => Promise<T>
+  tx: <T>(fn: Executor<'tx', T>) => Promise<T>
+  utxo: <T>(fn: Executor<'utxo', T>) => Promise<T>
   all: AddressBaselets & TransactionBaselets & UtxoBaselets
 }
 
@@ -102,15 +102,15 @@ export const makeBaselets = async (
   const utxoMutex = new Mutex()
 
   return {
-    async address(fn): Promise<ReturnType<typeof fn>> {
+    async address(fn) {
       return await addressMutex.runExclusive(async () => await fn(addressBases))
     },
 
-    async tx(fn): Promise<ReturnType<typeof fn>> {
+    async tx(fn) {
       return await txMutex.runExclusive(async () => await fn(txBases))
     },
 
-    async utxo(fn): Promise<ReturnType<typeof fn>> {
+    async utxo(fn) {
       return await utxoMutex.runExclusive(async () => await fn(utxoBases))
     },
 
