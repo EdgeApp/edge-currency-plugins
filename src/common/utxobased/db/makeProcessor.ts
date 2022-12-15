@@ -52,7 +52,7 @@ export interface Processor {
   /* UTXO processing
   **********************
   Uses the following tables:
-  ========================== 
+  ==========================
   utxoById: main table
   -------------------------------
   Used to store UTXOs. Needs to be able to track UTXOs that are already used in
@@ -77,7 +77,7 @@ export interface Processor {
   confirmation height for unconfirmed transactions
   txIdsByDate: index from date to txid, used for EdgeGetTransactionsOptions
   querying
-  ------------------------------- 
+  -------------------------------
   Used to store transactions. Needs to be updated for confirmation
   heights, and detecting used script pubkeys */
 
@@ -95,7 +95,7 @@ export interface Processor {
   addressByScriptPubkey: main table
   scriptPubkeyByPath: index from path to script pubkey
   lastUsedByFormatPath: index from path to last used address derivation index
-  ------------------------------- 
+  -------------------------------
   Used to store script pubkeys / addresses. Needs to be updated for 'used' flag
   and path */
 
