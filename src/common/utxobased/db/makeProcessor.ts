@@ -111,7 +111,10 @@ export async function makeProcessor(
   config: ProcessorConfig
 ): Promise<Processor> {
   const disklet = navigateDisklet(config.disklet, BASELET_DIR)
-  let baselets = await makeBaselets({ disklet })
+  let baselets = await makeBaselets({ disklet }).catch(async error => {
+    await disklet.delete('.')
+    throw error
+  })
 
   /**
    * Calculates the transaction value supplied (negative) or received (positive). In order to calculate
