@@ -456,8 +456,8 @@ export async function makeProcessor(
             existingAddress.lastTouched = address.lastTouched
           }
 
-          // Only update the balance field if one was given and does not equal the existing value
-          if (address.balance !== existingAddress.balance) {
+          // Only update the balance field if we have a value here
+          if (address.balance != null) {
             existingAddress.balance = address.balance
           }
 

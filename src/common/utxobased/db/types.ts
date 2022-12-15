@@ -10,7 +10,7 @@ export interface IAddress {
   lastQuery: number
   lastTouched: number
   used: boolean
-  balance: string
+  balance?: string
 }
 
 export const makeIAddress = (
@@ -24,7 +24,6 @@ export const makeIAddress = (
     lastQueriedBlockHeight: 0,
     lastQuery: 0,
     lastTouched: 0,
-    balance: '0',
     ...rest
   }
 }
