@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.3.2 (2022-12-16)
+
+- fix: Report the correct balance for old Airbitz-created addresses.
+
 ## v1.3.1 (2022-11-29)
 
 - fix: Enable and fix BCH to BSV splitting
