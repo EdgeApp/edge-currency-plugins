@@ -301,10 +301,12 @@ export function makeUtxoEngineState(
             scriptPubkey: processorAddress.scriptPubkey
           })
           addressesToSubscribe.add(address)
-          addressBalanceChanges.push({
-            scriptPubkey: processorAddress.scriptPubkey,
-            balance: processorAddress.balance
-          })
+          if (processorAddress.balance != null) {
+            addressBalanceChanges.push({
+              scriptPubkey: processorAddress.scriptPubkey,
+              balance: processorAddress.balance
+            })
+          }
         }
         addToAddressSubscribeCache(commonArgs.taskCache, addressesToSubscribe, {
           format,
@@ -1186,16 +1188,9 @@ const internalGetFreshAddress = async (
     path.addressIndex = forceIndex
   }
 
-  let nativeBalance = '0'
-  let scriptPubkey
   const iAddress = await processor.fetchAddress(path)
-  if (iAddress != null) {
-    nativeBalance = iAddress.balance
-    scriptPubkey = iAddress.scriptPubkey
-  } else {
-    const scriptPubKeyRet = await walletTools.getScriptPubkey(path)
-    scriptPubkey = scriptPubKeyRet.scriptPubkey
-  }
+  const nativeBalance = iAddress?.balance ?? '0'
+  const { scriptPubkey } = iAddress ?? (await walletTools.getScriptPubkey(path))
 
   if (scriptPubkey == null) {
     throw new Error('Unknown address path')

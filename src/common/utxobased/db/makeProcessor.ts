@@ -52,7 +52,7 @@ export interface Processor {
   /* UTXO processing
   **********************
   Uses the following tables:
-  ========================== 
+  ==========================
   utxoById: main table
   -------------------------------
   Used to store UTXOs. Needs to be able to track UTXOs that are already used in
@@ -77,7 +77,7 @@ export interface Processor {
   confirmation height for unconfirmed transactions
   txIdsByDate: index from date to txid, used for EdgeGetTransactionsOptions
   querying
-  ------------------------------- 
+  -------------------------------
   Used to store transactions. Needs to be updated for confirmation
   heights, and detecting used script pubkeys */
 
@@ -95,7 +95,7 @@ export interface Processor {
   addressByScriptPubkey: main table
   scriptPubkeyByPath: index from path to script pubkey
   lastUsedByFormatPath: index from path to last used address derivation index
-  ------------------------------- 
+  -------------------------------
   Used to store script pubkeys / addresses. Needs to be updated for 'used' flag
   and path */
 
@@ -111,7 +111,10 @@ export async function makeProcessor(
   config: ProcessorConfig
 ): Promise<Processor> {
   const disklet = navigateDisklet(config.disklet, BASELET_DIR)
-  let baselets = await makeBaselets({ disklet })
+  let baselets = await makeBaselets({ disklet }).catch(async error => {
+    await disklet.delete('.')
+    throw error
+  })
 
   /**
    * Calculates the transaction value supplied (negative) or received (positive). In order to calculate
@@ -453,8 +456,8 @@ export async function makeProcessor(
             existingAddress.lastTouched = address.lastTouched
           }
 
-          // Only update the balance field if one was given and does not equal the existing value
-          if (address.balance !== existingAddress.balance) {
+          // Only update the balance field if we have a value here
+          if (address.balance != null) {
             existingAddress.balance = address.balance
           }
 
