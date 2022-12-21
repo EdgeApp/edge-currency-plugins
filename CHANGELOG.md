@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.3.3 (2022-12-21)
+
+- fix: Upgrade dependencies to fix vulnerabilities and some data-layer issues.
+
 ## v1.3.2 (2022-12-16)
 
 - fix: Report the correct balance for old Airbitz-created addresses.
