@@ -50,7 +50,7 @@
     "disklet": "^0.4.5",
     "edge-core-js": "^0.19.33",
     "edge-sync-client": "^0.2.7",
-    "memlet": "^0.1.6",
+    "memlet": "^0.1.7",
     "uri-js": "^4.4.0",
     "url-parse": "^1.5.2",
     "wif-smart": "^2.0.0",
