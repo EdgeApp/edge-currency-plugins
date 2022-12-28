@@ -1,6 +1,6 @@
 import * as bn from 'biggystring'
 import * as bip39 from 'bip39'
-import { uncleaner } from 'cleaners'
+import { asMaybe, uncleaner } from 'cleaners'
 import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
@@ -17,6 +17,9 @@ import { parsePathname, validateMemo } from '../utxobased/engine/utils'
 import {
   asNumbWalletInfo,
   asPrivateKey,
+  asPublicKey,
+  getSupportedFormats,
+  inferPrivateKeyFormat,
   PrivateKey
 } from '../utxobased/keymanager/cleaners'
 import { EncodeUriMetadata, ExtendedParseUri, PluginInfo } from './types'
@@ -38,6 +41,20 @@ export function makeCurrencyTools(
   const asCurrencyNumbWalletInfo = asNumbWalletInfo(pluginInfo)
 
   const fns: EdgeCurrencyTools = {
+    async checkPublicKey(publicKeyData: JsonObject): Promise<boolean> {
+      const publicKey = asMaybe(asPublicKey)(publicKeyData)
+
+      if (publicKey == null) return false
+
+      const privateKeyFormat = inferPrivateKeyFormat(publicKey)
+      const supportedFormats = getSupportedFormats(privateKeyFormat)
+
+      // Public must have an defined xpub for every supported format
+      return supportedFormats.every(
+        format => publicKey.publicKeys[format] != null
+      )
+    },
+
     async createPrivateKey(
       _walletType: string,
       opts?: JsonObject

@@ -100,6 +100,23 @@ export const getSupportedFormats = (
 }
 
 /**
+ * Infers the private key format given a public key
+ */
+
+export const inferPrivateKeyFormat = (
+  publicKey: PublicKey
+): PrivateKeyFormat => {
+  const supportedFormats: CurrencyFormat[] = []
+  for (const [format, xpub] of Object.entries(publicKey.publicKeys)) {
+    if (xpub != null) supportedFormats.push(format as CurrencyFormat)
+  }
+  if (supportedFormats.includes('bip49')) return 'bip49'
+  if (supportedFormats.includes('bip44')) return 'bip44'
+  if (supportedFormats.includes('bip32')) return 'bip32'
+  return 'bip32'
+}
+
+/**
  * A cleaner that desensitizes the walletInfo object, excluding sensitive
  * keys (seed/mnemonic, sync key, data key, etc). By using this object type
  * internally within the plugin, we can minimize risk of leaking sensitive data.
