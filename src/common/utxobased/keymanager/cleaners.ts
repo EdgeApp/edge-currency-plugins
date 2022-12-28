@@ -19,6 +19,7 @@ import {
 import { deriveXpubsFromKeys } from '../engine/utils'
 
 // Private key format are a strict subset of all currency formats
+type PrivateKeyFormat = ReturnType<typeof asPrivateKeyFormat>
 const asPrivateKeyFormat = asValue('bip32', 'bip44', 'bip49')
 // Default to bip32 always for legacy reasons
 const asOptionalPrivateKeyFormat = asOptional(asPrivateKeyFormat, 'bip32')
@@ -30,7 +31,7 @@ const asOptionalPrivateKeyFormat = asOptional(asPrivateKeyFormat, 'bip32')
  */
 export interface PrivateKey {
   coinType: number
-  format: CurrencyFormat
+  format: PrivateKeyFormat
   imported?: boolean
   seed: string
 }
@@ -82,23 +83,19 @@ export const asPublicKey: Cleaner<PublicKey> = asObject({
 })
 
 /**
- * This utility returns a wallet's supported formats as specified in the
- * key-formats specification.
+ * This utility returns a wallet's supported formats according to its
+ * private-key's format as specified in the key-formats specification.
  */
 export const getSupportedFormats = (
-  format: CurrencyFormat
+  privateKeyFormat: PrivateKeyFormat
 ): CurrencyFormat[] => {
-  switch (format) {
+  switch (privateKeyFormat) {
     case 'bip32':
       return ['bip32']
     case 'bip44':
       return ['bip44']
     case 'bip49':
-      return ['bip49']
-    case 'bip84':
-      return ['bip84']
-    default:
-      throw new Error(`Unsupported format ${format}`)
+      return ['bip49', 'bip84']
   }
 }
 
