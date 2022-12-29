@@ -133,15 +133,16 @@ export const inferPrivateKeyFormat = (
  * The `walletFormats` field is a list of formats from which to derive
  * extended-keys for the wallet.
  *
- * The `primaryFormat` field is the default format from which to derive
- * addresses from.
+ * The `privateKeyFormat` field is the format defined by the private key and is
+ * useful for determining the "kind of wallet", or more precisely how the public
+ * key (xpubs) formats were derived.
  */
 export interface NumbWalletInfo {
   id: string
   type: string
   keys: {
     imported?: boolean
-    primaryFormat: CurrencyFormat
+    privateKeyFormat: PrivateKeyFormat
     publicKey: PublicKey
     walletFormats: CurrencyFormat[]
   }
@@ -150,7 +151,7 @@ export const asNumbWalletInfo = (
   pluginInfo: PluginInfo
 ): Cleaner<NumbWalletInfo> => {
   return (walletInfo: EdgeWalletInfo): NumbWalletInfo => {
-    const { engineInfo, coinInfo } = pluginInfo
+    const { coinInfo, engineInfo } = pluginInfo
     const { id, type } = walletInfo
 
     const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
@@ -172,21 +173,13 @@ export const asNumbWalletInfo = (
         throw new Error('Missing wallet public keys')
       }
 
-      // Search the engineInfo's formats array for the first format that exists
-      // in the publicKey data.
-      // If there are no defined formats in the engineInfo, then fallback to the
-      // first format in the publicKey after sorting alphabetically.
-      const primaryFormat =
-        (engineInfo.formats != null && engineInfo.formats.length > 0
-          ? engineInfo.formats.find(format => walletFormats.includes(format))
-          : undefined) ??
-        walletFormats.sort((a, b) => (a === b ? 0 : a > b ? 1 : -1))[0]
+      const privateKeyFormat = inferPrivateKeyFormat(publicKey)
 
       return {
         id,
         type,
         keys: {
-          primaryFormat,
+          privateKeyFormat,
           walletFormats,
           publicKey
         }
@@ -206,7 +199,7 @@ export const asNumbWalletInfo = (
         id,
         type,
         keys: {
-          primaryFormat: privateKey.format,
+          privateKeyFormat: privateKey.format,
           walletFormats,
           publicKey: { publicKeys: publicKey }
         }

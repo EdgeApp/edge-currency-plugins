@@ -346,7 +346,7 @@ export function makeUtxoEngineState(
       forceIndex
     }): Promise<EdgeFreshAddress> {
       const walletPurpose = currencyFormatToPurposeType(
-        walletInfo.keys.primaryFormat
+        walletInfo.keys.privateKeyFormat
       )
       if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
         const {
@@ -420,7 +420,7 @@ export function makeUtxoEngineState(
         engineInfo: commonArgs.pluginInfo.engineInfo,
         processor: commonArgs.processor,
         taskCache: commonArgs.taskCache,
-        format: walletInfo.keys.primaryFormat,
+        format: walletInfo.keys.privateKeyFormat,
         script
       })
       return {
