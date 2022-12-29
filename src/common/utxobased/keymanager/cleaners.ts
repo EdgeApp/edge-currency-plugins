@@ -14,6 +14,7 @@ import { EdgeWalletInfo } from 'edge-core-js/types'
 import {
   asCurrencyFormat,
   CurrencyFormat,
+  EngineInfo,
   PluginInfo
 } from '../../plugin/types'
 import { deriveXpubsFromKeys } from '../engine/utils'
@@ -87,16 +88,21 @@ export const asPublicKey: Cleaner<PublicKey> = asObject({
  * private-key's format as specified in the key-formats specification.
  */
 export const getSupportedFormats = (
+  engineInfo: EngineInfo,
   privateKeyFormat: PrivateKeyFormat
 ): CurrencyFormat[] => {
-  switch (privateKeyFormat) {
-    case 'bip32':
-      return ['bip32']
-    case 'bip44':
-      return ['bip44']
-    case 'bip49':
-      return ['bip49', 'bip84']
-  }
+  const formats = ((): CurrencyFormat[] => {
+    switch (privateKeyFormat) {
+      case 'bip32':
+        return ['bip32']
+      case 'bip44':
+        return ['bip44']
+      case 'bip49':
+        return ['bip49', 'bip84']
+    }
+  })()
+  const engineInfoFormats = engineInfo.formats ?? ['bip44', 'bip32']
+  return formats.filter(format => engineInfoFormats.includes(format))
 }
 
 /**
@@ -190,10 +196,11 @@ export const asNumbWalletInfo = (
     const privateKey = asMaybe(asCurrencyPrivateKey)(walletInfo.keys)
     if (privateKey != null) {
       const publicKey = deriveXpubsFromKeys({
+        engineInfo,
         privateKey,
         coin: coinInfo.name
       })
-      const walletFormats = getSupportedFormats(privateKey.format)
+      const walletFormats = getSupportedFormats(engineInfo, privateKey.format)
 
       return {
         id,

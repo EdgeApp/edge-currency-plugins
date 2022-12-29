@@ -47,7 +47,7 @@ export function makeCurrencyTools(
       if (publicKey == null) return false
 
       const privateKeyFormat = inferPrivateKeyFormat(publicKey)
-      const supportedFormats = getSupportedFormats(privateKeyFormat)
+      const supportedFormats = getSupportedFormats(engineInfo, privateKeyFormat)
 
       // Public must have an defined xpub for every supported format
       return supportedFormats.every(

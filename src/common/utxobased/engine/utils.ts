@@ -233,13 +233,19 @@ export const deriveXprivFromKeys = (args: {
 }
 
 export const deriveXpubsFromKeys = (args: {
+  engineInfo: EngineInfo
   privateKey: PrivateKey
   coin: string
 }): CurrencyFormatKeys => {
+  const { engineInfo, privateKey, coin } = args
   const xpubs: CurrencyFormatKeys = {}
-  for (const format of getSupportedFormats(args.privateKey.format)) {
+  for (const format of getSupportedFormats(
+    engineInfo,
+    args.privateKey.format
+  )) {
     xpubs[format] = deriveXpub({
-      ...args,
+      privateKey,
+      coin,
       type: currencyFormatToPurposeType(format)
     })
   }
