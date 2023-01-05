@@ -21,6 +21,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: ['wss://tbtc1.trezor.io', 'wss://tbtc2.trezor.io'],
     enableCustomServers: false
   },
+  canReplaceByFee: true,
   customFeeTemplate: [
     {
       type: 'nativeAmount',
