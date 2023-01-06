@@ -26,7 +26,7 @@ import {
   IUTXO,
   makeIAddress
 } from '../db/types'
-import { NumbWalletInfo } from '../keymanager/cleaners'
+import { getSupportedFormats, NumbWalletInfo } from '../keymanager/cleaners'
 import {
   BIP43PurposeTypeEnum,
   derivationLevelScriptHash,
@@ -50,8 +50,6 @@ import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
 import { makeServerStates, ServerStates } from './makeServerStates'
 import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
 import {
-  currencyFormatToPurposeType,
-  getCurrencyFormatFromPurposeType,
   getFormatSupportedBranches,
   getScriptTypeFromPurposeType,
   pathToPurposeType,
@@ -345,73 +343,58 @@ export function makeUtxoEngineState(
       branch = 0,
       forceIndex
     }): Promise<EdgeFreshAddress> {
-      const walletPurpose = currencyFormatToPurposeType(
-        walletInfo.keys.primaryFormat
-      )
-      if (walletPurpose === BIP43PurposeTypeEnum.Segwit) {
-        const {
-          address: publicAddress,
-          nativeBalance = '0',
-          legacyAddress
-        } = await internalGetFreshAddress({
-          ...commonArgs,
-          format: getCurrencyFormatFromPurposeType(
-            BIP43PurposeTypeEnum.WrappedSegwit
-          ),
-          forceIndex,
-          changeIndex: branch
-        })
+      const { privateKeyFormat } = walletInfo.keys
 
-        const {
-          address: segwitAddress,
-          nativeBalance: segwitNativeBalance = '0'
-        } = await internalGetFreshAddress({
-          ...commonArgs,
-          format: getCurrencyFormatFromPurposeType(BIP43PurposeTypeEnum.Segwit),
-          forceIndex,
-          changeIndex: branch
-        })
+      // Airbitz wallets only use branch 0
+      if (privateKeyFormat === 'bip32') branch = 0
 
-        return {
-          nativeBalance,
-          publicAddress,
-          legacyNativeBalance:
-            legacyAddress !== publicAddress ? nativeBalance : undefined,
-          // Legacy address is just a different encoding of the standard public address
-          // and therefore would have the same balance
-          legacyAddress:
-            legacyAddress !== publicAddress ? legacyAddress : undefined,
-          segwitAddress,
-          segwitNativeBalance
-        }
-      } else {
-        // Airbitz wallets only use branch 0
-        if (walletPurpose === BIP43PurposeTypeEnum.Airbitz) {
-          branch = 0
-        }
+      const {
+        address: publicAddress,
+        nativeBalance = '0',
+        legacyAddress
+      } = await internalGetFreshAddress({
+        ...commonArgs,
+        format: privateKeyFormat,
+        forceIndex,
+        changeIndex: branch
+      })
 
-        const {
-          address: publicAddress,
-          nativeBalance = '0',
-          legacyAddress
-        } = await internalGetFreshAddress({
-          ...commonArgs,
-          format: getCurrencyFormatFromPurposeType(walletPurpose),
-          forceIndex,
-          changeIndex: branch
-        })
+      const freshAddress: EdgeFreshAddress = {
+        publicAddress,
+        nativeBalance,
+        legacyAddress:
+          legacyAddress !== publicAddress ? legacyAddress : undefined,
+        // Legacy address is just a different encoding of the standard public address
+        // and therefore would have the same balance
+        legacyNativeBalance:
+          legacyAddress !== publicAddress ? nativeBalance : undefined
+      }
 
-        return {
-          nativeBalance,
-          publicAddress,
-          legacyNativeBalance:
-            legacyAddress !== publicAddress ? nativeBalance : undefined,
-          // Legacy address is just a different encoding of the standard public address
-          // and therefore would have the same balance
-          legacyAddress:
-            legacyAddress !== publicAddress ? legacyAddress : undefined
+      // Exclude the privateKeyFormat because it's covered by 'publicAddress'
+      const supportedFormats = getSupportedFormats(
+        pluginInfo.engineInfo,
+        walletInfo.keys.privateKeyFormat
+      ).filter(format => format !== privateKeyFormat)
+
+      // Loop over all other supported formats for their equivalent address:
+      for (const format of supportedFormats) {
+        if (format === 'bip84') {
+          const {
+            address,
+            nativeBalance = '0'
+          } = await internalGetFreshAddress({
+            ...commonArgs,
+            format,
+            forceIndex,
+            changeIndex: branch
+          })
+
+          freshAddress.segwitAddress = address
+          freshAddress.segwitNativeBalance = nativeBalance
         }
       }
+
+      return freshAddress
     },
 
     async deriveScriptAddress(script): Promise<EdgeFreshAddress> {
@@ -420,7 +403,7 @@ export function makeUtxoEngineState(
         engineInfo: commonArgs.pluginInfo.engineInfo,
         processor: commonArgs.processor,
         taskCache: commonArgs.taskCache,
-        format: walletInfo.keys.primaryFormat,
+        format: walletInfo.keys.privateKeyFormat,
         script
       })
       return {

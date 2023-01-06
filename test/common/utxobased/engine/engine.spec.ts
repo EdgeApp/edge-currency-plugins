@@ -474,7 +474,7 @@ describe('engine.spec', function () {
         assert(dataDump.walletId === id, 'walletId')
         assert(dataDump.walletType === WALLET_TYPE, 'walletType')
         assert(
-          dataDump.data.walletInfo.primaryFormat === WALLET_FORMAT,
+          dataDump.data.walletInfo.privateKeyFormat === WALLET_FORMAT,
           'walletFormat'
         )
       })

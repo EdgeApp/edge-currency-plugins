@@ -14,11 +14,13 @@ import { EdgeWalletInfo } from 'edge-core-js/types'
 import {
   asCurrencyFormat,
   CurrencyFormat,
+  EngineInfo,
   PluginInfo
 } from '../../plugin/types'
 import { deriveXpubsFromKeys } from '../engine/utils'
 
 // Private key format are a strict subset of all currency formats
+type PrivateKeyFormat = ReturnType<typeof asPrivateKeyFormat>
 const asPrivateKeyFormat = asValue('bip32', 'bip44', 'bip49')
 // Default to bip32 always for legacy reasons
 const asOptionalPrivateKeyFormat = asOptional(asPrivateKeyFormat, 'bip32')
@@ -30,7 +32,7 @@ const asOptionalPrivateKeyFormat = asOptional(asPrivateKeyFormat, 'bip32')
  */
 export interface PrivateKey {
   coinType: number
-  format: CurrencyFormat
+  format: PrivateKeyFormat
   imported?: boolean
   seed: string
 }
@@ -82,24 +84,42 @@ export const asPublicKey: Cleaner<PublicKey> = asObject({
 })
 
 /**
- * This utility returns a wallet's supported formats as specified in the
- * key-formats specification.
+ * This utility returns a wallet's supported formats according to its
+ * private-key's format as specified in the key-formats specification.
  */
 export const getSupportedFormats = (
-  format: CurrencyFormat
+  engineInfo: EngineInfo,
+  privateKeyFormat: PrivateKeyFormat
 ): CurrencyFormat[] => {
-  switch (format) {
-    case 'bip32':
-      return ['bip32']
-    case 'bip44':
-      return ['bip44']
-    case 'bip49':
-      return ['bip49']
-    case 'bip84':
-      return ['bip84']
-    default:
-      throw new Error(`Unsupported format ${format}`)
+  const formats = ((): CurrencyFormat[] => {
+    switch (privateKeyFormat) {
+      case 'bip32':
+        return ['bip32']
+      case 'bip44':
+        return ['bip44']
+      case 'bip49':
+        return ['bip49', 'bip84']
+    }
+  })()
+  const engineInfoFormats = engineInfo.formats ?? ['bip44', 'bip32']
+  return formats.filter(format => engineInfoFormats.includes(format))
+}
+
+/**
+ * Infers the private key format given a public key
+ */
+
+export const inferPrivateKeyFormat = (
+  publicKey: PublicKey
+): PrivateKeyFormat => {
+  const supportedFormats: CurrencyFormat[] = []
+  for (const [format, xpub] of Object.entries(publicKey.publicKeys)) {
+    if (xpub != null) supportedFormats.push(format as CurrencyFormat)
   }
+  if (supportedFormats.includes('bip49')) return 'bip49'
+  if (supportedFormats.includes('bip44')) return 'bip44'
+  if (supportedFormats.includes('bip32')) return 'bip32'
+  return 'bip32'
 }
 
 /**
@@ -113,15 +133,16 @@ export const getSupportedFormats = (
  * The `walletFormats` field is a list of formats from which to derive
  * extended-keys for the wallet.
  *
- * The `primaryFormat` field is the default format from which to derive
- * addresses from.
+ * The `privateKeyFormat` field is the format defined by the private key and is
+ * useful for determining the "kind of wallet", or more precisely how the public
+ * key (xpubs) formats were derived.
  */
 export interface NumbWalletInfo {
   id: string
   type: string
   keys: {
     imported?: boolean
-    primaryFormat: CurrencyFormat
+    privateKeyFormat: PrivateKeyFormat
     publicKey: PublicKey
     walletFormats: CurrencyFormat[]
   }
@@ -130,7 +151,7 @@ export const asNumbWalletInfo = (
   pluginInfo: PluginInfo
 ): Cleaner<NumbWalletInfo> => {
   return (walletInfo: EdgeWalletInfo): NumbWalletInfo => {
-    const { engineInfo, coinInfo } = pluginInfo
+    const { coinInfo, engineInfo } = pluginInfo
     const { id, type } = walletInfo
 
     const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
@@ -152,21 +173,13 @@ export const asNumbWalletInfo = (
         throw new Error('Missing wallet public keys')
       }
 
-      // Search the engineInfo's formats array for the first format that exists
-      // in the publicKey data.
-      // If there are no defined formats in the engineInfo, then fallback to the
-      // first format in the publicKey after sorting alphabetically.
-      const primaryFormat =
-        (engineInfo.formats != null && engineInfo.formats.length > 0
-          ? engineInfo.formats.find(format => walletFormats.includes(format))
-          : undefined) ??
-        walletFormats.sort((a, b) => (a === b ? 0 : a > b ? 1 : -1))[0]
+      const privateKeyFormat = inferPrivateKeyFormat(publicKey)
 
       return {
         id,
         type,
         keys: {
-          primaryFormat,
+          privateKeyFormat,
           walletFormats,
           publicKey
         }
@@ -176,16 +189,17 @@ export const asNumbWalletInfo = (
     const privateKey = asMaybe(asCurrencyPrivateKey)(walletInfo.keys)
     if (privateKey != null) {
       const publicKey = deriveXpubsFromKeys({
+        engineInfo,
         privateKey,
         coin: coinInfo.name
       })
-      const walletFormats = getSupportedFormats(privateKey.format)
+      const walletFormats = getSupportedFormats(engineInfo, privateKey.format)
 
       return {
         id,
         type,
         keys: {
-          primaryFormat: privateKey.format,
+          privateKeyFormat: privateKey.format,
           walletFormats,
           publicKey: { publicKeys: publicKey }
         }
