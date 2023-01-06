@@ -1,5 +1,10 @@
 # edge-currency-plugins
 
+## v1.3.4 (2023-1-6)
+
+- Added: Support bech32 addresses as `segwitAddress` for `EdgeFreshAddress`
+- Added: RBF flags for Bitcoin and Litecoin
+
 ## v1.3.3 (2022-12-21)
 
 - fix: Upgrade dependencies to fix vulnerabilities and some data-layer issues.
