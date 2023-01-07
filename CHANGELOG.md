@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.3.5 (2023-1-6)
+
+- Fixed: Incorrect types path in package.json
+
 ## v1.3.4 (2023-1-6)
 
 - Added: Support bech32 addresses as `segwitAddress` for `EdgeFreshAddress`
