@@ -12,7 +12,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook-qtum-sfo3.edge.app'],
+    blockbookServers: [],
     enableCustomServers: false
   },
   customFeeTemplate: [
