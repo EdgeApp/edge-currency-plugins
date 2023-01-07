@@ -24,10 +24,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Configuration options:
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: [
-      'wss://bsv-bbwrap1.edge.app',
-      'wss://blockbook.siftbitcoin.com:9146'
-    ],
+    blockbookServers: ['wss://blockbook.siftbitcoin.com:9146'],
     enableCustomServers: false
   },
   customFeeTemplate: [
