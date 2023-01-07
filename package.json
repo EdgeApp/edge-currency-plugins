@@ -9,7 +9,7 @@
   "browser": {
     "ws": false
   },
-  "types": "./lib/index.d.ts",
+  "types": "./lib/src/index.d.ts",
   "files": [
     "lib/*",
     "package.json",
