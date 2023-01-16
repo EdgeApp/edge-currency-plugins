@@ -10,7 +10,7 @@ import { InnerSocket, InnerSocketCallbacks, ReadyState } from './types'
 import { setupBrowser } from './windowWS'
 
 const TIMER_SLACK = 500
-const KEEP_ALIVE_MS = 60000 // interval at which we keep the connection alive
+const KEEP_ALIVE_MS = 50000 // interval at which we keep the connection alive
 const WAKE_UP_MS = 5000 // interval at which we wakeUp and potentially onQueueSpace
 
 export type OnFailHandler = (error: Error) => void
