@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.3.6 (2023-1-18)
+
+- Fixed: Reduce the KEEP_ALIVE_MS blockbook server heartbeat time
+
 ## v1.3.5 (2023-1-6)
 
 - Fixed: Incorrect types path in package.json
