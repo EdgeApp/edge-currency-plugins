@@ -27,6 +27,10 @@ const asOptionalPrivateKeyFormat = asOptional(asPrivateKeyFormat, 'bip32')
 
 /**
  * A cleaner for the private key format following the key-formats specification.
+ * It _includes_ the private key.
+ *
+ * **It is not considered safe memory, and it should be deallocated
+ * (thrown away) after use**.
  *
  * (spec: https://github.com/EdgeApp/edge-core-js/blob/master/docs/key-formats.md)
  */
@@ -34,7 +38,7 @@ export interface PrivateKey {
   coinType: number
   format: PrivateKeyFormat
   imported?: boolean
-  seed: string
+  seed: string // rename of seed/mnemonic (i.e. bitcoinKey, litecoinKey, etc)
 }
 export function asPrivateKey(
   coinName: string,
