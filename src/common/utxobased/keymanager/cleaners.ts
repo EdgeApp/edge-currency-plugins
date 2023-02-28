@@ -141,7 +141,7 @@ export const inferPrivateKeyFormat = (
  * useful for determining the "kind of wallet", or more precisely how the public
  * key (xpubs) formats were derived.
  */
-export interface NumbWalletInfo {
+export interface SafeWalletInfo {
   id: string
   type: string
   keys: {
@@ -151,10 +151,10 @@ export interface NumbWalletInfo {
     walletFormats: CurrencyFormat[]
   }
 }
-export const asNumbWalletInfo = (
+export const asSafeWalletInfo = (
   pluginInfo: PluginInfo
-): Cleaner<NumbWalletInfo> => {
-  return (walletInfo: EdgeWalletInfo): NumbWalletInfo => {
+): Cleaner<SafeWalletInfo> => {
+  return (walletInfo: EdgeWalletInfo): SafeWalletInfo => {
     const { coinInfo, engineInfo } = pluginInfo
     const { id, type } = walletInfo
 

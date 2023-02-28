@@ -29,9 +29,9 @@ import {
 } from '../db/Models/ProcessorTransaction'
 import { IProcessorTransaction, IUTXO } from '../db/types'
 import {
-  asNumbWalletInfo,
   asPrivateKey,
-  NumbWalletInfo
+  asSafeWalletInfo,
+  SafeWalletInfo
 } from '../keymanager/cleaners'
 import {
   makeTx,
@@ -53,7 +53,7 @@ export async function makeUtxoEngine(
     pluginInfo,
     pluginDisklet,
     // Rename to make it explicit that this is sensitive memory
-    walletInfo: sensitiveWalletInfo,
+    walletInfo: unsafeWalletInfo,
     options,
     io,
     pluginState
@@ -79,8 +79,8 @@ export async function makeUtxoEngine(
   const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
   // Private key may be missing for watch-only wallets
   const asMaybeCurrencyPrivateKey = asMaybe(asCurrencyPrivateKey)
-  // This walletInfo is desensitized (numb) and should be passed around over the original walletInfo
-  const walletInfo = asNumbWalletInfo(pluginInfo)(sensitiveWalletInfo)
+  // This walletInfo is desensitized and can be passed around over the original walletInfo
+  const walletInfo = asSafeWalletInfo(pluginInfo)(unsafeWalletInfo)
   const { privateKeyFormat, publicKey, walletFormats } = walletInfo.keys
 
   if (
@@ -209,7 +209,7 @@ export async function makeUtxoEngine(
     },
 
     getDisplayPrivateSeed(): string | null {
-      const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
+      const privateKey = asMaybeCurrencyPrivateKey(unsafeWalletInfo.keys)
       if (privateKey == null) return null
       return privateKey.format === 'bip32'
         ? Buffer.from(privateKey.seed, 'base64').toString('hex')
@@ -525,7 +525,7 @@ export async function makeUtxoEngine(
       if (psbt == null || edgeSpendInfo == null)
         throw new Error('Invalid transaction data')
 
-      const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
+      const privateKey = asMaybeCurrencyPrivateKey(unsafeWalletInfo.keys)
 
       if (privateKey == null)
         throw new Error('Cannot sign a transaction for a read-only wallet')
@@ -627,7 +627,7 @@ export async function makeUtxoEngine(
         )
       }
 
-      const tmpWalletInfo: NumbWalletInfo = {
+      const tmpWalletInfo: SafeWalletInfo = {
         id: walletInfo.id,
         type: walletInfo.type,
         keys: {
@@ -721,7 +721,7 @@ export async function makeUtxoEngine(
         if (processorAddress?.path == null) {
           throw new Error('Missing address to sign with')
         }
-        const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
+        const privateKey = asMaybeCurrencyPrivateKey(unsafeWalletInfo.keys)
 
         if (privateKey == null)
           throw new Error('Cannot sign a message for a read-only wallet')
