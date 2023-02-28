@@ -52,14 +52,6 @@ export const validateMemo = (memo: string): EdgeMemoRules => {
   return result
 }
 
-export const getAddressTypeFromKeys = (
-  privateKey: PrivateKey
-): AddressTypeEnum => {
-  return getAddressTypeFromPurposeType(
-    currencyFormatToPurposeType(privateKey.format)
-  )
-}
-
 export const getAddressTypeFromPurposeType = (
   purpose: BIP43PurposeTypeEnum
 ): AddressTypeEnum => {
