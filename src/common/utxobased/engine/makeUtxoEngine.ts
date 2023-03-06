@@ -77,9 +77,11 @@ export async function makeUtxoEngine(
   })
 
   const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
-  // Private key may be missing for watch-only wallets
+  // Private key may be missing for read-only wallets
   const asMaybeCurrencyPrivateKey = asMaybe(asCurrencyPrivateKey)
-  // This walletInfo is desensitized and can be passed around over the original walletInfo
+
+  // This walletInfo will not contain private keys and should only contain the
+  // public keys and so can be passed around the plugin safely.
   const walletInfo = asSafeWalletInfo(pluginInfo)(config.walletInfo)
   const { privateKeyFormat, publicKey, walletFormats } = walletInfo.keys
 

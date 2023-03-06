@@ -105,6 +105,8 @@ export function makeCurrencyTools(
     async derivePublicKey(
       unsafeWalletInfo: EdgeWalletInfo
     ): Promise<JsonObject> {
+      // Use the safety cleaner to derive the public keys from the
+      // unsafeWalletInfo which contains the private key.
       const safeWalletInfo = asCurrencySafeWalletInfo(unsafeWalletInfo)
       return safeWalletInfo.keys.publicKey
     },
