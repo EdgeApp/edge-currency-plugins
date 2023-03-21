@@ -9,13 +9,13 @@ import {
   EdgeGetReceiveAddressOptions,
   EdgeGetTransactionsOptions,
   EdgePaymentProtocolInfo,
+  EdgeSignMessageOptions,
   EdgeSpendInfo,
   EdgeTokenInfo,
   EdgeTransaction,
-  EdgeWalletInfo,
   InsufficientFundsError,
   JsonObject
-} from 'edge-core-js/types'
+} from 'edge-core-js'
 
 import { filterUndefined } from '../../../util/filterUndefined'
 import { unixTime } from '../../../util/unixTime'
@@ -43,7 +43,11 @@ import {
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
-import { asUtxoUserSettings, UtxoTxOtherParams } from './types'
+import {
+  asUtxoSignMessageOtherParams,
+  asUtxoUserSettings,
+  UtxoTxOtherParams
+} from './types'
 import { getOwnUtxosFromTx } from './util/getOwnUtxosFromTx'
 import { fetchOrDeriveXprivFromKeys, sumUtxos } from './utils'
 
@@ -518,6 +522,40 @@ export async function makeUtxoEngine(
       await engineState.processUtxos(ownUtxos)
     },
 
+    async signMessage(
+      message: string,
+      privateKeys: JsonObject,
+      opts: EdgeSignMessageOptions
+    ): Promise<string> {
+      const otherParams = asUtxoSignMessageOtherParams(opts)
+      const { publicAddress } = otherParams
+      if (publicAddress == null)
+        throw new Error('Missing publicAddress in EdgeSignMessageOptions')
+      const scriptPubkey = walletTools.addressToScriptPubkey(publicAddress)
+      const processorAddress = await processor.fetchAddress(scriptPubkey)
+      if (processorAddress?.path == null) {
+        throw new Error('Missing address to sign with')
+      }
+      const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
+
+      if (privateKey == null)
+        throw new Error('Cannot sign a message for a read-only wallet')
+
+      // Derive the xprivs on the fly, since we do not persist them
+      const xprivKeys = await fetchOrDeriveXprivFromKeys({
+        privateKey,
+        walletLocalEncryptedDisklet,
+        coin: coinInfo.name
+      })
+
+      const signature = await walletTools.signMessageBase64({
+        path: processorAddress?.path,
+        message,
+        xprivKeys
+      })
+      return signature
+    },
+
     async signTx(
       transaction: EdgeTransaction,
       privateKeys: JsonObject
@@ -718,37 +756,7 @@ export async function makeUtxoEngine(
       return await end
     },
 
-    otherMethods: {
-      signMessageBase64: async (
-        message: string,
-        address: string,
-        unsafeWalletInfo: EdgeWalletInfo
-      ): Promise<string> => {
-        const scriptPubkey = walletTools.addressToScriptPubkey(address)
-        const processorAddress = await processor.fetchAddress(scriptPubkey)
-        if (processorAddress?.path == null) {
-          throw new Error('Missing address to sign with')
-        }
-        const privateKey = asMaybeCurrencyPrivateKey(unsafeWalletInfo.keys)
-
-        if (privateKey == null)
-          throw new Error('Cannot sign a message for a read-only wallet')
-
-        // Derive the xprivs on the fly, since we do not persist them
-        const xprivKeys = await fetchOrDeriveXprivFromKeys({
-          privateKey,
-          walletLocalEncryptedDisklet,
-          coin: coinInfo.name
-        })
-
-        const signature = await walletTools.signMessageBase64({
-          path: processorAddress?.path,
-          message,
-          xprivKeys
-        })
-        return signature
-      }
-    }
+    otherMethods: {}
   }
 
   return engine

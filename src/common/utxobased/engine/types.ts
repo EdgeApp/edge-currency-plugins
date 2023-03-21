@@ -19,3 +19,10 @@ export interface UtxoTxOtherParams {
   edgeSpendInfo?: EdgeSpendInfo
   ourScriptPubkeys: string[]
 }
+
+export type UtxoSignMessageOtherParams = ReturnType<
+  typeof asUtxoSignMessageOtherParams
+>
+export const asUtxoSignMessageOtherParams = asObject({
+  publicAddress: asString
+})
