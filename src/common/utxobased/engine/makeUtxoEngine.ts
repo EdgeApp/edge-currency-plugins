@@ -279,11 +279,10 @@ export async function makeUtxoEngine(
       return addressData.used
     },
 
-    async makeSpend(
-      edgeSpendInfo: EdgeSpendInfo,
-      options?: TxOptions
-    ): Promise<EdgeTransaction> {
+    async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
       const { spendTargets } = edgeSpendInfo
+      const txOptions: TxOptions | undefined =
+        edgeSpendInfo.otherParams?.txOptions
       const { outputSort = 'bip69', utxoSourceAddress, forceChangeAddress } =
         edgeSpendInfo.otherParams ?? {}
 
@@ -292,7 +291,7 @@ export async function makeUtxoEngine(
         utxoScriptPubkey = walletTools.addressToScriptPubkey(utxoSourceAddress)
       }
 
-      if (options?.CPFP == null && spendTargets.length < 1) {
+      if (txOptions?.CPFP == null && spendTargets.length < 1) {
         throw new Error('Need to provide Spend Targets')
       }
       // Calculate the total amount to send
@@ -301,7 +300,7 @@ export async function makeUtxoEngine(
         '0'
       )
       const utxos =
-        options?.utxos ??
+        txOptions?.utxos ??
         filterUndefined(
           (await processor.fetchUtxos({
             scriptPubkey: utxoScriptPubkey,
@@ -373,7 +372,7 @@ export async function makeUtxoEngine(
         freshAddress.segwitAddress ??
         freshAddress.publicAddress
 
-      const setRBF = options?.setRBF ?? false
+      const setRBF = txOptions?.setRBF ?? false
       const rbfTxid = edgeSpendInfo.rbfTxid
       let maxUtxo: undefined | IUTXO
       let feeRate = parseInt(await fees.getRate(edgeSpendInfo))
@@ -395,9 +394,9 @@ export async function makeUtxoEngine(
           )
         }
       }
-      if (options?.CPFP != null) {
+      if (txOptions?.CPFP != null) {
         const [childTx] = await processor.fetchTransactions({
-          txId: options?.CPFP
+          txId: txOptions?.CPFP
         })
         if (childTx == null) throw new Error('transaction not found')
         const utxos: IUTXO[] = []
@@ -411,7 +410,7 @@ export async function makeUtxoEngine(
       }
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
-        options?.subtractFee != null ? options.subtractFee : false
+        txOptions?.subtractFee != null ? txOptions.subtractFee : false
       const tx = makeTx({
         utxos,
         forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
@@ -672,12 +671,15 @@ export async function makeUtxoEngine(
             }
             const destAddress = await this.getFreshAddress({})
             const nativeAmount = tmpMetadata.state.balance
-            const options: TxOptions = { utxos: tmpUtxos, subtractFee: true }
+            const txOptions: TxOptions = { utxos: tmpUtxos, subtractFee: true }
             spendInfo.spendTargets = [
               { publicAddress: destAddress.publicAddress, nativeAmount }
             ]
-            // @ts-expect-error TODO: TheCharlatan - add option to makeSpend declaration in edge-core-js
-            const tx = await this.makeSpend(spendInfo, options)
+            spendInfo.otherParams = {
+              ...spendInfo.otherParams,
+              txOptions
+            }
+            const tx = await this.makeSpend(spendInfo)
             success(tx)
           } catch (e) {
             failure(e)
