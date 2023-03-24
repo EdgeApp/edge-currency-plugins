@@ -550,15 +550,21 @@ export async function makeUtxoEngine(
           return await Promise.all(
             psbt.inputs.map(async ({ hash, index }) => {
               const txid = Buffer.from(hash).reverse().toString('hex')
+              const utxoId = `${txid}_${index}`
 
               const [utxo] = await processor.fetchUtxos({
-                utxoIds: [`${txid}_${index}`]
+                utxoIds: [utxoId]
               })
               if (utxo == null) throw new Error('Invalid UTXO')
 
               const address = await processor.fetchAddress(utxo.scriptPubkey)
-              if (address?.path == null)
-                throw new Error('Invalid script pubkey')
+              if (address == null) {
+                throw new Error(`Address for UTXO ${utxoId} not found`)
+              }
+              if (address.path == null)
+                throw new Error(
+                  `Invalid scriptPubkey ${address.scriptPubkey}; Missing path`
+                )
 
               const privateKey = walletTools.getPrivateKey({
                 path: address.path,

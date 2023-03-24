@@ -291,7 +291,7 @@ export function makeUtxoEngineState(
           })
           if (processorAddress == null) {
             throw new Error(
-              'Missing processor during address subscription initialization'
+              `Missing processor address ${format} ${branch} ${addressIndex} during initialization`
             )
           }
           const { address } = walletTools.scriptPubkeyToAddress({
