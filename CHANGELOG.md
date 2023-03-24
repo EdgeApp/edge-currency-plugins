@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v1.3.7 (2023-3-23)
+
+- Improve log detail in order to better troubleshoot spending issues.
+
 ## v1.3.6 (2023-1-18)
 
 - Fixed: Reduce the KEEP_ALIVE_MS blockbook server heartbeat time
