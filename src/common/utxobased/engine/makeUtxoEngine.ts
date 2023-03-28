@@ -122,7 +122,7 @@ export async function makeUtxoEngine(
     pluginState
   })
 
-  const fns: EdgeCurrencyEngine = {
+  const engine = {
     async startEngine(): Promise<void> {
       emitter.emit(
         EngineEvent.WALLET_BALANCE_CHANGED,
@@ -481,7 +481,7 @@ export async function makeUtxoEngine(
 
     async resyncBlockchain(): Promise<void> {
       // Stops the engine
-      await fns.killEngine()
+      await engine.killEngine()
 
       // Clear cache and state
       await processor.clearAll()
@@ -493,7 +493,7 @@ export async function makeUtxoEngine(
       await pluginState.refreshServers()
 
       // Restart the engine
-      await fns.startEngine()
+      await engine.startEngine()
     },
 
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
@@ -751,5 +751,5 @@ export async function makeUtxoEngine(
     }
   }
 
-  return fns
+  return engine
 }
