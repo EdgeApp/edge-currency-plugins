@@ -1,5 +1,10 @@
 # edge-currency-plugins
 
+## v2.0.0 (2023-3-28)
+
+- changed: Upgrade security access to private keys in EdgeWalletInfo
+- changed: Add signMessage API to replace signMessageBase64 in otherMethods
+
 ## v1.3.7 (2023-3-23)
 
 - Improve log detail in order to better troubleshoot spending issues.
