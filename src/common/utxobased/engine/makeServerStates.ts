@@ -5,7 +5,7 @@ import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { PluginState } from '../../plugin/pluginState'
 import { PluginInfo } from '../../plugin/types'
 import { removeItem } from '../../plugin/utils'
-import { NumbWalletInfo } from '../keymanager/cleaners'
+import { SafeWalletInfo } from '../keymanager/cleaners'
 import { BlockBook, makeBlockBook } from '../network/BlockBook'
 import { SubscribeAddressResponse } from '../network/BlockBookAPI'
 import Deferred from '../network/Deferred'
@@ -27,7 +27,7 @@ interface ServerStateConfig {
   log: EdgeLog
   pluginInfo: PluginInfo
   pluginState: PluginState
-  walletInfo: NumbWalletInfo
+  walletInfo: SafeWalletInfo
 }
 
 export interface ServerStates {

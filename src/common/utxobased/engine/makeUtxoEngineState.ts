@@ -26,7 +26,7 @@ import {
   IUTXO,
   makeIAddress
 } from '../db/types'
-import { getSupportedFormats, NumbWalletInfo } from '../keymanager/cleaners'
+import { getSupportedFormats, SafeWalletInfo } from '../keymanager/cleaners'
 import {
   BIP43PurposeTypeEnum,
   derivationLevelScriptHash,
@@ -87,7 +87,7 @@ export interface UtxoEngineState {
 
 export interface UtxoEngineStateConfig extends EngineConfig {
   walletTools: UTXOPluginWalletTools
-  walletInfo: NumbWalletInfo
+  walletInfo: SafeWalletInfo
   processor: Processor
 }
 
@@ -512,7 +512,7 @@ export function makeUtxoEngineState(
 
 interface CommonArgs {
   pluginInfo: PluginInfo
-  walletInfo: NumbWalletInfo
+  walletInfo: SafeWalletInfo
   walletTools: UTXOPluginWalletTools
   processor: Processor
   emitter: EngineEmitter

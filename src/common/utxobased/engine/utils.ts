@@ -52,14 +52,6 @@ export const validateMemo = (memo: string): EdgeMemoRules => {
   return result
 }
 
-export const getAddressTypeFromKeys = (
-  privateKey: PrivateKey
-): AddressTypeEnum => {
-  return getAddressTypeFromPurposeType(
-    currencyFormatToPurposeType(privateKey.format)
-  )
-}
-
 export const getAddressTypeFromPurposeType = (
   purpose: BIP43PurposeTypeEnum
 ): AddressTypeEnum => {
@@ -239,30 +231,20 @@ export const deriveXpubsFromKeys = (args: {
 }): CurrencyFormatKeys => {
   const { engineInfo, privateKey, coin } = args
   const xpubs: CurrencyFormatKeys = {}
-  for (const format of getSupportedFormats(
-    engineInfo,
-    args.privateKey.format
-  )) {
-    xpubs[format] = deriveXpub({
-      privateKey,
+  for (const format of getSupportedFormats(engineInfo, privateKey.format)) {
+    const xpriv = deriveXprivFromKeys({
       coin,
-      type: currencyFormatToPurposeType(format)
+      privateKey
+    })[format]
+    if (xpriv == null)
+      throw new Error('Cannot derive xpub: no private key exists')
+    xpubs[format] = xprivToXPub({
+      coin,
+      type: currencyFormatToPurposeType(format),
+      xpriv
     })
   }
   return xpubs
-}
-
-export const deriveXpub = (args: {
-  privateKey: PrivateKey
-  coin: string
-  type: BIP43PurposeTypeEnum
-}): string => {
-  const xpriv = deriveXprivFromKeys(args)[
-    getCurrencyFormatFromPurposeType(args.type)
-  ]
-  if (xpriv == null)
-    throw new Error('Cannot derive xpub: no private key exists')
-  return xprivToXPub({ ...args, xpriv })
 }
 
 export const parsePathname = (args: {

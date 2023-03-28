@@ -89,6 +89,7 @@ describe('engine.spec', function () {
         emitter.emit('onTransactionsChanged', transactionList)
       },
       onTxidsChanged() {},
+      onUnactivatedTokenIdsChanged() {},
       onWcNewContractCall() {}
     }
 
@@ -359,7 +360,7 @@ describe('engine.spec', function () {
 
     describe(`Get Wallet Keys for Wallet type ${WALLET_TYPE}`, function () {
       it('get private key', function (done) {
-        engine.getDisplayPrivateSeed()
+        engine.getDisplayPrivateSeed(keys)
         done()
       })
       it('get public key', function (done) {
@@ -429,7 +430,7 @@ describe('engine.spec', function () {
           return await engine
             .makeSpend(templateSpend)
             .then(async a => {
-              return await engine.signTx(a)
+              return await engine.signTx(a, keys)
             })
             .then(a => {
               fakeLogger.info('sign', a)
@@ -458,7 +459,7 @@ describe('engine.spec', function () {
             throw new Error('No sweepPrivateKeys')
           }
           return await engine.sweepPrivateKeys(templateSpend).then(async a => {
-            return await engine.signTx(a)
+            return await engine.signTx(a, keys)
           })
           // .then(a => {
           // console.warn('sign', a)

@@ -27,6 +27,10 @@ const asOptionalPrivateKeyFormat = asOptional(asPrivateKeyFormat, 'bip32')
 
 /**
  * A cleaner for the private key format following the key-formats specification.
+ * It _includes_ the private key.
+ *
+ * **It is not considered safe memory, and it should be deallocated
+ * (thrown away) after use**.
  *
  * (spec: https://github.com/EdgeApp/edge-core-js/blob/master/docs/key-formats.md)
  */
@@ -34,7 +38,7 @@ export interface PrivateKey {
   coinType: number
   format: PrivateKeyFormat
   imported?: boolean
-  seed: string
+  seed: string // rename of seed/mnemonic (i.e. bitcoinKey, litecoinKey, etc)
 }
 export function asPrivateKey(
   coinName: string,
@@ -123,9 +127,12 @@ export const inferPrivateKeyFormat = (
 }
 
 /**
- * A cleaner that desensitizes the walletInfo object, excluding sensitive
+ * A cleaner that desensitizes an unsafeWalletInfo object, excluding sensitive
  * keys (seed/mnemonic, sync key, data key, etc). By using this object type
- * internally within the plugin, we can minimize risk of leaking sensitive data.
+ * internally within the plugin, we can minimize risk of leaking sensitive data
+ * when deriving public keys from walletInfo which only contains private keys.
+ * It may also be used on a safeWalletInfo object which only contains the
+ * wallet's public keys.
  *
  * It also includes internal derived data (publicKey, format, walletFormats, etc).
  * This derived data is to be used internally within the plugin and saved to disk (publicKey).
@@ -137,7 +144,7 @@ export const inferPrivateKeyFormat = (
  * useful for determining the "kind of wallet", or more precisely how the public
  * key (xpubs) formats were derived.
  */
-export interface NumbWalletInfo {
+export interface SafeWalletInfo {
   id: string
   type: string
   keys: {
@@ -147,10 +154,10 @@ export interface NumbWalletInfo {
     walletFormats: CurrencyFormat[]
   }
 }
-export const asNumbWalletInfo = (
+export const asSafeWalletInfo = (
   pluginInfo: PluginInfo
-): Cleaner<NumbWalletInfo> => {
-  return (walletInfo: EdgeWalletInfo): NumbWalletInfo => {
+): Cleaner<SafeWalletInfo> => {
+  return (walletInfo: EdgeWalletInfo): SafeWalletInfo => {
     const { coinInfo, engineInfo } = pluginInfo
     const { id, type } = walletInfo
 

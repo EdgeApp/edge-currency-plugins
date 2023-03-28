@@ -15,9 +15,9 @@ import urlParse from 'url-parse'
 
 import { parsePathname, validateMemo } from '../utxobased/engine/utils'
 import {
-  asNumbWalletInfo,
   asPrivateKey,
   asPublicKey,
+  asSafeWalletInfo,
   getSupportedFormats,
   inferPrivateKeyFormat,
   PrivateKey
@@ -38,7 +38,7 @@ export function makeCurrencyTools(
 
   const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
   const wasCurrencyPrivateKey = uncleaner(asCurrencyPrivateKey)
-  const asCurrencyNumbWalletInfo = asNumbWalletInfo(pluginInfo)
+  const asCurrencySafeWalletInfo = asSafeWalletInfo(pluginInfo)
 
   const fns: EdgeCurrencyTools = {
     async checkPublicKey(publicKeyData: JsonObject): Promise<boolean> {
@@ -102,9 +102,13 @@ export function makeCurrencyTools(
       return validateMemo(memo)
     },
 
-    async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-      const numbWalletInfo = asCurrencyNumbWalletInfo(walletInfo)
-      return numbWalletInfo.keys.publicKey
+    async derivePublicKey(
+      unsafeWalletInfo: EdgeWalletInfo
+    ): Promise<JsonObject> {
+      // Use the safety cleaner to derive the public keys from the
+      // unsafeWalletInfo which contains the private key.
+      const safeWalletInfo = asCurrencySafeWalletInfo(unsafeWalletInfo)
+      return safeWalletInfo.keys.publicKey
     },
 
     async parseUri(uri: string): Promise<ExtendedParseUri> {

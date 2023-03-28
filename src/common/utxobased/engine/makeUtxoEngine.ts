@@ -9,12 +9,13 @@ import {
   EdgeGetReceiveAddressOptions,
   EdgeGetTransactionsOptions,
   EdgePaymentProtocolInfo,
+  EdgeSignMessageOptions,
   EdgeSpendInfo,
   EdgeTokenInfo,
   EdgeTransaction,
   InsufficientFundsError,
   JsonObject
-} from 'edge-core-js/types'
+} from 'edge-core-js'
 
 import { filterUndefined } from '../../../util/filterUndefined'
 import { unixTime } from '../../../util/unixTime'
@@ -29,9 +30,9 @@ import {
 } from '../db/Models/ProcessorTransaction'
 import { IProcessorTransaction, IUTXO } from '../db/types'
 import {
-  asNumbWalletInfo,
   asPrivateKey,
-  NumbWalletInfo
+  asSafeWalletInfo,
+  SafeWalletInfo
 } from '../keymanager/cleaners'
 import {
   makeTx,
@@ -42,7 +43,11 @@ import {
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
-import { asUtxoUserSettings, UtxoTxOtherParams } from './types'
+import {
+  asUtxoSignMessageOtherParams,
+  asUtxoUserSettings,
+  UtxoTxOtherParams
+} from './types'
 import { getOwnUtxosFromTx } from './util/getOwnUtxosFromTx'
 import { fetchOrDeriveXprivFromKeys, sumUtxos } from './utils'
 
@@ -53,7 +58,6 @@ export async function makeUtxoEngine(
     pluginInfo,
     pluginDisklet,
     // Rename to make it explicit that this is sensitive memory
-    walletInfo: sensitiveWalletInfo,
     options,
     io,
     pluginState
@@ -77,10 +81,12 @@ export async function makeUtxoEngine(
   })
 
   const asCurrencyPrivateKey = asPrivateKey(coinInfo.name, coinInfo.coinType)
-  // Private key may be missing for watch-only wallets
+  // Private key may be missing for read-only wallets
   const asMaybeCurrencyPrivateKey = asMaybe(asCurrencyPrivateKey)
-  // This walletInfo is desensitized (numb) and should be passed around over the original walletInfo
-  const walletInfo = asNumbWalletInfo(pluginInfo)(sensitiveWalletInfo)
+
+  // This walletInfo will not contain private keys and should only contain the
+  // public keys and so can be passed around the plugin safely.
+  const walletInfo = asSafeWalletInfo(pluginInfo)(config.walletInfo)
   const { privateKeyFormat, publicKey, walletFormats } = walletInfo.keys
 
   if (
@@ -120,7 +126,7 @@ export async function makeUtxoEngine(
     pluginState
   })
 
-  const fns: EdgeCurrencyEngine = {
+  const engine = {
     async startEngine(): Promise<void> {
       emitter.emit(
         EngineEvent.WALLET_BALANCE_CHANGED,
@@ -208,8 +214,8 @@ export async function makeUtxoEngine(
       return await Promise.resolve(undefined)
     },
 
-    getDisplayPrivateSeed(): string | null {
-      const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
+    getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
+      const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
       if (privateKey == null) return null
       return privateKey.format === 'bip32'
         ? Buffer.from(privateKey.seed, 'base64').toString('hex')
@@ -279,11 +285,10 @@ export async function makeUtxoEngine(
       return addressData.used
     },
 
-    async makeSpend(
-      edgeSpendInfo: EdgeSpendInfo,
-      options?: TxOptions
-    ): Promise<EdgeTransaction> {
+    async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
       const { spendTargets } = edgeSpendInfo
+      const txOptions: TxOptions | undefined =
+        edgeSpendInfo.otherParams?.txOptions
       const { outputSort = 'bip69', utxoSourceAddress, forceChangeAddress } =
         edgeSpendInfo.otherParams ?? {}
 
@@ -292,7 +297,7 @@ export async function makeUtxoEngine(
         utxoScriptPubkey = walletTools.addressToScriptPubkey(utxoSourceAddress)
       }
 
-      if (options?.CPFP == null && spendTargets.length < 1) {
+      if (txOptions?.CPFP == null && spendTargets.length < 1) {
         throw new Error('Need to provide Spend Targets')
       }
       // Calculate the total amount to send
@@ -301,7 +306,7 @@ export async function makeUtxoEngine(
         '0'
       )
       const utxos =
-        options?.utxos ??
+        txOptions?.utxos ??
         filterUndefined(
           (await processor.fetchUtxos({
             scriptPubkey: utxoScriptPubkey,
@@ -373,7 +378,7 @@ export async function makeUtxoEngine(
         freshAddress.segwitAddress ??
         freshAddress.publicAddress
 
-      const setRBF = options?.setRBF ?? false
+      const setRBF = txOptions?.setRBF ?? false
       const rbfTxid = edgeSpendInfo.rbfTxid
       let maxUtxo: undefined | IUTXO
       let feeRate = parseInt(await fees.getRate(edgeSpendInfo))
@@ -395,9 +400,9 @@ export async function makeUtxoEngine(
           )
         }
       }
-      if (options?.CPFP != null) {
+      if (txOptions?.CPFP != null) {
         const [childTx] = await processor.fetchTransactions({
-          txId: options?.CPFP
+          txId: txOptions?.CPFP
         })
         if (childTx == null) throw new Error('transaction not found')
         const utxos: IUTXO[] = []
@@ -411,7 +416,7 @@ export async function makeUtxoEngine(
       }
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
-        options?.subtractFee != null ? options.subtractFee : false
+        txOptions?.subtractFee != null ? txOptions.subtractFee : false
       const tx = makeTx({
         utxos,
         forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
@@ -480,7 +485,7 @@ export async function makeUtxoEngine(
 
     async resyncBlockchain(): Promise<void> {
       // Stops the engine
-      await fns.killEngine()
+      await engine.killEngine()
 
       // Clear cache and state
       await processor.clearAll()
@@ -492,7 +497,7 @@ export async function makeUtxoEngine(
       await pluginState.refreshServers()
 
       // Restart the engine
-      await fns.startEngine()
+      await engine.startEngine()
     },
 
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
@@ -517,7 +522,44 @@ export async function makeUtxoEngine(
       await engineState.processUtxos(ownUtxos)
     },
 
-    async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
+    async signMessage(
+      message: string,
+      privateKeys: JsonObject,
+      opts: EdgeSignMessageOptions
+    ): Promise<string> {
+      const otherParams = asUtxoSignMessageOtherParams(opts)
+      const { publicAddress } = otherParams
+      if (publicAddress == null)
+        throw new Error('Missing publicAddress in EdgeSignMessageOptions')
+      const scriptPubkey = walletTools.addressToScriptPubkey(publicAddress)
+      const processorAddress = await processor.fetchAddress(scriptPubkey)
+      if (processorAddress?.path == null) {
+        throw new Error('Missing address to sign with')
+      }
+      const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
+
+      if (privateKey == null)
+        throw new Error('Cannot sign a message for a read-only wallet')
+
+      // Derive the xprivs on the fly, since we do not persist them
+      const xprivKeys = await fetchOrDeriveXprivFromKeys({
+        privateKey,
+        walletLocalEncryptedDisklet,
+        coin: coinInfo.name
+      })
+
+      const signature = await walletTools.signMessageBase64({
+        path: processorAddress?.path,
+        message,
+        xprivKeys
+      })
+      return signature
+    },
+
+    async signTx(
+      transaction: EdgeTransaction,
+      privateKeys: JsonObject
+    ): Promise<EdgeTransaction> {
       const otherParams = transaction.otherParams as UtxoTxOtherParams
       if (otherParams == null) throw new Error('Invalid transaction data')
 
@@ -525,7 +567,7 @@ export async function makeUtxoEngine(
       if (psbt == null || edgeSpendInfo == null)
         throw new Error('Invalid transaction data')
 
-      const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
+      const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
 
       if (privateKey == null)
         throw new Error('Cannot sign a transaction for a read-only wallet')
@@ -627,7 +669,7 @@ export async function makeUtxoEngine(
         )
       }
 
-      const tmpWalletInfo: NumbWalletInfo = {
+      const tmpWalletInfo: SafeWalletInfo = {
         id: walletInfo.id,
         type: walletInfo.type,
         keys: {
@@ -672,12 +714,15 @@ export async function makeUtxoEngine(
             }
             const destAddress = await this.getFreshAddress({})
             const nativeAmount = tmpMetadata.state.balance
-            const options: TxOptions = { utxos: tmpUtxos, subtractFee: true }
+            const txOptions: TxOptions = { utxos: tmpUtxos, subtractFee: true }
             spendInfo.spendTargets = [
               { publicAddress: destAddress.publicAddress, nativeAmount }
             ]
-            // @ts-expect-error TODO: TheCharlatan - add option to makeSpend declaration in edge-core-js
-            const tx = await this.makeSpend(spendInfo, options)
+            spendInfo.otherParams = {
+              ...spendInfo.otherParams,
+              txOptions
+            }
+            const tx = await this.makeSpend(spendInfo)
             success(tx)
           } catch (e) {
             failure(e)
@@ -711,37 +756,8 @@ export async function makeUtxoEngine(
       return await end
     },
 
-    otherMethods: {
-      signMessageBase64: async (
-        message: string,
-        address: string
-      ): Promise<string> => {
-        const scriptPubkey = walletTools.addressToScriptPubkey(address)
-        const processorAddress = await processor.fetchAddress(scriptPubkey)
-        if (processorAddress?.path == null) {
-          throw new Error('Missing address to sign with')
-        }
-        const privateKey = asMaybeCurrencyPrivateKey(sensitiveWalletInfo.keys)
-
-        if (privateKey == null)
-          throw new Error('Cannot sign a message for a read-only wallet')
-
-        // Derive the xprivs on the fly, since we do not persist them
-        const xprivKeys = await fetchOrDeriveXprivFromKeys({
-          privateKey,
-          walletLocalEncryptedDisklet,
-          coin: coinInfo.name
-        })
-
-        const signature = await walletTools.signMessageBase64({
-          path: processorAddress?.path,
-          message,
-          xprivKeys
-        })
-        return signature
-      }
-    }
+    otherMethods: {}
   }
 
-  return fns
+  return engine
 }
