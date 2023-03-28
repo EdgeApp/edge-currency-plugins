@@ -12,6 +12,7 @@ import {
   EdgeSpendInfo,
   EdgeTokenInfo,
   EdgeTransaction,
+  EdgeWalletInfo,
   InsufficientFundsError,
   JsonObject
 } from 'edge-core-js/types'
@@ -53,7 +54,6 @@ export async function makeUtxoEngine(
     pluginInfo,
     pluginDisklet,
     // Rename to make it explicit that this is sensitive memory
-    walletInfo: unsafeWalletInfo,
     options,
     io,
     pluginState
@@ -80,7 +80,7 @@ export async function makeUtxoEngine(
   // Private key may be missing for watch-only wallets
   const asMaybeCurrencyPrivateKey = asMaybe(asCurrencyPrivateKey)
   // This walletInfo is desensitized and can be passed around over the original walletInfo
-  const walletInfo = asSafeWalletInfo(pluginInfo)(unsafeWalletInfo)
+  const walletInfo = asSafeWalletInfo(pluginInfo)(config.walletInfo)
   const { privateKeyFormat, publicKey, walletFormats } = walletInfo.keys
 
   if (
@@ -208,8 +208,8 @@ export async function makeUtxoEngine(
       return await Promise.resolve(undefined)
     },
 
-    getDisplayPrivateSeed(): string | null {
-      const privateKey = asMaybeCurrencyPrivateKey(unsafeWalletInfo.keys)
+    getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
+      const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
       if (privateKey == null) return null
       return privateKey.format === 'bip32'
         ? Buffer.from(privateKey.seed, 'base64').toString('hex')
@@ -516,7 +516,10 @@ export async function makeUtxoEngine(
       await engineState.processUtxos(ownUtxos)
     },
 
-    async signTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
+    async signTx(
+      transaction: EdgeTransaction,
+      privateKeys: JsonObject
+    ): Promise<EdgeTransaction> {
       const otherParams = transaction.otherParams as UtxoTxOtherParams
       if (otherParams == null) throw new Error('Invalid transaction data')
 
@@ -524,7 +527,7 @@ export async function makeUtxoEngine(
       if (psbt == null || edgeSpendInfo == null)
         throw new Error('Invalid transaction data')
 
-      const privateKey = asMaybeCurrencyPrivateKey(unsafeWalletInfo.keys)
+      const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
 
       if (privateKey == null)
         throw new Error('Cannot sign a transaction for a read-only wallet')
@@ -716,7 +719,8 @@ export async function makeUtxoEngine(
     otherMethods: {
       signMessageBase64: async (
         message: string,
-        address: string
+        address: string,
+        unsafeWalletInfo: EdgeWalletInfo
       ): Promise<string> => {
         const scriptPubkey = walletTools.addressToScriptPubkey(address)
         const processorAddress = await processor.fetchAddress(scriptPubkey)
