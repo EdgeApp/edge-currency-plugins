@@ -527,10 +527,8 @@ export async function makeUtxoEngine(
       privateKeys: JsonObject,
       opts: EdgeSignMessageOptions
     ): Promise<string> {
-      const otherParams = asUtxoSignMessageOtherParams(opts)
+      const otherParams = asUtxoSignMessageOtherParams(opts.otherParams)
       const { publicAddress } = otherParams
-      if (publicAddress == null)
-        throw new Error('Missing publicAddress in EdgeSignMessageOptions')
       const scriptPubkey = walletTools.addressToScriptPubkey(publicAddress)
       const processorAddress = await processor.fetchAddress(scriptPubkey)
       if (processorAddress?.path == null) {
