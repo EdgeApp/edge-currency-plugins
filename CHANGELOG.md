@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v2.0.1 (2023-04-04)
+
+- fixed: Bug with signMessage cleaning of `EdgeSignMessageOptions['otherParams']`
+
 ## v2.0.0 (2023-3-28)
 
 - changed: Upgrade security access to private keys in EdgeWalletInfo
