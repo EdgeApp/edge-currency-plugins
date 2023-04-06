@@ -67,7 +67,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
     async start(): Promise<void> {
       const edgeFees = await fetchFees({
         ...common,
-        uri: `${INFO_SERVER_URI}/networkFees/${currencyInfo.currencyCode}`,
+        uri: `${INFO_SERVER_URI}/networkFees/${currencyInfo.pluginId}`,
         processor: processInfoServerFees
       })
       Object.assign(fees, edgeFees)
