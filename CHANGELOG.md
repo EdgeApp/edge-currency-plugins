@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v2.0.2 (2023-04-10)
+
+- Query `networkFees` endpoint with pluginId instead of currencyCode
+
 ## v2.0.1 (2023-04-04)
 
 - fixed: Bug with signMessage cleaning of `EdgeSignMessageOptions['otherParams']`
