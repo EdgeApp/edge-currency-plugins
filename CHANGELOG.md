@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v2.0.3 (2023-06-22)
+
+- Fixed: Throw DustSpendError instead of obscure blockbook error message for dust spend transaction broadcasts.
+
 ## v2.0.2 (2023-04-10)
 
 - Query `networkFees` endpoint with pluginId instead of currencyCode
