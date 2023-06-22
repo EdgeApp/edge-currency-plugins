@@ -2,6 +2,7 @@ import * as bs from 'biggystring'
 import { asMaybe } from 'cleaners'
 import { makeMemoryDisklet } from 'disklet'
 import {
+  DustSpendError,
   EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
   EdgeDataDump,
@@ -178,7 +179,12 @@ export async function makeUtxoEngine(
           )
         }
       }
-      const id = await engineState.broadcastTx(transaction)
+      const id = await engineState.broadcastTx(transaction).catch(err => {
+        if (String(err).includes('Error: Blockbook Error: -26: dust')) {
+          throw new DustSpendError()
+        }
+        throw err
+      })
       if (id !== transaction.txid) {
         throw new Error('broadcast response txid does not match original')
       }
