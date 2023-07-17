@@ -2,6 +2,7 @@ import { clearMemletCache } from 'baselet'
 import * as bs from 'biggystring'
 import { Disklet, navigateDisklet } from 'disklet'
 import { EdgeGetTransactionsOptions } from 'edge-core-js/types'
+import { makeMemlet } from 'memlet'
 
 import { unixTime } from '../../../util/unixTime'
 import { AddressPath, ChangePath } from '../../plugin/types'
@@ -111,8 +112,9 @@ export async function makeProcessor(
   config: ProcessorConfig
 ): Promise<Processor> {
   const disklet = navigateDisklet(config.disklet, BASELET_DIR)
-  let baselets = await makeBaselets({ disklet }).catch(async error => {
-    await disklet.delete('.')
+  let memlet = makeMemlet(disklet)
+  let baselets = await makeBaselets({ storage: memlet }).catch(async error => {
+    await memlet.delete('.')
     throw error
   })
 
@@ -147,11 +149,11 @@ export async function makeProcessor(
 
   const processor: Processor = {
     async clearAll(): Promise<void> {
+      await memlet.onFlush.next().value
       await clearMemletCache()
-      // why is this delay needed?
-      await new Promise(resolve => setTimeout(resolve, 0))
       await disklet.delete('.')
-      baselets = await makeBaselets({ disklet })
+      memlet = makeMemlet(disklet)
+      baselets = await makeBaselets({ storage: memlet })
     },
 
     async dumpData(): Promise<DumpDataReturn[]> {

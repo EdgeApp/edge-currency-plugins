@@ -35,7 +35,7 @@
   "dependencies": {
     "altcoin-js": "https://github.com/EdgeApp/altcoin-js.git#master",
     "async-mutex": "^0.2.6",
-    "baselet": "^0.2.3",
+    "baselet": "^0.2.4",
     "biggystring": "^4.0.0",
     "bip32": "^2.0.5",
     "bip32grs": "^2.0.5",

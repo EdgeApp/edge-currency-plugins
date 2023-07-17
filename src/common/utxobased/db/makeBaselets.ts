@@ -5,6 +5,7 @@ import {
   createOrOpenRangeBase
 } from 'baselet'
 import { Disklet } from 'disklet'
+import { Memlet } from 'memlet'
 
 import {
   AddressByScriptPubkeyBaselet,
@@ -26,7 +27,7 @@ import {
 } from './Models/baselet'
 
 interface MakeBaseletsConfig {
-  disklet: Disklet
+  storage: Disklet | Memlet
 }
 
 type Executor<BaseletName extends keyof AllBaselets, T> = (
@@ -69,30 +70,30 @@ export const makeBaselets = async (
   /* Tables */
   const addressBases: AddressBaselets = {
     addressByScriptPubkey: await createOrOpenHashBase(
-      config.disklet,
+      config.storage,
       addressByScriptPubkeyOptions
     ),
     scriptPubkeyByPath: await createOrOpenCountBase(
-      config.disklet,
+      config.storage,
       scriptPubkeyByPathOptions
     ),
     lastUsedByFormatPath: await createOrOpenHashBase(
-      config.disklet,
+      config.storage,
       lastUsedByFormatPathOptions
     )
   }
   const txBases: TransactionBaselets = {
-    txById: await createOrOpenHashBase(config.disklet, txByIdOptions),
+    txById: await createOrOpenHashBase(config.storage, txByIdOptions),
     txIdsByBlockHeight: await createOrOpenRangeBase(
-      config.disklet,
+      config.storage,
       txIdsByBlockHeightOptions
     ),
-    txIdsByDate: await createOrOpenRangeBase(config.disklet, txIdsByDateOptions)
+    txIdsByDate: await createOrOpenRangeBase(config.storage, txIdsByDateOptions)
   }
   const utxoBases: UtxoBaselets = {
-    utxoById: await createOrOpenHashBase(config.disklet, utxoByIdOptions),
+    utxoById: await createOrOpenHashBase(config.storage, utxoByIdOptions),
     utxoIdsByScriptPubkey: await createOrOpenHashBase(
-      config.disklet,
+      config.storage,
       utxoIdsByScriptPubkeyOptions
     )
   }
