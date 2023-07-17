@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v2.0.4 (2023-07-17)
+
+- Fixed: Race condition during re-sync causing impartial processor data ("Missing processor address" bug)
+
 ## v2.0.3 (2023-06-22)
 
 - Fixed: Throw DustSpendError instead of obscure blockbook error message for dust spend transaction broadcasts.
