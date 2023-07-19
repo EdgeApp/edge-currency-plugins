@@ -1,6 +1,3 @@
-// @flow
-
-// import bcoin from 'bcoin'
 import { Buffer } from 'buffer'
 
 import { decode, encode } from './base32'
