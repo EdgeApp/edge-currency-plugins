@@ -1,4 +1,4 @@
-import * as bitcoin from 'altcoin-js'
+import { ECPair } from 'altcoin-js'
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
@@ -126,9 +126,7 @@ describe('altcoin test fixtures', () => {
     if (f.signMessageTests != null) {
       f.signMessageTests.forEach(j => {
         it(`${f.name} sign message test`, () => {
-          const privateKey = bitcoin.ECPair.fromWIF(j.wif).privateKey?.toString(
-            'hex'
-          )
+          const privateKey = ECPair.fromWIF(j.wif).privateKey?.toString('hex')
           if (privateKey == null) {
             throw new Error('private key cannot be null')
           }

@@ -1,4 +1,4 @@
-import * as bitcoin from 'altcoin-js'
+import { Psbt } from 'altcoin-js'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
@@ -55,7 +55,7 @@ const engineInfo: EngineInfo = {
 export const coinInfo: CoinInfo = {
   name: 'bitcoincashtestnet',
   segwit: false,
-  sighash: bitcoin.Psbt.BCH_SIGHASH_ALL,
+  sighash: Psbt.BCH_SIGHASH_ALL,
   coinType: 1,
 
   prefixes: {

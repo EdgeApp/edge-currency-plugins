@@ -1,4 +1,4 @@
-import * as bitcoin from 'altcoin-js'
+import { Psbt } from 'altcoin-js'
 import { asCodec, asString } from 'cleaners'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
@@ -94,7 +94,7 @@ const engineInfo: EngineInfo = {
 export const coinInfo: CoinInfo = {
   name: 'bitcoinsv',
   segwit: false,
-  sighash: bitcoin.Psbt.BCH_SIGHASH_ALL,
+  sighash: Psbt.BCH_SIGHASH_ALL,
   coinType: 236,
 
   prefixes: {
