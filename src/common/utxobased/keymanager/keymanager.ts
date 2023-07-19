@@ -220,16 +220,7 @@ interface SignTxReturn {
   hex: string
 }
 
-// BitcoinJSNetwork and Bip32 are the same interfaces as declared in  bitcoin-js ts_src/network.ts
-// We redeclare them here for transparency reasons
-export interface BitcoinJSNetwork {
-  wif: number
-  bip32: Bip32
-  messagePrefix: string
-  bech32: string
-  pubKeyHash: number
-  scriptHash: number
-}
+type BitcoinJSNetwork = bitcoin.networks.Network
 
 export interface Bip32 {
   public: number
