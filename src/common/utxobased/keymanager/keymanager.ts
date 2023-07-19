@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 import * as bitcoin from 'altcoin-js'
 import { gt, lt } from 'biggystring'
 import * as bip32 from 'bip32'
