@@ -1066,6 +1066,12 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
   const psbt = Psbt.fromBase64(args.psbtBase64)
   const coin = getCoinFromString(args.coin)
 
+  const validator = (
+    pubkey: Buffer,
+    msghash: Buffer,
+    signature: Buffer
+  ): boolean => ECPair.fromPublicKey(pubkey).verify(msghash, signature)
+
   for (let i = 0; i < psbt.inputCount; i++) {
     const privateKeyEncoding =
       args.privateKeyEncodings[i] ??
@@ -1077,7 +1083,7 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
       Psbt.DEFAULT_SIGHASHES,
       coin.sighashFunction
     )
-    psbt.validateSignaturesOfInput(i)
+    psbt.validateSignaturesOfInput(i, validator)
     psbt.finalizeInput(i)
   }
   const tx = psbt.extractTransaction(true)
