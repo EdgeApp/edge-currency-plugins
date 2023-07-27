@@ -1,3 +1,4 @@
+import { BaseConverter } from 'base-x'
 import * as bip32 from 'bip32'
 import { asNumber, asObject, asString, asValue, Cleaner } from 'cleaners'
 import { Disklet } from 'disklet'
@@ -9,6 +10,7 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+import * as wif from 'wif'
 
 import { IProcessorTransaction, IUTXO } from '../utxobased/db/types'
 import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
@@ -74,10 +76,9 @@ export interface CoinInfo {
   sighash?: number
   sighashFunction?: (Hash: Buffer) => Buffer
   txHashFunction?: (Hash: Buffer) => Buffer
-  bs58DecodeFunc?: (payload: string | undefined) => Buffer
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  bs58EncodeFunc?: (payload: any) => string
-  wifEncodeFunc?: (prefix: unknown, key: unknown, compressed: unknown) => string
+  bs58DecodeFunc?: BaseConverter['decode']
+  bs58EncodeFunc?: BaseConverter['encode']
+  wifEncodeFunc?: typeof wif.encode
   bip32FromBase58Func?: (
     xKey: string,
     network: BitcoinJSNetwork
