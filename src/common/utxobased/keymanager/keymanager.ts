@@ -528,7 +528,7 @@ const addressToScriptPubkeyInternal = (
   try {
     scriptPubkey = payment({
       address: args.address,
-      network: network,
+      network,
       bs58DecodeFunc: coin.bs58DecodeFunc,
       bs58EncodeFunc: coin.bs58EncodeFunc
     }).output
@@ -646,7 +646,7 @@ export function scriptPubkeyToAddress(
       address ??
       payment({
         output: Buffer.from(args.scriptPubkey, 'hex'),
-        network: network,
+        network,
         bs58DecodeFunc: coinClass.bs58DecodeFunc,
         bs58EncodeFunc: coinClass.bs58EncodeFunc
       }).address
@@ -695,7 +695,7 @@ export function scriptPubkeyToScriptHash(
   try {
     scriptHash = payment({
       output: Buffer.from(args.scriptPubkey, 'hex'),
-      network: network
+      network
     }).hash
   } catch (error) {
     console.trace(error)
