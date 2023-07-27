@@ -719,7 +719,7 @@ export function scriptPubkeyToP2SH(
     })
   }
   const p2sh = payments.p2sh({
-    network: bip32Network,
+    ...(bip32Network != null ? { network: bip32Network } : {}),
     redeem: {
       output: Buffer.from(scriptPubkey, 'hex')
     }
