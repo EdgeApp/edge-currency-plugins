@@ -59,7 +59,8 @@ export enum AddressTypeEnum {
   p2pkh = 'p2pkh',
   p2sh = 'p2sh',
   p2wpkh = 'p2wpkh', // short bech32 address
-  p2wsh = 'p2wsh' // long bech32 address
+  p2wsh = 'p2wsh', // long bech32 address
+  p2tr = 'p2tr' // bech32m address
 }
 
 export enum ScriptTypeEnum {
@@ -69,6 +70,7 @@ export enum ScriptTypeEnum {
   p2pk = 'p2pk',
   p2pkh = 'p2pkh',
   p2sh = 'p2sh',
+  p2tr = 'p2tr',
   replayProtection = 'replayprotection',
   replayProtectionP2SH = 'replayprotectionp2sh'
 }
@@ -523,6 +525,9 @@ const addressToScriptPubkeyInternal = (
     case AddressTypeEnum.p2wsh:
       payment = payments.p2wsh
       break
+    case AddressTypeEnum.p2tr:
+      payment = payments.p2tr
+      break
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
@@ -640,6 +645,9 @@ export function scriptPubkeyToAddress(
     case AddressTypeEnum.p2wsh:
       payment = payments.p2wsh
       break
+    case AddressTypeEnum.p2tr:
+      payment = payments.p2tr
+      break
     default:
       throw new Error('invalid address type in address to script pubkey')
   }
@@ -689,6 +697,9 @@ export function scriptPubkeyToScriptHash(
       break
     case ScriptTypeEnum.p2wpkh:
       payment = payments.p2wpkh
+      break
+    case ScriptTypeEnum.p2tr:
+      payment = payments.p2tr
       break
     default:
       throw new Error('invalid address type in address to script pubkey')
@@ -762,7 +773,7 @@ export function pubkeyToScriptPubkey(
 ): PubkeyToScriptPubkeyReturn {
   let payment: payments.Payment
   switch (args.scriptType) {
-    case ScriptTypeEnum.p2pkh:
+    case ScriptTypeEnum.p2pkh: {
       payment = payments.p2pkh({
         pubkey: Buffer.from(args.pubkey, 'hex')
       })
@@ -770,14 +781,16 @@ export function pubkeyToScriptPubkey(
         throw new Error('failed converting pubkey to script pubkey')
       }
       return { scriptPubkey: payment.output.toString('hex') }
-    case ScriptTypeEnum.p2wpkhp2sh:
+    }
+    case ScriptTypeEnum.p2wpkhp2sh: {
       return scriptPubkeyToP2SH({
         scriptPubkey: pubkeyToScriptPubkey({
           pubkey: args.pubkey,
           scriptType: ScriptTypeEnum.p2wpkh
         }).scriptPubkey
       })
-    case ScriptTypeEnum.p2wpkh:
+    }
+    case ScriptTypeEnum.p2wpkh: {
       payment = payments.p2wpkh({
         pubkey: Buffer.from(args.pubkey, 'hex')
       })
@@ -785,6 +798,16 @@ export function pubkeyToScriptPubkey(
         throw new Error('failed converting pubkey to script pubkey')
       }
       return { scriptPubkey: payment.output.toString('hex') }
+    }
+    case ScriptTypeEnum.p2tr: {
+      payment = payments.p2tr({
+        pubkey: Buffer.from(args.pubkey, 'hex')
+      })
+      if (payment.output == null) {
+        throw new Error('failed converting pubkey to script pubkey')
+      }
+      return { scriptPubkey: payment.output.toString('hex') }
+    }
     case ScriptTypeEnum.replayProtection: {
       if (args.scriptTemplates == null)
         throw new Error('Missing replayProtection script template')
@@ -1248,7 +1271,7 @@ const guessAddressTypeFromAddress = (
       bs58EncodeFunc: coinClass.bs58EncodeFunc
     })
     return AddressTypeEnum.p2pkh
-  } catch (e) {}
+  } catch (_) {}
   try {
     payments.p2sh({
       address,
@@ -1257,15 +1280,22 @@ const guessAddressTypeFromAddress = (
       bs58EncodeFunc: coinClass.bs58EncodeFunc
     })
     return AddressTypeEnum.p2sh
-  } catch (e) {}
+  } catch (_) {}
   try {
     payments.p2wsh({ address, network })
     return AddressTypeEnum.p2wsh
-  } catch (e) {}
+  } catch (_) {}
   try {
     payments.p2wpkh({ address, network })
     return AddressTypeEnum.p2wpkh
-  } catch (e) {}
+  } catch (_) {}
+  try {
+    payments.p2tr({
+      address,
+      network
+    })
+    return AddressTypeEnum.p2tr
+  } catch (_) {}
   const cashAddrPrefixes = getCashAddrPrefixes(coinClass)
   if (cashAddrPrefixes.length > 0) {
     try {
@@ -1318,6 +1348,9 @@ const scriptHashToScriptPubkey = (
       break
     case ScriptTypeEnum.p2wpkh:
       payment = payments.p2wpkh
+      break
+    case ScriptTypeEnum.p2tr:
+      payment = payments.p2tr
       break
     default:
       throw new Error('invalid address type in address to script pubkey')
