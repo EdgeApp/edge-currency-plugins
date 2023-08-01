@@ -1267,6 +1267,14 @@ export const fixtures: Fixture = {
           address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
           scriptPubkey: '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
         },
+        // Wrapped Segwit address test vector accordng to BIP-141 spec:
+        // (See https://iancoleman.io/bip39/ with "abandon...abort" address)
+        {
+          address: '34jP3Ne6hyTNsYqwz8svHXGBSDdp3iiWJy',
+          scriptPubkey: 'a914215ad66607bfb5d8a7b98397d0fae2db11353afb87'
+        },
+        // Segwit address test vector according to BIP-84 spec:
+        // (See https://iancoleman.io/bip39/ with "abandon...abort" address)
         {
           address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
           scriptPubkey: '0014c0cebcd6c3d3ca8c75dc5ec62ebe55330ef910e2'
