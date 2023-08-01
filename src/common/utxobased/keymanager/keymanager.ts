@@ -1,5 +1,6 @@
 import {
   crypto,
+  initEccLib,
   networks,
   opcodes,
   payments,
@@ -33,6 +34,7 @@ let ECPair: ECPairAPI
 
 import('@bitcoin-js/tiny-secp256k1-asmjs')
   .then(tinysecp => {
+    initEccLib(tinysecp)
     ECPair = ECPairFactory(tinysecp)
   })
   .catch(error => {
