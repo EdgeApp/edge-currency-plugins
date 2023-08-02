@@ -1,5 +1,10 @@
 # edge-currency-plugins
 
+## v2.1.0 (2023-08-02)
+
+- Changed: Upgraded AltcoinJS to first published version based on BitcoinJS v6.1.3
+- Added: Support for pay-to-taproot address support (P2TR) for Bitcoin wallets.
+
 ## v2.0.4 (2023-07-17)
 
 - Fixed: Race condition during re-sync causing impartial processor data ("Missing processor address" bug)
