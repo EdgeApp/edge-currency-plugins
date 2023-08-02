@@ -1,4 +1,4 @@
-import { bip32 } from 'altcoin-js'
+import * as bip32 from 'bip32'
 import { asNumber, asObject, asString, asValue, Cleaner } from 'cleaners'
 import { Disklet } from 'disklet'
 import {

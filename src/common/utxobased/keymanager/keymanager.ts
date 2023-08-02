@@ -1,6 +1,5 @@
 import {
   crypto,
-  ECPair,
   networks,
   opcodes,
   payments,
@@ -12,6 +11,7 @@ import { gt, lt } from 'biggystring'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
 import bitcoinMessage from 'bitcoinjs-message'
+import { ECPairAPI, ECPairFactory } from 'ecpair'
 import { EdgeLog, InsufficientFundsError } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
@@ -28,6 +28,19 @@ import {
 } from './bitcoincashUtils/cashAddress'
 import { getCoinFromString } from './coinmapper'
 import * as utxopicker from './utxopicker'
+
+let ECPair: ECPairAPI
+
+import('@bitcoin-js/tiny-secp256k1-asmjs')
+  .then(tinysecp => {
+    ECPair = ECPairFactory(tinysecp)
+  })
+  .catch(error => {
+    console.error(error)
+  })
+  .finally(() => {
+    console.log('loaded ECPair!')
+  })
 
 // in bitcoin these are bip44, bip49, bip84 xpub prefixes
 // other coins contain different formats which still need to be gathered.

@@ -33,7 +33,8 @@
     "*.{js,ts,json}": "eslint"
   },
   "dependencies": {
-    "altcoin-js": "https://github.com/EdgeApp/altcoin-js.git#master",
+    "@bitcoin-js/tiny-secp256k1-asmjs": "^2.2.3",
+    "altcoin-js": "^1.0.0",
     "async-mutex": "^0.2.6",
     "baselet": "^0.2.4",
     "biggystring": "^4.0.0",
@@ -48,6 +49,7 @@
     "bs58smartcheck": "^2.0.4",
     "cleaners": "^0.3.12",
     "disklet": "^0.4.5",
+    "ecpair": "https://github.com/EdgeApp/ecpair.git#b193eb8ea2ec0c93b528f4b0223a605407ff43e4",
     "edge-sync-client": "^0.2.7",
     "memlet": "^0.1.7",
     "uri-js": "^4.4.0",

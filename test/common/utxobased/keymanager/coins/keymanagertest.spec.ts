@@ -1,5 +1,5 @@
-import { ECPair } from 'altcoin-js'
 import { expect } from 'chai'
+import { ECPairAPI, ECPairFactory } from 'ecpair'
 import { describe, it } from 'mocha'
 
 import {
@@ -17,6 +17,14 @@ import {
 import { fixtures } from './altcointestfixtures'
 
 describe('altcoin test fixtures', () => {
+  let ECPair: ECPairAPI
+
+  before(async function () {
+    await import('@bitcoin-js/tiny-secp256k1-asmjs').then(tinysecp => {
+      ECPair = ECPairFactory(tinysecp)
+    })
+  })
+
   fixtures.coins.forEach(f => {
     // test deriving a xpriv from a seed for each coin
     f.seedToXPrivTests.forEach(j => {
