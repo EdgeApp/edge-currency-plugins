@@ -1,4 +1,3 @@
-// @flow
 /***
  * https://github.com/bitcoincashjs/cashaddr
  * Copyright (c) 2018 Matias Alejo Garcia

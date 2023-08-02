@@ -1,5 +1,3 @@
-/* eslint-disable no-fallthrough */
-/* eslint-disable no-duplicate-case */
 import { ScriptTypeEnum } from '../keymanager'
 import { Input, Output, UTXO, UtxoPickerResult } from './types'
 

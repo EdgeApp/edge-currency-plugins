@@ -1,6 +1,6 @@
 'use strict'
 
-import base58 from 'bs58'
+import bs58 from 'bs58'
 import { Buffer } from 'buffer'
 
 interface Base58BaseReturn {
@@ -16,7 +16,7 @@ export function base58Base(
   function encode(payload: Buffer): string {
     const checksum: Buffer = checksumFn(payload)
 
-    return base58.encode(Buffer.concat([payload, checksum], payload.length + 4))
+    return bs58.encode(Buffer.concat([payload, checksum], payload.length + 4))
   }
 
   function decodeRaw(buffer: Buffer): Buffer | undefined {
@@ -38,7 +38,7 @@ export function base58Base(
 
   // Decode a base58-check encoded string to a buffer, no result if checksum is wrong
   function decodeUnsafe(stringPayload: string): Buffer | undefined {
-    const buffer = base58.decodeUnsafe(stringPayload)
+    const buffer = bs58.decodeUnsafe(stringPayload)
     if (buffer == null) return
 
     return decodeRaw(buffer)
@@ -46,7 +46,7 @@ export function base58Base(
 
   function decode(payload: string | undefined): Buffer {
     if (payload == null) throw new Error('Invalid base58 string')
-    const buffer = base58.decode(payload)
+    const buffer = bs58.decode(payload)
     const bPayload = decodeRaw(buffer)
     if (bPayload == null) throw new Error('Invalid checksum')
     return bPayload

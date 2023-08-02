@@ -1,5 +1,5 @@
-import * as bitcoin from 'altcoin-js'
 import { expect } from 'chai'
+import { ECPairAPI, ECPairFactory } from 'ecpair'
 import { describe, it } from 'mocha'
 
 import {
@@ -17,6 +17,14 @@ import {
 import { fixtures } from './altcointestfixtures'
 
 describe('altcoin test fixtures', () => {
+  let ECPair: ECPairAPI
+
+  before(async function () {
+    await import('@bitcoin-js/tiny-secp256k1-asmjs').then(tinysecp => {
+      ECPair = ECPairFactory(tinysecp)
+    })
+  })
+
   fixtures.coins.forEach(f => {
     // test deriving a xpriv from a seed for each coin
     f.seedToXPrivTests.forEach(j => {
@@ -126,9 +134,7 @@ describe('altcoin test fixtures', () => {
     if (f.signMessageTests != null) {
       f.signMessageTests.forEach(j => {
         it(`${f.name} sign message test`, () => {
-          const privateKey = bitcoin.ECPair.fromWIF(j.wif).privateKey?.toString(
-            'hex'
-          )
+          const privateKey = ECPair.fromWIF(j.wif).privateKey?.toString('hex')
           if (privateKey == null) {
             throw new Error('private key cannot be null')
           }
