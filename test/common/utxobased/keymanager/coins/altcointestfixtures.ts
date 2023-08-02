@@ -1267,9 +1267,25 @@ export const fixtures: Fixture = {
           address: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
           scriptPubkey: '76a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac'
         },
+        // Wrapped Segwit address test vector accordng to BIP-141 spec:
+        // (See https://iancoleman.io/bip39/ with "abandon...abort" address)
+        {
+          address: '34jP3Ne6hyTNsYqwz8svHXGBSDdp3iiWJy',
+          scriptPubkey: 'a914215ad66607bfb5d8a7b98397d0fae2db11353afb87'
+        },
+        // Segwit address test vector according to BIP-84 spec:
+        // (See https://iancoleman.io/bip39/ with "abandon...abort" address)
         {
           address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
           scriptPubkey: '0014c0cebcd6c3d3ca8c75dc5ec62ebe55330ef910e2'
+        },
+        // Taproot address test vectors from BIP-86:
+        // (See https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki)
+        {
+          address:
+            'bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr',
+          scriptPubkey:
+            '5120a60869f0dbcf1dc659c9cecbaf8050135ea9e8cdc487053f1dc6880949dc684c'
         }
       ],
       signMessageTests: [

@@ -1,3 +1,4 @@
+import { initEccLib } from 'altcoin-js'
 import { expect } from 'chai'
 import { ECPairAPI, ECPairFactory } from 'ecpair'
 import { describe, it } from 'mocha'
@@ -21,6 +22,7 @@ describe('altcoin test fixtures', () => {
 
   before(async function () {
     await import('@bitcoin-js/tiny-secp256k1-asmjs').then(tinysecp => {
+      initEccLib(tinysecp)
       ECPair = ECPairFactory(tinysecp)
     })
   })
