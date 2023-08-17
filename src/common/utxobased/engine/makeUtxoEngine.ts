@@ -24,6 +24,7 @@ import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
 import { makeMetadata } from '../../plugin/makeMetadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
+import { upgradeMemos } from '../../upgradeMemos'
 import { makeProcessor } from '../db/makeProcessor'
 import {
   fromEdgeTransaction,
@@ -292,7 +293,8 @@ export async function makeUtxoEngine(
     },
 
     async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
-      const { spendTargets } = edgeSpendInfo
+      edgeSpendInfo = upgradeMemos(edgeSpendInfo, currencyInfo)
+      const { memos = [], spendTargets } = edgeSpendInfo
       const txOptions: TxOptions | undefined =
         edgeSpendInfo.otherParams?.txOptions
       const { outputSort = 'bip69', utxoSourceAddress, forceChangeAddress } =
@@ -330,10 +332,7 @@ export async function makeUtxoEngine(
       let targets: MakeTxTarget[] = []
       const ourReceiveAddresses: string[] = []
       for (const target of spendTargets) {
-        if (
-          target.memo == null &&
-          (target.publicAddress == null || target.nativeAmount == null)
-        ) {
+        if (target.publicAddress == null || target.nativeAmount == null) {
           throw new Error('Invalid spend target')
         }
 
@@ -350,8 +349,7 @@ export async function makeUtxoEngine(
               value:
                 target.nativeAmount == null
                   ? undefined
-                  : parseInt(target.nativeAmount),
-              memo: target.memo
+                  : parseInt(target.nativeAmount)
             })
           }
         } else {
@@ -368,13 +366,12 @@ export async function makeUtxoEngine(
             value:
               target.nativeAmount == null
                 ? undefined
-                : parseInt(target.nativeAmount),
-            memo: target.memo
+                : parseInt(target.nativeAmount)
           })
         }
       }
 
-      if (targets.length < 1) {
+      if (targets.length + memos.length < 1) {
         throw new Error('Need to provide Spend Targets')
       }
 
@@ -427,6 +424,7 @@ export async function makeUtxoEngine(
         utxos,
         forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
         targets,
+        memos,
         feeRate,
         coin: coinInfo.name,
         currencyCode: currencyInfo.currencyCode,
@@ -478,7 +476,7 @@ export async function makeUtxoEngine(
           satPerVByte: feeRate
         },
         isSend: true,
-        memos: [],
+        memos,
         nativeAmount,
         networkFee,
         otherParams,

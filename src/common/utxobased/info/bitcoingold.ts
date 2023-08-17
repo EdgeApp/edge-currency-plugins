@@ -2,6 +2,7 @@ import { Psbt } from 'altcoin-js'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoingold',
@@ -34,6 +35,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://explorer.bitcoingold.org/insight/address/%s',

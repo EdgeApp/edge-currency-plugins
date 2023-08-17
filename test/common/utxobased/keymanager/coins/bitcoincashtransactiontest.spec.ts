@@ -74,6 +74,7 @@ describe('bitcoincash transaction creation and signing test', () => {
         }
       ],
       outputSort: 'bip69',
+      memos: [],
       targets: []
     })
     const signedTx = await signTx({
@@ -154,6 +155,7 @@ describe('bitcoincash replay protection transaction creation and signing test', 
         }
       ],
       outputSort: 'bip69',
+      memos: [],
       targets: []
     })
     const signedTx = await signTx({

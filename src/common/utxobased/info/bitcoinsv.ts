@@ -9,6 +9,7 @@ import {
   AddressTypeEnum,
   scriptPubkeyToAddress
 } from '../keymanager/keymanager'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoinsv',
@@ -35,6 +36,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
+  ...memoInfo,
 
   // Explorers:
   blockExplorer: 'https://whatsonchain.com/block/%s',

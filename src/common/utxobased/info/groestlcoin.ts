@@ -5,6 +5,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import * as wifgrs from 'wifgrs'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'groestlcoin',
@@ -30,6 +31,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer:

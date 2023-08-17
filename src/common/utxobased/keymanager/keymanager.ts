@@ -13,13 +13,12 @@ import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
 import bitcoinMessage from 'bitcoinjs-message'
 import { ECPairAPI, ECPairFactory } from 'ecpair'
-import { EdgeLog, InsufficientFundsError } from 'edge-core-js/types'
+import { EdgeLog, EdgeMemo, InsufficientFundsError } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
 import { ChangePath, CoinInfo, CoinPrefixes } from '../../plugin/types'
 import { IUTXO } from '../db/types'
-import { validateMemo } from '../engine/utils'
 import { ScriptTemplate, ScriptTemplates } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
 import {
@@ -213,6 +212,7 @@ export interface MakeTxArgs {
   forceUseUtxo: IUTXO[]
   utxos: IUTXO[]
   targets: MakeTxTarget[]
+  memos: EdgeMemo[]
   feeRate: number
   setRBF: boolean
   coin: string
@@ -226,7 +226,6 @@ export interface MakeTxArgs {
 export interface MakeTxTarget {
   address?: string
   value?: number
-  memo?: string | null
 }
 
 interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
@@ -926,7 +925,7 @@ export function signMessageBase64(message: string, privateKey: string): string {
 }
 
 export function makeTx(args: MakeTxArgs): MakeTxReturn {
-  const { log, outputSort } = args
+  const { log, outputSort, memos } = args
   let sequence = 0xffffffff
   if (args.setRBF) {
     sequence -= 2
@@ -1016,22 +1015,19 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
         value: target.value
       })
     }
-
-    if (target.memo != null && target.memo !== '') {
-      const memoHex = Buffer.from(target.memo, 'utf8').toString('hex')
-      // check if hex string is within 80 bytes
-      const validatedMemo = validateMemo(memoHex)
-      if (!validatedMemo.passed) {
-        throw new Error('Memo size exceeds 80 bytes')
-      }
-      const script = bitcoinScript
-        .compile([opcodes.OP_RETURN, Buffer.from(target.memo, 'utf8')])
-        .toString('hex')
-      targets.push({
-        script,
-        value: 0
-      })
-    }
+  }
+  for (const memo of memos) {
+    const memoData =
+      memo.type === 'text'
+        ? Buffer.from(memo.value, 'utf8')
+        : Buffer.from(memo.value, 'hex')
+    const script = bitcoinScript
+      .compile([opcodes.OP_RETURN, memoData])
+      .toString('hex')
+    targets.push({
+      script,
+      value: 0
+    })
   }
 
   const changeScript = addressToScriptPubkey({

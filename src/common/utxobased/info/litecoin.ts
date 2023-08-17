@@ -2,6 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'litecoin',
@@ -34,6 +35,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
+  ...memoInfo,
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/litecoin/block/%s',

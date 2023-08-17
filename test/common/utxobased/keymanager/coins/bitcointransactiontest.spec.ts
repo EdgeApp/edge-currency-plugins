@@ -187,6 +187,7 @@ describe('bitcoin transaction creation and signing test', function () {
         }
       ],
       targets: [],
+      memos: [],
       outputSort: 'bip69'
     })
     const signedTx = await signTx({
@@ -253,6 +254,7 @@ describe('bitcoin transaction creation and signing test', function () {
         { address: segwitAddress, value: 200 },
         { address: segwitAddress, value: 100 }
       ],
+      memos: [],
       outputSort: 'bip69'
     })
     const signedTx = await signTx({
@@ -314,6 +316,7 @@ describe('bitcoin transaction creation and signing test', function () {
         { address: segwitAddress, value: 200 },
         { address: segwitAddress, value: 100 }
       ],
+      memos: [],
       outputSort: 'targets'
     })
     const signedTx = await signTx({
@@ -367,6 +370,7 @@ describe('bitcoin transaction creation and signing test', function () {
         { address: segwitAddress, value: 200 },
         { address: segwitAddress, value: 200 }
       ],
+      memos: [],
       outputSort: 'bip69'
     })
 
@@ -403,6 +407,7 @@ describe('bitcoin transaction creation and signing test', function () {
       subtractFee: false,
       utxos: [],
       targets: [],
+      memos: [],
       outputSort: 'bip69'
     })
 
@@ -482,6 +487,7 @@ describe('bitcoin transaction creation and signing test', function () {
       subtractFee: false,
       utxos: [],
       targets: [targetSegwit, targetWrappedSegwit],
+      memos: [],
       outputSort: 'bip69'
     })
 
@@ -538,6 +544,7 @@ describe('bitcoin transaction creation and signing test', function () {
       subtractFee: false,
       utxos: [utxo],
       targets: Array(100).fill(target),
+      memos: [],
       outputSort: 'bip69'
     })
 
@@ -572,6 +579,7 @@ describe('bitcoin transaction creation and signing test', function () {
       subtractFee: false,
       utxos: utxos,
       targets: Array(2).fill(target),
+      memos: [],
       outputSort: 'bip69'
     })
 

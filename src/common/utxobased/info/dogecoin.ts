@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 import { makeDogeUtxoPicker } from './utxoPickers/dogeUtxoPicker'
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -30,6 +31,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://blockchair.com/dogecoin/address/%s?from=edgeapp',
