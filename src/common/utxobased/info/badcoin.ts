@@ -26,12 +26,14 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
 
   // Explorers:
   addressExplorer: 'https://www.blockingbad.com/address/%s',
   blockExplorer: 'https://www.blockingbad.com/block/%s',
-  transactionExplorer: 'https://www.blockingbad.com/tx/%s'
+  transactionExplorer: 'https://www.blockingbad.com/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

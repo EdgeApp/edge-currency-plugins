@@ -23,12 +23,14 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
 
   // Explorers:
   addressExplorer: 'https://ravencoin.network/address/%s',
   blockExplorer: 'https://ravencoin.network/block/%s',
-  transactionExplorer: 'https://ravencoin.network/tx/%s'
+  transactionExplorer: 'https://ravencoin.network/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

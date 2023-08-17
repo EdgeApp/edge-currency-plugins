@@ -26,12 +26,14 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
 
   // Explorers:
   addressExplorer: 'https://www.blockexperts.com/ebst/address/%s',
   blockExplorer: 'https://www.blockexperts.com/ebst/hash/%s',
-  transactionExplorer: 'https://www.blockexperts.com/ebst/tx/%s'
+  transactionExplorer: 'https://www.blockexperts.com/ebst/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

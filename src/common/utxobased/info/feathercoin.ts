@@ -27,7 +27,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
 
   // Explorers:
   addressExplorer: 'https://fsight.chain.tips/address/%s',
@@ -36,7 +35,10 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   // Images:
   symbolImage: `${IMAGE_SERVER_URL}/feathercoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/feathercoin-logo-solo-64.png`
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/feathercoin-logo-solo-64.png`,
+
+  // Deprecated:
+  metaTokens: []
 }
 
 export const engineInfo: EngineInfo = {

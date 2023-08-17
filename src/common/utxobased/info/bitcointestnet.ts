@@ -30,7 +30,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/bitcoin/testnet/block/%s',
@@ -39,7 +38,10 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   // Images:
   symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
+
+  // Deprecated:
+  metaTokens: []
 }
 
 export const engineInfo: EngineInfo = {

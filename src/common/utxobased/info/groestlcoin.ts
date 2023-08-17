@@ -30,14 +30,16 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
 
   // Explorers:
   addressExplorer:
     'https://blockchair.com/groestlcoin/address/%s?from=edgeapp?from=edgeapp',
   blockExplorer: 'https://blockchair.com/groestlcoin/block/%s?from=edgeapp',
   transactionExplorer:
-    'https://blockchair.com/groestlcoin/transaction/%s?from=edgeapp'
+    'https://blockchair.com/groestlcoin/transaction/%s?from=edgeapp',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

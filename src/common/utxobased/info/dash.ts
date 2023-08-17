@@ -34,12 +34,15 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
 
   // Explorers:
   addressExplorer: 'https://blockchair.com/dash/address/%s?from=edgeapp',
   blockExplorer: 'https://blockchair.com/dash/block/%s?from=edgeapp',
-  transactionExplorer: 'https://blockchair.com/dash/transaction/%s?from=edgeapp'
+  transactionExplorer:
+    'https://blockchair.com/dash/transaction/%s?from=edgeapp',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

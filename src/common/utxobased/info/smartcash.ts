@@ -29,12 +29,14 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
 
   // Explorers:
   addressExplorer: 'https://insight.smartcash.cc/address/%s',
   blockExplorer: 'https://insight.smartcash.cc/block/%s',
-  transactionExplorer: 'https://insight.smartcash.cc/tx/%s'
+  transactionExplorer: 'https://insight.smartcash.cc/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

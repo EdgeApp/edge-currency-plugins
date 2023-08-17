@@ -30,13 +30,15 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
 
   // Explorers:
   addressExplorer: 'https://blockchair.com/dogecoin/address/%s?from=edgeapp',
   blockExplorer: 'https://blockchair.com/dogecoin/block/%s?from=edgeapp',
   transactionExplorer:
-    'https://blockchair.com/dogecoin/transaction/%s?from=edgeapp'
+    'https://blockchair.com/dogecoin/transaction/%s?from=edgeapp',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

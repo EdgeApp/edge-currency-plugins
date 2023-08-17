@@ -20,12 +20,14 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: [],
     enableCustomServers: false
   },
-  metaTokens: [],
 
   // Explorers:
   addressExplorer: 'https://explorer.bitcoingold.org/insight/address/%s',
   blockExplorer: 'https://explorer.bitcoingold.org/insight/block/%s',
-  transactionExplorer: 'https://explorer.bitcoingold.org/insight/tx/%s'
+  transactionExplorer: 'https://explorer.bitcoingold.org/insight/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {
