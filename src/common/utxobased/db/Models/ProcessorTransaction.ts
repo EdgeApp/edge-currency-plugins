@@ -95,16 +95,16 @@ export const toEdgeTransaction = async (
   } catch (e) {}
 
   return {
-    walletId,
-    currencyCode: currencyInfo.currencyCode,
-    txid: tx.txid,
     blockHeight: tx.blockHeight,
     confirmations: tx.confirmations,
+    currencyCode: currencyInfo.currencyCode,
     date: tx.date,
     nativeAmount: tx.ourAmount,
     networkFee: tx.fees,
-    signedTx: tx.hex,
     ourReceiveAddresses,
+    signedTx: tx.hex,
+    txid: tx.txid,
+    walletId,
     ...feeRes
   }
 }

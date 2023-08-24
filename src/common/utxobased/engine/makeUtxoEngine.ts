@@ -471,19 +471,19 @@ export async function makeUtxoEngine(
       }
 
       const transaction = {
-        walletId: walletInfo.id,
-        ourReceiveAddresses,
-        otherParams,
-        currencyCode: currencyInfo.currencyCode,
-        txid: '',
-        date: unixTime(),
         blockHeight: 0,
-        nativeAmount,
-        networkFee,
+        currencyCode: currencyInfo.currencyCode,
+        date: unixTime(),
         feeRateUsed: {
           satPerVByte: feeRate
         },
-        signedTx: ''
+        nativeAmount,
+        networkFee,
+        otherParams,
+        ourReceiveAddresses,
+        signedTx: '',
+        txid: '',
+        walletId: walletInfo.id
       }
 
       return transaction
