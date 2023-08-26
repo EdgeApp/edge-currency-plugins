@@ -470,20 +470,21 @@ export async function makeUtxoEngine(
         ourScriptPubkeys
       }
 
-      const transaction = {
-        walletId: walletInfo.id,
-        ourReceiveAddresses,
-        otherParams,
-        currencyCode: currencyInfo.currencyCode,
-        txid: '',
-        date: unixTime(),
+      const transaction: EdgeTransaction = {
         blockHeight: 0,
-        nativeAmount,
-        networkFee,
+        currencyCode: currencyInfo.currencyCode,
+        date: unixTime(),
         feeRateUsed: {
           satPerVByte: feeRate
         },
-        signedTx: ''
+        isSend: true,
+        nativeAmount,
+        networkFee,
+        otherParams,
+        ourReceiveAddresses,
+        signedTx: '',
+        txid: '',
+        walletId: walletInfo.id
       }
 
       return transaction

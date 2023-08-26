@@ -1,4 +1,5 @@
 import { Transaction } from 'altcoin-js'
+import { lt } from 'biggystring'
 import BN from 'bn.js'
 import { EdgeTransaction } from 'edge-core-js/types'
 
@@ -95,16 +96,17 @@ export const toEdgeTransaction = async (
   } catch (e) {}
 
   return {
-    walletId,
-    currencyCode: currencyInfo.currencyCode,
-    txid: tx.txid,
     blockHeight: tx.blockHeight,
     confirmations: tx.confirmations,
+    currencyCode: currencyInfo.currencyCode,
     date: tx.date,
+    isSend: lt(tx.ourAmount, '0'),
     nativeAmount: tx.ourAmount,
     networkFee: tx.fees,
-    signedTx: tx.hex,
     ourReceiveAddresses,
+    signedTx: tx.hex,
+    txid: tx.txid,
+    walletId,
     ...feeRes
   }
 }

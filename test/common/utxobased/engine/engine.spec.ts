@@ -11,6 +11,7 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeFetchFunction,
+  EdgeGetTransactionsOptions,
   EdgeSpendInfo,
   JsonObject,
   makeFakeIo
@@ -246,7 +247,7 @@ describe('engine.spec', function () {
         it('Checking a wrong formated address', async function () {
           try {
             await engine.isAddressUsed(address)
-          } catch (e) {
+          } catch (e: any) {
             assert(e, 'Should throw')
             assert.match(
               e.message,
@@ -260,7 +261,7 @@ describe('engine.spec', function () {
         it("Checking an address we don't own", async function () {
           try {
             assert.equal(await engine.isAddressUsed(address), false)
-          } catch (e) {
+          } catch (e: any) {
             assert(e, 'Should throw')
             assert.equal(e.message, 'Address not found in wallet')
           }
@@ -300,11 +301,12 @@ describe('engine.spec', function () {
       })
 
       it('Should get transactions from cache with options', async function () {
-        await engine
-          .getTransactions({ startIndex: 1, startEntries: 2 })
-          .then(txs => {
-            assert.equal(txs.length, 2, 'should have 2 tx from cache')
-          })
+        const options: EdgeGetTransactionsOptions = {
+          startIndex: 1,
+          startEntries: 2
+        }
+        const txs = await engine.getTransactions(options)
+        assert.equal(txs.length, 2, 'should have 2 tx from cache')
       })
     })
 
@@ -360,11 +362,15 @@ describe('engine.spec', function () {
 
     describe(`Get Wallet Keys for Wallet type ${WALLET_TYPE}`, function () {
       it('get private key', function (done) {
-        engine.getDisplayPrivateSeed(keys)
+        if (engine.getDisplayPrivateSeed != null) {
+          engine.getDisplayPrivateSeed(keys)
+        }
         done()
       })
       it('get public key', function (done) {
-        engine.getDisplayPublicSeed()
+        if (engine.getDisplayPublicSeed != null) {
+          engine.getDisplayPublicSeed()
+        }
         done()
       })
     })
