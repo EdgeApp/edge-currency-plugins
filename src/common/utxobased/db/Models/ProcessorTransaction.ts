@@ -101,6 +101,7 @@ export const toEdgeTransaction = async (
     currencyCode: currencyInfo.currencyCode,
     date: tx.date,
     isSend: lt(tx.ourAmount, '0'),
+    memos: [],
     nativeAmount: tx.ourAmount,
     networkFee: tx.fees,
     ourReceiveAddresses,

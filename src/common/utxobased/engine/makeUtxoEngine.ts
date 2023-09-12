@@ -478,6 +478,7 @@ export async function makeUtxoEngine(
           satPerVByte: feeRate
         },
         isSend: true,
+        memos: [],
         nativeAmount,
         networkFee,
         otherParams,
