@@ -3,6 +3,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -22,7 +23,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: [],
     enableCustomServers: false
   },
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/bitcoin-cash/block/%s',
@@ -32,7 +33,10 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Images:
   symbolImage: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

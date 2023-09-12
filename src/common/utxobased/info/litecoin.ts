@@ -2,6 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'litecoin',
@@ -34,7 +35,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/litecoin/block/%s',
@@ -43,7 +44,10 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   // Images:
   symbolImage: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
+
+  // Deprecated:
+  metaTokens: []
 }
 
 export const engineInfo: EngineInfo = {

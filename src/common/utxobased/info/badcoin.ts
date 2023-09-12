@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'badcoin',
@@ -26,12 +27,15 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://www.blockingbad.com/address/%s',
   blockExplorer: 'https://www.blockingbad.com/block/%s',
-  transactionExplorer: 'https://www.blockingbad.com/tx/%s'
+  transactionExplorer: 'https://www.blockingbad.com/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

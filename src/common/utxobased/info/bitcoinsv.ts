@@ -9,6 +9,7 @@ import {
   AddressTypeEnum,
   scriptPubkeyToAddress
 } from '../keymanager/keymanager'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoinsv',
@@ -35,7 +36,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   blockExplorer: 'https://whatsonchain.com/block/%s',
@@ -44,7 +45,10 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Images:
   symbolImage: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {
@@ -64,7 +68,7 @@ const engineInfo: EngineInfo = {
   /*
   This is to support cashaddr and 1-addresses coming from the network.
   We always convert to a 1-address for internal use.
-  We send 1-address to the network because all servers should support legacy 
+  We send 1-address to the network because all servers should support legacy
   address (this is the uncleaner).
   */
   asBlockbookAddress: asCodec(

@@ -4,6 +4,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import * as wifsmart from 'wif-smart'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'smartcash',
@@ -29,12 +30,15 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://insight.smartcash.cc/address/%s',
   blockExplorer: 'https://insight.smartcash.cc/block/%s',
-  transactionExplorer: 'https://insight.smartcash.cc/tx/%s'
+  transactionExplorer: 'https://insight.smartcash.cc/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

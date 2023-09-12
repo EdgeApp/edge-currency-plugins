@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'qtum',
@@ -23,12 +24,15 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://explorer.qtum.org/address/%s',
   blockExplorer: 'https://explorer.qtum.org/block/%s',
-  transactionExplorer: 'https://explorer.qtum.org/tx/%s'
+  transactionExplorer: 'https://explorer.qtum.org/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

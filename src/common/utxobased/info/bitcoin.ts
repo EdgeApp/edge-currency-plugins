@@ -2,6 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoin',
@@ -36,7 +37,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/bitcoin/block/%s',
@@ -45,7 +46,10 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Images:
   symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

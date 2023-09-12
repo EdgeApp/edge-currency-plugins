@@ -55,6 +55,7 @@ describe('groestlcoin transaction creation and signing test', function () {
         }
       ],
       outputSort: 'bip69',
+      memos: [],
       targets: []
     })
 

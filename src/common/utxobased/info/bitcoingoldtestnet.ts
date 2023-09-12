@@ -2,6 +2,7 @@ import { Psbt } from 'altcoin-js'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoingoldtestnet',
@@ -20,12 +21,15 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: [],
     enableCustomServers: false
   },
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://explorer.bitcoingold.org/insight/address/%s',
   blockExplorer: 'https://explorer.bitcoingold.org/insight/block/%s',
-  transactionExplorer: 'https://explorer.bitcoingold.org/insight/tx/%s'
+  transactionExplorer: 'https://explorer.bitcoingold.org/insight/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

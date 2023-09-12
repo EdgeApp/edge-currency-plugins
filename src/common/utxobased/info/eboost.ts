@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'eboost',
@@ -26,12 +27,15 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://www.blockexperts.com/ebst/address/%s',
   blockExplorer: 'https://www.blockexperts.com/ebst/hash/%s',
-  transactionExplorer: 'https://www.blockexperts.com/ebst/tx/%s'
+  transactionExplorer: 'https://www.blockexperts.com/ebst/tx/%s',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

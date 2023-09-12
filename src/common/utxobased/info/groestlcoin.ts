@@ -5,6 +5,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import * as wifgrs from 'wifgrs'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'groestlcoin',
@@ -30,14 +31,17 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer:
     'https://blockchair.com/groestlcoin/address/%s?from=edgeapp?from=edgeapp',
   blockExplorer: 'https://blockchair.com/groestlcoin/block/%s?from=edgeapp',
   transactionExplorer:
-    'https://blockchair.com/groestlcoin/transaction/%s?from=edgeapp'
+    'https://blockchair.com/groestlcoin/transaction/%s?from=edgeapp',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

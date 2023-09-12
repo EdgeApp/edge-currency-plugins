@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 import { makeDogeUtxoPicker } from './utxoPickers/dogeUtxoPicker'
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -30,13 +31,16 @@ const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://blockchair.com/dogecoin/address/%s?from=edgeapp',
   blockExplorer: 'https://blockchair.com/dogecoin/block/%s?from=edgeapp',
   transactionExplorer:
-    'https://blockchair.com/dogecoin/transaction/%s?from=edgeapp'
+    'https://blockchair.com/dogecoin/transaction/%s?from=edgeapp',
+
+  // Deprecated:
+  metaTokens: []
 }
 
 const engineInfo: EngineInfo = {

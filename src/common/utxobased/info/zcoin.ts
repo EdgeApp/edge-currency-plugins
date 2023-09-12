@@ -2,6 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { memoInfo } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'zcoin',
@@ -27,7 +28,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       displayMultiplier: '0'
     }
   ],
-  metaTokens: [],
+  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://insight.zcoin.io/address/%s',
@@ -36,7 +37,10 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   // Images:
   symbolImage: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
+
+  // Deprecated:
+  metaTokens: []
 }
 
 export const engineInfo: EngineInfo = {
