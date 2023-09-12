@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v2.2.0 (2023-09-12)
+
+- added: Support the latest core memo API's.
+
 ## v2.1.0 (2023-08-02)
 
 - Changed: Upgraded AltcoinJS to first published version based on BitcoinJS v6.1.3
