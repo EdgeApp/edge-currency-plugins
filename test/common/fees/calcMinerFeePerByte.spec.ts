@@ -9,6 +9,11 @@ describe(`Mining Fees`, function () {
     const feeOption = 'standard'
     const customFee = '15'
     const bitcoinFees = {
+      lowFeeFudgeFactor: undefined,
+      standardFeeLowFudgeFactor: undefined,
+      standardFeeHighFudgeFactor: undefined,
+      highFeeFudgeFactor: undefined,
+
       lowFee: '10',
       standardFeeLow: '50',
       standardFeeHigh: '300',
@@ -30,6 +35,11 @@ describe(`Mining Fees`, function () {
     const feeOption = 'standard'
     const customFee = '15'
     const bitcoinFees = {
+      lowFeeFudgeFactor: undefined,
+      standardFeeLowFudgeFactor: undefined,
+      standardFeeHighFudgeFactor: undefined,
+      highFeeFudgeFactor: undefined,
+
       lowFee: '10',
       standardFeeLow: '50',
       standardFeeHigh: '100',
@@ -51,6 +61,11 @@ describe(`Mining Fees`, function () {
     const feeOption = 'standard'
     const customFee = '15'
     const bitcoinFees = {
+      lowFeeFudgeFactor: undefined,
+      standardFeeLowFudgeFactor: undefined,
+      standardFeeHighFudgeFactor: undefined,
+      highFeeFudgeFactor: undefined,
+
       lowFee: '10',
       standardFeeLow: '50',
       standardFeeHigh: '100',
@@ -72,6 +87,11 @@ describe(`Mining Fees`, function () {
     const feeOption = 'low'
     const customFee = '15'
     const bitcoinFees = {
+      lowFeeFudgeFactor: undefined,
+      standardFeeLowFudgeFactor: undefined,
+      standardFeeHighFudgeFactor: undefined,
+      highFeeFudgeFactor: undefined,
+
       lowFee: '10',
       standardFeeLow: '50',
       standardFeeHigh: '100',
@@ -93,6 +113,11 @@ describe(`Mining Fees`, function () {
     const feeOption = 'high'
     const customFee = '15'
     const bitcoinFees = {
+      lowFeeFudgeFactor: undefined,
+      standardFeeLowFudgeFactor: undefined,
+      standardFeeHighFudgeFactor: undefined,
+      highFeeFudgeFactor: undefined,
+
       lowFee: '10',
       standardFeeLow: '50',
       standardFeeHigh: '100',
@@ -114,6 +139,11 @@ describe(`Mining Fees`, function () {
     const feeOption = 'custom'
     const customFee = '15'
     const bitcoinFees = {
+      lowFeeFudgeFactor: undefined,
+      standardFeeLowFudgeFactor: undefined,
+      standardFeeHighFudgeFactor: undefined,
+      highFeeFudgeFactor: undefined,
+
       lowFee: '10',
       standardFeeLow: '50',
       standardFeeHigh: '100',

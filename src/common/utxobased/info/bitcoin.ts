@@ -60,6 +60,11 @@ const engineInfo: EngineInfo = {
   feeUpdateInterval: 60000,
   mempoolSpaceFeeInfoServer: 'https://mempool.space/api/v1/fees/recommended',
   simpleFeeSettings: {
+    lowFeeFudgeFactor: undefined,
+    standardFeeLowFudgeFactor: undefined,
+    standardFeeHighFudgeFactor: undefined,
+    highFeeFudgeFactor: undefined,
+
     highFee: '150',
     lowFee: '20',
     standardFeeLow: '50',
