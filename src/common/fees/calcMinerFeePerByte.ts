@@ -1,4 +1,4 @@
-import { add, div, gte, lte, mul, sub } from 'biggystring'
+import { add, div, gte, lte, mul, round, sub } from 'biggystring'
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { SimpleFeeSettings } from '../plugin/types'
@@ -19,8 +19,20 @@ export const calcMinerFeePerByte = (
   networkFeeOption?: NetworkFeeOption,
   customNetworkFee?: string
 ): string => {
-  const { standardFeeLowAmount, standardFeeHighAmount } = fees
-  const { highFee, lowFee, standardFeeHigh, standardFeeLow } = fees
+  const {
+    highFeeFudgeFactor = '1',
+    lowFeeFudgeFactor = '1',
+    standardFeeHighAmount,
+    standardFeeHighFudgeFactor = '1',
+    standardFeeLowAmount,
+    standardFeeLowFudgeFactor = '1'
+  } = fees
+  let { highFee, lowFee, standardFeeHigh, standardFeeLow } = fees
+
+  highFee = round(mul(highFee, highFeeFudgeFactor), 0)
+  lowFee = round(mul(lowFee, lowFeeFudgeFactor), 0)
+  standardFeeHigh = round(mul(standardFeeHigh, standardFeeHighFudgeFactor), 0)
+  standardFeeLow = round(mul(standardFeeLow, standardFeeLowFudgeFactor), 0)
 
   switch (networkFeeOption) {
     case 'low':
