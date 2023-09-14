@@ -1,6 +1,13 @@
 import { BaseConverter } from 'base-x'
 import * as bip32 from 'bip32'
-import { asNumber, asObject, asString, asValue, Cleaner } from 'cleaners'
+import {
+  asMaybe,
+  asNumber,
+  asObject,
+  asString,
+  asValue,
+  Cleaner
+} from 'cleaners'
 import { Disklet } from 'disklet'
 import {
   EdgeCurrencyEngineOptions,
@@ -147,6 +154,12 @@ export const asFeeRates = asObject({
 export type SimpleFeeSettings = ReturnType<typeof asSimpleFeeSettings>
 export const asSimpleFeeSettings = asObject({
   ...asFeeRates.shape,
+
+  lowFeeFudgeFactor: asMaybe(asString),
+  standardFeeLowFudgeFactor: asMaybe(asString),
+  standardFeeHighFudgeFactor: asMaybe(asString),
+  highFeeFudgeFactor: asMaybe(asString),
+
   standardFeeLowAmount: asString,
   standardFeeHighAmount: asString
 })

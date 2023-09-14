@@ -57,6 +57,11 @@ const engineInfo: EngineInfo = {
   defaultFee: 10000,
   feeUpdateInterval: 60000,
   simpleFeeSettings: {
+    lowFeeFudgeFactor: undefined,
+    standardFeeLowFudgeFactor: undefined,
+    standardFeeHighFudgeFactor: undefined,
+    highFeeFudgeFactor: undefined,
+
     highFee: '20',
     lowFee: '3',
     standardFeeLow: '5',
