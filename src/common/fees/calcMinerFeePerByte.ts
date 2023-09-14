@@ -19,36 +19,36 @@ export const calcMinerFeePerByte = (
   networkFeeOption?: NetworkFeeOption,
   customNetworkFee?: string
 ): string => {
+  const { standardFeeLowAmount, standardFeeHighAmount } = fees
+  const { highFee, lowFee, standardFeeHigh, standardFeeLow } = fees
+
   switch (networkFeeOption) {
     case 'low':
-      return fees.lowFee
+      return lowFee
 
     case 'standard': {
-      if (gte(nativeAmount, fees.standardFeeHighAmount)) {
-        return fees.standardFeeHigh
+      if (gte(nativeAmount, standardFeeHighAmount)) {
+        return standardFeeHigh
       }
-      if (lte(nativeAmount, fees.standardFeeLowAmount)) {
-        return fees.standardFeeLow
+      if (lte(nativeAmount, standardFeeLowAmount)) {
+        return standardFeeLow
       }
 
       // Scale the fee by the amount the user is sending scaled between standardFeeLowAmount and standardFeeHighAmount
-      const lowHighAmountDiff = sub(
-        fees.standardFeeHighAmount,
-        fees.standardFeeLowAmount
-      )
-      const lowHighFeeDiff = sub(fees.standardFeeHigh, fees.standardFeeLow)
+      const lowHighAmountDiff = sub(standardFeeHighAmount, standardFeeLowAmount)
+      const lowHighFeeDiff = sub(standardFeeHigh, standardFeeLow)
 
       // How much above the lowFeeAmount is the user sending
-      const amountDiffFromLow = sub(nativeAmount, fees.standardFeeLowAmount)
+      const amountDiffFromLow = sub(nativeAmount, standardFeeLowAmount)
 
       // Add this much to the low fee = (amountDiffFromLow * lowHighFeeDiff) / lowHighAmountDiff)
       const temp1 = mul(amountDiffFromLow, lowHighFeeDiff)
       const addFeeToLow = div(temp1, lowHighAmountDiff)
-      return add(fees.standardFeeLow, addFeeToLow)
+      return add(standardFeeLow, addFeeToLow)
     }
 
     case 'high':
-      return fees.highFee
+      return highFee
 
     case 'custom':
       if (customNetworkFee == null || customNetworkFee === '0') {
