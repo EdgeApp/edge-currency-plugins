@@ -1,4 +1,4 @@
-import * as bs from 'biggystring'
+import { add, div, gte, lte, mul, sub } from 'biggystring'
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { SimpleFeeSettings } from '../plugin/types'
@@ -24,27 +24,27 @@ export const calcMinerFeePerByte = (
       return fees.lowFee
 
     case 'standard': {
-      if (bs.gte(nativeAmount, fees.standardFeeHighAmount)) {
+      if (gte(nativeAmount, fees.standardFeeHighAmount)) {
         return fees.standardFeeHigh
       }
-      if (bs.lte(nativeAmount, fees.standardFeeLowAmount)) {
+      if (lte(nativeAmount, fees.standardFeeLowAmount)) {
         return fees.standardFeeLow
       }
 
       // Scale the fee by the amount the user is sending scaled between standardFeeLowAmount and standardFeeHighAmount
-      const lowHighAmountDiff = bs.sub(
+      const lowHighAmountDiff = sub(
         fees.standardFeeHighAmount,
         fees.standardFeeLowAmount
       )
-      const lowHighFeeDiff = bs.sub(fees.standardFeeHigh, fees.standardFeeLow)
+      const lowHighFeeDiff = sub(fees.standardFeeHigh, fees.standardFeeLow)
 
       // How much above the lowFeeAmount is the user sending
-      const amountDiffFromLow = bs.sub(nativeAmount, fees.standardFeeLowAmount)
+      const amountDiffFromLow = sub(nativeAmount, fees.standardFeeLowAmount)
 
       // Add this much to the low fee = (amountDiffFromLow * lowHighFeeDiff) / lowHighAmountDiff)
-      const temp1 = bs.mul(amountDiffFromLow, lowHighFeeDiff)
-      const addFeeToLow = bs.div(temp1, lowHighAmountDiff)
-      return bs.add(fees.standardFeeLow, addFeeToLow)
+      const temp1 = mul(amountDiffFromLow, lowHighFeeDiff)
+      const addFeeToLow = div(temp1, lowHighAmountDiff)
+      return add(fees.standardFeeLow, addFeeToLow)
     }
 
     case 'high':
