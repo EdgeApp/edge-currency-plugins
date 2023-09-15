@@ -1,8 +1,16 @@
 # edge-currency-plugins
 
+## v2.2.1 (2023-09-15)
+
+- added: Dynamic fudge factors for UTXO fees
+
 ## v2.2.0 (2023-09-12)
 
 - added: Support the latest core memo API's.
+
+## v2.1.1 (2023-09-15)
+
+- added: Dynamic fudge factors for UTXO fees
 
 ## v2.1.0 (2023-08-02)
 
