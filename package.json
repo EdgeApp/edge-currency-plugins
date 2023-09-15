@@ -37,7 +37,7 @@
     "altcoin-js": "^1.0.0",
     "async-mutex": "^0.2.6",
     "baselet": "^0.2.4",
-    "biggystring": "^4.0.0",
+    "biggystring": "^4.1.3",
     "bip32": "^2.0.5",
     "bip32grs": "^2.0.5",
     "bip39": "^3.0.2",

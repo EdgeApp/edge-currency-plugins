@@ -9,6 +9,7 @@ import {
 } from 'edge-core-js/types'
 import { makeMemlet, Memlet } from 'memlet'
 
+import { removeUndefined } from '../../util/filterUndefined'
 import { FEES_PATH, INFO_SERVER_URI } from '../constants'
 import {
   asSimpleFeeSettings,
@@ -57,7 +58,8 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       ...common,
       mempoolSpaceFeeInfoServer: engineInfo.mempoolSpaceFeeInfoServer
     })
-    Object.assign(fees, vendorFees ?? {})
+    const cleanedVendorFees = removeUndefined(vendorFees ?? {})
+    Object.assign(fees, cleanedVendorFees)
     timestamp = Date.now()
 
     await cacheFees(memlet, fees)
@@ -67,7 +69,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
     async start(): Promise<void> {
       const edgeFees = await fetchFees({
         ...common,
-        uri: `${INFO_SERVER_URI}/networkFees/${currencyInfo.pluginId}`,
+        uri: `${INFO_SERVER_URI}/v1/networkFees/${currencyInfo.pluginId}`,
         processor: processInfoServerFees
       })
       Object.assign(fees, edgeFees)

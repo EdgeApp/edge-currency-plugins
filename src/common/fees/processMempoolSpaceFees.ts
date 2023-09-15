@@ -16,6 +16,10 @@ export const asMempoolSpaceFees = asObject({
  * @param fees
  * @returns Partial<FeeRates>
  */
+
+const STANDARD_FEE_HIGH_MULTIPLIER = 1.3
+const HIGH_FEE_MULTIPLIER = 2
+
 export const processMempoolSpaceFees = (fees: unknown): FeeRates | null => {
   let mempoolFees: ReturnType<typeof asMempoolSpaceFees>
   try {
@@ -24,10 +28,14 @@ export const processMempoolSpaceFees = (fees: unknown): FeeRates | null => {
     return null
   }
 
-  const standardFeeLow = mempoolFees.hourFee.toString()
-  const lowFee = bs.div(standardFeeLow, '2')
-  const standardFeeHigh = mempoolFees.halfHourFee.toString()
-  const highFee = mempoolFees.fastestFee.toString()
+  const { fastestFee, halfHourFee } = mempoolFees
+
+  const lowFee = halfHourFee.toString()
+  const standardFeeLow = fastestFee.toString()
+  const standardFeeHigh = Math.round(
+    fastestFee * STANDARD_FEE_HIGH_MULTIPLIER
+  ).toString()
+  const highFee = Math.round(fastestFee * HIGH_FEE_MULTIPLIER).toString()
 
   return {
     lowFee: bs.max(lowFee, LOW_FEE.toString()),

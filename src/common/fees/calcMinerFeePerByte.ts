@@ -1,4 +1,4 @@
-import * as bs from 'biggystring'
+import { add, div, gte, lte, mul, round, sub } from 'biggystring'
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { SimpleFeeSettings } from '../plugin/types'
@@ -19,36 +19,48 @@ export const calcMinerFeePerByte = (
   networkFeeOption?: NetworkFeeOption,
   customNetworkFee?: string
 ): string => {
+  const {
+    highFeeFudgeFactor = '1',
+    lowFeeFudgeFactor = '1',
+    standardFeeHighAmount,
+    standardFeeHighFudgeFactor = '1',
+    standardFeeLowAmount,
+    standardFeeLowFudgeFactor = '1'
+  } = fees
+  let { highFee, lowFee, standardFeeHigh, standardFeeLow } = fees
+
+  highFee = round(mul(highFee, highFeeFudgeFactor), 0)
+  lowFee = round(mul(lowFee, lowFeeFudgeFactor), 0)
+  standardFeeHigh = round(mul(standardFeeHigh, standardFeeHighFudgeFactor), 0)
+  standardFeeLow = round(mul(standardFeeLow, standardFeeLowFudgeFactor), 0)
+
   switch (networkFeeOption) {
     case 'low':
-      return fees.lowFee
+      return lowFee
 
     case 'standard': {
-      if (bs.gte(nativeAmount, fees.standardFeeHighAmount)) {
-        return fees.standardFeeHigh
+      if (gte(nativeAmount, standardFeeHighAmount)) {
+        return standardFeeHigh
       }
-      if (bs.lte(nativeAmount, fees.standardFeeLowAmount)) {
-        return fees.standardFeeLow
+      if (lte(nativeAmount, standardFeeLowAmount)) {
+        return standardFeeLow
       }
 
       // Scale the fee by the amount the user is sending scaled between standardFeeLowAmount and standardFeeHighAmount
-      const lowHighAmountDiff = bs.sub(
-        fees.standardFeeHighAmount,
-        fees.standardFeeLowAmount
-      )
-      const lowHighFeeDiff = bs.sub(fees.standardFeeHigh, fees.standardFeeLow)
+      const lowHighAmountDiff = sub(standardFeeHighAmount, standardFeeLowAmount)
+      const lowHighFeeDiff = sub(standardFeeHigh, standardFeeLow)
 
       // How much above the lowFeeAmount is the user sending
-      const amountDiffFromLow = bs.sub(nativeAmount, fees.standardFeeLowAmount)
+      const amountDiffFromLow = sub(nativeAmount, standardFeeLowAmount)
 
       // Add this much to the low fee = (amountDiffFromLow * lowHighFeeDiff) / lowHighAmountDiff)
-      const temp1 = bs.mul(amountDiffFromLow, lowHighFeeDiff)
-      const addFeeToLow = bs.div(temp1, lowHighAmountDiff)
-      return bs.add(fees.standardFeeLow, addFeeToLow)
+      const temp1 = mul(amountDiffFromLow, lowHighFeeDiff)
+      const addFeeToLow = div(temp1, lowHighAmountDiff)
+      return add(standardFeeLow, addFeeToLow)
     }
 
     case 'high':
-      return fees.highFee
+      return highFee
 
     case 'custom':
       if (customNetworkFee == null || customNetworkFee === '0') {
