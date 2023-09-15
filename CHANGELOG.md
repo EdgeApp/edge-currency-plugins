@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v2.1.1 (2023-09-15)
+
+- added: Dynamic fudge factors for UTXO fees
+
 ## v2.1.0 (2023-08-02)
 
 - Changed: Upgraded AltcoinJS to first published version based on BitcoinJS v6.1.3
