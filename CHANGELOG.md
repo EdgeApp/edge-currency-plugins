@@ -1,5 +1,9 @@
 # edge-currency-plugins
 
+## v2.3.0 (2023-09-29)
+
+- removed: BSV from BCH's split options
+
 ## v2.2.1 (2023-09-15)
 
 - added: Dynamic fudge factors for UTXO fees
