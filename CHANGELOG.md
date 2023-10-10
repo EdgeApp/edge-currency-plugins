@@ -1,5 +1,8 @@
 # edge-currency-plugins
 
+## Unreleased
+
+- changed: Re-enabled maximum fee rate checks from AltcoinJS.
 ## v2.3.0 (2023-09-29)
 
 - removed: BSV from BCH's split options
