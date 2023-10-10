@@ -3,6 +3,8 @@
 ## Unreleased
 
 - changed: Re-enabled maximum fee rate checks from AltcoinJS.
+- added: Configurable `maximumFeeRate` field for currency info's `EngineInfo` to change from default 5000 sats-per-vbyte
+
 ## v2.3.0 (2023-09-29)
 
 - removed: BSV from BCH's split options

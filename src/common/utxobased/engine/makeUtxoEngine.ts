@@ -625,9 +625,10 @@ export async function makeUtxoEngine(
         }
       })()
       const signedTx = await signTx({
-        psbtBase64: psbt.base64,
         coin: coinInfo.name,
-        privateKeyEncodings: privateKeyEncodings
+        feeInfo: fees.feeInfo,
+        privateKeyEncodings: privateKeyEncodings,
+        psbtBase64: psbt.base64
       })
       transaction.txid = signedTx.id
       transaction.signedTx = signedTx.hex
