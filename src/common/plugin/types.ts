@@ -151,8 +151,15 @@ export const asFeeRates = asObject({
   highFee: asString
 })
 
-export type FeeInfo = ReturnType<typeof asFeeInfo>
-export const asFeeInfo = asObject({
+export type FeeInfo = FeeRates & {
+  lowFeeFudgeFactor?: string
+  standardFeeLowFudgeFactor?: string
+  standardFeeHighFudgeFactor?: string
+  highFeeFudgeFactor?: string
+  standardFeeLowAmount: string
+  standardFeeHighAmount: string
+}
+export const asFeeInfo = asObject<FeeInfo>({
   ...asFeeRates.shape,
 
   lowFeeFudgeFactor: asMaybe(asString),
@@ -160,7 +167,9 @@ export const asFeeInfo = asObject({
   standardFeeHighFudgeFactor: asMaybe(asString),
   highFeeFudgeFactor: asMaybe(asString),
 
+  // The amount of satoshis which will be charged the standardFeeLow
   standardFeeLowAmount: asString,
+  // The amount of satoshis which will be charged the standardFeeHigh
   standardFeeHighAmount: asString
 })
 

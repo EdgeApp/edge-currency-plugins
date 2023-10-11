@@ -1,5 +1,5 @@
 import * as bs from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { asMaybe, Cleaner } from 'cleaners'
 import { Disklet } from 'disklet'
 import {
   EdgeIo,
@@ -13,7 +13,6 @@ import { removeUndefined } from '../../util/filterUndefined'
 import { FEES_PATH, INFO_SERVER_URI } from '../constants'
 import { asFeeInfo, FeeInfo, PluginInfo } from '../plugin/types'
 import { calcMinerFeePerByte } from './calcMinerFeePerByte'
-import { processInfoServerFees } from './processInfoServerFees'
 import { processMempoolSpaceFees } from './processMempoolSpaceFees'
 
 interface MakeFeesConfig extends Common {
@@ -66,7 +65,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       const edgeFees = await fetchFees({
         ...common,
         uri: `${INFO_SERVER_URI}/v1/networkFees/${currencyInfo.pluginId}`,
-        processor: processInfoServerFees
+        cleaner: asMaybe(asFeeInfo, null)
       })
       Object.assign(feeInfo, edgeFees)
       await updateVendorFees()
@@ -139,17 +138,17 @@ const sumSpendTargets = (spendTargets: EdgeSpendTarget[]): string =>
 
 interface FetchFeesArgs<T> extends Common {
   uri: string
-  processor: (fees: unknown) => T
+  cleaner: Cleaner<T>
 }
 const fetchFees = async <T>(args: FetchFeesArgs<T>): Promise<T | null> => {
-  const { uri, processor, io, log } = args
+  const { uri, cleaner, io, log } = args
 
   try {
     const response = await io.fetch(uri)
     if (!response.ok) throw new Error(`Error fetching fees from ${uri}`)
 
     const fees = await response.json()
-    return processor(fees)
+    return cleaner(fees)
   } catch (err) {
     log(err.message)
     return null
@@ -167,7 +166,7 @@ const fetchFeesFromVendor = async (
     const mempoolFees = await fetchFees({
       ...args,
       uri: args.mempoolSpaceFeeInfoServer,
-      processor: processMempoolSpaceFees
+      cleaner: processMempoolSpaceFees
     })
     if (mempoolFees != null) {
       return mempoolFees
