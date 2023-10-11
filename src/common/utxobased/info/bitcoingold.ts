@@ -2,6 +2,7 @@ import { Psbt } from 'altcoin-js'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -62,7 +63,8 @@ const engineInfo: EngineInfo = {
     standardFeeLow: '15',
     standardFeeHigh: '140',
     standardFeeLowAmount: '17320',
-    standardFeeHighAmount: '86700000'
+    standardFeeHighAmount: '86700000',
+    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 12.62)
   }
 }
 

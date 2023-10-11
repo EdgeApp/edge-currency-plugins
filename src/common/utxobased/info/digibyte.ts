@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -55,7 +56,8 @@ const engineInfo: EngineInfo = {
     standardFeeLow: '50',
     standardFeeHigh: '100',
     standardFeeLowAmount: '173200',
-    standardFeeHighAmount: '8670000'
+    standardFeeHighAmount: '8670000',
+    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 0.006176)
   }
 }
 
