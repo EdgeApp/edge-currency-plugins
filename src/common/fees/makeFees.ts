@@ -11,11 +11,7 @@ import { makeMemlet, Memlet } from 'memlet'
 
 import { removeUndefined } from '../../util/filterUndefined'
 import { FEES_PATH, INFO_SERVER_URI } from '../constants'
-import {
-  asSimpleFeeSettings,
-  PluginInfo,
-  SimpleFeeSettings
-} from '../plugin/types'
+import { asFeeInfo, FeeInfo, PluginInfo } from '../plugin/types'
 import { calcMinerFeePerByte } from './calcMinerFeePerByte'
 import { processInfoServerFees } from './processInfoServerFees'
 import { processMempoolSpaceFees } from './processMempoolSpaceFees'
@@ -35,7 +31,7 @@ export interface Fees {
   stop: () => void
   clearCache: () => Promise<void>
   getRate: (edgeSpendInfo: EdgeSpendInfo) => Promise<string>
-  fees: SimpleFeeSettings
+  feeInfo: FeeInfo
 }
 
 export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
@@ -43,7 +39,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
   const { currencyInfo, engineInfo } = pluginInfo
 
   const memlet = makeMemlet(disklet)
-  const fees: SimpleFeeSettings = await fetchCachedFees(
+  const feeInfo: FeeInfo = await fetchCachedFees(
     memlet,
     engineInfo.simpleFeeSettings
   )
@@ -59,10 +55,10 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       mempoolSpaceFeeInfoServer: engineInfo.mempoolSpaceFeeInfoServer
     })
     const cleanedVendorFees = removeUndefined(vendorFees ?? {})
-    Object.assign(fees, cleanedVendorFees)
+    Object.assign(feeInfo, cleanedVendorFees)
     timestamp = Date.now()
 
-    await cacheFees(memlet, fees)
+    await cacheFees(memlet, feeInfo)
   }
 
   return {
@@ -72,7 +68,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
         uri: `${INFO_SERVER_URI}/v1/networkFees/${currencyInfo.pluginId}`,
         processor: processInfoServerFees
       })
-      Object.assign(fees, edgeFees)
+      Object.assign(feeInfo, edgeFees)
       await updateVendorFees()
       vendorIntervalId = setInterval(
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -109,32 +105,30 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
 
       const rate = calcMinerFeePerByte(
         sumSpendTargets(spendTargets),
-        fees,
+        feeInfo,
         networkFeeOption,
         customNetworkFee[customFeeTemplate.key]
       )
       return rate
     },
 
-    get fees(): SimpleFeeSettings {
-      return fees
+    get feeInfo(): FeeInfo {
+      return feeInfo
     }
   }
 }
 
 const fetchCachedFees = async (
   memlet: Memlet,
-  fallback: SimpleFeeSettings
-): Promise<SimpleFeeSettings> => {
+  fallback: FeeInfo
+): Promise<FeeInfo> => {
   const data = await memlet.getJson(FEES_PATH).catch(() => undefined)
-  const feeSettings = asMaybe(asSimpleFeeSettings, fallback)(data)
+  const feeSettings = asMaybe(asFeeInfo, fallback)(data)
   return feeSettings
 }
 
-const cacheFees = async (
-  memlet: Memlet,
-  fees: SimpleFeeSettings
-): Promise<void> => await memlet.setJson(FEES_PATH, fees)
+const cacheFees = async (memlet: Memlet, feeInfo: FeeInfo): Promise<void> =>
+  await memlet.setJson(FEES_PATH, feeInfo)
 
 const sumSpendTargets = (spendTargets: EdgeSpendTarget[]): string =>
   spendTargets.reduce((amount, { nativeAmount }) => {
@@ -168,7 +162,7 @@ interface FetchFeesFromVendorArgs extends Common {
 
 const fetchFeesFromVendor = async (
   args: FetchFeesFromVendorArgs
-): Promise<Partial<SimpleFeeSettings>> => {
+): Promise<Partial<FeeInfo>> => {
   if (args.mempoolSpaceFeeInfoServer != null) {
     const mempoolFees = await fetchFees({
       ...args,

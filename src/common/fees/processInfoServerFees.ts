@@ -1,15 +1,13 @@
-import { asSimpleFeeSettings, SimpleFeeSettings } from '../plugin/types'
+import { asFeeInfo, FeeInfo } from '../plugin/types'
 
 /**
  * Processes the fee object from Edge Info Server
  * @param fees
- * @returns {SimpleFeeSettings}
+ * @returns {FeeInfo}
  */
-export const processInfoServerFees = (
-  fees: unknown
-): SimpleFeeSettings | null => {
+export const processInfoServerFees = (fees: unknown): FeeInfo | null => {
   try {
-    return asSimpleFeeSettings(fees)
+    return asFeeInfo(fees)
   } catch {
     return null
   }

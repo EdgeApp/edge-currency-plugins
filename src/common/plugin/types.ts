@@ -61,7 +61,7 @@ export interface EngineInfo {
   defaultFee: number
   feeUpdateInterval: number
   mempoolSpaceFeeInfoServer?: string
-  simpleFeeSettings: SimpleFeeSettings
+  simpleFeeSettings: FeeInfo
   scriptTemplates?: ScriptTemplates
   // Codec Cleaners
   asBlockbookAddress?: Cleaner<string>
@@ -151,8 +151,8 @@ export const asFeeRates = asObject({
   highFee: asString
 })
 
-export type SimpleFeeSettings = ReturnType<typeof asSimpleFeeSettings>
-export const asSimpleFeeSettings = asObject({
+export type FeeInfo = ReturnType<typeof asFeeInfo>
+export const asFeeInfo = asObject({
   ...asFeeRates.shape,
 
   lowFeeFudgeFactor: asMaybe(asString),
