@@ -61,7 +61,7 @@ export interface EngineInfo {
   defaultFee: number
   feeUpdateInterval: number
   mempoolSpaceFeeInfoServer?: string
-  simpleFeeSettings: FeeInfo
+  defaultFeeInfo: FeeInfo
   scriptTemplates?: ScriptTemplates
   // Codec Cleaners
   asBlockbookAddress?: Cleaner<string>

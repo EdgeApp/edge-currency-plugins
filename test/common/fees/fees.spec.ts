@@ -39,7 +39,7 @@ describe('fees', function () {
         log: fakeLog
       })
 
-      fees.feeInfo.should.eql(fakeMakePluginInfo.engineInfo.simpleFeeSettings)
+      fees.feeInfo.should.eql(fakeMakePluginInfo.engineInfo.defaultFeeInfo)
 
       testJson()
     })
@@ -47,7 +47,7 @@ describe('fees', function () {
     it('should cache fees after started', async () => {
       await fees.start()
 
-      testJson(fakeMakePluginInfo.engineInfo.simpleFeeSettings)
+      testJson(fakeMakePluginInfo.engineInfo.defaultFeeInfo)
 
       // be sure to stop after start, test will hang otherwise
       fees.stop()

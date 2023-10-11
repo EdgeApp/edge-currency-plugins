@@ -43,7 +43,7 @@ const engineInfo: EngineInfo = {
   gapLimit: 10,
   defaultFee: 500000,
   feeUpdateInterval: 60000,
-  simpleFeeSettings: {
+  defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,
     standardFeeHighFudgeFactor: undefined,

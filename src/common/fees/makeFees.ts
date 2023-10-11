@@ -41,7 +41,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
   const memlet = makeMemlet(disklet)
   const feeInfo: FeeInfo = await fetchCachedFees(
     memlet,
-    engineInfo.simpleFeeSettings
+    engineInfo.defaultFeeInfo
   )
   // The last time the fees were updated
   let timestamp = 0
