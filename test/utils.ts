@@ -45,7 +45,8 @@ export const makeFakePluginInfo = (): PluginInfo => {
         standardFeeHigh: '3',
         standardFeeHighAmount: '4',
         standardFeeLow: '5',
-        standardFeeLowAmount: '6'
+        standardFeeLowAmount: '6',
+        maximumFeeRate: undefined
       }
     },
     coinInfo: {

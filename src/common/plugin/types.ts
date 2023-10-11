@@ -4,6 +4,7 @@ import {
   asMaybe,
   asNumber,
   asObject,
+  asOptional,
   asString,
   asValue,
   Cleaner
@@ -158,6 +159,7 @@ export type FeeInfo = FeeRates & {
   highFeeFudgeFactor?: string
   standardFeeLowAmount: string
   standardFeeHighAmount: string
+  maximumFeeRate?: string
 }
 export const asFeeInfo = asObject<FeeInfo>({
   ...asFeeRates.shape,
@@ -170,7 +172,9 @@ export const asFeeInfo = asObject<FeeInfo>({
   // The amount of satoshis which will be charged the standardFeeLow
   standardFeeLowAmount: asString,
   // The amount of satoshis which will be charged the standardFeeHigh
-  standardFeeHighAmount: asString
+  standardFeeHighAmount: asString,
+  // A safe-guard for any potential software bugs:
+  maximumFeeRate: asOptional(asString)
 })
 
 export interface EngineConfig {
