@@ -130,7 +130,7 @@ export async function makeUtxoEngine(
     pluginState
   })
 
-  const engine = {
+  const engine: EdgeCurrencyEngine = {
     async startEngine(): Promise<void> {
       emitter.emit(
         EngineEvent.WALLET_BALANCE_CHANGED,
@@ -238,10 +238,6 @@ export async function makeUtxoEngine(
         .join('\n')
     },
 
-    async getEnabledTokens(): Promise<string[]> {
-      return await Promise.resolve([])
-    },
-
     async getFreshAddress(
       opts: EdgeGetReceiveAddressOptions
     ): Promise<EdgeFreshAddress> {
@@ -261,10 +257,6 @@ export async function makeUtxoEngine(
         currencyInfo.currencyCode,
         io.fetch
       )
-    },
-
-    getTokenStatus(_token: string): boolean {
-      return false
     },
 
     async getTransactions(
