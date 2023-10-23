@@ -427,7 +427,10 @@ export async function makeUtxoEngine(
         feeRate,
         coin: coinInfo.name,
         currencyCode: currencyInfo.currencyCode,
-        enableRbf: spendInfoOtherParams.enableRbf ?? false,
+        enableRbf:
+          spendInfoOtherParams.enableRbf ??
+          currencyInfo.canReplaceByFee ??
+          false,
         freshChangeAddress,
         subtractFee,
         log,
