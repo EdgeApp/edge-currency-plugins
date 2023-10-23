@@ -5,7 +5,7 @@ import { MemoryStorage } from 'disklet/lib/src/backends/memory'
 
 import { FEES_PATH } from '../../../src/common/constants'
 import { Fees, makeFees } from '../../../src/common/fees/makeFees'
-import { SimpleFeeSettings } from '../../../src/common/plugin/types'
+import { FeeInfo } from '../../../src/common/plugin/types'
 import { makeFakeIo, makeFakeLog, makeFakePluginInfo } from '../../utils'
 
 chai.should()
@@ -20,7 +20,7 @@ describe('fees', function () {
   const disklet = makeMemoryDisklet(memory)
   let fees: Fees
 
-  const testJson = (expected?: SimpleFeeSettings): void => {
+  const testJson = (expected?: FeeInfo): void => {
     const str = memory[`/${FEES_PATH}`]
     if (typeof str === 'string') {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
@@ -39,7 +39,7 @@ describe('fees', function () {
         log: fakeLog
       })
 
-      fees.fees.should.eql(fakeMakePluginInfo.engineInfo.simpleFeeSettings)
+      fees.feeInfo.should.eql(fakeMakePluginInfo.engineInfo.defaultFeeInfo)
 
       testJson()
     })
@@ -47,7 +47,7 @@ describe('fees', function () {
     it('should cache fees after started', async () => {
       await fees.start()
 
-      testJson(fakeMakePluginInfo.engineInfo.simpleFeeSettings)
+      testJson(fakeMakePluginInfo.engineInfo.defaultFeeInfo)
 
       // be sure to stop after start, test will hang otherwise
       fees.stop()

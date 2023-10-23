@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import { memoInfo } from './commonInfo'
 import { makeDogeUtxoPicker } from './utxoPickers/dogeUtxoPicker'
 
@@ -48,7 +49,7 @@ const engineInfo: EngineInfo = {
   gapLimit: 10,
   defaultFee: 1000,
   feeUpdateInterval: 10000,
-  simpleFeeSettings: {
+  defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,
     standardFeeHighFudgeFactor: undefined,
@@ -59,7 +60,8 @@ const engineInfo: EngineInfo = {
     standardFeeLow: '526316',
     standardFeeHigh: '526316',
     standardFeeLowAmount: '2000000000',
-    standardFeeHighAmount: '98100000000'
+    standardFeeHighAmount: '98100000000',
+    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 0.05938)
   }
 }
 

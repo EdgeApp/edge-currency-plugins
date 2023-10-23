@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -43,7 +44,7 @@ const engineInfo: EngineInfo = {
   gapLimit: 10,
   defaultFee: 50000,
   feeUpdateInterval: 60000,
-  simpleFeeSettings: {
+  defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,
     standardFeeHighFudgeFactor: undefined,
@@ -54,7 +55,8 @@ const engineInfo: EngineInfo = {
     standardFeeLow: '1100',
     standardFeeHigh: '2000',
     standardFeeLowAmount: '51282051282051',
-    standardFeeHighAmount: '5128205128205100'
+    standardFeeHighAmount: '5128205128205100',
+    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 0.000137)
   }
 }
 

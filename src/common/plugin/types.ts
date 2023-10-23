@@ -4,6 +4,7 @@ import {
   asMaybe,
   asNumber,
   asObject,
+  asOptional,
   asString,
   asValue,
   Cleaner
@@ -61,7 +62,7 @@ export interface EngineInfo {
   defaultFee: number
   feeUpdateInterval: number
   mempoolSpaceFeeInfoServer?: string
-  simpleFeeSettings: SimpleFeeSettings
+  defaultFeeInfo: FeeInfo
   scriptTemplates?: ScriptTemplates
   // Codec Cleaners
   asBlockbookAddress?: Cleaner<string>
@@ -151,8 +152,16 @@ export const asFeeRates = asObject({
   highFee: asString
 })
 
-export type SimpleFeeSettings = ReturnType<typeof asSimpleFeeSettings>
-export const asSimpleFeeSettings = asObject({
+export type FeeInfo = FeeRates & {
+  lowFeeFudgeFactor?: string
+  standardFeeLowFudgeFactor?: string
+  standardFeeHighFudgeFactor?: string
+  highFeeFudgeFactor?: string
+  standardFeeLowAmount: string
+  standardFeeHighAmount: string
+  maximumFeeRate?: string
+}
+export const asFeeInfo = asObject<FeeInfo>({
   ...asFeeRates.shape,
 
   lowFeeFudgeFactor: asMaybe(asString),
@@ -160,8 +169,12 @@ export const asSimpleFeeSettings = asObject({
   standardFeeHighFudgeFactor: asMaybe(asString),
   highFeeFudgeFactor: asMaybe(asString),
 
+  // The amount of satoshis which will be charged the standardFeeLow
   standardFeeLowAmount: asString,
-  standardFeeHighAmount: asString
+  // The amount of satoshis which will be charged the standardFeeHigh
+  standardFeeHighAmount: asString,
+  // A safe-guard for any potential software bugs:
+  maximumFeeRate: asOptional(asString)
 })
 
 export interface EngineConfig {

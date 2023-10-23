@@ -2,6 +2,7 @@ import { asBoolean, asMaybe, asObject, asOptional } from 'cleaners'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import { IProcessorTransaction } from '../db/types'
 import { memoInfo } from './commonInfo'
 
@@ -52,7 +53,7 @@ const engineInfo: EngineInfo = {
   gapLimit: 10,
   defaultFee: 10000,
   feeUpdateInterval: 60000,
-  simpleFeeSettings: {
+  defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,
     standardFeeHighFudgeFactor: undefined,
@@ -63,7 +64,8 @@ const engineInfo: EngineInfo = {
     standardFeeLow: '150',
     standardFeeHigh: '200',
     standardFeeLowAmount: '20000000',
-    standardFeeHighAmount: '981000000'
+    standardFeeHighAmount: '981000000',
+    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 25.8)
   },
   txSpecificHandling: (
     tx: IProcessorTransaction,

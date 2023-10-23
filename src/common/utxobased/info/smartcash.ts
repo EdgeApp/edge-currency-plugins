@@ -4,6 +4,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import * as wifsmart from 'wif-smart'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -46,7 +47,7 @@ const engineInfo: EngineInfo = {
   gapLimit: 10,
   defaultFee: 100000,
   feeUpdateInterval: 60000,
-  simpleFeeSettings: {
+  defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,
     standardFeeHighFudgeFactor: undefined,
@@ -57,7 +58,8 @@ const engineInfo: EngineInfo = {
     standardFeeLow: '500',
     standardFeeHigh: '1000',
     standardFeeLowAmount: '1732000',
-    standardFeeHighAmount: '86700000'
+    standardFeeHighAmount: '86700000',
+    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 0.0002171)
   }
 }
 

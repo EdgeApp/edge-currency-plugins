@@ -2,6 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -59,7 +60,7 @@ const engineInfo: EngineInfo = {
   defaultFee: 1000,
   feeUpdateInterval: 60000,
   mempoolSpaceFeeInfoServer: 'https://mempool.space/api/v1/fees/recommended',
-  simpleFeeSettings: {
+  defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,
     standardFeeHighFudgeFactor: undefined,
@@ -70,7 +71,8 @@ const engineInfo: EngineInfo = {
     standardFeeLow: '50',
     standardFeeHigh: '100',
     standardFeeLowAmount: '173200',
-    standardFeeHighAmount: '8670000'
+    standardFeeHighAmount: '8670000',
+    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 27460.65)
   }
 }
 

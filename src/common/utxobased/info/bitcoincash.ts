@@ -4,6 +4,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
+import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import { memoInfo } from './commonInfo'
 import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
@@ -60,7 +61,7 @@ const engineInfo: EngineInfo = {
   gapLimit: 10,
   defaultFee: 10000,
   feeUpdateInterval: 60000,
-  simpleFeeSettings: {
+  defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,
     standardFeeHighFudgeFactor: undefined,
@@ -71,7 +72,8 @@ const engineInfo: EngineInfo = {
     standardFeeLow: '5',
     standardFeeHigh: '10',
     standardFeeLowAmount: '1000000',
-    standardFeeHighAmount: '65000000'
+    standardFeeHighAmount: '65000000',
+    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 212.86)
   },
   scriptTemplates,
   asBlockbookAddress: asCodec(

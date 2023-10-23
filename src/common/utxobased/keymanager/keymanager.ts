@@ -17,7 +17,7 @@ import { EdgeLog, EdgeMemo, InsufficientFundsError } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
-import { ChangePath, CoinInfo, CoinPrefixes } from '../../plugin/types'
+import { ChangePath, CoinInfo, CoinPrefixes, FeeInfo } from '../../plugin/types'
 import { IUTXO } from '../db/types'
 import { ScriptTemplate, ScriptTemplates } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
@@ -234,9 +234,10 @@ interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
 }
 
 export interface SignTxArgs {
-  privateKeyEncodings: PrivateKeyEncoding[]
-  psbtBase64: string
   coin: string
+  feeInfo: FeeInfo
+  psbtBase64: string
+  privateKeyEncodings: PrivateKeyEncoding[]
 }
 
 interface SignTxReturn {
@@ -1084,7 +1085,10 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
 }
 
 export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
-  const psbt = Psbt.fromBase64(args.psbtBase64)
+  const { maximumFeeRate } = args.feeInfo
+  const opts =
+    maximumFeeRate != null ? { maximumFeeRate: parseInt(maximumFeeRate) } : {}
+  const psbt = Psbt.fromBase64(args.psbtBase64, opts)
   const coin = getCoinFromString(args.coin)
 
   const validator = (
@@ -1107,7 +1111,7 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
     psbt.validateSignaturesOfInput(i, validator)
     psbt.finalizeInput(i)
   }
-  const tx = psbt.extractTransaction(true)
+  const tx = psbt.extractTransaction()
   return {
     id: tx.getId(coin.txHashFunction),
     hex: tx.toHex()

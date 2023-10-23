@@ -34,7 +34,7 @@ export const makeFakePluginInfo = (): PluginInfo => {
       defaultFee: 0,
       feeUpdateInterval: 0,
       gapLimit: 0,
-      simpleFeeSettings: {
+      defaultFeeInfo: {
         lowFeeFudgeFactor: undefined,
         standardFeeLowFudgeFactor: undefined,
         standardFeeHighFudgeFactor: undefined,
@@ -45,7 +45,8 @@ export const makeFakePluginInfo = (): PluginInfo => {
         standardFeeHigh: '3',
         standardFeeHighAmount: '4',
         standardFeeLow: '5',
-        standardFeeLowAmount: '6'
+        standardFeeLowAmount: '6',
+        maximumFeeRate: undefined
       }
     },
     coinInfo: {

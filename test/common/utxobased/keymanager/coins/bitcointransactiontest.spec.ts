@@ -2,6 +2,7 @@ import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
 import { IUTXO } from '../../../../../src/common/utxobased/db/types'
+import { info as bitcoin } from '../../../../../src/common/utxobased/info/bitcoin'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -191,9 +192,10 @@ describe('bitcoin transaction creation and signing test', function () {
       outputSort: 'bip69'
     })
     const signedTx = await signTx({
-      psbtBase64,
+      coin: 'bitcoin',
+      feeInfo: bitcoin.engineInfo.defaultFeeInfo,
       privateKeyEncodings: [privateKeyEncoding],
-      coin: 'bitcoin'
+      psbtBase64
     })
     expect(signedTx.hex).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7' +
@@ -258,9 +260,10 @@ describe('bitcoin transaction creation and signing test', function () {
       outputSort: 'bip69'
     })
     const signedTx = await signTx({
-      psbtBase64,
+      coin: 'bitcoin',
+      feeInfo: bitcoin.engineInfo.defaultFeeInfo,
       privateKeyEncodings: [privateKeyEncoding],
-      coin: 'bitcoin'
+      psbtBase64
     })
     expect(signedTx.hex).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006b4830450221009f9e6c80a05d3af0425c6169ad09ec48e65d1d96436a64c7724c40576cdf9fe502206227c33d4087b05ff0b5e1f0b447569a439cd9418b82abd80440d43ddde3427301210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffff0464000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d2c010000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d28360100000000001976a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac00000000'
@@ -320,9 +323,10 @@ describe('bitcoin transaction creation and signing test', function () {
       outputSort: 'targets'
     })
     const signedTx = await signTx({
-      psbtBase64,
+      coin: 'bitcoin',
+      feeInfo: bitcoin.engineInfo.defaultFeeInfo,
       privateKeyEncodings: [privateKeyEncoding],
-      coin: 'bitcoin'
+      psbtBase64
     })
     expect(signedTx.hex).to.equal(
       '02000000013ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006a47304402203d4b4d8f7be9219914e822684ce72001367081101654aaeeaa734e6aa934972e022072154039d101819e8c78fc3a11132e5a46a3538546db68c8a7818128b02de88101210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffff042c010000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d64000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518d28360100000000001976a914ca0d36044e0dc08a22724efa6f6a07b0ec4c79aa88ac00000000'
@@ -375,9 +379,10 @@ describe('bitcoin transaction creation and signing test', function () {
     })
 
     const { hex: rawtransaction } = await signTx({
-      psbtBase64,
+      coin: 'bitcoin',
+      feeInfo: bitcoin.engineInfo.defaultFeeInfo,
       privateKeyEncodings: [privateKeyEncoding],
-      coin: 'bitcoin'
+      psbtBase64
     })
 
     expect(rawtransaction).to.equal(
@@ -412,13 +417,14 @@ describe('bitcoin transaction creation and signing test', function () {
     })
 
     const { hex: segwitRawTransaction } = await signTx({
-      psbtBase64,
+      coin: 'bitcoin',
+      feeInfo: bitcoin.engineInfo.defaultFeeInfo,
       privateKeyEncodings: [
         privateKeyEncoding,
         privateKeyEncoding,
         privateKeyEncoding
       ],
-      coin: 'bitcoin'
+      psbtBase64
     })
 
     expect(segwitRawTransaction).to.equal(
@@ -492,13 +498,14 @@ describe('bitcoin transaction creation and signing test', function () {
     })
 
     const { hex: rawtransaction } = await signTx({
-      psbtBase64,
+      coin: 'bitcoin',
+      feeInfo: bitcoin.engineInfo.defaultFeeInfo,
       privateKeyEncodings: [
         privateKeyEncoding,
         privateKeyEncoding,
         privateKeyEncoding
       ],
-      coin: 'bitcoin'
+      psbtBase64
     })
     expect(rawtransaction).to.equal(
       '020000000001033ebc8203037dda39d482bf41ff3be955996c50d9d4f7cfc3d2097a694a7b067d000000006b483045022100c10c70dab0e8e88a67bb013d276b88b3d5a52d3cb3ec53aa7d2e7c4704e89dc602207fabdfa3b55b196da7792de9fe436535501fce2fe76439d5361bd5d9dd69bd0901210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f455ffffffffb385ee16c29a8148e7e99187a293e96fcf9a16e4967d3afc8f7838024dfa268b0100000000ffffffff9e5d335ec9133a9e5ed426d08c421273594b82ab9876b5beb66716384688f2e901000000171600148bbc95d2709c71607c60ee3f097c1217482f518dffffffff03c8000000000000001976a9148bbc95d2709c71607c60ee3f097c1217482f518d88acc8000000000000001600148bbc95d2709c71607c60ee3f097c1217482f518dc80000000000000017a9142427d83a84e5793ce6f6efc33020d844dd217dbb8700024730440220008a9738e8acdc002ae4bb415ff7368161057ed9b22fd8b671c5acbb47379a69022045ab99fa73730fa367d3972d41b26b4ef337b34c4e593c4f47800ed4ee1c64fd01210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f4550247304402201d4f3ee993cfb468dc41387ac618081c36c49ebc9db528155b51d346382c347802201d1c07201f80df3e6e86195444532b6be86e9a429a7eb5a0ae268df9760a974601210365db9da3f8a260078a7e8f8b708a1161468fb2323ffda5ec16b261ec1056f45500000000'
@@ -549,9 +556,10 @@ describe('bitcoin transaction creation and signing test', function () {
     })
 
     const signedTx = await signTx({
-      psbtBase64,
+      coin: 'bitcoin',
+      feeInfo: bitcoin.engineInfo.defaultFeeInfo,
       privateKeyEncodings: [privateKeyEncoding],
-      coin: 'bitcoin'
+      psbtBase64
     })
 
     const utxos: IUTXO[] = Array(100)
@@ -584,9 +592,10 @@ describe('bitcoin transaction creation and signing test', function () {
     })
 
     const { hex: hexTxMultiSigned } = await signTx({
-      psbtBase64: psbtBase64Multi,
+      coin: 'bitcoin',
+      feeInfo: bitcoin.engineInfo.defaultFeeInfo,
       privateKeyEncodings: Array(nOutputs).fill(privateKeyEncoding),
-      coin: 'bitcoin'
+      psbtBase64: psbtBase64Multi
     })
 
     expect(hexTxMultiSigned).to.equal(
