@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.4.0 (2023-10-23)
+
 - changed: Re-enabled maximum fee rate checks from AltcoinJS.
 - added: Configurable `maximumFeeRate` field for currency info's `EngineInfo` to change from default 5000 sats-per-vbyte
 
