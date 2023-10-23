@@ -3,6 +3,7 @@
 ## Unreleased
 
 - fixed: Incorrect handling of `vout` for Blockbook transactions
+- fixed: Incorrectly populating `ourReceiveAddress` for new transactions from `makeSpend`
 
 ## 2.4.1 (2023-10-27)
 

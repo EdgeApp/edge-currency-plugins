@@ -351,7 +351,7 @@ export async function makeUtxoEngine(
             const scriptPubkey = walletTools.addressToScriptPubkey(
               target.publicAddress
             )
-            if (processor.fetchAddress(scriptPubkey) != null) {
+            if ((await processor.fetchAddress(scriptPubkey)) != null) {
               ourReceiveAddresses.push(target.publicAddress)
             }
           }
