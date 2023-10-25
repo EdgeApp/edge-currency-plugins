@@ -1,6 +1,8 @@
 import { BaseConverter } from 'base-x'
 import * as bip32 from 'bip32'
 import {
+  asArray,
+  asBoolean,
   asMaybe,
   asNumber,
   asObject,
@@ -20,7 +22,7 @@ import {
 } from 'edge-core-js/types'
 import * as wif from 'wif'
 
-import { IProcessorTransaction, IUTXO } from '../utxobased/db/types'
+import { asIUTXO, IProcessorTransaction, IUTXO } from '../utxobased/db/types'
 import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
 import { UtxoPicker } from '../utxobased/keymanager/utxopicker'
 import { EngineEmitter } from './makeEngineEmitter'
@@ -46,6 +48,11 @@ export interface TxOptions {
   subtractFee?: boolean
   CPFP?: string
 }
+export const asTxOptions = asObject<TxOptions>({
+  utxos: asOptional(asArray(asIUTXO)),
+  subtractFee: asOptional(asBoolean),
+  CPFP: asOptional(asString)
+})
 
 export interface PluginInfo {
   currencyInfo: EdgeCurrencyInfo

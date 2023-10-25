@@ -49,6 +49,7 @@ import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import {
   asUtxoSignMessageOtherParams,
+  asUtxoSpendInfoOtherParams,
   asUtxoUserSettings,
   UtxoTxOtherParams
 } from './types'
@@ -289,17 +290,22 @@ export async function makeUtxoEngine(
     async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
       edgeSpendInfo = upgradeMemos(edgeSpendInfo, currencyInfo)
       const { memos = [], spendTargets } = edgeSpendInfo
-      const txOptions: TxOptions | undefined =
-        edgeSpendInfo.otherParams?.txOptions
-      const { outputSort = 'bip69', utxoSourceAddress, forceChangeAddress } =
+      const spendInfoOtherParams = asUtxoSpendInfoOtherParams(
         edgeSpendInfo.otherParams ?? {}
+      )
+      const txOptions = spendInfoOtherParams.txOptions ?? {}
+      const {
+        outputSort,
+        utxoSourceAddress,
+        forceChangeAddress
+      } = spendInfoOtherParams
 
       let utxoScriptPubkey: string | undefined
       if (utxoSourceAddress != null) {
         utxoScriptPubkey = walletTools.addressToScriptPubkey(utxoSourceAddress)
       }
 
-      if (txOptions?.CPFP == null && spendTargets.length < 1) {
+      if (txOptions.CPFP == null && spendTargets.length < 1) {
         throw new Error('Need to provide Spend Targets')
       }
       // Calculate the total amount to send
@@ -308,7 +314,7 @@ export async function makeUtxoEngine(
         '0'
       )
       const utxos =
-        txOptions?.utxos ??
+        txOptions.utxos ??
         filterUndefined(
           (await processor.fetchUtxos({
             scriptPubkey: utxoScriptPubkey,
@@ -396,9 +402,9 @@ export async function makeUtxoEngine(
           maxInput.n
         )
       }
-      if (txOptions?.CPFP != null) {
+      if (txOptions.CPFP != null) {
         const [childTx] = await processor.fetchTransactions({
-          txId: txOptions?.CPFP
+          txId: txOptions.CPFP
         })
         if (childTx == null) throw new Error('transaction not found')
         const utxos: IUTXO[] = []
@@ -412,7 +418,7 @@ export async function makeUtxoEngine(
       }
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
-        txOptions?.subtractFee != null ? txOptions.subtractFee : false
+        txOptions.subtractFee != null ? txOptions.subtractFee : false
       const tx = makeTx({
         utxos,
         forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
@@ -421,7 +427,7 @@ export async function makeUtxoEngine(
         feeRate,
         coin: coinInfo.name,
         currencyCode: currencyInfo.currencyCode,
-        enableRbf: edgeSpendInfo.otherParams?.enableRbf ?? false,
+        enableRbf: spendInfoOtherParams.enableRbf ?? false,
         freshChangeAddress,
         subtractFee,
         log,

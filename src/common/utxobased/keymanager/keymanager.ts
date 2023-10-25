@@ -12,6 +12,7 @@ import { gt, lt } from 'biggystring'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
 import bitcoinMessage from 'bitcoinjs-message'
+import { asValue } from 'cleaners'
 import { ECPairAPI, ECPairFactory } from 'ecpair'
 import { EdgeLog, EdgeMemo, InsufficientFundsError } from 'edge-core-js/types'
 
@@ -73,6 +74,17 @@ export enum ScriptTypeEnum {
   replayProtection = 'replayprotection',
   replayProtectionP2SH = 'replayprotectionp2sh'
 }
+export const asScriptTypeEnum = asValue(
+  'p2wpkh' as ScriptTypeEnum.p2wpkh,
+  'p2wpkhp2sh' as ScriptTypeEnum.p2wpkhp2sh,
+  'p2wsh' as ScriptTypeEnum.p2wsh,
+  'p2pk' as ScriptTypeEnum.p2pk,
+  'p2pkh' as ScriptTypeEnum.p2pkh,
+  'p2sh' as ScriptTypeEnum.p2sh,
+  'p2tr' as ScriptTypeEnum.p2tr,
+  'replayprotection' as ScriptTypeEnum.replayProtection,
+  'replayprotectionp2sh' as ScriptTypeEnum.replayProtectionP2SH
+)
 
 // A transaction input is either legacy or segwit. This is used for transaction creation and passed per input
 export enum TransactionInputTypeEnum {
