@@ -39,10 +39,13 @@ import {
 } from '../keymanager/cleaners'
 import {
   makeTx,
+  MakeTxArgs,
   MakeTxTarget,
   PrivateKeyEncoding,
+  scriptPubkeyToAddress,
   signTx
 } from '../keymanager/keymanager'
+import { asMaybeInsufficientFundsErrorPlus } from '../keymanager/types'
 import { transactionSizeFromHex } from '../keymanager/utxopicker/utils'
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
@@ -54,7 +57,12 @@ import {
   UtxoTxOtherParams
 } from './types'
 import { getOwnUtxosFromTx } from './util/getOwnUtxosFromTx'
-import { fetchOrDeriveXprivFromKeys, sumUtxos } from './utils'
+import {
+  fetchOrDeriveXprivFromKeys,
+  getAddressTypeFromPurposeType,
+  pathToPurposeType,
+  sumUtxos
+} from './utils'
 
 export async function makeUtxoEngine(
   config: EngineConfig
@@ -132,6 +140,208 @@ export async function makeUtxoEngine(
   })
 
   const engine: EdgeCurrencyEngine = {
+    async accelerate(edgeTx: EdgeTransaction): Promise<EdgeTransaction | null> {
+      // Get the replaced transaction from the processor:
+      const replacedTxid = edgeTx.txid
+      const [replacedTx] = await processor.fetchTransactions({
+        txId: replacedTxid
+      })
+
+      // Transaction checks:
+      // The transaction must be found and not confirmed or dropped.
+      if (replacedTx == null) return null
+      if (replacedTx.blockHeight !== 0) return null
+
+      // Double the fee used for the RBF transaction:
+      const vBytes = transactionSizeFromHex(replacedTx.hex)
+      const newFeeRate = Math.round((parseInt(replacedTx.fees) / vBytes) * 2)
+
+      const replacedTxInputs = replacedTx.inputs
+      // Recreate UTXOs from processor transaction and mark them as unspent:
+      const replacedTxUtxos = await Promise.all(
+        replacedTxInputs.map(async (_, index) => {
+          const utxo = await utxoFromProcessorTransactionInput(
+            processor,
+            replacedTx,
+            index
+          )
+          // Mark as unspent because we're going to reuse replaced tx's UTXOs
+          utxo.spent = false
+          return utxo
+        })
+      )
+      // Get the largest input from the transaction to re-use:
+      const replacedTxMaxUtxo = replacedTxUtxos.reduce((maxUtxo, utxo) => {
+        if (utxo.value > maxUtxo.value) return utxo
+        return maxUtxo
+      })
+
+      const targets: MakeTxTarget[] = []
+      const newOurReceiveAddresses: string[] = []
+      let foundChangeAddress: string | undefined
+      for (const output of replacedTx.outputs) {
+        // Fetch address by output's scriptPubkey to determine output ownership
+        const ourAddress = await processor.fetchAddress(output.scriptPubkey)
+
+        // This isn't our output, so include it as a target
+        if (ourAddress == null) {
+          targets.push({
+            scriptPubkey: output.scriptPubkey,
+            value: parseInt(output.amount)
+          })
+          continue
+        }
+
+        // Addresses from database should include a path; this is a type assert
+        if (ourAddress.path == null)
+          throw new Error('Expecting path for address')
+
+        // The output is ours:
+        const purposeType = pathToPurposeType(
+          ourAddress.path,
+          engineInfo.scriptTemplates
+        )
+        const addressType = getAddressTypeFromPurposeType(purposeType)
+        const { address } = scriptPubkeyToAddress({
+          scriptPubkey: ourAddress.scriptPubkey,
+          addressType,
+          coin: coinInfo.name,
+          redeemScript: ourAddress.redeemScript
+        })
+
+        newOurReceiveAddresses.push(address)
+
+        // Detect if it's the change address:
+        if (ourAddress.path.changeIndex === 1) {
+          foundChangeAddress = address
+        } else {
+          // This isn't our change address, so include it as a target.
+          // The transaction must have been a spend-to-self.
+          targets.push({
+            scriptPubkey: output.scriptPubkey,
+            value: parseInt(output.amount)
+          })
+        }
+      }
+
+      // Use the found change address or generate a new one:
+      const freshAddress =
+        foundChangeAddress == null
+          ? await engineState.getFreshAddress({ branch: 1 })
+          : { publicAddress: foundChangeAddress }
+      const freshChangeAddress =
+        freshAddress.segwitAddress ?? freshAddress.publicAddress
+
+      // Get all current UTXOs:
+      const currentUtxos = filterUndefined(
+        await processor.fetchUtxos({
+          utxoIds: []
+        })
+      )
+        // Exclude all UTXOs which are from the replaced tx, because
+        // they wont be valid.
+        .filter(utxo => utxo.txid !== replacedTxid)
+
+      // Combine replaced transaction's inputs as UTXOs with the current UTXO set
+      const utxos = [...replacedTxUtxos, ...currentUtxos]
+
+      // New transaction to be the replacement transaction
+      const makeTxArgs: MakeTxArgs = {
+        utxos,
+        forceUseUtxo: [replacedTxMaxUtxo],
+        targets,
+        memos: edgeTx.memos,
+        feeRate: newFeeRate,
+        coin: coinInfo.name,
+        currencyCode: currencyInfo.currencyCode,
+        enableRbf: true,
+        freshChangeAddress,
+        subtractFee: false,
+        log,
+        outputSort: 'bip69'
+      }
+      const newTx = (() => {
+        try {
+          return makeTx(makeTxArgs)
+        } catch (error) {
+          const cleanError = asMaybeInsufficientFundsErrorPlus(error)
+          if (cleanError?.networkFeeShortage != null) {
+            let feeDelta = parseInt(cleanError.networkFeeShortage)
+            // Adjust target values until we diminish the fee delta completely
+            for (const target of targets) {
+              if (target.value == null) continue
+              // The term is how much value to subtract from the target's value.
+              // The term's maximum value is the target's value.
+              // The term's minimum value is the fee delta.
+              const term = Math.min(target.value, feeDelta)
+              target.value -= term // Either decrement or zero out
+              feeDelta -= term // Ether decrement or zero out
+            }
+            // Retry making the transaction
+            return makeTx(makeTxArgs)
+          }
+          throw error
+        }
+      })()
+
+      if (newTx.changeUsed) {
+        newOurReceiveAddresses.push(freshChangeAddress)
+      }
+
+      // Generate new tracking of our scripts:
+      const newOurScriptPubkeys: string[] = newTx.inputs.map(input =>
+        input.scriptPubkey.toString('hex')
+      )
+
+      // Calculate transaction spend amount:
+      let nativeAmount = '0'
+      for (const output of newTx.outputs) {
+        const scriptPubkey = output.scriptPubkey.toString('hex')
+        const own = await processor.fetchAddress(scriptPubkey)
+        if (own == null) {
+          // Not our output
+          nativeAmount = bs.sub(nativeAmount, output.value.toString())
+        } else {
+          // Our output
+          newOurScriptPubkeys.push(scriptPubkey)
+        }
+      }
+
+      const networkFee = newTx.fee.toString()
+      nativeAmount = bs.sub(nativeAmount, networkFee)
+
+      const newTxOtherParams: UtxoTxOtherParams = {
+        unsignedTx: newTx.hex,
+        psbt: {
+          base64: newTx.psbtBase64,
+          inputs: newTx.inputs,
+          outputs: newTx.outputs
+        },
+        ourScriptPubkeys: newOurScriptPubkeys,
+        rbfTxid: replacedTxid
+      }
+
+      // Return a EdgeTransaction object with the updates
+      return {
+        ...edgeTx,
+        blockHeight: 0,
+        currencyCode: currencyInfo.currencyCode,
+        date: unixTime(),
+        feeRateUsed: {
+          satPerVByte: newFeeRate
+        },
+        isSend: true,
+        nativeAmount,
+        networkFee,
+        otherParams: newTxOtherParams,
+        ourReceiveAddresses: newOurReceiveAddresses,
+        parentNetworkFee: undefined,
+        signedTx: '',
+        txid: '',
+        walletId: walletInfo.id
+      }
+    },
+
     async startEngine(): Promise<void> {
       emitter.emit(
         EngineEvent.WALLET_BALANCE_CHANGED,

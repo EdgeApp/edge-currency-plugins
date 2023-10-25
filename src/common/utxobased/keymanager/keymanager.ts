@@ -14,7 +14,7 @@ import * as bip39 from 'bip39'
 import bitcoinMessage from 'bitcoinjs-message'
 import { asValue } from 'cleaners'
 import { ECPairAPI, ECPairFactory } from 'ecpair'
-import { EdgeLog, EdgeMemo, InsufficientFundsError } from 'edge-core-js/types'
+import { EdgeLog, EdgeMemo } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
@@ -28,6 +28,7 @@ import {
   hashToCashAddress
 } from './bitcoincashUtils/cashAddress'
 import { getCoinFromString } from './coinmapper'
+import { InsufficientFundsErrorPlus } from './types'
 import * as utxopicker from './utxopicker'
 import * as pickerUtils from './utxopicker/utils'
 
@@ -242,7 +243,7 @@ export interface MakeTxTarget {
   value?: number
 }
 
-interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
+export interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
   hex: string
   psbtBase64: string
 }
@@ -1076,10 +1077,10 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
     const inputsValue = pickerUtils.sumOrNaN(result.inputs)
     // This is how much fee is needed to validate the spend
     const feeDelta = result.fee - (inputsValue - targetsValue)
-    throw new InsufficientFundsError({
+    throw new InsufficientFundsErrorPlus({
       currencyCode: args.currencyCode,
-      // Repurpose the networkFee property in the error as the fee delta
-      networkFee: feeDelta.toString()
+      networkFee: result.fee.toString(),
+      networkFeeShortage: feeDelta.toString()
     })
   }
 
