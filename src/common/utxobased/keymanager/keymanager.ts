@@ -1063,7 +1063,7 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
     feeRate: args.feeRate,
     changeScript
   })
-  if (result.inputs == null || result.outputs == null) {
+  if (result.outputs == null) {
     throw new InsufficientFundsError(args.currencyCode)
   }
 
