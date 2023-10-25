@@ -238,6 +238,7 @@ export interface MakeTxArgs {
 
 export interface MakeTxTarget {
   address?: string
+  scriptPubkey?: string
   value?: number
 }
 
@@ -1019,16 +1020,22 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
 
   const targets: utxopicker.Target[] = []
   for (const target of args.targets) {
-    if (target.address != null && target.value != null) {
-      const script = addressToScriptPubkey({
-        address: target.address,
-        coin: coin.name
-      })
-      targets.push({
-        script,
-        value: target.value
-      })
-    }
+    if (target.value == null) continue
+
+    const scriptPubkey =
+      target.address == null
+        ? target.scriptPubkey
+        : addressToScriptPubkey({
+            address: target.address,
+            coin: coin.name
+          })
+
+    if (scriptPubkey == null) continue
+
+    targets.push({
+      script: scriptPubkey,
+      value: target.value
+    })
   }
   for (const memo of memos) {
     const memoData =
