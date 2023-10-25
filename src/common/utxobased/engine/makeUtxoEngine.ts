@@ -570,8 +570,7 @@ export async function makeUtxoEngine(
       if (otherParams == null) throw new Error('Invalid transaction data')
 
       const { psbt, edgeSpendInfo }: UtxoTxOtherParams = otherParams
-      if (psbt == null || edgeSpendInfo == null)
-        throw new Error('Invalid transaction data')
+      if (psbt == null) throw new Error('Invalid transaction data')
 
       const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
 
@@ -590,7 +589,7 @@ export async function makeUtxoEngine(
       const privateKeyEncodings = await (async (): Promise<
         PrivateKeyEncoding[]
       > => {
-        if (edgeSpendInfo.privateKeys != null) {
+        if (edgeSpendInfo?.privateKeys != null) {
           return edgeSpendInfo.privateKeys.map(wif =>
             walletTools.getPrivateKeyEncodingFromWif(wif)
           )
