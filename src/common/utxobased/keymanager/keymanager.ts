@@ -29,6 +29,7 @@ import {
 } from './bitcoincashUtils/cashAddress'
 import { getCoinFromString } from './coinmapper'
 import * as utxopicker from './utxopicker'
+import * as pickerUtils from './utxopicker/utils'
 
 let ECPair: ECPairAPI
 
@@ -1064,7 +1065,15 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
     changeScript
   })
   if (result.outputs == null) {
-    throw new InsufficientFundsError(args.currencyCode)
+    const targetsValue = pickerUtils.sumOrNaN(targets)
+    const inputsValue = pickerUtils.sumOrNaN(result.inputs)
+    // This is how much fee is needed to validate the spend
+    const feeDelta = result.fee - (inputsValue - targetsValue)
+    throw new InsufficientFundsError({
+      currencyCode: args.currencyCode,
+      // Repurpose the networkFee property in the error as the fee delta
+      networkFee: feeDelta.toString()
+    })
   }
 
   const sortedInputs = sortInputs(result.inputs)
