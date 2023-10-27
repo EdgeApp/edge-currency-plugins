@@ -161,21 +161,28 @@ export type FeeInfo = FeeRates & {
   standardFeeHighAmount: string
   maximumFeeRate?: string
 }
-export const asFeeInfo = asObject<FeeInfo>({
-  ...asFeeRates.shape,
+export const asFeeInfo = (fallback?: FeeInfo): Cleaner<FeeInfo> =>
+  asObject<FeeInfo>({
+    ...asFeeRates.shape,
 
-  lowFeeFudgeFactor: asMaybe(asString),
-  standardFeeLowFudgeFactor: asMaybe(asString),
-  standardFeeHighFudgeFactor: asMaybe(asString),
-  highFeeFudgeFactor: asMaybe(asString),
+    lowFeeFudgeFactor: asMaybe(asString, fallback?.lowFeeFudgeFactor),
+    standardFeeLowFudgeFactor: asMaybe(
+      asString,
+      fallback?.standardFeeLowFudgeFactor
+    ),
+    standardFeeHighFudgeFactor: asMaybe(
+      asString,
+      fallback?.standardFeeHighFudgeFactor
+    ),
+    highFeeFudgeFactor: asMaybe(asString, fallback?.highFeeFudgeFactor),
 
-  // The amount of satoshis which will be charged the standardFeeLow
-  standardFeeLowAmount: asString,
-  // The amount of satoshis which will be charged the standardFeeHigh
-  standardFeeHighAmount: asString,
-  // A safe-guard for any potential software bugs:
-  maximumFeeRate: asOptional(asString)
-})
+    // The amount of satoshis which will be charged the standardFeeLow
+    standardFeeLowAmount: asString,
+    // The amount of satoshis which will be charged the standardFeeHigh
+    standardFeeHighAmount: asString,
+    // A safe-guard for any potential software bugs:
+    maximumFeeRate: asOptional(asString, fallback?.maximumFeeRate)
+  }).withRest
 
 export interface EngineConfig {
   walletInfo: EdgeWalletInfo
