@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.4.1 (2023-10-27)
+
 - fixed: Bug with new `maximumFeeRate` entry in `FeeInfo` not applying due to disk/info-server overwriting the field.
 
 ## 2.4.0 (2023-10-23)
