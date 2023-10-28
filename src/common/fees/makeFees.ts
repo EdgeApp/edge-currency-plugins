@@ -65,7 +65,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
       const edgeFees = await fetchFees({
         ...common,
         uri: `${INFO_SERVER_URI}/v1/networkFees/${currencyInfo.pluginId}`,
-        cleaner: asMaybe(asFeeInfo, null)
+        cleaner: asMaybe(asFeeInfo(feeInfo), null)
       })
       Object.assign(feeInfo, edgeFees)
       await updateVendorFees()
@@ -122,7 +122,7 @@ const fetchCachedFees = async (
   fallback: FeeInfo
 ): Promise<FeeInfo> => {
   const data = await memlet.getJson(FEES_PATH).catch(() => undefined)
-  const feeSettings = asMaybe(asFeeInfo, fallback)(data)
+  const feeSettings = asMaybe(asFeeInfo(fallback), fallback)(data)
   return feeSettings
 }
 

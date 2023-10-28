@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Bug with new `maximumFeeRate` entry in `FeeInfo` not applying due to disk/info-server overwriting the field.
+
 ## 2.4.0 (2023-10-23)
 
 - changed: Re-enabled maximum fee rate checks from AltcoinJS.
