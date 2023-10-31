@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added: `accelerate` method to `UtxoEngine` for RBF support.
+- fixed: Incorrect handling of `vout` for Blockbook transactions
+- fixed: Incorrectly populating `ourReceiveAddress` for new transactions from `makeSpend`
+
 ## 2.4.1 (2023-10-27)
 
 - fixed: Bug with new `maximumFeeRate` entry in `FeeInfo` not applying due to disk/info-server overwriting the field.

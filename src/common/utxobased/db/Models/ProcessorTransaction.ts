@@ -1,7 +1,7 @@
 import { Transaction } from 'altcoin-js'
 import { lt } from 'biggystring'
 import BN from 'bn.js'
-import { EdgeTransaction } from 'edge-core-js/types'
+import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
 
 import { PluginInfo } from '../../../plugin/types'
 import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
@@ -78,8 +78,7 @@ export const toEdgeTransaction = async (
     }
   }
 
-  const feeRes = {}
-
+  let feeRateUsed: JsonObject | undefined
   try {
     const altcoinTx = Transaction.fromHex(tx.hex)
     const vBytes = altcoinTx.virtualSize()
@@ -87,12 +86,10 @@ export const toEdgeTransaction = async (
     const feeRate: number = new BN(tx.fees, 10)
       .div(new BN(vBytes, 10))
       .toNumber()
-    Object.assign(feeRes, {
-      feeRateUsed: {
-        // GUI repo uses satPerVByte rather than satPerByte defined in customFeeTemplate
-        satPerVByte: feeRate
-      }
-    })
+    feeRateUsed = {
+      // GUI repo uses satPerVByte rather than satPerByte defined in customFeeTemplate
+      satPerVByte: feeRate
+    }
   } catch (e) {}
 
   return {
@@ -108,6 +105,6 @@ export const toEdgeTransaction = async (
     signedTx: tx.hex,
     txid: tx.txid,
     walletId,
-    ...feeRes
+    feeRateUsed
   }
 }

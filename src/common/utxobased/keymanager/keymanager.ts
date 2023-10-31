@@ -12,8 +12,9 @@ import { gt, lt } from 'biggystring'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
 import bitcoinMessage from 'bitcoinjs-message'
+import { asValue } from 'cleaners'
 import { ECPairAPI, ECPairFactory } from 'ecpair'
-import { EdgeLog, EdgeMemo, InsufficientFundsError } from 'edge-core-js/types'
+import { EdgeLog, EdgeMemo } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
@@ -27,7 +28,9 @@ import {
   hashToCashAddress
 } from './bitcoincashUtils/cashAddress'
 import { getCoinFromString } from './coinmapper'
+import { InsufficientFundsErrorPlus } from './types'
 import * as utxopicker from './utxopicker'
+import * as pickerUtils from './utxopicker/utils'
 
 let ECPair: ECPairAPI
 
@@ -73,6 +76,17 @@ export enum ScriptTypeEnum {
   replayProtection = 'replayprotection',
   replayProtectionP2SH = 'replayprotectionp2sh'
 }
+export const asScriptTypeEnum = asValue(
+  'p2wpkh' as ScriptTypeEnum.p2wpkh,
+  'p2wpkhp2sh' as ScriptTypeEnum.p2wpkhp2sh,
+  'p2wsh' as ScriptTypeEnum.p2wsh,
+  'p2pk' as ScriptTypeEnum.p2pk,
+  'p2pkh' as ScriptTypeEnum.p2pkh,
+  'p2sh' as ScriptTypeEnum.p2sh,
+  'p2tr' as ScriptTypeEnum.p2tr,
+  'replayprotection' as ScriptTypeEnum.replayProtection,
+  'replayprotectionp2sh' as ScriptTypeEnum.replayProtectionP2SH
+)
 
 // A transaction input is either legacy or segwit. This is used for transaction creation and passed per input
 export enum TransactionInputTypeEnum {
@@ -214,7 +228,7 @@ export interface MakeTxArgs {
   targets: MakeTxTarget[]
   memos: EdgeMemo[]
   feeRate: number
-  setRBF: boolean
+  enableRbf: boolean
   coin: string
   currencyCode: string
   freshChangeAddress: string
@@ -225,10 +239,11 @@ export interface MakeTxArgs {
 
 export interface MakeTxTarget {
   address?: string
+  scriptPubkey?: string
   value?: number
 }
 
-interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
+export interface MakeTxReturn extends Required<utxopicker.UtxoPickerResult> {
   hex: string
   psbtBase64: string
 }
@@ -928,7 +943,7 @@ export function signMessageBase64(message: string, privateKey: string): string {
 export function makeTx(args: MakeTxArgs): MakeTxReturn {
   const { log, outputSort, memos } = args
   let sequence = 0xffffffff
-  if (args.setRBF) {
+  if (args.enableRbf) {
     sequence -= 2
   }
 
@@ -1006,16 +1021,22 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
 
   const targets: utxopicker.Target[] = []
   for (const target of args.targets) {
-    if (target.address != null && target.value != null) {
-      const script = addressToScriptPubkey({
-        address: target.address,
-        coin: coin.name
-      })
-      targets.push({
-        script,
-        value: target.value
-      })
-    }
+    if (target.value == null) continue
+
+    const scriptPubkey =
+      target.address == null
+        ? target.scriptPubkey
+        : addressToScriptPubkey({
+            address: target.address,
+            coin: coin.name
+          })
+
+    if (scriptPubkey == null) continue
+
+    targets.push({
+      script: scriptPubkey,
+      value: target.value
+    })
   }
   for (const memo of memos) {
     const memoData =
@@ -1051,8 +1072,16 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
     feeRate: args.feeRate,
     changeScript
   })
-  if (result.inputs == null || result.outputs == null) {
-    throw new InsufficientFundsError(args.currencyCode)
+  if (result.outputs == null) {
+    const targetsValue = pickerUtils.sumOrNaN(targets)
+    const inputsValue = pickerUtils.sumOrNaN(result.inputs)
+    // This is how much fee is needed to validate the spend
+    const feeDelta = result.fee - (inputsValue - targetsValue)
+    throw new InsufficientFundsErrorPlus({
+      currencyCode: args.currencyCode,
+      networkFee: result.fee.toString(),
+      networkFeeShortage: feeDelta.toString()
+    })
   }
 
   const sortedInputs = sortInputs(result.inputs)

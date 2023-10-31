@@ -31,6 +31,7 @@ import {
   toEdgeTransaction
 } from '../db/Models/ProcessorTransaction'
 import { IProcessorTransaction, IUTXO } from '../db/types'
+import { utxoFromProcessorTransactionInput } from '../db/util/utxo'
 import {
   asPrivateKey,
   asSafeWalletInfo,
@@ -38,20 +39,30 @@ import {
 } from '../keymanager/cleaners'
 import {
   makeTx,
+  MakeTxArgs,
   MakeTxTarget,
   PrivateKeyEncoding,
+  scriptPubkeyToAddress,
   signTx
 } from '../keymanager/keymanager'
+import { asMaybeInsufficientFundsErrorPlus } from '../keymanager/types'
+import { transactionSizeFromHex } from '../keymanager/utxopicker/utils'
 import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
 import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import {
   asUtxoSignMessageOtherParams,
+  asUtxoSpendInfoOtherParams,
   asUtxoUserSettings,
   UtxoTxOtherParams
 } from './types'
 import { getOwnUtxosFromTx } from './util/getOwnUtxosFromTx'
-import { fetchOrDeriveXprivFromKeys, sumUtxos } from './utils'
+import {
+  fetchOrDeriveXprivFromKeys,
+  getAddressTypeFromPurposeType,
+  pathToPurposeType,
+  sumUtxos
+} from './utils'
 
 export async function makeUtxoEngine(
   config: EngineConfig
@@ -128,7 +139,209 @@ export async function makeUtxoEngine(
     pluginState
   })
 
-  const engine = {
+  const engine: EdgeCurrencyEngine = {
+    async accelerate(edgeTx: EdgeTransaction): Promise<EdgeTransaction | null> {
+      // Get the replaced transaction from the processor:
+      const replacedTxid = edgeTx.txid
+      const [replacedTx] = await processor.fetchTransactions({
+        txId: replacedTxid
+      })
+
+      // Transaction checks:
+      // The transaction must be found and not confirmed or dropped.
+      if (replacedTx == null) return null
+      if (replacedTx.blockHeight !== 0) return null
+
+      // Double the fee used for the RBF transaction:
+      const vBytes = transactionSizeFromHex(replacedTx.hex)
+      const newFeeRate = Math.round((parseInt(replacedTx.fees) / vBytes) * 2)
+
+      const replacedTxInputs = replacedTx.inputs
+      // Recreate UTXOs from processor transaction and mark them as unspent:
+      const replacedTxUtxos = await Promise.all(
+        replacedTxInputs.map(async (_, index) => {
+          const utxo = await utxoFromProcessorTransactionInput(
+            processor,
+            replacedTx,
+            index
+          )
+          // Mark as unspent because we're going to reuse replaced tx's UTXOs
+          utxo.spent = false
+          return utxo
+        })
+      )
+      // Get the largest input from the transaction to re-use:
+      const replacedTxMaxUtxo = replacedTxUtxos.reduce((maxUtxo, utxo) => {
+        if (utxo.value > maxUtxo.value) return utxo
+        return maxUtxo
+      })
+
+      const targets: MakeTxTarget[] = []
+      const newOurReceiveAddresses: string[] = []
+      let foundChangeAddress: string | undefined
+      for (const output of replacedTx.outputs) {
+        // Fetch address by output's scriptPubkey to determine output ownership
+        const ourAddress = await processor.fetchAddress(output.scriptPubkey)
+
+        // This isn't our output, so include it as a target
+        if (ourAddress == null) {
+          targets.push({
+            scriptPubkey: output.scriptPubkey,
+            value: parseInt(output.amount)
+          })
+          continue
+        }
+
+        // Addresses from database should include a path; this is a type assert
+        if (ourAddress.path == null)
+          throw new Error('Expecting path for address')
+
+        // The output is ours:
+        const purposeType = pathToPurposeType(
+          ourAddress.path,
+          engineInfo.scriptTemplates
+        )
+        const addressType = getAddressTypeFromPurposeType(purposeType)
+        const { address } = scriptPubkeyToAddress({
+          scriptPubkey: ourAddress.scriptPubkey,
+          addressType,
+          coin: coinInfo.name,
+          redeemScript: ourAddress.redeemScript
+        })
+
+        newOurReceiveAddresses.push(address)
+
+        // Detect if it's the change address:
+        if (ourAddress.path.changeIndex === 1) {
+          foundChangeAddress = address
+        } else {
+          // This isn't our change address, so include it as a target.
+          // The transaction must have been a spend-to-self.
+          targets.push({
+            scriptPubkey: output.scriptPubkey,
+            value: parseInt(output.amount)
+          })
+        }
+      }
+
+      // Use the found change address or generate a new one:
+      const freshAddress =
+        foundChangeAddress == null
+          ? await engineState.getFreshAddress({ branch: 1 })
+          : { publicAddress: foundChangeAddress }
+      const freshChangeAddress =
+        freshAddress.segwitAddress ?? freshAddress.publicAddress
+
+      // Get all current UTXOs:
+      const currentUtxos = filterUndefined(
+        await processor.fetchUtxos({
+          utxoIds: []
+        })
+      )
+        // Exclude all UTXOs which are from the replaced tx, because
+        // they wont be valid.
+        .filter(utxo => utxo.txid !== replacedTxid)
+
+      // Combine replaced transaction's inputs as UTXOs with the current UTXO set
+      const utxos = [...replacedTxUtxos, ...currentUtxos]
+
+      // New transaction to be the replacement transaction
+      const makeTxArgs: MakeTxArgs = {
+        utxos,
+        forceUseUtxo: [replacedTxMaxUtxo],
+        targets,
+        memos: edgeTx.memos,
+        feeRate: newFeeRate,
+        coin: coinInfo.name,
+        currencyCode: currencyInfo.currencyCode,
+        enableRbf: true,
+        freshChangeAddress,
+        subtractFee: false,
+        log,
+        outputSort: 'bip69'
+      }
+      const newTx = (() => {
+        try {
+          return makeTx(makeTxArgs)
+        } catch (error) {
+          const cleanError = asMaybeInsufficientFundsErrorPlus(error)
+          if (cleanError?.networkFeeShortage != null) {
+            let feeDelta = parseInt(cleanError.networkFeeShortage)
+            // Adjust target values until we diminish the fee delta completely
+            for (const target of targets) {
+              if (target.value == null) continue
+              // The term is how much value to subtract from the target's value.
+              // The term's maximum value is the target's value.
+              // The term's minimum value is the fee delta.
+              const term = Math.min(target.value, feeDelta)
+              target.value -= term // Either decrement or zero out
+              feeDelta -= term // Ether decrement or zero out
+            }
+            // Retry making the transaction
+            return makeTx(makeTxArgs)
+          }
+          throw error
+        }
+      })()
+
+      if (newTx.changeUsed) {
+        newOurReceiveAddresses.push(freshChangeAddress)
+      }
+
+      // Generate new tracking of our scripts:
+      const newOurScriptPubkeys: string[] = newTx.inputs.map(input =>
+        input.scriptPubkey.toString('hex')
+      )
+
+      // Calculate transaction spend amount:
+      let nativeAmount = '0'
+      for (const output of newTx.outputs) {
+        const scriptPubkey = output.scriptPubkey.toString('hex')
+        const own = await processor.fetchAddress(scriptPubkey)
+        if (own == null) {
+          // Not our output
+          nativeAmount = bs.sub(nativeAmount, output.value.toString())
+        } else {
+          // Our output
+          newOurScriptPubkeys.push(scriptPubkey)
+        }
+      }
+
+      const networkFee = newTx.fee.toString()
+      nativeAmount = bs.sub(nativeAmount, networkFee)
+
+      const newTxOtherParams: UtxoTxOtherParams = {
+        unsignedTx: newTx.hex,
+        psbt: {
+          base64: newTx.psbtBase64,
+          inputs: newTx.inputs,
+          outputs: newTx.outputs
+        },
+        ourScriptPubkeys: newOurScriptPubkeys,
+        replacedTxid: replacedTxid
+      }
+
+      // Return a EdgeTransaction object with the updates
+      return {
+        ...edgeTx,
+        blockHeight: 0,
+        currencyCode: currencyInfo.currencyCode,
+        date: unixTime(),
+        feeRateUsed: {
+          satPerVByte: newFeeRate
+        },
+        isSend: true,
+        nativeAmount,
+        networkFee,
+        otherParams: newTxOtherParams,
+        ourReceiveAddresses: newOurReceiveAddresses,
+        parentNetworkFee: undefined,
+        signedTx: '',
+        txid: '',
+        walletId: walletInfo.id
+      }
+    },
+
     async startEngine(): Promise<void> {
       emitter.emit(
         EngineEvent.WALLET_BALANCE_CHANGED,
@@ -236,10 +449,6 @@ export async function makeUtxoEngine(
         .join('\n')
     },
 
-    async getEnabledTokens(): Promise<string[]> {
-      return await Promise.resolve([])
-    },
-
     async getFreshAddress(
       opts: EdgeGetReceiveAddressOptions
     ): Promise<EdgeFreshAddress> {
@@ -259,10 +468,6 @@ export async function makeUtxoEngine(
         currencyInfo.currencyCode,
         io.fetch
       )
-    },
-
-    getTokenStatus(_token: string): boolean {
-      return false
     },
 
     async getTransactions(
@@ -295,17 +500,22 @@ export async function makeUtxoEngine(
     async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
       edgeSpendInfo = upgradeMemos(edgeSpendInfo, currencyInfo)
       const { memos = [], spendTargets } = edgeSpendInfo
-      const txOptions: TxOptions | undefined =
-        edgeSpendInfo.otherParams?.txOptions
-      const { outputSort = 'bip69', utxoSourceAddress, forceChangeAddress } =
+      const spendInfoOtherParams = asUtxoSpendInfoOtherParams(
         edgeSpendInfo.otherParams ?? {}
+      )
+      const txOptions = spendInfoOtherParams.txOptions ?? {}
+      const {
+        outputSort,
+        utxoSourceAddress,
+        forceChangeAddress
+      } = spendInfoOtherParams
 
       let utxoScriptPubkey: string | undefined
       if (utxoSourceAddress != null) {
         utxoScriptPubkey = walletTools.addressToScriptPubkey(utxoSourceAddress)
       }
 
-      if (txOptions?.CPFP == null && spendTargets.length < 1) {
+      if (txOptions.CPFP == null && spendTargets.length < 1) {
         throw new Error('Need to provide Spend Targets')
       }
       // Calculate the total amount to send
@@ -314,7 +524,7 @@ export async function makeUtxoEngine(
         '0'
       )
       const utxos =
-        txOptions?.utxos ??
+        txOptions.utxos ??
         filterUndefined(
           (await processor.fetchUtxos({
             scriptPubkey: utxoScriptPubkey,
@@ -357,7 +567,7 @@ export async function makeUtxoEngine(
             const scriptPubkey = walletTools.addressToScriptPubkey(
               target.publicAddress
             )
-            if (processor.fetchAddress(scriptPubkey) != null) {
+            if ((await processor.fetchAddress(scriptPubkey)) != null) {
               ourReceiveAddresses.push(target.publicAddress)
             }
           }
@@ -381,31 +591,12 @@ export async function makeUtxoEngine(
         freshAddress.segwitAddress ??
         freshAddress.publicAddress
 
-      const setRBF = txOptions?.setRBF ?? false
-      const rbfTxid = edgeSpendInfo.rbfTxid
+      const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+
       let maxUtxo: undefined | IUTXO
-      let feeRate = parseInt(await fees.getRate(edgeSpendInfo))
-      if (rbfTxid != null) {
-        const [rbfTx] = await processor.fetchTransactions({ txId: rbfTxid })
-        if (rbfTx == null) throw new Error('transaction not found')
-        // double the fee used for the RBF transaction
-        feeRate *= 2
-        const rbfInputs = rbfTx.inputs
-        const maxInput = rbfInputs.reduce((a, b) =>
-          bs.gt(a.amount, b.amount) ? a : b
-        )
-        const maxId = `${maxInput.txId}_${maxInput.outputIndex}`
-        maxUtxo = (await processor.fetchUtxos({ utxoIds: [maxId] }))[0]
-        if (maxUtxo == null) {
-          log.error('transaction to be replaced found, but not its input utxos')
-          throw new Error(
-            'transaction to be replaced found, but not its input utxos'
-          )
-        }
-      }
-      if (txOptions?.CPFP != null) {
+      if (txOptions.CPFP != null) {
         const [childTx] = await processor.fetchTransactions({
-          txId: txOptions?.CPFP
+          txId: txOptions.CPFP
         })
         if (childTx == null) throw new Error('transaction not found')
         const utxos: IUTXO[] = []
@@ -417,9 +608,10 @@ export async function makeUtxoEngine(
         // cpfp just sends to change, no target addresses are required
         targets = []
       }
+
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
-        txOptions?.subtractFee != null ? txOptions.subtractFee : false
+        txOptions.subtractFee != null ? txOptions.subtractFee : false
       const tx = makeTx({
         utxos,
         forceUseUtxo: maxUtxo != null ? [maxUtxo] : [],
@@ -428,7 +620,10 @@ export async function makeUtxoEngine(
         feeRate,
         coin: coinInfo.name,
         currencyCode: currencyInfo.currencyCode,
-        setRBF,
+        enableRbf:
+          spendInfoOtherParams.enableRbf ??
+          currencyInfo.canReplaceByFee ??
+          false,
         freshChangeAddress,
         subtractFee,
         log,
@@ -507,6 +702,26 @@ export async function makeUtxoEngine(
     },
 
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
+      // If the transaction being saved replaces a transaction, update it.
+      const replacedTxid: string | undefined = edgeTx.otherParams?.replacedTxid
+      if (replacedTxid != null) {
+        // Get the replaced transaction using the replacedTxid
+        const [rbfTx] = await processor.fetchTransactions({
+          txId: replacedTxid
+        })
+        if (rbfTx != null) {
+          rbfTx.blockHeight = -1
+          await transactionChanged({
+            walletId: walletInfo.id,
+            tx: rbfTx,
+            pluginInfo,
+            emitter,
+            walletTools,
+            processor
+          })
+        }
+      }
+
       const tx = fromEdgeTransaction(edgeTx)
       await transactionChanged({
         walletId: walletInfo.id,
@@ -568,8 +783,7 @@ export async function makeUtxoEngine(
       if (otherParams == null) throw new Error('Invalid transaction data')
 
       const { psbt, edgeSpendInfo }: UtxoTxOtherParams = otherParams
-      if (psbt == null || edgeSpendInfo == null)
-        throw new Error('Invalid transaction data')
+      if (psbt == null) throw new Error('Invalid transaction data')
 
       const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
 
@@ -588,24 +802,34 @@ export async function makeUtxoEngine(
       const privateKeyEncodings = await (async (): Promise<
         PrivateKeyEncoding[]
       > => {
-        if (edgeSpendInfo.privateKeys != null) {
+        if (edgeSpendInfo?.privateKeys != null) {
           return edgeSpendInfo.privateKeys.map(wif =>
             walletTools.getPrivateKeyEncodingFromWif(wif)
           )
         } else {
           return await Promise.all(
-            psbt.inputs.map(async ({ hash, index }) => {
-              const txid = Buffer.from(hash).reverse().toString('hex')
-              const utxoId = `${txid}_${index}`
+            psbt.inputs.map(async ({ hash, index: vout }) => {
+              const txId = Buffer.from(hash).reverse().toString('hex')
 
-              const [utxo] = await processor.fetchUtxos({
-                utxoIds: [utxoId]
-              })
-              if (utxo == null) throw new Error('Invalid UTXO')
+              const [transaction] = await processor.fetchTransactions({ txId })
+              if (transaction == null)
+                throw new Error(
+                  'Unable to find previous transaction data for input'
+                )
+              const prevout = transaction.outputs.find(
+                input => input.n === vout
+              )
+              if (prevout == null)
+                throw new Error('Unable to find prevout in transaction')
+              const { scriptPubkey } = prevout
 
-              const address = await processor.fetchAddress(utxo.scriptPubkey)
+              // Use the scriptPubkey to find the private key from the address
+              // derivation path
+              const address = await processor.fetchAddress(scriptPubkey)
               if (address == null) {
-                throw new Error(`Address for UTXO ${utxoId} not found`)
+                throw new Error(
+                  `Address for scriptPubkey '${scriptPubkey}' not found`
+                )
               }
               if (address.path == null)
                 throw new Error(

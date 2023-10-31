@@ -1,3 +1,5 @@
+import * as bitcoin from 'altcoin-js'
+
 import { ScriptTypeEnum } from '../keymanager'
 import { Input, Output, UTXO, UtxoPickerResult } from './types'
 
@@ -106,6 +108,11 @@ export function transactionBytes(inputs: UTXO[], outputs: Output[]): number {
   const outputsSize = outputs.reduce((a, x) => a + outputBytes(x), 0)
 
   return overhead + inputsSize + outputsSize
+}
+
+export const transactionSizeFromHex = (hex: string): number => {
+  const transaction = bitcoin.Transaction.fromHex(hex)
+  return transaction.virtualSize()
 }
 
 export function uintOrNaN(v: number): number {

@@ -33,7 +33,8 @@ export interface UtxoPickerArgs {
 }
 
 export interface UtxoPickerResult {
-  inputs?: Input[]
+  inputs: Input[]
+  // Nullish outputs means fee exceeds selected inputs
   outputs?: Output[]
   changeUsed: boolean
   fee: number

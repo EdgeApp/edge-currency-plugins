@@ -1,6 +1,8 @@
+import { asBoolean, asNumber, asObject, asOptional, asString } from 'cleaners'
+
 import { SoftPick } from '../../../util/typeUtil'
 import { AddressPath } from '../../plugin/types'
-import { ScriptTypeEnum } from '../keymanager/keymanager'
+import { asScriptTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 
 export interface IAddress {
   scriptPubkey: string
@@ -40,6 +42,18 @@ export interface IUTXO {
   blockHeight: number
   spent: boolean
 }
+export const asIUTXO = asObject<IUTXO>({
+  id: asString,
+  txid: asString,
+  vout: asNumber,
+  value: asString,
+  scriptPubkey: asString,
+  script: asString,
+  redeemScript: asOptional(asString),
+  scriptType: asScriptTypeEnum,
+  blockHeight: asNumber,
+  spent: asBoolean
+})
 
 export interface IProcessorTransaction {
   txid: string

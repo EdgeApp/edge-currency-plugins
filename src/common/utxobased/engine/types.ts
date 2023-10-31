@@ -1,6 +1,15 @@
-import { asArray, asBoolean, asMaybe, asObject, asString } from 'cleaners'
+import {
+  asArray,
+  asBoolean,
+  asMaybe,
+  asObject,
+  asOptional,
+  asString,
+  asValue
+} from 'cleaners'
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
+import { asTxOptions } from '../../plugin/types'
 import { Input, Output } from '../keymanager/utxopicker/types'
 
 export const asUtxoUserSettings = asObject({
@@ -18,6 +27,7 @@ export interface UtxoTxOtherParams {
   }
   edgeSpendInfo?: EdgeSpendInfo
   ourScriptPubkeys: string[]
+  replacedTxid?: string
 }
 
 export type UtxoSignMessageOtherParams = ReturnType<
@@ -25,4 +35,15 @@ export type UtxoSignMessageOtherParams = ReturnType<
 >
 export const asUtxoSignMessageOtherParams = asObject({
   publicAddress: asString
+})
+
+export type UtxoSpendInfoOtherParams = ReturnType<
+  typeof asUtxoSpendInfoOtherParams
+>
+export const asUtxoSpendInfoOtherParams = asObject({
+  enableRbf: asOptional(asBoolean),
+  forceChangeAddress: asOptional(asString),
+  outputSort: asOptional(asValue('bip69', 'targets'), 'bip69'),
+  txOptions: asOptional(asTxOptions),
+  utxoSourceAddress: asOptional(asString)
 })

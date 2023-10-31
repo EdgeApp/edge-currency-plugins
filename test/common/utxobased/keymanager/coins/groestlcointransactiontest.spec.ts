@@ -37,7 +37,7 @@ describe('groestlcoin transaction creation and signing test', function () {
       forceUseUtxo: [],
       coin: 'groestlcoin',
       currencyCode: 'GRS',
-      setRBF: false,
+      enableRbf: false,
       freshChangeAddress: 'Fpzstx4fKWhqZYbVVmuncuhbEmgecqPTgg',
       feeRate: 0,
       subtractFee: false,
