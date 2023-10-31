@@ -591,27 +591,9 @@ export async function makeUtxoEngine(
         freshAddress.segwitAddress ??
         freshAddress.publicAddress
 
-      const rbfTxid = edgeSpendInfo.rbfTxid
+      const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+
       let maxUtxo: undefined | IUTXO
-      let feeRate = parseInt(await fees.getRate(edgeSpendInfo))
-      if (rbfTxid != null) {
-        const [rbfTx] = await processor.fetchTransactions({ txId: rbfTxid })
-        if (rbfTx == null) throw new Error('transaction not found')
-
-        // double the fee used for the RBF transaction
-        const vBytes = transactionSizeFromHex(rbfTx.hex)
-        feeRate = Math.round(parseInt(rbfTx.fees) / vBytes) * 2
-
-        const rbfInputs = rbfTx.inputs
-        const maxInput = rbfInputs.reduce((a, b) =>
-          bs.gt(a.amount, b.amount) ? a : b
-        )
-        maxUtxo = await utxoFromProcessorTransactionInput(
-          processor,
-          rbfTx,
-          maxInput.n
-        )
-      }
       if (txOptions.CPFP != null) {
         const [childTx] = await processor.fetchTransactions({
           txId: txOptions.CPFP
@@ -626,6 +608,7 @@ export async function makeUtxoEngine(
         // cpfp just sends to change, no target addresses are required
         targets = []
       }
+
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
         txOptions.subtractFee != null ? txOptions.subtractFee : false
@@ -677,8 +660,7 @@ export async function makeUtxoEngine(
           outputs: tx.outputs
         },
         edgeSpendInfo,
-        ourScriptPubkeys,
-        rbfTxid
+        ourScriptPubkeys
       }
 
       const transaction: EdgeTransaction = {
