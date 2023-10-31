@@ -27,7 +27,7 @@ export interface UtxoTxOtherParams {
   }
   edgeSpendInfo?: EdgeSpendInfo
   ourScriptPubkeys: string[]
-  rbfTxid?: string
+  replacedTxid?: string
 }
 
 export type UtxoSignMessageOtherParams = ReturnType<
