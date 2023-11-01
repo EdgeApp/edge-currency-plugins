@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.5.0 (2023-10-31)
+
 - added: `accelerate` method to `UtxoEngine` for RBF support.
 - fixed: Incorrect handling of `vout` for Blockbook transactions
 - fixed: Incorrectly populating `ourReceiveAddress` for new transactions from `makeSpend`
