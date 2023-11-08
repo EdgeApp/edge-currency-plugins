@@ -141,6 +141,9 @@ export async function makeUtxoEngine(
 
   const engine: EdgeCurrencyEngine = {
     async accelerate(edgeTx: EdgeTransaction): Promise<EdgeTransaction | null> {
+      const { canReplaceByFee = false } = currencyInfo
+      if (!canReplaceByFee) return null
+
       // Get the replaced transaction from the processor:
       const replacedTxid = edgeTx.txid
       const [replacedTx] = await processor.fetchTransactions({
