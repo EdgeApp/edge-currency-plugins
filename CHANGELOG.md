@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Disabled RBF for Litecoin
+
 ## 2.5.0 (2023-10-31)
 
 - added: `accelerate` method to `UtxoEngine` for RBF support.
