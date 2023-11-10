@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.5.1 (2023-11-10)
+
 - changed: Disabled RBF for Litecoin
 - fixed: Respect `canReplaceByFee` flag from currency info in engine `accelerate` function
 
