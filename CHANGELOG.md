@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: Disabled RBF for Litecoin
+- fixed: Respect `canReplaceByFee` flag from currency info in engine `accelerate` function
+
 ## 2.5.0 (2023-10-31)
 
 - added: `accelerate` method to `UtxoEngine` for RBF support.
