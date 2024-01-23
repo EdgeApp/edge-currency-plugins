@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- removed: Disable `accelerate` for bip32 (Airbitz) wallets
+
 ## 2.5.1 (2023-11-10)
 
 - changed: Disabled RBF for Litecoin
