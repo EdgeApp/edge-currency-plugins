@@ -144,6 +144,9 @@ export async function makeUtxoEngine(
       const { canReplaceByFee = false } = currencyInfo
       if (!canReplaceByFee) return null
 
+      // Accelerate for legacy Airbitz wallets is not supported
+      if (privateKeyFormat === 'bip32') return null
+
       // Get the replaced transaction from the processor:
       const replacedTxid = edgeTx.txid
       const [replacedTx] = await processor.fetchTransactions({
