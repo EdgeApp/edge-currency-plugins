@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.5.2 (2024-01-23)
+
 - removed: Disable `accelerate` for bip32 (Airbitz) wallets
 
 ## 2.5.1 (2023-11-10)
