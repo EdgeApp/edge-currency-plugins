@@ -13,5 +13,9 @@ export function subtractFee(args: UtxoPickerArgs): UtxoPickerResult {
   const fee = Math.ceil(feeRate * utils.transactionBytes(utxos, outputs))
   targets[0].value -= fee
   outputs[0].value -= fee
+
+  const targetValue = utils.sumOrNaN(targets)
+  if (fee > targetValue) return { inputs: utxos, fee, changeUsed: false }
+
   return { inputs: utxos, outputs, fee, changeUsed: false }
 }
