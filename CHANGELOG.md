@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.5.3 (2024-01-24)
+
 - changed: Add insufficient funds check `subtractFee` style transactions
 
 ## 2.5.2 (2024-01-23)
