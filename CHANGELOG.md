@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.5.4 (2024-01-26)
+
 - fixed: Check for NaN target totals in `subtractFee` style transactions
 - removed: Disable `accelerate` for bip44 wallets
 
