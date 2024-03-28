@@ -75,12 +75,12 @@ describe('Blockbook notifications tests with dummy server', function () {
     })
 
     blockbook = makeBlockbook({
-      socketEmitter,
+      connectionUri: 'ws://localhost:8555',
       engineEmitter,
       log,
-      walletId: '',
       onQueueSpaceCB,
-      wsAddress: 'ws://localhost:8555'
+      socketEmitter,
+      walletId: ''
     })
     await blockbook.connect()
     blockbook.isConnected.should.be.true
@@ -151,7 +151,9 @@ describe('Blockbook', function () {
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
   const engineEmitter = new EngineEmitter()
   const socketEmitter = new SocketEmitter()
+
   const log = makeFakeLog()
+
   let blockbook: Blockbook
 
   const onQueueSpaceCB = async (
@@ -162,12 +164,12 @@ describe('Blockbook', function () {
 
   beforeEach(async () => {
     blockbook = makeBlockbook({
-      socketEmitter,
+      connectionUri: 'wss://btc1.trezor.io/websocket',
       engineEmitter,
       log,
-      wsAddress: 'wss://btc1.trezor.io/websocket',
-      walletId: '',
-      onQueueSpaceCB
+      onQueueSpaceCB,
+      socketEmitter,
+      walletId: ''
     })
     await blockbook.connect()
   })

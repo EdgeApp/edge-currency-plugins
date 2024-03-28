@@ -209,7 +209,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
       // Make new Blockbook instance
       const blockbook = makeBlockbook({
-        wsAddress: uri,
+        connectionUri: uri,
         socketEmitter,
         engineEmitter,
         log,
