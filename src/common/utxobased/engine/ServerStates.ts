@@ -1,4 +1,4 @@
-import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
+import { EdgeIo, EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 import { parse } from 'uri-js'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
@@ -7,12 +7,17 @@ import { PluginInfo } from '../../plugin/types'
 import { removeItem } from '../../plugin/utils'
 import { SafeWalletInfo } from '../keymanager/cleaners'
 import { Blockbook, makeBlockbook } from '../network/Blockbook'
-import { SubscribeAddressResponse } from '../network/blockbookApi'
+import {
+  asBlockbookResponse,
+  asBroadcastTxResponse,
+  SubscribeAddressResponse
+} from '../network/blockbookApi'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
 import { SocketEmitter, SocketEvent } from '../network/SocketEmitter'
 import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
 import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
+import { UtxoInitOptions } from './types'
 
 interface ServerState {
   blockbook: Blockbook
@@ -24,6 +29,8 @@ interface ServerState {
 
 interface ServerStateConfig {
   engineEmitter: EngineEmitter
+  initOptions: UtxoInitOptions
+  io: EdgeIo
   log: EdgeLog
   pluginInfo: PluginInfo
   pluginState: PluginState
@@ -58,7 +65,16 @@ interface ServerStatesCache {
 }
 
 export function makeServerStates(config: ServerStateConfig): ServerStates {
-  const { engineEmitter, log, pluginInfo, pluginState, walletInfo } = config
+  const {
+    engineEmitter,
+    initOptions,
+    io,
+    log,
+    pluginInfo,
+    pluginState,
+    walletInfo
+  } = config
+  const { serverConfigs = [] } = pluginInfo.engineInfo
   log('Making server states')
 
   const serverStatesCache: ServerStatesCache = {}
@@ -209,8 +225,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
       // Make new Blockbook instance
       const blockbook = makeBlockbook({
+        asAddress: pluginInfo.engineInfo.asBlockbookAddress,
         connectionUri: uri,
-        socketEmitter,
         engineEmitter,
         log,
         onQueueSpaceCB: async (): Promise<
@@ -229,8 +245,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           }
           return task
         },
-        walletId: walletInfo.id,
-        asAddress: pluginInfo.engineInfo.asBlockbookAddress
+        socketEmitter,
+        walletId: walletInfo.id
       })
 
       // Make new ServerStates instance
@@ -304,38 +320,117 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
   const broadcastTx = async (transaction: EdgeTransaction): Promise<string> => {
     return await new Promise((resolve, reject) => {
-      const uris = Object.keys(serverStatesCache).filter(uri => {
-        const { blockbook } = serverStatesCache[uri]
-        if (blockbook == null) return false
-        return blockbook.isConnected
-      })
-      if (uris == null || uris.length < 1) {
-        reject(
-          new Error('No available connections\nCheck your internet signal')
-        )
-      }
       let resolved = false
       let bad = 0
-      for (const uri of uris) {
-        const { blockbook } = serverStatesCache[uri]
-        if (blockbook == null) continue
-        blockbook
-          .broadcastTx(transaction)
-          .then(response => {
-            if (!resolved) {
-              resolved = true
-              resolve(response.result)
-            }
+
+      const wsUris = Object.keys(serverStatesCache).filter(
+        uri => serverStatesCache[uri].blockbook != null
+      )
+
+      // If there are no blockbook instances, reject the promise
+      if (wsUris.length < 1) {
+        reject(new Error('Unexpected error. Missing WebSocket connections.'))
+        // Exit early if there are blockbook instances
+        return
+      }
+
+      // Determine if there are any connected blockbook instances
+      const isAnyBlockbookConnected = wsUris.some(
+        uri => serverStatesCache[uri].blockbook.isConnected
+      )
+
+      if (isAnyBlockbookConnected) {
+        for (const uri of wsUris) {
+          const { blockbook } = serverStatesCache[uri]
+          if (blockbook == null) continue
+          blockbook
+            .broadcastTx(transaction)
+            .then(response => {
+              if (!resolved) {
+                resolved = true
+                resolve(response.result)
+              }
+            })
+            .catch((e?: Error) => {
+              if (++bad === wsUris.length) {
+                const msg = e != null ? `With error ${e.message}` : ''
+                log.error(
+                  `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
+                )
+                reject(e)
+              }
+            })
+        }
+      }
+
+      // Broadcast through any HTTP URI that may be configured, only if no
+      // blockbook instances are connected.
+      if (!isAnyBlockbookConnected) {
+        // This is for the future when we want to HTTP servers from the user
+        // settings:
+        // const httpUris = pluginState.getLocalServers(Infinity, [
+        //   /^http(?:s)?:/i
+        // ])
+
+        const { nowNodeApiKey } = initOptions
+        const nowNodeUris = serverConfigs
+          .filter(config => config.type === 'blockbook-nownode')
+          .map(config => config.uris)
+          .flat(1)
+
+        // If there are no HTTP servers, reject the promise
+        if (nowNodeUris.length < 1) {
+          // If no HTTP servers are available, and we had no connected blockbook
+          // instances, reject the promise with a message indicating no
+          // available connections. It's clear we have some connection instances
+          // if we gotten to this point, but we just don't have any of those
+          // instances connected at this time.
+          reject(
+            new Error('No available connections. Check your internet signal.')
+          )
+          return
+        }
+
+        // If there is no key for the NowNode servers:
+        if (nowNodeApiKey == null) {
+          reject(new Error('Missing connection key for fallback servers.'))
+          return
+        }
+
+        for (const uri of nowNodeUris) {
+          // HTTP Fallback
+          io.fetchCors(`${uri}/api/v2/sendtx/`, {
+            method: 'POST',
+            headers: {
+              'api-key': nowNodeApiKey
+            },
+            body: transaction.signedTx
           })
-          .catch((e?: Error) => {
-            if (++bad === uris.length) {
-              const msg = e != null ? `With error ${e.message}` : ''
-              log.error(
-                `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
-              )
-              reject(e)
-            }
-          })
+            .then(async response => {
+              if (!response.ok) {
+                throw new Error(
+                  `Failed to broadcast transaction via Blockbook: HTTP ${response.status}`
+                )
+              }
+              const json = await response.json()
+              return asBlockbookResponse(asBroadcastTxResponse)(json)
+            })
+            .then(response => {
+              if (!resolved) {
+                resolved = true
+                resolve(response.result)
+              }
+            })
+            .catch((e?: Error) => {
+              if (++bad === nowNodeUris.length) {
+                const msg = e != null ? `With error ${e.message}` : ''
+                log.error(
+                  `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
+                )
+                reject(e)
+              }
+            })
+        }
       }
     })
   }

@@ -56,6 +56,12 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
+  serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['bchbook.nownodes.io']
+    }
+  ],
   formats: ['bip44', 'bip32'],
   forks: [], // 'bitcoinsv' is currently disabled, so not included in the forks
   gapLimit: 10,

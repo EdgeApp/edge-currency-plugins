@@ -95,13 +95,16 @@ export function makeUtxoEngineState(
   config: UtxoEngineStateConfig
 ): UtxoEngineState {
   const {
+    initOptions,
+    io,
+    options,
+    pluginState,
     pluginInfo,
-    walletInfo,
-    walletTools,
-    options: { emitter, log },
     processor,
-    pluginState
+    walletInfo,
+    walletTools
   } = config
+  const { emitter, log } = options
 
   const { walletFormats } = walletInfo.keys
 
@@ -178,6 +181,8 @@ export function makeUtxoEngineState(
 
   const serverStates = makeServerStates({
     engineEmitter: emitter,
+    initOptions,
+    io,
     log,
     pluginInfo,
     pluginState,
@@ -191,7 +196,7 @@ export function makeUtxoEngineState(
     emitter,
     taskCache,
     updateProgressRatio,
-    io: config.io,
+    io,
     log,
     serverStates,
     pluginState,

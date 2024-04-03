@@ -45,6 +45,12 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
+  serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['https://dogebook.nownodes.io']
+    }
+  ],
   formats: ['bip44', 'bip32'],
   gapLimit: 10,
   defaultFee: 1000,

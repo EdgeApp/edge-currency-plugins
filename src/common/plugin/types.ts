@@ -23,6 +23,7 @@ import {
 import * as wif from 'wif'
 
 import { asIUTXO, IProcessorTransaction, IUTXO } from '../utxobased/db/types'
+import { UtxoInitOptions } from '../utxobased/engine/types'
 import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
 import { UtxoPicker } from '../utxobased/keymanager/utxopicker'
 import { EngineEmitter } from './EngineEmitter'
@@ -70,6 +71,7 @@ export interface EngineInfo {
   mempoolSpaceFeeInfoServer?: string
   defaultFeeInfo: FeeInfo
   scriptTemplates?: ScriptTemplates
+  serverConfigs?: ServerConfig[]
   // Codec Cleaners
   asBlockbookAddress?: Cleaner<string>
   // Coin specific transaction handling
@@ -77,6 +79,11 @@ export interface EngineInfo {
     tx: IProcessorTransaction,
     specialTx: unknown
   ) => IProcessorTransaction
+}
+
+export interface ServerConfig {
+  type: 'blockbook-nownode'
+  uris: string[]
 }
 
 /**
@@ -196,6 +203,7 @@ export interface EngineConfig {
   pluginDisklet: Disklet
   currencyTools: EdgeCurrencyTools
   options: EngineOptions
+  initOptions: UtxoInitOptions
   io: EdgeIo
   pluginState: PluginState
 }
