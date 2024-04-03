@@ -51,7 +51,7 @@ export interface PluginState {
   clearCache: () => Promise<void>
   getLocalServers: (
     numServersWanted: number,
-    includePatterns: string[]
+    includePatterns?: Array<string | RegExp>
   ) => string[]
   refreshServers: () => Promise<void>
   updateServers: (settings: UtxoUserSettings) => Promise<void>
@@ -209,7 +209,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     getLocalServers(
       numServersWanted: number,
-      includePatterns: string[] = []
+      includePatterns: Array<string | RegExp> = []
     ): string[] {
       return serverScores.getServers(
         knownServers,
