@@ -30,7 +30,7 @@ export type WatchAddressesCB = (
 ) => void | Promise<void>
 export type WatchBlocksCB = () => void | Promise<void>
 
-export interface BlockBook {
+export interface Blockbook {
   isConnected: boolean
 
   connect: () => Promise<void>
@@ -60,7 +60,7 @@ export interface BlockBook {
   broadcastTx: (transaction: EdgeTransaction) => Promise<BroadcastTxResponse>
 }
 
-interface BlockBookConfig {
+interface BlockbookConfig {
   socketEmitter: SocketEmitter
   engineEmitter: EngineEmitter
   wsAddress: string
@@ -70,7 +70,7 @@ interface BlockBookConfig {
   asAddress?: Cleaner<string>
 }
 
-export function makeBlockBook(config: BlockBookConfig): BlockBook {
+export function makeBlockbook(config: BlockbookConfig): Blockbook {
   const {
     wsAddress,
     socketEmitter,
@@ -80,9 +80,9 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     walletId,
     asAddress
   } = config
-  log(`makeBlockBook with uri ${wsAddress}`)
+  log(`makeBlockbook with uri ${wsAddress}`)
 
-  const instance: BlockBook = {
+  const instance: Blockbook = {
     isConnected: false,
     connect,
     disconnect,

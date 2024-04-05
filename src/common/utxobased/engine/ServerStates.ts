@@ -6,7 +6,7 @@ import { PluginState } from '../../plugin/PluginState'
 import { PluginInfo } from '../../plugin/types'
 import { removeItem } from '../../plugin/utils'
 import { SafeWalletInfo } from '../keymanager/cleaners'
-import { BlockBook, makeBlockBook } from '../network/BlockBook'
+import { Blockbook, makeBlockbook } from '../network/Blockbook'
 import { SubscribeAddressResponse } from '../network/blockbookApi'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
@@ -15,7 +15,7 @@ import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
 import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
 
 interface ServerState {
-  blockbook: BlockBook
+  blockbook: Blockbook
   blockSubscriptionStatus: 'unsubscribed' | 'subscribing' | 'subscribed'
   blockHeight: number
   txids: Set<string>
@@ -122,7 +122,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) => Promise<boolean | WsTask<any> | undefined>
 
-  const makeServerStatesCacheEntry = (blockbook: BlockBook): ServerState => ({
+  const makeServerStatesCacheEntry = (blockbook: Blockbook): ServerState => ({
     blockbook,
     blockSubscriptionStatus: 'unsubscribed',
     txids: new Set(),
@@ -208,7 +208,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       }
 
       // Make new Blockbook instance
-      const blockbook = makeBlockBook({
+      const blockbook = makeBlockbook({
         wsAddress: uri,
         socketEmitter,
         engineEmitter,

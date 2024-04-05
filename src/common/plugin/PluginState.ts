@@ -15,7 +15,7 @@ import {
 } from './ServerScores'
 
 // Info server endpoint to getting ServerListInfo data
-const serverListInfoUrl = 'https://info1.edge.app/v1/blockBook/'
+const serverListInfoUrl = 'https://info1.edge.app/v1/blockbook/'
 // The filename for ServerInfoCache data (see ServerScores.ts)
 // Perhaps this should be in ServerScores.ts file, but that'll take some refactoring
 const SERVER_CACHE_FILE = 'serverCache.json'
