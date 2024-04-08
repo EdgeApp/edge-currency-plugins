@@ -6,7 +6,7 @@ import { makeMemoryDisklet } from 'disklet'
 import {
   makeProcessor,
   Processor
-} from '../../../../src/common/utxobased/db/makeProcessor'
+} from '../../../../src/common/utxobased/db/Processor'
 import {
   IAddress,
   IProcessorTransaction,

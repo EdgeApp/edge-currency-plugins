@@ -3,7 +3,7 @@ import {
   BIP43PurposeTypeEnum,
   ScriptTypeEnum
 } from '../../keymanager/keymanager'
-import { Processor } from '../makeProcessor'
+import { Processor } from '../Processor'
 import { IProcessorTransaction, IUTXO } from '../types'
 
 export const utxoFromProcessorTransactionInput = async (

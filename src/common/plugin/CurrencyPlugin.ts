@@ -7,11 +7,14 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
-import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
-import { asUtxoUserSettings } from '../utxobased/engine/types'
-import { makeCurrencyTools } from './makeCurrencyTools'
-import { makeEngineEmitter } from './makeEngineEmitter'
-import { makePluginState } from './pluginState'
+import {
+  asUtxoInitOptions,
+  asUtxoUserSettings
+} from '../utxobased/engine/types'
+import { makeUtxoEngine } from '../utxobased/engine/UtxoEngine'
+import { makeCurrencyTools } from './CurrencyTools'
+import { makeEngineEmitter } from './EngineEmitter'
+import { makePluginState } from './PluginState'
 import { EngineConfig, PluginInfo } from './types'
 
 export function makeCurrencyPlugin(
@@ -19,7 +22,7 @@ export function makeCurrencyPlugin(
   pluginInfo: PluginInfo
 ): EdgeCurrencyPlugin {
   const { currencyInfo } = pluginInfo
-  const { io, log, pluginDisklet } = pluginOptions
+  const { io, log, pluginDisklet, initOptions } = pluginOptions
   const currencyTools = makeCurrencyTools(io, pluginInfo)
   const { defaultSettings, pluginId, currencyCode } = currencyInfo
   const pluginState = makePluginState({
@@ -43,6 +46,7 @@ export function makeCurrencyPlugin(
         pluginInfo,
         pluginDisklet,
         currencyTools,
+        initOptions: asUtxoInitOptions(initOptions),
         io,
         options: {
           ...pluginOptions,

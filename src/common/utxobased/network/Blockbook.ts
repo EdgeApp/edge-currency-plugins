@@ -1,7 +1,7 @@
 import { Cleaner } from 'cleaners'
 import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 
-import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
 import {
   addressMessage,
   AddressResponse,
@@ -20,17 +20,17 @@ import {
   SubscribeNewBlockResponse,
   transactionMessage,
   TransactionResponse
-} from './BlockBookAPI'
+} from './blockbookApi'
 import Deferred from './Deferred'
-import { SocketEmitter } from './MakeSocketEmitter'
 import { makeSocket, OnQueueSpaceCB } from './Socket'
+import { SocketEmitter } from './SocketEmitter'
 
 export type WatchAddressesCB = (
   response: SubscribeAddressResponse
 ) => void | Promise<void>
 export type WatchBlocksCB = () => void | Promise<void>
 
-export interface BlockBook {
+export interface Blockbook {
   isConnected: boolean
 
   connect: () => Promise<void>
@@ -60,29 +60,29 @@ export interface BlockBook {
   broadcastTx: (transaction: EdgeTransaction) => Promise<BroadcastTxResponse>
 }
 
-interface BlockBookConfig {
-  socketEmitter: SocketEmitter
-  engineEmitter: EngineEmitter
-  wsAddress: string
-  log: EdgeLog
-  walletId: string
-  onQueueSpaceCB: OnQueueSpaceCB
+interface BlockbookConfig {
   asAddress?: Cleaner<string>
+  connectionUri: string
+  engineEmitter: EngineEmitter
+  log: EdgeLog
+  onQueueSpaceCB: OnQueueSpaceCB
+  socketEmitter: SocketEmitter
+  walletId: string
 }
 
-export function makeBlockBook(config: BlockBookConfig): BlockBook {
+export function makeBlockbook(config: BlockbookConfig): Blockbook {
   const {
-    wsAddress,
-    socketEmitter,
+    asAddress,
+    connectionUri,
     engineEmitter,
     log,
     onQueueSpaceCB,
-    walletId,
-    asAddress
+    socketEmitter,
+    walletId
   } = config
-  log(`makeBlockBook with uri ${wsAddress}`)
+  log(`makeBlockbook with uri ${connectionUri}`)
 
-  const instance: BlockBook = {
+  const instance: Blockbook = {
     isConnected: false,
     connect,
     disconnect,
@@ -96,7 +96,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     broadcastTx
   }
 
-  const socket = makeSocket(wsAddress, {
+  const socket = makeSocket(connectionUri, {
     healthCheck: ping,
     onQueueSpaceCB,
     log,
@@ -105,7 +105,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
   })
 
   async function connect(): Promise<void> {
-    log(`connecting to blockbook socket with uri ${wsAddress}`)
+    log(`connecting to blockbook socket with uri ${connectionUri}`)
     if (instance.isConnected) return
 
     await socket.connect()
@@ -114,7 +114,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
 
   async function disconnect(): Promise<void> {
     log(
-      `disconnecting from blockbook socket with uri ${wsAddress}, currently connected: ${instance.isConnected}`
+      `disconnecting from blockbook socket with uri ${connectionUri}, currently connected: ${instance.isConnected}`
     )
     if (!instance.isConnected) return
 
@@ -163,7 +163,7 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     const socketCb = async (res: SubscribeNewBlockResponse): Promise<void> => {
       engineEmitter.emit(
         EngineEvent.BLOCK_HEIGHT_CHANGED,
-        wsAddress,
+        connectionUri,
         res.height
       )
     }
@@ -180,7 +180,11 @@ export function makeBlockBook(config: BlockBookConfig): BlockBook {
     deferredAddressSub: Deferred<unknown>
   ): void {
     const socketCb = async (res: SubscribeAddressResponse): Promise<void> => {
-      engineEmitter.emit(EngineEvent.NEW_ADDRESS_TRANSACTION, wsAddress, res)
+      engineEmitter.emit(
+        EngineEvent.NEW_ADDRESS_TRANSACTION,
+        connectionUri,
+        res
+      )
     }
     socket.subscribe({
       ...subscribeAddressesMessage(addresses, asAddress),

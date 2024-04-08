@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: New fallback server engine info, starting with NOWNodes blockbook servers
+
 ## 2.5.4 (2024-01-26)
 
 - fixed: Check for NaN target totals in `subtractFee` style transactions

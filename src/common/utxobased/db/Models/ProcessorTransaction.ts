@@ -4,9 +4,9 @@ import BN from 'bn.js'
 import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
 
 import { PluginInfo } from '../../../plugin/types'
-import { UTXOPluginWalletTools } from '../../engine/makeUtxoWalletTools'
 import { UtxoTxOtherParams } from '../../engine/types'
-import { Processor } from '../makeProcessor'
+import { UtxoWalletTools } from '../../engine/UtxoWalletTools'
+import { Processor } from '../Processor'
 import { IProcessorTransaction } from '../types'
 
 export const fromEdgeTransaction = (
@@ -54,7 +54,7 @@ export const fromEdgeTransaction = (
 interface ToEdgeTransactionArgs {
   walletId: string
   tx: IProcessorTransaction
-  walletTools: UTXOPluginWalletTools
+  walletTools: UtxoWalletTools
   processor: Processor
   pluginInfo: PluginInfo
 }

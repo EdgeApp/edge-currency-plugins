@@ -46,6 +46,12 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
+  serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['grsbook.nownodes.io']
+    }
+  ],
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   gapLimit: 10,
   defaultFee: 100000,

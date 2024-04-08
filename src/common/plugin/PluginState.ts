@@ -5,19 +5,19 @@ import { Disklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet } from 'memlet'
 
-import { UtxoEngineState } from '../utxobased/engine/makeUtxoEngineState'
 import { UtxoUserSettings } from '../utxobased/engine/types'
+import { UtxoEngineState } from '../utxobased/engine/UtxoEngineState'
 import {
   asServerCache,
   ServerCache,
   ServerList,
   ServerScores
-} from './serverScores'
+} from './ServerScores'
 
 // Info server endpoint to getting ServerListInfo data
-const serverListInfoUrl = 'https://info1.edge.app/v1/blockBook/'
-// The filename for ServerInfoCache data (see serverScores.ts)
-// Perhaps this should be in serverScores.ts file, but that'll take some refactoring
+const serverListInfoUrl = 'https://info1.edge.app/v1/blockbook/'
+// The filename for ServerInfoCache data (see ServerScores.ts)
+// Perhaps this should be in ServerScores.ts file, but that'll take some refactoring
 const SERVER_CACHE_FILE = 'serverCache.json'
 
 // ServerListInfo data structure from info server and saved to disk
@@ -51,7 +51,7 @@ export interface PluginState {
   clearCache: () => Promise<void>
   getLocalServers: (
     numServersWanted: number,
-    includePatterns: string[]
+    includePatterns?: Array<string | RegExp>
   ) => string[]
   refreshServers: () => Promise<void>
   updateServers: (settings: UtxoUserSettings) => Promise<void>
@@ -209,7 +209,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     getLocalServers(
       numServersWanted: number,
-      includePatterns: string[] = []
+      includePatterns: Array<string | RegExp> = []
     ): string[] {
       return serverScores.getServers(
         knownServers,

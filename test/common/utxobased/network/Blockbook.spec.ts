@@ -6,25 +6,25 @@ import WS from 'ws'
 import {
   EngineEmitter,
   EngineEvent
-} from '../../../../src/common/plugin/makeEngineEmitter'
+} from '../../../../src/common/plugin/EngineEmitter'
 import {
-  BlockBook,
-  makeBlockBook
-} from '../../../../src/common/utxobased/network/BlockBook'
-import { SubscribeAddressResponse } from '../../../../src/common/utxobased/network/BlockBookAPI'
+  Blockbook,
+  makeBlockbook
+} from '../../../../src/common/utxobased/network/Blockbook'
+import { SubscribeAddressResponse } from '../../../../src/common/utxobased/network/blockbookApi'
 import Deferred from '../../../../src/common/utxobased/network/Deferred'
+import { WsTask } from '../../../../src/common/utxobased/network/Socket'
 import {
   SocketEmitter,
   SocketEvent
-} from '../../../../src/common/utxobased/network/MakeSocketEmitter'
-import { WsTask } from '../../../../src/common/utxobased/network/Socket'
+} from '../../../../src/common/utxobased/network/SocketEmitter'
 import { makeFakeLog } from '../../../utils'
 
 chai.should()
 
-describe('BlockBook notifications tests with dummy server', function () {
+describe('Blockbook notifications tests with dummy server', function () {
   let websocketServer: WS.Server
-  let blockBook: BlockBook
+  let blockbook: Blockbook
   let websocketClient: WebSocket
   let engineEmitter: EngineEmitter
 
@@ -74,26 +74,26 @@ describe('BlockBook notifications tests with dummy server', function () {
       open = true
     })
 
-    blockBook = makeBlockBook({
-      socketEmitter,
+    blockbook = makeBlockbook({
+      connectionUri: 'ws://localhost:8555',
       engineEmitter,
       log,
-      walletId: '',
       onQueueSpaceCB,
-      wsAddress: 'ws://localhost:8555'
+      socketEmitter,
+      walletId: ''
     })
-    await blockBook.connect()
-    blockBook.isConnected.should.be.true
+    await blockbook.connect()
+    blockbook.isConnected.should.be.true
     open.should.be.true
   })
 
   afterEach(async () => {
-    await blockBook.disconnect()
-    blockBook.isConnected.should.be.false
+    await blockbook.disconnect()
+    blockbook.isConnected.should.be.false
     websocketServer.close()
   })
 
-  it('Test BlockBook watch address and watch block events', async () => {
+  it('Test Blockbook watch address and watch block events', async () => {
     let test = false
     test.should.be.false
 
@@ -104,7 +104,7 @@ describe('BlockBook notifications tests with dummy server', function () {
       }
     )
 
-    blockBook.watchBlocks(new Deferred<unknown>())
+    blockbook.watchBlocks(new Deferred<unknown>())
     websocketClient.send(
       '{"id":"subscribeNewBlock","data":{"height":1916453,"hash":"0000000000000e0444fa7c1540a96e5658898a59733311d08f01292e114e8d5b"}}'
     )
@@ -127,7 +127,7 @@ describe('BlockBook notifications tests with dummy server', function () {
         test = true
       }
     )
-    blockBook.watchAddresses(
+    blockbook.watchAddresses(
       ['tb1q8uc93239etekcywh2l0t7aklxwywhaw0xlexld'],
       new Deferred<unknown>()
     )
@@ -145,14 +145,16 @@ describe('BlockBook notifications tests with dummy server', function () {
   })
 })
 
-describe('BlockBook', function () {
+describe('Blockbook', function () {
   this.timeout(10000)
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
   const engineEmitter = new EngineEmitter()
   const socketEmitter = new SocketEmitter()
+
   const log = makeFakeLog()
-  let blockBook: BlockBook
+
+  let blockbook: Blockbook
 
   const onQueueSpaceCB = async (
     _uri: string
@@ -161,39 +163,39 @@ describe('BlockBook', function () {
   }
 
   beforeEach(async () => {
-    blockBook = makeBlockBook({
-      socketEmitter,
+    blockbook = makeBlockbook({
+      connectionUri: 'wss://btc1.trezor.io/websocket',
       engineEmitter,
       log,
-      wsAddress: 'wss://btc1.trezor.io/websocket',
-      walletId: '',
-      onQueueSpaceCB
+      onQueueSpaceCB,
+      socketEmitter,
+      walletId: ''
     })
-    await blockBook.connect()
+    await blockbook.connect()
   })
 
   afterEach(async () => {
-    await blockBook.disconnect()
+    await blockbook.disconnect()
   })
 
   describe('connect', function () {
-    it('should connect to the BlockBook websocket API', async function () {
-      blockBook.isConnected.should.be.true
+    it('should connect to the Blockbook websocket API', async function () {
+      blockbook.isConnected.should.be.true
     })
   })
 
   describe('disconnect', function () {
-    it('should disconnect from the BlockBook API', async function () {
-      blockBook.isConnected.should.be.true
-      await blockBook.disconnect()
-      blockBook.isConnected.should.be.false
+    it('should disconnect from the Blockbook API', async function () {
+      blockbook.isConnected.should.be.true
+      await blockbook.disconnect()
+      blockbook.isConnected.should.be.false
     })
   })
 
   describe('fetchInfo', function () {
-    it('should fetch the BlockBook server info', async function () {
-      blockBook.isConnected.should.be.true
-      const info = await blockBook.fetchInfo()
+    it('should fetch the Blockbook server info', async function () {
+      blockbook.isConnected.should.be.true
+      const info = await blockbook.fetchInfo()
       info.should.have.keys(
         'name',
         'shortcut',
@@ -210,7 +212,7 @@ describe('BlockBook', function () {
 
   describe('fetchAddress', function () {
     it('should fetch basic address information', async function () {
-      const info = await blockBook.fetchAddress(satoshiAddress)
+      const info = await blockbook.fetchAddress(satoshiAddress)
 
       info.should.have.property('address', satoshiAddress)
       info.should.have.property('balance')
@@ -221,7 +223,7 @@ describe('BlockBook', function () {
       info.should.have.property('unconfirmedTxs')
     })
     it('should fetch address information with tx ids', async function () {
-      const info = await blockBook.fetchAddress(satoshiAddress, {
+      const info = await blockbook.fetchAddress(satoshiAddress, {
         details: 'txids'
       })
 
@@ -238,7 +240,7 @@ describe('BlockBook', function () {
       info.should.have.property('txids')
     })
     it('should fetch address information with txs', async function () {
-      const info = await blockBook.fetchAddress(satoshiAddress, {
+      const info = await blockbook.fetchAddress(satoshiAddress, {
         details: 'txs'
       })
 
@@ -258,7 +260,7 @@ describe('BlockBook', function () {
 
   describe('fetchAddressUtxos', function () {
     it('should fetch an address UTXOS', async function () {
-      const utxos = await blockBook.fetchAddressUtxos(satoshiAddress)
+      const utxos = await blockbook.fetchAddressUtxos(satoshiAddress)
 
       utxos.length.should.be.greaterThan(0)
       utxos[0].should.have.property('txid')
@@ -271,7 +273,7 @@ describe('BlockBook', function () {
     const satoshiHash =
       '3ed86f1b0a0a6fe180195bc1f93fd9d0801aea8c8ad5018de82c026dc21e2b15'
     it('should fetch details from a transaction hash', async function () {
-      const tx = await blockBook.fetchTransaction(satoshiHash)
+      const tx = await blockbook.fetchTransaction(satoshiHash)
 
       tx.txid.should.equal(satoshiHash)
       tx.fees.should.equal('226')

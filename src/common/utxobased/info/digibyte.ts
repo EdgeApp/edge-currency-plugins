@@ -40,6 +40,12 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
+  serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['dgbbook.nownodes.io']
+    }
+  ],
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   forks: [],
   gapLimit: 10,

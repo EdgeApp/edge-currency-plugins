@@ -7,8 +7,8 @@ import {
   EdgeTransaction
 } from 'edge-core-js/types'
 
-import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
-import { PluginState } from '../../plugin/pluginState'
+import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
+import { PluginState } from '../../plugin/PluginState'
 import {
   AddressPath,
   ChangePath,
@@ -18,8 +18,8 @@ import {
   PluginInfo
 } from '../../plugin/types'
 import { removeItem } from '../../plugin/utils'
-import { Processor } from '../db/makeProcessor'
 import { toEdgeTransaction } from '../db/Models/ProcessorTransaction'
+import { Processor } from '../db/Processor'
 import {
   IAddress,
   IProcessorTransaction,
@@ -42,19 +42,19 @@ import {
   transactionMessage,
   transactionMessageSpecific,
   TransactionResponse
-} from '../network/BlockBookAPI'
+} from '../network/blockbookApi'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
 import AwaitLock from './await-lock'
 import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
-import { makeServerStates, ServerStates } from './makeServerStates'
-import { UTXOPluginWalletTools } from './makeUtxoWalletTools'
+import { makeServerStates, ServerStates } from './ServerStates'
 import {
   getFormatSupportedBranches,
   getScriptTypeFromPurposeType,
   pathToPurposeType,
   validScriptPubkeyFromAddress
 } from './utils'
+import { UtxoWalletTools } from './UtxoWalletTools'
 
 export interface UtxoEngineState {
   processedPercent: number
@@ -86,7 +86,7 @@ export interface UtxoEngineState {
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
-  walletTools: UTXOPluginWalletTools
+  walletTools: UtxoWalletTools
   walletInfo: SafeWalletInfo
   processor: Processor
 }
@@ -95,13 +95,16 @@ export function makeUtxoEngineState(
   config: UtxoEngineStateConfig
 ): UtxoEngineState {
   const {
+    initOptions,
+    io,
+    options,
+    pluginState,
     pluginInfo,
-    walletInfo,
-    walletTools,
-    options: { emitter, log },
     processor,
-    pluginState
+    walletInfo,
+    walletTools
   } = config
+  const { emitter, log } = options
 
   const { walletFormats } = walletInfo.keys
 
@@ -178,6 +181,8 @@ export function makeUtxoEngineState(
 
   const serverStates = makeServerStates({
     engineEmitter: emitter,
+    initOptions,
+    io,
     log,
     pluginInfo,
     pluginState,
@@ -191,7 +196,7 @@ export function makeUtxoEngineState(
     emitter,
     taskCache,
     updateProgressRatio,
-    io: config.io,
+    io,
     log,
     serverStates,
     pluginState,
@@ -513,7 +518,7 @@ export function makeUtxoEngineState(
 interface CommonArgs {
   pluginInfo: PluginInfo
   walletInfo: SafeWalletInfo
-  walletTools: UTXOPluginWalletTools
+  walletTools: UtxoWalletTools
   processor: Processor
   emitter: EngineEmitter
   taskCache: TaskCache
@@ -686,7 +691,7 @@ interface TransactionChangedArgs {
   walletId: string
   tx: IProcessorTransaction
   emitter: EngineEmitter
-  walletTools: UTXOPluginWalletTools
+  walletTools: UtxoWalletTools
   pluginInfo: PluginInfo
   processor: Processor
 }
@@ -1079,7 +1084,7 @@ const updateTransactions = (
 }
 
 interface DeriveScriptAddressArgs {
-  walletTools: UTXOPluginWalletTools
+  walletTools: UtxoWalletTools
   engineInfo: EngineInfo
   processor: Processor
   format: CurrencyFormat

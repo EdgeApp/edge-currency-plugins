@@ -6,7 +6,7 @@ import { makeMemlet } from 'memlet'
 
 import { unixTime } from '../../../util/unixTime'
 import { AddressPath, ChangePath } from '../../plugin/types'
-import { makeBaselets } from './makeBaselets'
+import { makeBaselets } from './Baselets'
 import { addressPathToPrefix, TxIdByDate } from './Models/baselet'
 import {
   IAddress,

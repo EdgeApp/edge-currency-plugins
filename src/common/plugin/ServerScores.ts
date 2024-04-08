@@ -208,7 +208,7 @@ export class ServerScores {
   getServers(
     servers: ServerList,
     numServersWanted: number,
-    includePatterns: string[] = []
+    includePatterns: Array<string | RegExp> = []
   ): string[] {
     if (servers == null || Object.keys(servers).length === 0) {
       return []
@@ -236,7 +236,14 @@ export class ServerScores {
       const filter = (server: ServerInfo): boolean => {
         for (const pattern of includePatterns) {
           // make sure that the server URL starts with the required pattern
-          if (server.serverUrl.indexOf(pattern) === 0) return true
+          if (
+            typeof pattern === 'string' &&
+            server.serverUrl.indexOf(pattern) === 0
+          )
+            return true
+          // Or make sure that the server URL matches regex
+          if (pattern instanceof RegExp && pattern.test(server.serverUrl))
+            return true
         }
         return false
       }

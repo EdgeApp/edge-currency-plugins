@@ -21,15 +21,15 @@ import {
 import { filterUndefined } from '../../../util/filterUndefined'
 import { unixTime } from '../../../util/unixTime'
 import { makeFees } from '../../fees/makeFees'
-import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
-import { makeMetadata } from '../../plugin/makeMetadata'
+import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
+import { makeMetadata } from '../../plugin/Metadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
 import { upgradeMemos } from '../../upgradeMemos'
-import { makeProcessor } from '../db/makeProcessor'
 import {
   fromEdgeTransaction,
   toEdgeTransaction
 } from '../db/Models/ProcessorTransaction'
+import { makeProcessor } from '../db/Processor'
 import { IProcessorTransaction, IUTXO } from '../db/types'
 import { utxoFromProcessorTransactionInput } from '../db/util/utxo'
 import {
@@ -47,8 +47,6 @@ import {
 } from '../keymanager/keymanager'
 import { asMaybeInsufficientFundsErrorPlus } from '../keymanager/types'
 import { transactionSizeFromHex } from '../keymanager/utxopicker/utils'
-import { makeUtxoEngineState, transactionChanged } from './makeUtxoEngineState'
-import { makeUtxoWalletTools } from './makeUtxoWalletTools'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import {
   asUtxoSignMessageOtherParams,
@@ -63,6 +61,8 @@ import {
   pathToPurposeType,
   sumUtxos
 } from './utils'
+import { makeUtxoEngineState, transactionChanged } from './UtxoEngineState'
+import { makeUtxoWalletTools } from './UtxoWalletTools'
 
 export async function makeUtxoEngine(
   config: EngineConfig
