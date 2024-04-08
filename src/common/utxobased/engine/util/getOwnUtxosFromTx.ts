@@ -1,5 +1,5 @@
 import { EngineInfo } from '../../../plugin/types'
-import { Processor } from '../../db/makeProcessor'
+import { Processor } from '../../db/Processor'
 import { IProcessorTransaction, IUTXO } from '../../db/types'
 import { BIP43PurposeTypeEnum } from '../../keymanager/keymanager'
 import { getScriptTypeFromPurposeType, pathToPurposeType } from '../utils'

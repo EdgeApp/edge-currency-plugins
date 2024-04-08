@@ -3,10 +3,10 @@
 import { assert } from 'chai'
 import { describe, it } from 'mocha'
 
-import { ServerScores } from '../../../src/common/plugin/serverScores'
+import { ServerScores } from '../../../src/common/plugin/ServerScores'
 import { makeFakeLog } from '../../utils'
 
-describe(`ServerCache`, function () {
+describe(`ServerScores`, function () {
   const testLog = makeFakeLog()
   const callback = (_: string): void => {
     return

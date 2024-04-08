@@ -7,11 +7,11 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
-import { makeUtxoEngine } from '../utxobased/engine/makeUtxoEngine'
 import { asUtxoUserSettings } from '../utxobased/engine/types'
-import { makeCurrencyTools } from './makeCurrencyTools'
-import { makeEngineEmitter } from './makeEngineEmitter'
-import { makePluginState } from './pluginState'
+import { makeUtxoEngine } from '../utxobased/engine/UtxoEngine'
+import { makeCurrencyTools } from './CurrencyTools'
+import { makeEngineEmitter } from './EngineEmitter'
+import { makePluginState } from './PluginState'
 import { EngineConfig, PluginInfo } from './types'
 
 export function makeCurrencyPlugin(

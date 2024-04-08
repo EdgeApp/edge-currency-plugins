@@ -7,8 +7,8 @@ import { EdgeLog } from 'edge-core-js/types'
 import {
   EngineEmitter,
   EngineEvent
-} from '../../../src/common/plugin/makeEngineEmitter'
-import { makeMetadata, Metadata } from '../../../src/common/plugin/makeMetadata'
+} from '../../../src/common/plugin/EngineEmitter'
+import { makeMetadata, Metadata } from '../../../src/common/plugin/Metadata'
 import { makeFakeLog } from '../../utils'
 
 chai.should()

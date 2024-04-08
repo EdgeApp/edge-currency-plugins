@@ -1,6 +1,6 @@
 import { EdgeCorePluginOptions, EdgeCorePlugins } from 'edge-core-js/types'
 
-import { makeCurrencyPlugin } from './common/plugin/makeCurrencyPlugin'
+import { makeCurrencyPlugin } from './common/plugin/CurrencyPlugin'
 import { all } from './common/utxobased/info/all'
 
 const plugins: EdgeCorePlugins = {}

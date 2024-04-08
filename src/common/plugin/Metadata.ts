@@ -4,7 +4,7 @@ import { EdgeLog } from 'edge-core-js/types'
 import { makeMemlet } from 'memlet'
 
 import AwaitLock from '../utxobased/engine/await-lock'
-import { EngineEmitter, EngineEvent } from './makeEngineEmitter'
+import { EngineEmitter, EngineEvent } from './EngineEmitter'
 import { asLocalWalletMetadata, LocalWalletMetadata } from './types'
 import { removeItem } from './utils'
 

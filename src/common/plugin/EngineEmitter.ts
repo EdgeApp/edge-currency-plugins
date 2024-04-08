@@ -5,7 +5,7 @@ import {
 } from 'edge-core-js/types'
 import { EventEmitter } from 'events'
 
-import { SubscribeAddressResponse } from '../utxobased/network/BlockBookAPI'
+import { SubscribeAddressResponse } from '../utxobased/network/blockbookApi'
 
 export declare interface EngineEmitter {
   emit: ((

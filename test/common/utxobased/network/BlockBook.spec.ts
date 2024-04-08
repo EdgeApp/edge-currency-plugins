@@ -6,18 +6,18 @@ import WS from 'ws'
 import {
   EngineEmitter,
   EngineEvent
-} from '../../../../src/common/plugin/makeEngineEmitter'
+} from '../../../../src/common/plugin/EngineEmitter'
 import {
   BlockBook,
   makeBlockBook
 } from '../../../../src/common/utxobased/network/BlockBook'
-import { SubscribeAddressResponse } from '../../../../src/common/utxobased/network/BlockBookAPI'
+import { SubscribeAddressResponse } from '../../../../src/common/utxobased/network/blockbookApi'
 import Deferred from '../../../../src/common/utxobased/network/Deferred'
+import { WsTask } from '../../../../src/common/utxobased/network/Socket'
 import {
   SocketEmitter,
   SocketEvent
-} from '../../../../src/common/utxobased/network/MakeSocketEmitter'
-import { WsTask } from '../../../../src/common/utxobased/network/Socket'
+} from '../../../../src/common/utxobased/network/SocketEmitter'
 import { makeFakeLog } from '../../../utils'
 
 chai.should()

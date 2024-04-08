@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 
-import { makeUtxoWalletTools } from '../../../../src/common/utxobased/engine/makeUtxoWalletTools'
+import { makeUtxoWalletTools } from '../../../../src/common/utxobased/engine/UtxoWalletTools'
 import { info as pluginInfo } from '../../../../src/common/utxobased/info/bitcoin'
 
 describe('wallet tools tests', () => {

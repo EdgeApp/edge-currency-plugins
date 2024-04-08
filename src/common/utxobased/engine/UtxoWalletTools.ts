@@ -32,7 +32,7 @@ export interface WalletToolsConfig {
   publicKey: PublicKey
 }
 
-export interface UTXOPluginWalletTools {
+export interface UtxoWalletTools {
   getPubkey: (args: AddressPath) => string
 
   getScriptPubkey: (args: AddressPath) => ScriptPubkeyReturn
@@ -96,14 +96,14 @@ interface SignMessageArgs {
 
 export function makeUtxoWalletTools(
   config: WalletToolsConfig
-): UTXOPluginWalletTools {
+): UtxoWalletTools {
   const { pluginInfo, publicKey } = config
   const { engineInfo } = pluginInfo
   const { name: coin } = pluginInfo.coinInfo
 
   const xpubKeys = publicKey.publicKeys
 
-  const fns: UTXOPluginWalletTools = {
+  const fns: UtxoWalletTools = {
     getPubkey(args: AddressPath): string {
       if (xpubKeys[args.format] == null) {
         throw new Error(

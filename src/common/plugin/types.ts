@@ -25,8 +25,8 @@ import * as wif from 'wif'
 import { asIUTXO, IProcessorTransaction, IUTXO } from '../utxobased/db/types'
 import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
 import { UtxoPicker } from '../utxobased/keymanager/utxopicker'
-import { EngineEmitter } from './makeEngineEmitter'
-import { PluginState } from './pluginState'
+import { EngineEmitter } from './EngineEmitter'
+import { PluginState } from './PluginState'
 
 export type CurrencyFormat = ReturnType<typeof asCurrencyFormat>
 export const asCurrencyFormat = asValue('bip32', 'bip44', 'bip49', 'bip84')

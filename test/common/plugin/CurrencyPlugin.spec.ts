@@ -11,7 +11,7 @@ import { before, describe, it } from 'mocha'
 
 import edgeCorePlugins from '../../../src/index'
 import { testLog } from '../../util/testLog'
-import { fixtures } from './currencyPlugin.fixtures/index'
+import { fixtures } from './CurrencyPlugin.fixtures/index'
 
 describe('currencyPlugins.spec', () => {
   for (const fixture of fixtures) {

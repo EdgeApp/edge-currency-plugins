@@ -1,7 +1,7 @@
 import { Cleaner } from 'cleaners'
 import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 
-import { EngineEmitter, EngineEvent } from '../../plugin/makeEngineEmitter'
+import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
 import {
   addressMessage,
   AddressResponse,
@@ -20,10 +20,10 @@ import {
   SubscribeNewBlockResponse,
   transactionMessage,
   TransactionResponse
-} from './BlockBookAPI'
+} from './blockbookApi'
 import Deferred from './Deferred'
-import { SocketEmitter } from './MakeSocketEmitter'
 import { makeSocket, OnQueueSpaceCB } from './Socket'
+import { SocketEmitter } from './SocketEmitter'
 
 export type WatchAddressesCB = (
   response: SubscribeAddressResponse
