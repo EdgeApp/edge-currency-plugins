@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.6.0 (2024-04-09)
+
 - added: New fallback server engine info, starting with NOWNodes blockbook servers
 
 ## 2.5.4 (2024-01-26)
