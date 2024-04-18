@@ -52,7 +52,7 @@ export const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
-      uris: ['ltcbook.nownodes.io']
+      uris: ['https://ltcbook.nownodes.io']
     }
   ],
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],

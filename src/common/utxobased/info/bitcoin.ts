@@ -54,7 +54,7 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
-      uris: ['btcbook.nownodes.io']
+      uris: ['https://btcbook.nownodes.io']
     }
   ],
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],

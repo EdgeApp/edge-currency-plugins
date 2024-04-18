@@ -49,7 +49,7 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
-      uris: ['dashbook.nownodes.io']
+      uris: ['https://dashbook.nownodes.io']
     }
   ],
   formats: ['bip44', 'bip32'],
