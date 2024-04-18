@@ -9,10 +9,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'groestlcoin',
-  walletType: 'wallet:groestlcoin',
   currencyCode: 'GRS',
   displayName: 'Groestlcoin',
+  pluginId: 'groestlcoin',
+  walletType: 'wallet:groestlcoin',
+
   denominations: [
     { name: 'GRS', multiplier: '100000000', symbol: 'G' },
     { name: 'mGRS', multiplier: '100000', symbol: 'mG' }

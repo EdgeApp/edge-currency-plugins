@@ -5,10 +5,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'eboost',
-  walletType: 'wallet:eboost',
   currencyCode: 'EBST',
   displayName: 'eBoost',
+  pluginId: 'eboost',
+  walletType: 'wallet:eboost',
+
   denominations: [
     { name: 'EBST', multiplier: '100000000', symbol: 'EBST' },
     { name: 'mEBST', multiplier: '100000', symbol: 'mEBST' }

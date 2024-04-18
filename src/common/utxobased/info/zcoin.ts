@@ -6,10 +6,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'FIRO',
+  displayName: 'Firo',
   pluginId: 'zcoin',
   walletType: 'wallet:zcoin',
-  displayName: 'Firo',
-  currencyCode: 'FIRO',
+
   denominations: [
     { name: 'FIRO', multiplier: '100000000', symbol: 'ƒ' },
     { name: 'mFIRO', multiplier: '100000', symbol: 'mƒ' }

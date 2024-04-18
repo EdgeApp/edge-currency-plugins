@@ -7,10 +7,11 @@ import { memoInfo } from './commonInfo'
 import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'bitcoincashtestnet',
-  walletType: 'wallet:bitcoincashtestnet',
   currencyCode: 'TBCH',
   displayName: 'Bitcoin Cash',
+  pluginId: 'bitcoincashtestnet',
+  walletType: 'wallet:bitcoincashtestnet',
+
   denominations: [
     { name: 'TBCH', multiplier: '100000000', symbol: '₿' },
     { name: 'mTBCH', multiplier: '100000', symbol: 'm₿' },

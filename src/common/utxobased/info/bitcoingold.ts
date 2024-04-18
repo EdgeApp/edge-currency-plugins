@@ -6,10 +6,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'bitcoingold',
-  walletType: 'wallet:bitcoingold',
   currencyCode: 'BTG',
   displayName: 'Bitcoin Gold',
+  pluginId: 'bitcoingold',
+  walletType: 'wallet:bitcoingold',
+
   denominations: [
     { name: 'BTG', multiplier: '100000000', symbol: '₿' },
     { name: 'mBTG', multiplier: '100000', symbol: 'm₿' },

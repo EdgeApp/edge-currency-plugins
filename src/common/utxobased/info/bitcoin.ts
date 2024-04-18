@@ -6,10 +6,12 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'bitcoin',
-  walletType: 'wallet:bitcoin',
+  canReplaceByFee: true,
   currencyCode: 'BTC',
   displayName: 'Bitcoin',
+  pluginId: 'bitcoin',
+  walletType: 'wallet:bitcoin',
+
   denominations: [
     { name: 'BTC', multiplier: '100000000', symbol: '₿' },
     { name: 'mBTC', multiplier: '100000', symbol: 'm₿' },
@@ -29,7 +31,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
-  canReplaceByFee: true,
   customFeeTemplate: [
     {
       type: 'nativeAmount',

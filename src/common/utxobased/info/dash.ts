@@ -7,10 +7,11 @@ import { IProcessorTransaction } from '../db/types'
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'dash',
-  walletType: 'wallet:dash',
   currencyCode: 'DASH',
   displayName: 'Dash',
+  pluginId: 'dash',
+  walletType: 'wallet:dash',
+
   denominations: [
     { name: 'DASH', multiplier: '100000000', symbol: 'Ð' },
     { name: 'mDASH', multiplier: '100000', symbol: 'mÐ' }

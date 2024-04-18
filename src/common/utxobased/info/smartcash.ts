@@ -8,10 +8,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'smartcash',
-  walletType: 'wallet:smartcash',
   currencyCode: 'SMART',
   displayName: 'SmartCash',
+  pluginId: 'smartcash',
+  walletType: 'wallet:smartcash',
+
   denominations: [
     { name: 'SMART', multiplier: '100000000', symbol: 'S' },
     { name: 'mSMART', multiplier: '100000', symbol: 'mS' }

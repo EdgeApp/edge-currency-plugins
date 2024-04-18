@@ -5,10 +5,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'ravencoin',
-  walletType: 'wallet:ravencoin',
   currencyCode: 'RVN',
   displayName: 'Ravencoin',
+  pluginId: 'ravencoin',
+  walletType: 'wallet:ravencoin',
+
   denominations: [{ name: 'RVN', multiplier: '100000000', symbol: 'R' }],
 
   // Configuration options:

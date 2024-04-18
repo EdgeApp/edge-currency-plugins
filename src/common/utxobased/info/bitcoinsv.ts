@@ -13,10 +13,11 @@ import {
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'bitcoinsv',
-  walletType: 'wallet:bitcoinsv',
   currencyCode: 'BSV',
   displayName: 'Bitcoin SV',
+  pluginId: 'bitcoinsv',
+  walletType: 'wallet:bitcoinsv',
+
   denominations: [
     { name: 'BSV', multiplier: '100000000', symbol: '₿' },
     { name: 'mBSV', multiplier: '100000', symbol: 'm₿' },

@@ -6,10 +6,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'FTC',
+  displayName: 'Feathercoin',
   pluginId: 'feathercoin',
   walletType: 'wallet:feathercoin',
-  displayName: 'Feathercoin',
-  currencyCode: 'FTC',
+
   denominations: [
     { name: 'FTC', multiplier: '100000000', symbol: 'F' },
     { name: 'mFTC', multiplier: '100000', symbol: 'mF' }

@@ -5,10 +5,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'vertcoin',
-  walletType: 'wallet:vertcoin',
   currencyCode: 'VTC',
   displayName: 'Vertcoin',
+  pluginId: 'vertcoin',
+  walletType: 'wallet:vertcoin',
+
   denominations: [
     { name: 'VTC', multiplier: '100000000', symbol: 'V' },
     { name: 'mVTC', multiplier: '100000', symbol: 'mV' }

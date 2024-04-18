@@ -5,10 +5,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'ufo',
-  walletType: 'wallet:ufo',
   currencyCode: 'UFO',
   displayName: 'UFO',
+  pluginId: 'ufo',
+  walletType: 'wallet:ufo',
+
   denominations: [
     { name: 'UFO', multiplier: '100000000', symbol: 'Ʉ' },
     { name: 'kUFO', multiplier: '100000000000', symbol: 'kɄ' }

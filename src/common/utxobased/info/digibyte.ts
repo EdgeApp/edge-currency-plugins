@@ -5,10 +5,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'digibyte',
-  walletType: 'wallet:digibyte',
   currencyCode: 'DGB',
   displayName: 'DigiByte',
+  pluginId: 'digibyte',
+  walletType: 'wallet:digibyte',
+
   denominations: [
     { name: 'DGB', multiplier: '100000000', symbol: 'Ɗ' },
     { name: 'mDGB', multiplier: '100000', symbol: 'mƊ' }

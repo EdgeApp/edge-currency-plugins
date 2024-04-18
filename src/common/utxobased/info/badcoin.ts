@@ -4,10 +4,11 @@ import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'badcoin',
-  walletType: 'wallet:badcoin',
   currencyCode: 'BAD',
   displayName: 'Badcoin',
+  pluginId: 'badcoin',
+  walletType: 'wallet:badcoin',
+
   denominations: [
     { name: 'BAD', multiplier: '100000000', symbol: 'BAD' },
     { name: 'mBAD', multiplier: '100000', symbol: 'mBAD' }

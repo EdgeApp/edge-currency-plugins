@@ -6,10 +6,12 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'litecoin',
-  walletType: 'wallet:litecoin',
+  canReplaceByFee: false,
   currencyCode: 'LTC',
   displayName: 'Litecoin',
+  pluginId: 'litecoin',
+  walletType: 'wallet:litecoin',
+
   denominations: [
     { name: 'LTC', multiplier: '100000000', symbol: 'Ł' },
     { name: 'mLTC', multiplier: '100000', symbol: 'mŁ' }
@@ -27,7 +29,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
-  canReplaceByFee: false,
   customFeeTemplate: [
     {
       type: 'nativeAmount',

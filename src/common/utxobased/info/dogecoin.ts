@@ -6,10 +6,11 @@ import { memoInfo } from './commonInfo'
 import { makeDogeUtxoPicker } from './utxoPickers/dogeUtxoPicker'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'dogecoin',
-  walletType: 'wallet:dogecoin',
   currencyCode: 'DOGE',
   displayName: 'Dogecoin',
+  pluginId: 'dogecoin',
+  walletType: 'wallet:dogecoin',
+
   denominations: [{ name: 'DOGE', multiplier: '100000000', symbol: 'Ð' }],
 
   // Configuration options:

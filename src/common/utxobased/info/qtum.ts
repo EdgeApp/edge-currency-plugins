@@ -5,10 +5,11 @@ import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalcul
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'qtum',
-  walletType: 'wallet:qtum',
   currencyCode: 'QTUM',
   displayName: 'Qtum',
+  pluginId: 'qtum',
+  walletType: 'wallet:qtum',
+
   denominations: [{ name: 'QTUM', multiplier: '100000000', symbol: 'Q' }],
 
   // Configuration options:

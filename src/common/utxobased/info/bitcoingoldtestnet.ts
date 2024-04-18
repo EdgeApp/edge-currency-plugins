@@ -5,10 +5,11 @@ import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { memoInfo } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'bitcoingoldtestnet',
-  walletType: 'wallet:bitcoingoldtestnet',
   currencyCode: 'TBTG',
   displayName: 'Bitcoin Gold',
+  pluginId: 'bitcoingoldtestnet',
+  walletType: 'wallet:bitcoingoldtestnet',
+
   denominations: [
     { name: 'TBTG', multiplier: '100000000', symbol: '₿' },
     { name: 'mTBTG', multiplier: '100000', symbol: 'm₿' },

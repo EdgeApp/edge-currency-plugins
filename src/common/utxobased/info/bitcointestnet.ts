@@ -5,10 +5,12 @@ import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { memoInfo } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  pluginId: 'bitcointestnet',
-  walletType: 'wallet:bitcointestnet',
+  canReplaceByFee: true,
   currencyCode: 'TESTBTC',
   displayName: 'Bitcoin Testnet',
+  pluginId: 'bitcointestnet',
+  walletType: 'wallet:bitcointestnet',
+
   denominations: [
     { name: 'TESTBTC', multiplier: '100000000', symbol: '₿' },
     { name: 'mTESTBTC', multiplier: '100000', symbol: 'm₿' },
@@ -22,7 +24,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: ['wss://tbtc1.trezor.io', 'wss://tbtc2.trezor.io'],
     enableCustomServers: false
   },
-  canReplaceByFee: true,
   customFeeTemplate: [
     {
       type: 'nativeAmount',
