@@ -12,6 +12,15 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'litecoin',
   walletType: 'wallet:litecoin',
 
+  // Explorers:
+  blockExplorer: 'https://blockchair.com/litecoin/block/%s',
+  addressExplorer: 'https://blockchair.com/litecoin/address/%s',
+  transactionExplorer: 'https://blockchair.com/litecoin/transaction/%s',
+
+  // Images:
+  symbolImage: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
+
   denominations: [
     { name: 'LTC', multiplier: '100000000', symbol: 'Ł' },
     { name: 'mLTC', multiplier: '100000', symbol: 'mŁ' }
@@ -38,15 +47,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  blockExplorer: 'https://blockchair.com/litecoin/block/%s',
-  addressExplorer: 'https://blockchair.com/litecoin/address/%s',
-  transactionExplorer: 'https://blockchair.com/litecoin/transaction/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
 
   // Deprecated:
   metaTokens: []

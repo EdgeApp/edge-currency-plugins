@@ -11,6 +11,15 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'feathercoin',
   walletType: 'wallet:feathercoin',
 
+  // Explorers:
+  addressExplorer: 'https://fsight.chain.tips/address/%s',
+  blockExplorer: 'https://fsight.chain.tips/block/%s',
+  transactionExplorer: 'https://fsight.chain.tips/tx/%s',
+
+  // Images:
+  symbolImage: `${IMAGE_SERVER_URL}/feathercoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/feathercoin-logo-solo-64.png`,
+
   denominations: [
     { name: 'FTC', multiplier: '100000000', symbol: 'F' },
     { name: 'mFTC', multiplier: '100000', symbol: 'mF' }
@@ -31,15 +40,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://fsight.chain.tips/address/%s',
-  blockExplorer: 'https://fsight.chain.tips/block/%s',
-  transactionExplorer: 'https://fsight.chain.tips/tx/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/feathercoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/feathercoin-logo-solo-64.png`,
 
   // Deprecated:
   metaTokens: []

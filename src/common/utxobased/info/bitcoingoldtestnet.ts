@@ -10,6 +10,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoingoldtestnet',
   walletType: 'wallet:bitcoingoldtestnet',
 
+  // Explorers:
+  addressExplorer: 'https://explorer.bitcoingold.org/insight/address/%s',
+  blockExplorer: 'https://explorer.bitcoingold.org/insight/block/%s',
+  transactionExplorer: 'https://explorer.bitcoingold.org/insight/tx/%s',
+
   denominations: [
     { name: 'TBTG', multiplier: '100000000', symbol: '₿' },
     { name: 'mTBTG', multiplier: '100000', symbol: 'm₿' },
@@ -23,11 +28,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     enableCustomServers: false
   },
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://explorer.bitcoingold.org/insight/address/%s',
-  blockExplorer: 'https://explorer.bitcoingold.org/insight/block/%s',
-  transactionExplorer: 'https://explorer.bitcoingold.org/insight/tx/%s',
 
   // Deprecated:
   metaTokens: []

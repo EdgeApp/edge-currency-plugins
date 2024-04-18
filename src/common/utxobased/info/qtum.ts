@@ -10,6 +10,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'qtum',
   walletType: 'wallet:qtum',
 
+  // Explorers:
+  addressExplorer: 'https://explorer.qtum.org/address/%s',
+  blockExplorer: 'https://explorer.qtum.org/block/%s',
+  transactionExplorer: 'https://explorer.qtum.org/tx/%s',
+
   denominations: [{ name: 'QTUM', multiplier: '100000000', symbol: 'Q' }],
 
   // Configuration options:
@@ -27,11 +32,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://explorer.qtum.org/address/%s',
-  blockExplorer: 'https://explorer.qtum.org/block/%s',
-  transactionExplorer: 'https://explorer.qtum.org/tx/%s',
 
   // Deprecated:
   metaTokens: []

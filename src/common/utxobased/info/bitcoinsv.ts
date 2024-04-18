@@ -18,6 +18,15 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoinsv',
   walletType: 'wallet:bitcoinsv',
 
+  // Explorers:
+  blockExplorer: 'https://whatsonchain.com/block/%s',
+  addressExplorer: 'https://whatsonchain.com/address/%s',
+  transactionExplorer: 'https://whatsonchain.com/tx/%s',
+
+  // Images:
+  symbolImage: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
+
   denominations: [
     { name: 'BSV', multiplier: '100000000', symbol: '₿' },
     { name: 'mBSV', multiplier: '100000', symbol: 'm₿' },
@@ -39,15 +48,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  blockExplorer: 'https://whatsonchain.com/block/%s',
-  addressExplorer: 'https://whatsonchain.com/address/%s',
-  transactionExplorer: 'https://whatsonchain.com/tx/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
 
   // Deprecated:
   metaTokens: []

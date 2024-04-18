@@ -10,6 +10,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'ravencoin',
   walletType: 'wallet:ravencoin',
 
+  // Explorers:
+  addressExplorer: 'https://ravencoin.network/address/%s',
+  blockExplorer: 'https://ravencoin.network/block/%s',
+  transactionExplorer: 'https://ravencoin.network/tx/%s',
+
   denominations: [{ name: 'RVN', multiplier: '100000000', symbol: 'R' }],
 
   // Configuration options:
@@ -27,11 +32,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://ravencoin.network/address/%s',
-  blockExplorer: 'https://ravencoin.network/block/%s',
-  transactionExplorer: 'https://ravencoin.network/tx/%s',
 
   // Deprecated:
   metaTokens: []

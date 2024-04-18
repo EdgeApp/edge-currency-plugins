@@ -12,6 +12,15 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoin',
   walletType: 'wallet:bitcoin',
 
+  // Explorers:
+  blockExplorer: 'https://blockchair.com/bitcoin/block/%s',
+  addressExplorer: 'https://blockchair.com/bitcoin/address/%s',
+  transactionExplorer: 'https://blockchair.com/bitcoin/transaction/%s',
+
+  // Images:
+  symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
+
   denominations: [
     { name: 'BTC', multiplier: '100000000', symbol: '₿' },
     { name: 'mBTC', multiplier: '100000', symbol: 'm₿' },
@@ -40,15 +49,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  blockExplorer: 'https://blockchair.com/bitcoin/block/%s',
-  addressExplorer: 'https://blockchair.com/bitcoin/address/%s',
-  transactionExplorer: 'https://blockchair.com/bitcoin/transaction/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
 
   // Deprecated:
   metaTokens: []

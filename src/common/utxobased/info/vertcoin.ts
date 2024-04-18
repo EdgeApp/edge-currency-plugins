@@ -10,6 +10,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'vertcoin',
   walletType: 'wallet:vertcoin',
 
+  // Explorers:
+  addressExplorer: 'https://insight.vertcoin.org/address/%s',
+  blockExplorer: 'https://insight.vertcoin.org/block/%s',
+  transactionExplorer: 'https://insight.vertcoin.org/tx/%s',
+
   denominations: [
     { name: 'VTC', multiplier: '100000000', symbol: 'V' },
     { name: 'mVTC', multiplier: '100000', symbol: 'mV' }
@@ -36,11 +41,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://insight.vertcoin.org/address/%s',
-  blockExplorer: 'https://insight.vertcoin.org/block/%s',
-  transactionExplorer: 'https://insight.vertcoin.org/tx/%s',
 
   // Deprecated:
   metaTokens: []

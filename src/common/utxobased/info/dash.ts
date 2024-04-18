@@ -12,6 +12,12 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'dash',
   walletType: 'wallet:dash',
 
+  // Explorers:
+  addressExplorer: 'https://blockchair.com/dash/address/%s?from=edgeapp',
+  blockExplorer: 'https://blockchair.com/dash/block/%s?from=edgeapp',
+  transactionExplorer:
+    'https://blockchair.com/dash/transaction/%s?from=edgeapp',
+
   denominations: [
     { name: 'DASH', multiplier: '100000000', symbol: 'Ð' },
     { name: 'mDASH', multiplier: '100000', symbol: 'mÐ' }
@@ -38,12 +44,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://blockchair.com/dash/address/%s?from=edgeapp',
-  blockExplorer: 'https://blockchair.com/dash/block/%s?from=edgeapp',
-  transactionExplorer:
-    'https://blockchair.com/dash/transaction/%s?from=edgeapp',
 
   // Deprecated:
   metaTokens: []

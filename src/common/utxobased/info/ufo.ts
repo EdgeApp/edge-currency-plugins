@@ -10,6 +10,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'ufo',
   walletType: 'wallet:ufo',
 
+  // Explorers:
+  addressExplorer: 'https://explorer.ufobject.com/address/%s',
+  blockExplorer: 'https://explorer.ufobject.com/block/%s',
+  transactionExplorer: 'https://explorer.ufobject.com/tx/%s',
+
   denominations: [
     { name: 'UFO', multiplier: '100000000', symbol: 'Ʉ' },
     { name: 'kUFO', multiplier: '100000000000', symbol: 'kɄ' }
@@ -30,11 +35,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://explorer.ufobject.com/address/%s',
-  blockExplorer: 'https://explorer.ufobject.com/block/%s',
-  transactionExplorer: 'https://explorer.ufobject.com/tx/%s',
 
   // Deprecated:
   metaTokens: []

@@ -14,6 +14,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'groestlcoin',
   walletType: 'wallet:groestlcoin',
 
+  // Explorers:
+  addressExplorer:
+    'https://blockchair.com/groestlcoin/address/%s?from=edgeapp?from=edgeapp',
+  blockExplorer: 'https://blockchair.com/groestlcoin/block/%s?from=edgeapp',
+  transactionExplorer:
+    'https://blockchair.com/groestlcoin/transaction/%s?from=edgeapp',
+
   denominations: [
     { name: 'GRS', multiplier: '100000000', symbol: 'G' },
     { name: 'mGRS', multiplier: '100000', symbol: 'mG' }
@@ -34,13 +41,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer:
-    'https://blockchair.com/groestlcoin/address/%s?from=edgeapp?from=edgeapp',
-  blockExplorer: 'https://blockchair.com/groestlcoin/block/%s?from=edgeapp',
-  transactionExplorer:
-    'https://blockchair.com/groestlcoin/transaction/%s?from=edgeapp',
 
   // Deprecated:
   metaTokens: []

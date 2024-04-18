@@ -9,6 +9,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'badcoin',
   walletType: 'wallet:badcoin',
 
+  // Explorers:
+  addressExplorer: 'https://www.blockingbad.com/address/%s',
+  blockExplorer: 'https://www.blockingbad.com/block/%s',
+  transactionExplorer: 'https://www.blockingbad.com/tx/%s',
+
   denominations: [
     { name: 'BAD', multiplier: '100000000', symbol: 'BAD' },
     { name: 'mBAD', multiplier: '100000', symbol: 'mBAD' }
@@ -29,11 +34,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://www.blockingbad.com/address/%s',
-  blockExplorer: 'https://www.blockingbad.com/block/%s',
-  transactionExplorer: 'https://www.blockingbad.com/tx/%s',
 
   // Deprecated:
   metaTokens: []

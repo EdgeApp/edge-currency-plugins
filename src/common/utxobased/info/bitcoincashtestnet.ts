@@ -12,6 +12,16 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcoincashtestnet',
   walletType: 'wallet:bitcoincashtestnet',
 
+  // Explorers:
+  blockExplorer: 'https://blockchair.com/bitcoin-cash/block/%s',
+  addressExplorer: 'https://blockchair.com/bitcoin-cash/address/%s',
+  transactionExplorer: 'https://blockchair.com/bitcoin-cash/transaction/%s',
+  xpubExplorer: 'https://blockchair.com/bitcoin-cash/xpub/%s',
+
+  // Images:
+  symbolImage: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
+
   denominations: [
     { name: 'TBCH', multiplier: '100000000', symbol: '₿' },
     { name: 'mTBCH', multiplier: '100000', symbol: 'm₿' },
@@ -25,16 +35,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     enableCustomServers: false
   },
   ...memoInfo,
-
-  // Explorers:
-  blockExplorer: 'https://blockchair.com/bitcoin-cash/block/%s',
-  addressExplorer: 'https://blockchair.com/bitcoin-cash/address/%s',
-  transactionExplorer: 'https://blockchair.com/bitcoin-cash/transaction/%s',
-  xpubExplorer: 'https://blockchair.com/bitcoin-cash/xpub/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
 
   // Deprecated:
   metaTokens: []

@@ -10,6 +10,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'eboost',
   walletType: 'wallet:eboost',
 
+  // Explorers:
+  addressExplorer: 'https://www.blockexperts.com/ebst/address/%s',
+  blockExplorer: 'https://www.blockexperts.com/ebst/hash/%s',
+  transactionExplorer: 'https://www.blockexperts.com/ebst/tx/%s',
+
   denominations: [
     { name: 'EBST', multiplier: '100000000', symbol: 'EBST' },
     { name: 'mEBST', multiplier: '100000', symbol: 'mEBST' }
@@ -30,11 +35,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://www.blockexperts.com/ebst/address/%s',
-  blockExplorer: 'https://www.blockexperts.com/ebst/hash/%s',
-  transactionExplorer: 'https://www.blockexperts.com/ebst/tx/%s',
 
   // Deprecated:
   metaTokens: []

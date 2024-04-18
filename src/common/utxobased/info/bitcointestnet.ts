@@ -11,6 +11,15 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'bitcointestnet',
   walletType: 'wallet:bitcointestnet',
 
+  // Explorers:
+  blockExplorer: 'https://blockchair.com/bitcoin/testnet/block/%s',
+  addressExplorer: 'https://blockchair.com/bitcoin/testnet/address/%s',
+  transactionExplorer: 'https://blockchair.com/bitcoin/testnet/transaction/%s',
+
+  // Images:
+  symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
+
   denominations: [
     { name: 'TESTBTC', multiplier: '100000000', symbol: '₿' },
     { name: 'mTESTBTC', multiplier: '100000', symbol: 'm₿' },
@@ -33,15 +42,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  blockExplorer: 'https://blockchair.com/bitcoin/testnet/block/%s',
-  addressExplorer: 'https://blockchair.com/bitcoin/testnet/address/%s',
-  transactionExplorer: 'https://blockchair.com/bitcoin/testnet/transaction/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
 
   // Deprecated:
   metaTokens: []

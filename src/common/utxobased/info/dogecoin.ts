@@ -11,6 +11,12 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'dogecoin',
   walletType: 'wallet:dogecoin',
 
+  // Explorers:
+  addressExplorer: 'https://blockchair.com/dogecoin/address/%s?from=edgeapp',
+  blockExplorer: 'https://blockchair.com/dogecoin/block/%s?from=edgeapp',
+  transactionExplorer:
+    'https://blockchair.com/dogecoin/transaction/%s?from=edgeapp',
+
   denominations: [{ name: 'DOGE', multiplier: '100000000', symbol: 'Ð' }],
 
   // Configuration options:
@@ -34,12 +40,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://blockchair.com/dogecoin/address/%s?from=edgeapp',
-  blockExplorer: 'https://blockchair.com/dogecoin/block/%s?from=edgeapp',
-  transactionExplorer:
-    'https://blockchair.com/dogecoin/transaction/%s?from=edgeapp',
 
   // Deprecated:
   metaTokens: []

@@ -10,6 +10,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'digibyte',
   walletType: 'wallet:digibyte',
 
+  // Explorers:
+  addressExplorer: 'https://digiexplorer.info/address/%s',
+  blockExplorer: 'https://digiexplorer.info/block/%s',
+  transactionExplorer: 'https://digiexplorer.info/tx/%s',
+
   denominations: [
     { name: 'DGB', multiplier: '100000000', symbol: 'Ɗ' },
     { name: 'mDGB', multiplier: '100000', symbol: 'mƊ' }
@@ -30,11 +35,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://digiexplorer.info/address/%s',
-  blockExplorer: 'https://digiexplorer.info/block/%s',
-  transactionExplorer: 'https://digiexplorer.info/tx/%s',
 
   // Deprecated:
   metaTokens: []

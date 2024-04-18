@@ -11,6 +11,15 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'zcoin',
   walletType: 'wallet:zcoin',
 
+  // Explorers:
+  addressExplorer: 'https://insight.zcoin.io/address/%s',
+  blockExplorer: 'https://insight.zcoin.io/block/%s',
+  transactionExplorer: 'https://insight.zcoin.io/tx/%s',
+
+  // Images:
+  symbolImage: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
+
   denominations: [
     { name: 'FIRO', multiplier: '100000000', symbol: 'ƒ' },
     { name: 'mFIRO', multiplier: '100000', symbol: 'mƒ' }
@@ -31,15 +40,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://insight.zcoin.io/address/%s',
-  blockExplorer: 'https://insight.zcoin.io/block/%s',
-  transactionExplorer: 'https://insight.zcoin.io/tx/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
 
   // Deprecated:
   metaTokens: []
