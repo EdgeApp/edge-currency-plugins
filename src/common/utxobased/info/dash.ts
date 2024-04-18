@@ -4,11 +4,17 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import { IProcessorTransaction } from '../db/types'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'DASH',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'Dash',
+  memoOptions: utxoMemoOptions,
   pluginId: 'dash',
   walletType: 'wallet:dash',
 
@@ -23,7 +29,8 @@ const currencyInfo: EdgeCurrencyInfo = {
     { name: 'mDASH', multiplier: '100000', symbol: 'mÐ' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
@@ -35,17 +42,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

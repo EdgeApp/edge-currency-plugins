@@ -2,11 +2,17 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'UFO',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'UFO',
+  memoOptions: utxoMemoOptions,
   pluginId: 'ufo',
   walletType: 'wallet:ufo',
 
@@ -20,23 +26,13 @@ const currencyInfo: EdgeCurrencyInfo = {
     { name: 'kUFO', multiplier: '100000000000', symbol: 'kɄ' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: ['wss://blockbook.ufobject.com'],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

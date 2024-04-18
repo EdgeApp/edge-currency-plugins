@@ -2,11 +2,17 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'RVN',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'Ravencoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'ravencoin',
   walletType: 'wallet:ravencoin',
 
@@ -17,23 +23,13 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   denominations: [{ name: 'RVN', multiplier: '100000000', symbol: 'R' }],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: ['wss://blockbook.ravencoin.org'],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

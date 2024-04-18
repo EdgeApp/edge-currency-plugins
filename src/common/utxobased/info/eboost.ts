@@ -2,11 +2,17 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'EBST',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'eBoost',
+  memoOptions: utxoMemoOptions,
   pluginId: 'eboost',
   walletType: 'wallet:eboost',
 
@@ -20,23 +26,13 @@ const currencyInfo: EdgeCurrencyInfo = {
     { name: 'mEBST', multiplier: '100000', symbol: 'mEBST' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

@@ -3,11 +3,17 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIRO',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'Firo',
+  memoOptions: utxoMemoOptions,
   pluginId: 'zcoin',
   walletType: 'wallet:zcoin',
 
@@ -25,23 +31,13 @@ export const currencyInfo: EdgeCurrencyInfo = {
     { name: 'mFIRO', multiplier: '100000', symbol: 'mƒ' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: ['wss://blockbook.firo.org'],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

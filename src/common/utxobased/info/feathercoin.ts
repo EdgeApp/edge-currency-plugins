@@ -3,11 +3,17 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FTC',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'Feathercoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'feathercoin',
   walletType: 'wallet:feathercoin',
 
@@ -25,23 +31,13 @@ export const currencyInfo: EdgeCurrencyInfo = {
     { name: 'mFTC', multiplier: '100000', symbol: 'mF' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: ['wss://blockbook.feathercoin.com'],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

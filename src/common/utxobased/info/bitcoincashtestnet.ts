@@ -3,12 +3,18 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'TBCH',
   displayName: 'Bitcoin Cash',
+  memoOptions: utxoMemoOptions,
+  customFeeTemplate: utxoCustomFeeTemplate,
   pluginId: 'bitcoincashtestnet',
   walletType: 'wallet:bitcoincashtestnet',
 
@@ -28,15 +34,13 @@ const currencyInfo: EdgeCurrencyInfo = {
     { name: 'cash', multiplier: '100', symbol: 'ƀ' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [],
     enableCustomServers: false
   },
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

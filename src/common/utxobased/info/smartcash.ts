@@ -5,11 +5,17 @@ import * as wifsmart from 'wif-smart'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'SMART',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'SmartCash',
+  memoOptions: utxoMemoOptions,
   pluginId: 'smartcash',
   walletType: 'wallet:smartcash',
 
@@ -23,23 +29,13 @@ const currencyInfo: EdgeCurrencyInfo = {
     { name: 'mSMART', multiplier: '100000', symbol: 'mS' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

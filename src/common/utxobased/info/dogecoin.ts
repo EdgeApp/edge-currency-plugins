@@ -2,12 +2,18 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 import { makeDogeUtxoPicker } from './utxoPickers/dogeUtxoPicker'
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'DOGE',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'Dogecoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'dogecoin',
   walletType: 'wallet:dogecoin',
 
@@ -19,7 +25,8 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   denominations: [{ name: 'DOGE', multiplier: '100000000', symbol: 'Ð' }],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
@@ -31,17 +38,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

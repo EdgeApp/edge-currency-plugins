@@ -10,11 +10,17 @@ import {
   AddressTypeEnum,
   scriptPubkeyToAddress
 } from '../keymanager/keymanager'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'BSV',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'Bitcoin SV',
+  memoOptions: utxoMemoOptions,
   pluginId: 'bitcoinsv',
   walletType: 'wallet:bitcoinsv',
 
@@ -33,23 +39,13 @@ const currencyInfo: EdgeCurrencyInfo = {
     { name: 'cash', multiplier: '100', symbol: 'ƀ' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: ['wss://blockbook.siftbitcoin.com:9146'],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

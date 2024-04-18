@@ -2,12 +2,18 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'TESTBTC',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'Bitcoin Testnet',
+  memoOptions: utxoMemoOptions,
   pluginId: 'bitcointestnet',
   walletType: 'wallet:bitcointestnet',
 
@@ -27,23 +33,13 @@ export const currencyInfo: EdgeCurrencyInfo = {
     { name: 'sats', multiplier: '1', symbol: 's' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: ['wss://tbtc1.trezor.io', 'wss://tbtc2.trezor.io'],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 

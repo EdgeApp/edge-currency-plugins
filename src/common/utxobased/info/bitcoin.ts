@@ -3,12 +3,18 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'BTC',
+  customFeeTemplate: utxoCustomFeeTemplate,
   displayName: 'Bitcoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'bitcoin',
   walletType: 'wallet:bitcoin',
 
@@ -28,7 +34,8 @@ const currencyInfo: EdgeCurrencyInfo = {
     { name: 'sats', multiplier: '1', symbol: 's' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
@@ -40,17 +47,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Deprecated:
   metaTokens: []
 }
 
