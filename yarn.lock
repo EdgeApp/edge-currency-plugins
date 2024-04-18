@@ -3121,10 +3121,10 @@ ecc-jsbn@~0.1.1:
     typeforce "^1.18.0"
     wif "^2.0.6"
 
-edge-core-js@^1.14.0:
-  version "1.14.0"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-1.14.0.tgz#16569cf6a24b50e26e0105eca554bd041ce15a01"
-  integrity sha512-P2yGTyu4eqoFUHFnrmkemxJrFFezql+cL2ZZ01JDyRJFgeAwy9zlEmg1Aj4IgOq8hzoNUFTd68fKTVPZZRDKEA==
+edge-core-js@^2.5.0:
+  version "2.5.0"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-2.5.0.tgz#9dc013c4f59a7a3fb1c88880eb600c4ef3e44e4f"
+  integrity sha512-sY0lJDIECanLx/muNGRXz3BUcfd3c76gCFA2BZu/4coE2O5o5GK4QnNB64uKPw6XBNrLfDhP1IcrclHDDgcOUQ==
   dependencies:
     aes-js "^3.1.0"
     base-x "^4.0.0"

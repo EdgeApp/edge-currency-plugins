@@ -1,16 +1,17 @@
 import { Cleaner } from 'cleaners'
-import { InsufficientFundsError } from 'edge-core-js/types'
+import { EdgeTokenId, InsufficientFundsError } from 'edge-core-js/types'
 
 interface InsufficientFundsErrorOptsPlus {
   // The currency we need more of:
-  currencyCode?: string
+  tokenId: EdgeTokenId
   // If we don't have enough funds for a token send:
   networkFee?: string
+
   networkFeeShortage?: string
 }
 export class InsufficientFundsErrorPlus extends InsufficientFundsError {
   networkFeeShortage?: string
-  constructor(opts: InsufficientFundsErrorOptsPlus = {}) {
+  constructor(opts: InsufficientFundsErrorOptsPlus) {
     super(opts)
     const { networkFeeShortage } = opts
     this.networkFeeShortage = networkFeeShortage

@@ -1078,7 +1078,7 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
     // This is how much fee is needed to validate the spend
     const feeDelta = result.fee - (inputsValue - targetsValue)
     throw new InsufficientFundsErrorPlus({
-      currencyCode: args.currencyCode,
+      tokenId: null,
       networkFee: result.fee.toString(),
       networkFeeShortage: feeDelta.toString()
     })

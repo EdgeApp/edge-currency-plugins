@@ -79,7 +79,7 @@
     "base-x": "^4.0.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "edge-core-js": "^1.14.0",
+    "edge-core-js": "^2.5.0",
     "eslint": "^7.14.0",
     "eslint-config-standard-kit": "0.15.1",
     "eslint-plugin-import": "^2.22.1",

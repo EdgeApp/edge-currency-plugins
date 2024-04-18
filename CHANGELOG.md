@@ -5,6 +5,7 @@
 - added: Added blockbook-nownode server configs to BTC, BCH, DASH, DGB, GRS, LTC, and FIRO
 - added: Support for ElectrumX server WebSocket connections under 'electrumws(s):' protocol scheme.
 - added: Query for UTXO data from ElectrumX servers (sans transaction data).
+- changed: Upgrade edge-core-js dependency to v2
 
 ## 2.6.2 (2024-04-24)
 

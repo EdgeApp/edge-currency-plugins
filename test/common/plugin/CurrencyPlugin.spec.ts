@@ -25,6 +25,7 @@ describe('currencyPlugins.spec', () => {
     const fakeIo = makeFakeIo()
     const pluginOpts: EdgeCorePluginOptions = {
       initOptions: {},
+      infoPayload: {},
       io: {
         ...fakeIo,
         random: () => Uint8Array.from(fixture.key)
