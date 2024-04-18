@@ -1,6 +1,5 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import {
@@ -22,10 +21,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
   blockExplorer: 'https://blockchair.com/litecoin/block/%s',
   addressExplorer: 'https://blockchair.com/litecoin/address/%s',
   transactionExplorer: 'https://blockchair.com/litecoin/transaction/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
 
   denominations: [
     { name: 'LTC', multiplier: '100000000', symbol: 'Ł' },

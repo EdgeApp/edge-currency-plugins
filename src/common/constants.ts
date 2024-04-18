@@ -1,4 +1,3 @@
-export const IMAGE_SERVER_URL = 'https://content.edge.app'
 export const INFO_SERVER_URI = 'https://info1.edge.app'
 
 // Fees
