@@ -157,12 +157,17 @@ export async function makeProcessor(
     },
 
     async dumpData(): Promise<DumpDataReturn[]> {
-      const allBases = Object.values(baselets.all)
+      type AllBases = typeof baselets.all
+      const allBases: Array<AllBases[keyof AllBases]> = Object.values(
+        baselets.all
+      )
       return await Promise.all(
-        allBases.map(async base => ({
-          databaseName: base.databaseName,
-          data: (await base.dumpData('')) as unknown
-        }))
+        allBases.map(async base => {
+          return {
+            databaseName: base.databaseName,
+            data: (await base.dumpData()) as unknown
+          }
+        })
       )
     },
 
