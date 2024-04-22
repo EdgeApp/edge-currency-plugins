@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.6.1 (2024-04-22)
+
 - fixed: Missing `scriptPubkeyByPath` processor data from wallet data dump returned by `dumpData`
 - fixed: Prevent wallet processor data corruption ("Missing processor address" error)
 
