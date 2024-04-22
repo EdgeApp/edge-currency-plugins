@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: Missing `scriptPubkeyByPath` processor data from wallet data dump returned by `dumpData`
+- fixed: Prevent wallet processor data corruption ("Missing processor address" error)
+
 ## 2.6.0 (2024-04-09)
 
 - added: New fallback server engine info, starting with NOWNodes blockbook servers

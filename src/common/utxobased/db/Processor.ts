@@ -157,12 +157,17 @@ export async function makeProcessor(
     },
 
     async dumpData(): Promise<DumpDataReturn[]> {
-      const allBases = Object.values(baselets.all)
+      type AllBases = typeof baselets.all
+      const allBases: Array<AllBases[keyof AllBases]> = Object.values(
+        baselets.all
+      )
       return await Promise.all(
-        allBases.map(async base => ({
-          databaseName: base.databaseName,
-          data: (await base.dumpData('')) as unknown
-        }))
+        allBases.map(async base => {
+          return {
+            databaseName: base.databaseName,
+            data: (await base.dumpData()) as unknown
+          }
+        })
       )
     },
 
@@ -399,6 +404,15 @@ export async function makeProcessor(
 
     async saveAddress(address: IAddress): Promise<void> {
       await baselets.address(async tables => {
+        // This variable is used to update the scriptPubkeyByPath table.
+        // The path table must be written after the address table because the
+        // path table is an index of the address table.
+        // This variable acts as a catch for that update to be done after the
+        // address table is written.
+        let indexTableUpdate:
+          | { path: AddressPath; scriptPubkey: string }
+          | undefined
+
         const [existingAddress] = await tables.addressByScriptPubkey.query('', [
           address.scriptPubkey
         ])
@@ -415,14 +429,14 @@ export async function makeProcessor(
               'Attempted to save address with an existing path, but different script pubkey'
             )
 
-          await tables.scriptPubkeyByPath.insert(
-            addressPathToPrefix(address.path),
-            address.path.addressIndex,
-            address.scriptPubkey
-          )
+          indexTableUpdate = {
+            path: address.path,
+            scriptPubkey: address.scriptPubkey
+          }
 
-          // check if this address is used and if so, whether it has a higher last used index
-          if (address.used || (existingAddress?.used ?? false)) {
+          // check if this address is used and if so, whether it has a higher
+          // last used index
+          if (address.used || existingAddress?.used === true) {
             let [lastUsed] = await tables.lastUsedByFormatPath.query('', [
               addressPathToPrefix(address.path)
             ])
@@ -438,6 +452,7 @@ export async function makeProcessor(
           }
         }
 
+        // Update routine:
         if (existingAddress != null) {
           // Only update the lastQueriedBlockHeight on the address if one was given and is greater than the existing value
           if (
@@ -463,16 +478,21 @@ export async function makeProcessor(
             existingAddress.balance = address.balance
           }
 
-          // Only update the path field if one was given and currently does not have one
-          // NOTE: Addresses can be stored in the db without a path due to the `EdgeCurrencyEngine.addGapLimitAddresses` function
-          //  Once an address path is known, it should never be updated
+          /*
+          Only update the path field if one was given and the existing address
+          currently does not have one. We never update paths for addresses, only
+          insert paths when they're not present.
+
+          NOTE: Addresses can be stored in the db without a path due to the
+          `EdgeCurrencyEngine.addGapLimitAddresses` function. Once an address
+          path is known, it should never be updated
+          */
           if (address.path != null && existingAddress.path == null) {
             existingAddress.path = address.path
-            await tables.scriptPubkeyByPath.insert(
-              addressPathToPrefix(address.path),
-              address.path.addressIndex,
-              address.scriptPubkey
-            )
+            indexTableUpdate = {
+              path: existingAddress.path,
+              scriptPubkey: existingAddress.scriptPubkey
+            }
           }
 
           // Only update the used flag if one was given and is true
@@ -495,18 +515,32 @@ export async function makeProcessor(
               )
             }
           }
+
+          // Update the address table:
           await tables.addressByScriptPubkey.insert(
             '',
             existingAddress.scriptPubkey,
             existingAddress
           )
-          return
         }
-        await tables.addressByScriptPubkey.insert(
-          '',
-          address.scriptPubkey,
-          address
-        )
+
+        // Insert routine:
+        if (existingAddress == null) {
+          await tables.addressByScriptPubkey.insert(
+            '',
+            address.scriptPubkey,
+            address
+          )
+        }
+
+        // Insert the path into the index table:
+        if (indexTableUpdate != null) {
+          await tables.scriptPubkeyByPath.insert(
+            addressPathToPrefix(indexTableUpdate.path),
+            indexTableUpdate.path.addressIndex,
+            indexTableUpdate.scriptPubkey
+          )
+        }
       })
     },
 
