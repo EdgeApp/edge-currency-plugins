@@ -42,13 +42,15 @@ export const asUtxoSignMessageOtherParams = asObject({
   publicAddress: asString
 })
 
+const asOutputSort = asValue('bip69', 'targets')
+
 export type UtxoSpendInfoOtherParams = ReturnType<
   typeof asUtxoSpendInfoOtherParams
 >
 export const asUtxoSpendInfoOtherParams = asObject({
   enableRbf: asOptional(asBoolean),
   forceChangeAddress: asOptional(asString),
-  outputSort: asOptional(asValue('bip69', 'targets'), 'bip69'),
+  outputSort: asOptional(asOutputSort, 'bip69'),
   txOptions: asOptional(asTxOptions),
   utxoSourceAddress: asOptional(asString)
 })
