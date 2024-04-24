@@ -2,19 +2,32 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'VTC',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Vertcoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'vertcoin',
   walletType: 'wallet:vertcoin',
-  currencyCode: 'VTC',
-  displayName: 'Vertcoin',
+
+  // Explorers:
+  addressExplorer: 'https://insight.vertcoin.org/address/%s',
+  blockExplorer: 'https://insight.vertcoin.org/block/%s',
+  transactionExplorer: 'https://insight.vertcoin.org/tx/%s',
+
   denominations: [
     { name: 'VTC', multiplier: '100000000', symbol: 'V' },
     { name: 'mVTC', multiplier: '100000', symbol: 'mV' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
@@ -26,22 +39,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://insight.vertcoin.org/address/%s',
-  blockExplorer: 'https://insight.vertcoin.org/block/%s',
-  transactionExplorer: 'https://insight.vertcoin.org/tx/%s',
-
-  // Deprecated:
   metaTokens: []
 }
 

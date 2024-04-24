@@ -2,33 +2,38 @@ import { Psbt } from 'altcoin-js'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'TBTG',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Bitcoin Gold',
+  memoOptions: utxoMemoOptions,
   pluginId: 'bitcoingoldtestnet',
   walletType: 'wallet:bitcoingoldtestnet',
-  currencyCode: 'TBTG',
-  displayName: 'Bitcoin Gold',
-  denominations: [
-    { name: 'TBTG', multiplier: '100000000', symbol: '₿' },
-    { name: 'mTBTG', multiplier: '100000', symbol: 'm₿' },
-    { name: 'bits', multiplier: '100', symbol: 'ƀ' }
-  ],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: [],
-    enableCustomServers: false
-  },
-  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://explorer.bitcoingold.org/insight/address/%s',
   blockExplorer: 'https://explorer.bitcoingold.org/insight/block/%s',
   transactionExplorer: 'https://explorer.bitcoingold.org/insight/tx/%s',
 
+  denominations: [
+    { name: 'TBTG', multiplier: '100000000', symbol: '₿' },
+    { name: 'mTBTG', multiplier: '100000', symbol: 'm₿' },
+    { name: 'bits', multiplier: '100', symbol: 'ƀ' }
+  ],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: [],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

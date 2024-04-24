@@ -2,37 +2,34 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'RVN',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Ravencoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'ravencoin',
   walletType: 'wallet:ravencoin',
-  currencyCode: 'RVN',
-  displayName: 'Ravencoin',
-  denominations: [{ name: 'RVN', multiplier: '100000000', symbol: 'R' }],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook.ravencoin.org'],
-    enableCustomServers: false
-  },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://ravencoin.network/address/%s',
   blockExplorer: 'https://ravencoin.network/block/%s',
   transactionExplorer: 'https://ravencoin.network/tx/%s',
 
+  denominations: [{ name: 'RVN', multiplier: '100000000', symbol: 'R' }],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: ['wss://blockbook.ravencoin.org'],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

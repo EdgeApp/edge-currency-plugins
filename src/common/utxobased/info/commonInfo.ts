@@ -1,16 +1,25 @@
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo, EdgeMemoOption } from 'edge-core-js/types'
 
-export const memoInfo: Partial<EdgeCurrencyInfo> = {
-  memoOptions: [
-    {
-      type: 'hex',
-      hidden: true,
-      maxBytes: 80,
-      memoName: 'OP_RETURN'
-    }
-  ],
+export const utxoCustomFeeTemplate: EdgeCurrencyInfo['customFeeTemplate'] = [
+  {
+    type: 'nativeAmount',
+    key: 'satPerByte',
+    displayName: 'Satoshis Per Byte',
+    displayMultiplier: '0'
+  }
+]
 
-  // Deprecated:
+export const utxoMemoOptions: EdgeMemoOption[] = [
+  {
+    type: 'hex',
+    hidden: true,
+    maxBytes: 80,
+    memoName: 'OP_RETURN'
+  }
+]
+
+// Deprecated:
+export const legacyMemoInfo: Partial<EdgeCurrencyInfo> = {
   memoMaxLength: 80,
   memoType: 'text'
 }

@@ -3,33 +3,19 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'FIRO',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Firo',
+  memoOptions: utxoMemoOptions,
   pluginId: 'zcoin',
   walletType: 'wallet:zcoin',
-  displayName: 'Firo',
-  currencyCode: 'FIRO',
-  denominations: [
-    { name: 'FIRO', multiplier: '100000000', symbol: 'ƒ' },
-    { name: 'mFIRO', multiplier: '100000', symbol: 'mƒ' }
-  ],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook.firo.org'],
-    enableCustomServers: false
-  },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://insight.zcoin.io/address/%s',
@@ -40,7 +26,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
   symbolImage: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
   symbolImageDarkMono: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
 
+  denominations: [
+    { name: 'FIRO', multiplier: '100000000', symbol: 'ƒ' },
+    { name: 'mFIRO', multiplier: '100000', symbol: 'mƒ' }
+  ],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: ['wss://blockbook.firo.org'],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

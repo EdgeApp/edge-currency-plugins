@@ -10,34 +10,19 @@ import {
   AddressTypeEnum,
   scriptPubkeyToAddress
 } from '../keymanager/keymanager'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'BSV',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Bitcoin SV',
+  memoOptions: utxoMemoOptions,
   pluginId: 'bitcoinsv',
   walletType: 'wallet:bitcoinsv',
-  currencyCode: 'BSV',
-  displayName: 'Bitcoin SV',
-  denominations: [
-    { name: 'BSV', multiplier: '100000000', symbol: '₿' },
-    { name: 'mBSV', multiplier: '100000', symbol: 'm₿' },
-    { name: 'cash', multiplier: '100', symbol: 'ƀ' }
-  ],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook.siftbitcoin.com:9146'],
-    enableCustomServers: false
-  },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   blockExplorer: 'https://whatsonchain.com/block/%s',
@@ -48,7 +33,19 @@ const currencyInfo: EdgeCurrencyInfo = {
   symbolImage: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
   symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
 
+  denominations: [
+    { name: 'BSV', multiplier: '100000000', symbol: '₿' },
+    { name: 'mBSV', multiplier: '100000', symbol: 'm₿' },
+    { name: 'cash', multiplier: '100', symbol: 'ƀ' }
+  ],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: ['wss://blockbook.siftbitcoin.com:9146'],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

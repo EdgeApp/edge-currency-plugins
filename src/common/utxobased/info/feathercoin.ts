@@ -3,33 +3,19 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'FTC',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Feathercoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'feathercoin',
   walletType: 'wallet:feathercoin',
-  displayName: 'Feathercoin',
-  currencyCode: 'FTC',
-  denominations: [
-    { name: 'FTC', multiplier: '100000000', symbol: 'F' },
-    { name: 'mFTC', multiplier: '100000', symbol: 'mF' }
-  ],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook.feathercoin.com'],
-    enableCustomServers: false
-  },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://fsight.chain.tips/address/%s',
@@ -40,7 +26,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
   symbolImage: `${IMAGE_SERVER_URL}/feathercoin-logo-solo-64.png`,
   symbolImageDarkMono: `${IMAGE_SERVER_URL}/feathercoin-logo-solo-64.png`,
 
+  denominations: [
+    { name: 'FTC', multiplier: '100000000', symbol: 'F' },
+    { name: 'mFTC', multiplier: '100000', symbol: 'mF' }
+  ],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: ['wss://blockbook.feathercoin.com'],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

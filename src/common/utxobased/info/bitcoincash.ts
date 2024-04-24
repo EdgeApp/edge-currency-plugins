@@ -5,41 +5,20 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'BCH',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Bitcoin Cash',
+  memoOptions: utxoMemoOptions,
   pluginId: 'bitcoincash',
   walletType: 'wallet:bitcoincash',
-  currencyCode: 'BCH',
-  displayName: 'Bitcoin Cash',
-  denominations: [
-    { name: 'BCH', multiplier: '100000000', symbol: '₿' },
-    { name: 'mBCH', multiplier: '100000', symbol: 'm₿' },
-    { name: 'cash', multiplier: '100', symbol: 'ƀ' }
-  ],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: [
-      'wss://bch1.trezor.io',
-      'wss://bch2.trezor.io',
-      'wss://bch3.trezor.io',
-      'wss://bch4.trezor.io',
-      'wss://bch5.trezor.io'
-    ],
-    enableCustomServers: false
-  },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/bitcoin-cash/block/%s',
@@ -51,7 +30,25 @@ const currencyInfo: EdgeCurrencyInfo = {
   symbolImage: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
   symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
 
+  denominations: [
+    { name: 'BCH', multiplier: '100000000', symbol: '₿' },
+    { name: 'mBCH', multiplier: '100000', symbol: 'm₿' },
+    { name: 'cash', multiplier: '100', symbol: 'ƀ' }
+  ],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: [
+      'wss://bch1.trezor.io',
+      'wss://bch2.trezor.io',
+      'wss://bch3.trezor.io',
+      'wss://bch4.trezor.io',
+      'wss://bch5.trezor.io'
+    ],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

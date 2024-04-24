@@ -2,37 +2,34 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'QTUM',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Qtum',
+  memoOptions: utxoMemoOptions,
   pluginId: 'qtum',
   walletType: 'wallet:qtum',
-  currencyCode: 'QTUM',
-  displayName: 'Qtum',
-  denominations: [{ name: 'QTUM', multiplier: '100000000', symbol: 'Q' }],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: [],
-    enableCustomServers: false
-  },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://explorer.qtum.org/address/%s',
   blockExplorer: 'https://explorer.qtum.org/block/%s',
   transactionExplorer: 'https://explorer.qtum.org/tx/%s',
 
+  denominations: [{ name: 'QTUM', multiplier: '100000000', symbol: 'Q' }],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: [],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

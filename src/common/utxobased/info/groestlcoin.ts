@@ -6,33 +6,19 @@ import * as wifgrs from 'wifgrs'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'GRS',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Groestlcoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'groestlcoin',
   walletType: 'wallet:groestlcoin',
-  currencyCode: 'GRS',
-  displayName: 'Groestlcoin',
-  denominations: [
-    { name: 'GRS', multiplier: '100000000', symbol: 'G' },
-    { name: 'mGRS', multiplier: '100000', symbol: 'mG' }
-  ],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook.groestlcoin.org'],
-    enableCustomServers: false
-  },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   addressExplorer:
@@ -41,7 +27,18 @@ const currencyInfo: EdgeCurrencyInfo = {
   transactionExplorer:
     'https://blockchair.com/groestlcoin/transaction/%s?from=edgeapp',
 
+  denominations: [
+    { name: 'GRS', multiplier: '100000000', symbol: 'G' },
+    { name: 'mGRS', multiplier: '100000', symbol: 'mG' }
+  ],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: ['wss://blockbook.groestlcoin.org'],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

@@ -2,40 +2,37 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'DGB',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'DigiByte',
+  memoOptions: utxoMemoOptions,
   pluginId: 'digibyte',
   walletType: 'wallet:digibyte',
-  currencyCode: 'DGB',
-  displayName: 'DigiByte',
-  denominations: [
-    { name: 'DGB', multiplier: '100000000', symbol: 'Ɗ' },
-    { name: 'mDGB', multiplier: '100000', symbol: 'mƊ' }
-  ],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://dgb1.trezor.io', 'wss://dgb2.trezor.io'],
-    enableCustomServers: false
-  },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://digiexplorer.info/address/%s',
   blockExplorer: 'https://digiexplorer.info/block/%s',
   transactionExplorer: 'https://digiexplorer.info/tx/%s',
 
+  denominations: [
+    { name: 'DGB', multiplier: '100000000', symbol: 'Ɗ' },
+    { name: 'mDGB', multiplier: '100000', symbol: 'mƊ' }
+  ],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: ['wss://dgb1.trezor.io', 'wss://dgb2.trezor.io'],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

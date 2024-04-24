@@ -3,19 +3,37 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
+  canReplaceByFee: false,
+  currencyCode: 'LTC',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Litecoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'litecoin',
   walletType: 'wallet:litecoin',
-  currencyCode: 'LTC',
-  displayName: 'Litecoin',
+
+  // Explorers:
+  blockExplorer: 'https://blockchair.com/litecoin/block/%s',
+  addressExplorer: 'https://blockchair.com/litecoin/address/%s',
+  transactionExplorer: 'https://blockchair.com/litecoin/transaction/%s',
+
+  // Images:
+  symbolImage: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
+
   denominations: [
     { name: 'LTC', multiplier: '100000000', symbol: 'Ł' },
     { name: 'mLTC', multiplier: '100000', symbol: 'mŁ' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
@@ -27,27 +45,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
-  canReplaceByFee: false,
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Explorers:
-  blockExplorer: 'https://blockchair.com/litecoin/block/%s',
-  addressExplorer: 'https://blockchair.com/litecoin/address/%s',
-  transactionExplorer: 'https://blockchair.com/litecoin/transaction/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/litecoin-logo-solo-64.png`,
-
-  // Deprecated:
   metaTokens: []
 }
 

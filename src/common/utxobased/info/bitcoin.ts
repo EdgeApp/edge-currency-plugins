@@ -3,13 +3,30 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  canReplaceByFee: true,
+  currencyCode: 'BTC',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Bitcoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'bitcoin',
   walletType: 'wallet:bitcoin',
-  currencyCode: 'BTC',
-  displayName: 'Bitcoin',
+
+  // Explorers:
+  blockExplorer: 'https://blockchair.com/bitcoin/block/%s',
+  addressExplorer: 'https://blockchair.com/bitcoin/address/%s',
+  transactionExplorer: 'https://blockchair.com/bitcoin/transaction/%s',
+
+  // Images:
+  symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
+  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
+
   denominations: [
     { name: 'BTC', multiplier: '100000000', symbol: '₿' },
     { name: 'mBTC', multiplier: '100000', symbol: 'm₿' },
@@ -17,7 +34,8 @@ const currencyInfo: EdgeCurrencyInfo = {
     { name: 'sats', multiplier: '1', symbol: 's' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
@@ -29,27 +47,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
-  canReplaceByFee: true,
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Explorers:
-  blockExplorer: 'https://blockchair.com/bitcoin/block/%s',
-  addressExplorer: 'https://blockchair.com/bitcoin/address/%s',
-  transactionExplorer: 'https://blockchair.com/bitcoin/transaction/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
-
-  // Deprecated:
   metaTokens: []
 }
 

@@ -1,40 +1,37 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'BAD',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Badcoin',
+  memoOptions: utxoMemoOptions,
   pluginId: 'badcoin',
   walletType: 'wallet:badcoin',
-  currencyCode: 'BAD',
-  displayName: 'Badcoin',
-  denominations: [
-    { name: 'BAD', multiplier: '100000000', symbol: 'BAD' },
-    { name: 'mBAD', multiplier: '100000', symbol: 'mBAD' }
-  ],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: [],
-    enableCustomServers: false
-  },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   addressExplorer: 'https://www.blockingbad.com/address/%s',
   blockExplorer: 'https://www.blockingbad.com/block/%s',
   transactionExplorer: 'https://www.blockingbad.com/tx/%s',
 
+  denominations: [
+    { name: 'BAD', multiplier: '100000000', symbol: 'BAD' },
+    { name: 'mBAD', multiplier: '100000', symbol: 'mBAD' }
+  ],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: [],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 

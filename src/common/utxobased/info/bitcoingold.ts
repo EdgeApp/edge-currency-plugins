@@ -3,20 +3,33 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  currencyCode: 'BTG',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Bitcoin Gold',
+  memoOptions: utxoMemoOptions,
   pluginId: 'bitcoingold',
   walletType: 'wallet:bitcoingold',
-  currencyCode: 'BTG',
-  displayName: 'Bitcoin Gold',
+
+  // Explorers:
+  addressExplorer: 'https://explorer.bitcoingold.org/insight/address/%s',
+  blockExplorer: 'https://explorer.bitcoingold.org/insight/block/%s',
+  transactionExplorer: 'https://explorer.bitcoingold.org/insight/tx/%s',
+
   denominations: [
     { name: 'BTG', multiplier: '100000000', symbol: '₿' },
     { name: 'mBTG', multiplier: '100000', symbol: 'm₿' },
     { name: 'bits', multiplier: '100', symbol: 'ƀ' }
   ],
 
-  // Configuration options:
+  // Deprecated:
+  ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
@@ -28,22 +41,6 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
-
-  // Explorers:
-  addressExplorer: 'https://explorer.bitcoingold.org/insight/address/%s',
-  blockExplorer: 'https://explorer.bitcoingold.org/insight/block/%s',
-  transactionExplorer: 'https://explorer.bitcoingold.org/insight/tx/%s',
-
-  // Deprecated:
   metaTokens: []
 }
 

@@ -2,36 +2,20 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
-import { memoInfo } from './commonInfo'
+import {
+  legacyMemoInfo,
+  utxoCustomFeeTemplate,
+  utxoMemoOptions
+} from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
+  canReplaceByFee: true,
+  currencyCode: 'TESTBTC',
+  customFeeTemplate: utxoCustomFeeTemplate,
+  displayName: 'Bitcoin Testnet',
+  memoOptions: utxoMemoOptions,
   pluginId: 'bitcointestnet',
   walletType: 'wallet:bitcointestnet',
-  currencyCode: 'TESTBTC',
-  displayName: 'Bitcoin Testnet',
-  denominations: [
-    { name: 'TESTBTC', multiplier: '100000000', symbol: '₿' },
-    { name: 'mTESTBTC', multiplier: '100000', symbol: 'm₿' },
-    { name: 'bits', multiplier: '100', symbol: 'ƀ' },
-    { name: 'sats', multiplier: '1', symbol: 's' }
-  ],
-
-  // Configuration options:
-  defaultSettings: {
-    customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://tbtc1.trezor.io', 'wss://tbtc2.trezor.io'],
-    enableCustomServers: false
-  },
-  canReplaceByFee: true,
-  customFeeTemplate: [
-    {
-      type: 'nativeAmount',
-      key: 'satPerByte',
-      displayName: 'Satoshis Per Byte',
-      displayMultiplier: '0'
-    }
-  ],
-  ...memoInfo,
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/bitcoin/testnet/block/%s',
@@ -42,7 +26,20 @@ export const currencyInfo: EdgeCurrencyInfo = {
   symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
   symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
 
+  denominations: [
+    { name: 'TESTBTC', multiplier: '100000000', symbol: '₿' },
+    { name: 'mTESTBTC', multiplier: '100000', symbol: 'm₿' },
+    { name: 'bits', multiplier: '100', symbol: 'ƀ' },
+    { name: 'sats', multiplier: '1', symbol: 's' }
+  ],
+
   // Deprecated:
+  ...legacyMemoInfo,
+  defaultSettings: {
+    customFeeSettings: ['satPerByte'],
+    blockbookServers: ['wss://tbtc1.trezor.io', 'wss://tbtc2.trezor.io'],
+    enableCustomServers: false
+  },
   metaTokens: []
 }
 
