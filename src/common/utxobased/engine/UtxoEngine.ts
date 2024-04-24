@@ -684,6 +684,7 @@ export async function makeUtxoEngine(
         otherParams,
         ourReceiveAddresses,
         signedTx: '',
+        tokenId: null,
         txid: '',
         walletId: walletInfo.id
       }

@@ -97,14 +97,15 @@ export const toEdgeTransaction = async (
     confirmations: tx.confirmations,
     currencyCode: currencyInfo.currencyCode,
     date: tx.date,
+    feeRateUsed,
     isSend: lt(tx.ourAmount, '0'),
     memos: [],
     nativeAmount: tx.ourAmount,
     networkFee: tx.fees,
     ourReceiveAddresses,
     signedTx: tx.hex,
+    tokenId: null,
     txid: tx.txid,
-    walletId,
-    feeRateUsed
+    walletId
   }
 }
