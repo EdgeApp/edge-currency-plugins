@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2.6.2 (2024-04-24)
+
+- changed: Reorganize `currencyInfo`.
+
 ## 2.6.1 (2024-04-22)
 
 - fixed: Missing `scriptPubkeyByPath` processor data from wallet data dump returned by `dumpData`
