@@ -10,7 +10,6 @@ import {
   Cleaner,
   uncleaner
 } from 'cleaners'
-import { EdgeTransaction } from 'edge-core-js/types'
 
 /**
  * Websocket Task
@@ -227,11 +226,11 @@ export const transactionMessageSpecific = (
  * Send Transaction
  */
 export const broadcastTxMessage = (
-  transaction: EdgeTransaction
+  signedTx: string
 ): BlockbookTask<BroadcastTxResponse> => {
   return {
     method: 'sendTransaction',
-    params: { hex: transaction.signedTx },
+    params: { hex: signedTx },
     cleaner: asBlockbookResponse(asBroadcastTxResponse)
   }
 }

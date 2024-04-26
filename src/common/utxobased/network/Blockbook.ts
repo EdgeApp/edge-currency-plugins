@@ -197,7 +197,7 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
   async function broadcastTx(
     transaction: EdgeTransaction
   ): Promise<BroadcastTxResponse> {
-    return await promisifyWsMessage(broadcastTxMessage(transaction))
+    return await promisifyWsMessage(broadcastTxMessage(transaction.signedTx))
   }
 
   return instance
