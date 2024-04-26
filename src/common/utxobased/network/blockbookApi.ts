@@ -279,9 +279,10 @@ export interface AddressResponse {
   totalPages: number
   itemsOnPage: number
 }
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const asAddressResponse = (asAddress: Cleaner<string> = asString) =>
-  asObject({
+export const asAddressResponse = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<AddressResponse> =>
+  asObject<AddressResponse>({
     // details: basic
     address: asAddress,
     balance: asString,
