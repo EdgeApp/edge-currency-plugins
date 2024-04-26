@@ -8,8 +8,11 @@ import { removeItem } from '../../plugin/utils'
 import { SafeWalletInfo } from '../keymanager/cleaners'
 import { Blockbook, makeBlockbook } from '../network/Blockbook'
 import {
+  AddressResponse,
+  AddressUtxosResponse,
   asBlockbookResponse,
   asBroadcastTxResponse,
+  BlockbookTransaction,
   SubscribeAddressResponse
 } from '../network/blockbookApi'
 import Deferred from '../network/Deferred'
@@ -57,6 +60,35 @@ export interface ServerStates {
   ) => void
   watchBlocks: (uri: string) => void
   getBlockHeight: (uri: string) => number
+
+  //
+  // Task Methods:
+  //
+
+  addressQueryTask: (
+    serverUri: string,
+    address: string,
+    params: { lastQueriedBlockHeight: number; page: number },
+    deferred: Deferred<AddressResponse>
+  ) => WsTask<AddressResponse>
+
+  transactionQueryTask: (
+    serverUri: string,
+    txId: string,
+    deferred: Deferred<BlockbookTransaction>
+  ) => WsTask<BlockbookTransaction>
+
+  transactionSpecialQueryTask: (
+    serverUri: string,
+    txId: string,
+    deferred: Deferred<unknown>
+  ) => WsTask<unknown>
+
+  utxoListQueryTask: (
+    serverUri: string,
+    address: string,
+    deferred: Deferred<AddressUtxosResponse>
+  ) => WsTask<AddressUtxosResponse>
 }
 
 interface ServerStatesCache {
@@ -491,7 +523,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     return serverStatesCache[uri].blockHeight
   }
 
-  return {
+  const instance: ServerStates = {
     setPickNextTaskCB,
     stop,
     serverCanGetTx,
@@ -504,6 +536,74 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     broadcastTx,
     watchAddresses,
     watchBlocks,
-    getBlockHeight
+    getBlockHeight,
+
+    //
+    // Task Methods:
+    //
+
+    addressQueryTask(
+      serverUri: string,
+      address: string,
+      params: { lastQueriedBlockHeight: number; page: number },
+      deferred: Deferred<AddressResponse>
+    ): WsTask<AddressResponse> {
+      const serverState = serverStatesCache[serverUri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${serverUri}`)
+
+      return serverState.blockbook.addressQueryTask(
+        address,
+        {
+          asBlockbookAddress: pluginInfo.engineInfo.asBlockbookAddress,
+          lastQueriedBlockHeight: params.lastQueriedBlockHeight,
+          page: params.page
+        },
+        deferred
+      )
+    },
+
+    transactionQueryTask(
+      serverUri: string,
+      txId: string,
+      deferred: Deferred<BlockbookTransaction>
+    ): WsTask<BlockbookTransaction> {
+      const serverState = serverStatesCache[serverUri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${serverUri}`)
+
+      return serverState.blockbook.transactionQueryTask(txId, deferred)
+    },
+
+    transactionSpecialQueryTask(
+      serverUri: string,
+      txId: string,
+      deferred: Deferred<unknown>
+    ): WsTask<unknown> {
+      const serverState = serverStatesCache[serverUri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${serverUri}`)
+
+      return serverState.blockbook.transactionSpecialQueryTask(txId, deferred)
+    },
+    utxoListQueryTask(
+      serverUri: string,
+      address: string,
+      deferred: Deferred<AddressUtxosResponse>
+    ): WsTask<AddressUtxosResponse> {
+      const serverState = serverStatesCache[serverUri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${serverUri}`)
+
+      return serverState.blockbook.utxoListQueryTask(
+        address,
+        {
+          asBlockbookAddress: pluginInfo.engineInfo.asBlockbookAddress
+        },
+        deferred
+      )
+    }
   }
+
+  return instance
 }

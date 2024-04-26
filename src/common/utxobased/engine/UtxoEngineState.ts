@@ -33,20 +33,16 @@ import {
   ScriptTypeEnum
 } from '../keymanager/keymanager'
 import {
-  addressMessage,
   AddressResponse,
-  addressUtxosMessage,
   AddressUtxosResponse,
   BlockbookAccountUtxo,
   SubscribeAddressResponse,
-  transactionMessage,
-  transactionMessageSpecific,
   TransactionResponse
 } from '../network/blockbookApi'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
 import AwaitLock from './await-lock'
-import { BLOCKBOOK_TXS_PER_PAGE, CACHE_THROTTLE } from './constants'
+import { CACHE_THROTTLE } from './constants'
 import { makeServerStates, ServerStates } from './ServerStates'
 import {
   getFormatSupportedBranches,
@@ -779,7 +775,7 @@ export const pickNextTask = async (
         ...args,
         ...state,
         address: state.address,
-        uri: serverUri,
+        serverUri,
         utxo,
         id: `${utxo.txid}_${utxo.vout}`
       })
@@ -803,7 +799,7 @@ export const pickNextTask = async (
         ...args,
         ...state,
         address,
-        uri: serverUri
+        serverUri
       })
       wsTask.deferred.promise
         .then(() => {
@@ -877,6 +873,7 @@ export const pickNextTask = async (
         removeItem(updateTransactionSpecificCache, txId)
         const updateTransactionSpecificTask = updateTransactionsSpecific({
           ...args,
+          serverUri,
           txId
         })
         // once resolved, add the txid to the server cache
@@ -906,8 +903,9 @@ export const pickNextTask = async (
         removeItem(updateTransactionCache, txId)
         const updateTransactionTask = updateTransactions({
           ...args,
-          txId,
-          needsTxSpecific
+          serverUri,
+          needsTxSpecific,
+          txId
         })
         // once resolved, add the txid to the server cache
         updateTransactionTask.deferred.promise
@@ -942,7 +940,7 @@ export const pickNextTask = async (
         addressTransactionState: state,
         address,
         needsTxSpecific,
-        uri: serverUri
+        serverUri
       })
       wsTask.deferred.promise
         .then(() => {
@@ -959,6 +957,7 @@ export const pickNextTask = async (
 }
 
 interface UpdateTransactionsSpecificArgs extends CommonArgs {
+  serverUri: string
   txId: string
 }
 
@@ -969,9 +968,10 @@ const updateTransactionsSpecific = (
     walletInfo,
     emitter,
     walletTools,
-    txId,
     pluginInfo,
     processor,
+    serverUri,
+    txId,
     taskCache
   } = args
   const deferred = new Deferred<unknown>()
@@ -1006,15 +1006,18 @@ const updateTransactionsSpecific = (
       args.log('error in updateTransactionsSpecific:', err)
       taskCache.updateTransactionSpecificCache[txId] = { processing: false }
     })
-  return {
-    ...transactionMessageSpecific(txId),
+
+  return args.serverStates.transactionSpecialQueryTask(
+    serverUri,
+    txId,
     deferred
-  }
+  )
 }
 
 interface UpdateTransactionsArgs extends CommonArgs {
-  txId: string
   needsTxSpecific: boolean
+  serverUri: string
+  txId: string
 }
 
 const updateTransactions = (
@@ -1028,6 +1031,7 @@ const updateTransactions = (
     needsTxSpecific,
     pluginInfo,
     processor,
+    serverUri,
     taskCache
   } = args
   const deferred = new Deferred<TransactionResponse>()
@@ -1077,10 +1081,8 @@ const updateTransactions = (
       args.log('error in updateTransactions:', err)
       taskCache.updateTransactionCache[txId] = { processing: false }
     })
-  return {
-    ...transactionMessage(txId),
-    deferred
-  }
+
+  return args.serverStates.transactionQueryTask(serverUri, txId, deferred)
 }
 
 interface DeriveScriptAddressArgs {
@@ -1197,7 +1199,7 @@ const internalGetFreshAddress = async (
 interface ProcessAddressTxsArgs extends CommonArgs {
   address: string
   addressTransactionState: AddressTransactionCache[string]
-  uri: string
+  serverUri: string
   needsTxSpecific: boolean
 }
 
@@ -1215,12 +1217,9 @@ const processAddressTransactions = async (
     walletTools,
     taskCache,
     pluginState,
-    uri
+    serverUri
   } = args
   const { page = 1, blockHeight } = addressTransactionState
-  const {
-    engineInfo: { asBlockbookAddress }
-  } = pluginInfo
   const addressTransactionCache = taskCache.addressTransactionCache
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
@@ -1233,7 +1232,7 @@ const processAddressTransactions = async (
   const deferred = new Deferred<AddressResponse>()
   deferred.promise
     .then(async (value: AddressResponse) => {
-      pluginState.serverScoreUp(uri, Date.now() - queryTime)
+      pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
       // If address is used and previously not marked as used, mark as used.
@@ -1297,15 +1296,15 @@ const processAddressTransactions = async (
       addressTransactionCache[address] = addressTransactionState
     })
 
-  return {
-    ...addressMessage(address, asBlockbookAddress, {
-      details: 'txs',
-      from: addressData.lastQueriedBlockHeight,
-      pageSize: BLOCKBOOK_TXS_PER_PAGE,
+  return args.serverStates.addressQueryTask(
+    serverUri,
+    address,
+    {
+      lastQueriedBlockHeight: addressData.lastQueriedBlockHeight,
       page
-    }),
+    },
     deferred
-  }
+  )
 }
 
 interface processTransactionResponseArgs extends CommonArgs {
@@ -1371,10 +1370,10 @@ const processTransactionResponse = (
 }
 
 interface ProcessAddressUtxosArgs extends CommonArgs {
-  processing: boolean
-  path: ChangePath
   address: string
-  uri: string
+  path: ChangePath
+  processing: boolean
+  serverUri: string
 }
 
 const processAddressUtxos = async (
@@ -1386,19 +1385,15 @@ const processAddressUtxos = async (
     processor,
     taskCache,
     path,
-    pluginInfo,
     pluginState,
-    uri
+    serverUri
   } = args
-  const {
-    engineInfo: { asBlockbookAddress }
-  } = pluginInfo
   const { addressUtxoCache, rawUtxoCache, processorUtxoCache } = taskCache
   const queryTime = Date.now()
   const deferred = new Deferred<AddressUtxosResponse>()
   deferred.promise
     .then(async (utxos: AddressUtxosResponse) => {
-      pluginState.serverScoreUp(uri, Date.now() - queryTime)
+      pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
       const addressData = await processor.fetchAddress(scriptPubkey)
       if (addressData == null || addressData.path == null) {
@@ -1430,10 +1425,7 @@ const processAddressUtxos = async (
       }
     })
 
-  return {
-    ...addressUtxosMessage(address, asBlockbookAddress),
-    deferred
-  }
+  return args.serverStates.utxoListQueryTask(serverUri, address, deferred)
 }
 
 interface ProcessUtxoTransactionArgs extends CommonArgs {
@@ -1540,12 +1532,12 @@ const processProcessorUtxos = async (
 }
 
 interface ProcessRawUtxoArgs extends CommonArgs {
-  path: ChangePath
-  requiredCount: number
-  utxo: BlockbookAccountUtxo
-  id: string
   address: IAddress
-  uri: string
+  path: ChangePath
+  id: string
+  requiredCount: number
+  serverUri: string
+  utxo: BlockbookAccountUtxo
 }
 
 const processRawUtxo = async (
@@ -1561,7 +1553,7 @@ const processRawUtxo = async (
     taskCache,
     requiredCount,
     pluginState,
-    uri,
+    serverUri,
     log
   } = args
   const { rawUtxoCache, processorUtxoCache } = taskCache
@@ -1613,7 +1605,7 @@ const processRawUtxo = async (
           const deferred = new Deferred<TransactionResponse>()
           deferred.promise
             .then((txResponse: TransactionResponse) => {
-              pluginState.serverScoreUp(uri, Date.now() - queryTime)
+              pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
               const processedTx = processTransactionResponse({
                 ...args,
                 txResponse
@@ -1634,10 +1626,12 @@ const processRawUtxo = async (
                 requiredCount
               }
             })
-          return {
-            ...transactionMessage(utxo.txid),
+
+          return args.serverStates.transactionQueryTask(
+            serverUri,
+            utxo.txid,
             deferred
-          }
+          )
         } else {
           script = tx.hex
         }

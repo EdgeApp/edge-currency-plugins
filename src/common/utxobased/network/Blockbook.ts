@@ -2,6 +2,7 @@ import { Cleaner } from 'cleaners'
 import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
+import { BLOCKBOOK_TXS_PER_PAGE } from '../engine/constants'
 import {
   addressMessage,
   AddressResponse,
@@ -9,6 +10,7 @@ import {
   addressUtxosMessage,
   AddressUtxosResponse,
   BlockbookTask,
+  BlockbookTransaction,
   broadcastTxMessage,
   BroadcastTxResponse,
   infoMessage,
@@ -19,10 +21,11 @@ import {
   subscribeNewBlockMessage,
   SubscribeNewBlockResponse,
   transactionMessage,
+  transactionMessageSpecific,
   TransactionResponse
 } from './blockbookApi'
 import Deferred from './Deferred'
-import { makeSocket, OnQueueSpaceCB } from './Socket'
+import { makeSocket, OnQueueSpaceCB, WsTask } from './Socket'
 import { SocketEmitter } from './SocketEmitter'
 
 export type WatchAddressesCB = (
@@ -58,6 +61,38 @@ export interface Blockbook {
   fetchTransaction: (hash: string) => Promise<TransactionResponse>
 
   broadcastTx: (transaction: EdgeTransaction) => Promise<BroadcastTxResponse>
+
+  //
+  // Task Methods:
+  //
+
+  addressQueryTask: (
+    address: string,
+    params: {
+      asBlockbookAddress?: Cleaner<string> | undefined
+      lastQueriedBlockHeight: number
+      page: number
+    },
+    deferred: Deferred<AddressResponse>
+  ) => WsTask<AddressResponse>
+
+  transactionQueryTask: (
+    txId: string,
+    deferred: Deferred<BlockbookTransaction>
+  ) => WsTask<BlockbookTransaction>
+
+  transactionSpecialQueryTask: (
+    txId: string,
+    deferred: Deferred<unknown>
+  ) => WsTask<unknown>
+
+  utxoListQueryTask: (
+    address: string,
+    params: {
+      asBlockbookAddress?: Cleaner<string> | undefined
+    },
+    deferred: Deferred<AddressUtxosResponse>
+  ) => WsTask<AddressUtxosResponse>
 }
 
 interface BlockbookConfig {
@@ -93,7 +128,47 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
     watchBlocks,
     fetchAddressUtxos,
     fetchTransaction,
-    broadcastTx
+    broadcastTx,
+
+    //
+    // Task Methods:
+    //
+
+    addressQueryTask(address, params, deferred) {
+      return {
+        ...addressMessage(address, params.asBlockbookAddress, {
+          details: 'txs',
+          from: params.lastQueriedBlockHeight,
+          pageSize: BLOCKBOOK_TXS_PER_PAGE,
+          page: params.page
+        }),
+        deferred
+      }
+    },
+
+    transactionQueryTask(txId, deferred) {
+      return {
+        ...transactionMessage(txId),
+        deferred
+      }
+    },
+
+    transactionSpecialQueryTask(
+      txId: string,
+      deferred: Deferred<unknown>
+    ): WsTask<unknown> {
+      return {
+        ...transactionMessageSpecific(txId),
+        deferred
+      }
+    },
+
+    utxoListQueryTask(address, params, deferred) {
+      return {
+        ...addressUtxosMessage(address, params.asBlockbookAddress),
+        deferred
+      }
+    }
   }
 
   const socket = makeSocket(connectionUri, {
