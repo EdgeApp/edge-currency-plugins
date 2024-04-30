@@ -119,16 +119,92 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
 
   const instance: Blockbook = {
     isConnected: false,
-    connect,
-    disconnect,
-    onQueueSpace,
-    fetchInfo,
-    fetchAddress,
-    watchAddresses,
-    watchBlocks,
-    fetchAddressUtxos,
-    fetchTransaction,
-    broadcastTx,
+
+    async broadcastTx(
+      transaction: EdgeTransaction
+    ): Promise<BroadcastTxResponse> {
+      return await promisifyWsMessage(broadcastTxMessage(transaction.signedTx))
+    },
+
+    async connect(): Promise<void> {
+      log(`connecting to blockbook socket with uri ${connectionUri}`)
+      if (instance.isConnected) return
+
+      await socket.connect()
+      instance.isConnected = socket.isConnected()
+    },
+
+    async disconnect(): Promise<void> {
+      log(
+        `disconnecting from blockbook socket with uri ${connectionUri}, currently connected: ${instance.isConnected}`
+      )
+      if (!instance.isConnected) return
+
+      socket.disconnect()
+      instance.isConnected = false
+    },
+
+    async fetchAddress(
+      address: string,
+      params: AddresssMessageParams = {}
+    ): Promise<AddressResponse> {
+      return await promisifyWsMessage(
+        addressMessage(address, asAddress, params)
+      )
+    },
+
+    async fetchAddressUtxos(account: string): Promise<AddressUtxosResponse> {
+      return await promisifyWsMessage(addressUtxosMessage(account))
+    },
+
+    async fetchInfo(): Promise<InfoResponse> {
+      return await promisifyWsMessage(infoMessage())
+    },
+
+    async fetchTransaction(hash: string): Promise<TransactionResponse> {
+      return await promisifyWsMessage(transactionMessage(hash))
+    },
+
+    onQueueSpace(cb: OnQueueSpaceCB): void {
+      socket.onQueueSpace(cb)
+    },
+
+    watchAddresses(
+      addresses: string[],
+      deferredAddressSub: Deferred<unknown>
+    ): void {
+      const socketCb = async (res: SubscribeAddressResponse): Promise<void> => {
+        engineEmitter.emit(
+          EngineEvent.NEW_ADDRESS_TRANSACTION,
+          connectionUri,
+          res
+        )
+      }
+      socket.subscribe({
+        ...subscribeAddressesMessage(addresses, asAddress),
+        cb: socketCb,
+        deferred: deferredAddressSub,
+        subscribed: false
+      })
+    },
+
+    async watchBlocks(deferredBlockSub: Deferred<unknown>): Promise<void> {
+      const socketCb = async (
+        res: SubscribeNewBlockResponse
+      ): Promise<void> => {
+        engineEmitter.emit(
+          EngineEvent.BLOCK_HEIGHT_CHANGED,
+          connectionUri,
+          res.height
+        )
+      }
+      socket.subscribe({
+        ...subscribeNewBlockMessage(),
+        cb: socketCb,
+        deferred: deferredBlockSub,
+        subscribed: false
+      })
+    },
 
     //
     // Task Methods:
@@ -179,28 +255,6 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
     walletId
   })
 
-  async function connect(): Promise<void> {
-    log(`connecting to blockbook socket with uri ${connectionUri}`)
-    if (instance.isConnected) return
-
-    await socket.connect()
-    instance.isConnected = socket.isConnected()
-  }
-
-  async function disconnect(): Promise<void> {
-    log(
-      `disconnecting from blockbook socket with uri ${connectionUri}, currently connected: ${instance.isConnected}`
-    )
-    if (!instance.isConnected) return
-
-    socket.disconnect()
-    instance.isConnected = false
-  }
-
-  function onQueueSpace(cb: OnQueueSpaceCB): void {
-    socket.onQueueSpace(cb)
-  }
-
   async function promisifyWsMessage<T>(message: BlockbookTask<T>): Promise<T> {
     const deferred = new Deferred<T>()
     socket.submitTask<T>({ ...message, deferred })
@@ -209,70 +263,6 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
 
   async function ping(): Promise<void> {
     await promisifyWsMessage(pingMessage())
-  }
-
-  async function fetchInfo(): Promise<InfoResponse> {
-    return await promisifyWsMessage(infoMessage())
-  }
-
-  async function fetchAddressUtxos(
-    account: string
-  ): Promise<AddressUtxosResponse> {
-    return await promisifyWsMessage(addressUtxosMessage(account))
-  }
-
-  async function fetchTransaction(hash: string): Promise<TransactionResponse> {
-    return await promisifyWsMessage(transactionMessage(hash))
-  }
-
-  async function fetchAddress(
-    address: string,
-    params: AddresssMessageParams = {}
-  ): Promise<AddressResponse> {
-    return await promisifyWsMessage(addressMessage(address, asAddress, params))
-  }
-
-  async function watchBlocks(
-    deferredBlockSub: Deferred<unknown>
-  ): Promise<void> {
-    const socketCb = async (res: SubscribeNewBlockResponse): Promise<void> => {
-      engineEmitter.emit(
-        EngineEvent.BLOCK_HEIGHT_CHANGED,
-        connectionUri,
-        res.height
-      )
-    }
-    socket.subscribe({
-      ...subscribeNewBlockMessage(),
-      cb: socketCb,
-      deferred: deferredBlockSub,
-      subscribed: false
-    })
-  }
-
-  function watchAddresses(
-    addresses: string[],
-    deferredAddressSub: Deferred<unknown>
-  ): void {
-    const socketCb = async (res: SubscribeAddressResponse): Promise<void> => {
-      engineEmitter.emit(
-        EngineEvent.NEW_ADDRESS_TRANSACTION,
-        connectionUri,
-        res
-      )
-    }
-    socket.subscribe({
-      ...subscribeAddressesMessage(addresses, asAddress),
-      cb: socketCb,
-      deferred: deferredAddressSub,
-      subscribed: false
-    })
-  }
-
-  async function broadcastTx(
-    transaction: EdgeTransaction
-  ): Promise<BroadcastTxResponse> {
-    return await promisifyWsMessage(broadcastTxMessage(transaction.signedTx))
   }
 
   return instance
