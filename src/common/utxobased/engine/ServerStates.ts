@@ -39,7 +39,6 @@ interface ServerStateConfig {
 
 export interface ServerStates {
   setPickNextTaskCB: (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
   ) => void
   stop: () => void
@@ -135,7 +134,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
   let pickNextTaskCB: (
     uri: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) => Promise<boolean | WsTask<any> | undefined>
 
   const makeServerStatesCacheEntry = (blockbook: Blockbook): ServerState => ({
@@ -146,7 +144,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     blockHeight: 0
   })
   const setPickNextTaskCB = (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
   ): void => {
     pickNextTaskCB = callback
@@ -230,7 +227,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         engineEmitter,
         log,
         onQueueSpaceCB: async (): Promise<
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           WsTask<any> | boolean | undefined
         > => {
           // Exit if the connection is no longer active
