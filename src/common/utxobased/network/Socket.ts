@@ -55,7 +55,7 @@ interface SocketConfig {
   onQueueSpaceCB: OnQueueSpaceCB
 }
 
-interface WsMessage<T> {
+interface WsRequest<T> {
   task: WsTask<T>
   startTime: number
 }
@@ -64,8 +64,8 @@ interface Subscriptions<T> {
   [key: string]: WsSubscription<T>
 }
 
-interface PendingMessages<T> {
-  [key: string]: WsMessage<T>
+interface PendingRequests<T> {
+  [key: string]: WsRequest<T>
 }
 
 export function makeSocket(uri: string, config: SocketConfig): Socket {
@@ -76,7 +76,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const socketQueueId = walletId + '==' + uri
   const subscriptions: Subscriptions<any> = {}
   let onQueueSpace = config.onQueueSpaceCB
-  let pendingMessages: PendingMessages<any> = {}
+  let pendingRequests: PendingRequests<any> = {}
   let nextId = 0
   let lastKeepAlive = 0
   let lastWakeUp = 0
@@ -109,14 +109,14 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     connected = false
     socket = null
     cancelConnect = false
-    for (const message of Object.values(pendingMessages)) {
+    for (const request of Object.values(pendingRequests)) {
       try {
-        message.task.deferred.reject(err)
+        request.task.deferred.reject(err)
       } catch (e) {
         log.error(e.message)
       }
     }
-    pendingMessages = {}
+    pendingRequests = {}
     try {
       emitter.emit(SocketEvent.CONNECTION_CLOSE, uri, err)
     } catch (e) {
@@ -137,8 +137,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     } catch (e) {
       handleError(e)
     }
-    for (const [id, message] of Object.entries(pendingMessages)) {
-      transmitMessage(id, message)
+    for (const [id, request] of Object.entries(pendingRequests)) {
+      transmitRequest(id, request)
     }
 
     wakeUp()
@@ -161,8 +161,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     log(`doWakeUp socket with server ${uri}`)
     lastWakeUp = Date.now()
     if (connected && version != null) {
-      while (Object.keys(pendingMessages).length < queueSize) {
-        const task = await onQueueSpace?.(uri)
+      while (Object.keys(pendingRequests).length < queueSize) {
+        const task = await onQueueSpace(uri)
         if (task == null) break
         if (typeof task === 'boolean') {
           if (task) continue
@@ -190,12 +190,12 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   // add any exception, since the passed in template parameter needs to be re-assigned
   const submitTask = <T>(task: WsTask<T>): void => {
     const id = (nextId++).toString()
-    const message = { task, startTime: Date.now() }
-    pendingMessages[id] = message
-    transmitMessage(id, message)
+    const request = { task, startTime: Date.now() }
+    pendingRequests[id] = request
+    transmitRequest(id, request)
   }
 
-  const transmitMessage = <T>(id: string, pending: WsMessage<T>): void => {
+  const transmitRequest = <T>(id: string, request: WsRequest<T>): void => {
     const now = Date.now()
     if (
       socket != null &&
@@ -203,11 +203,11 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       connected &&
       !cancelConnect
     ) {
-      pending.startTime = now
+      request.startTime = now
       const message = {
         id,
-        method: pending.task.method,
-        params: pending.task.params ?? {}
+        method: request.task.method,
+        params: request.task.params ?? {}
       }
       socket.send(JSON.stringify(message))
     }
@@ -227,14 +227,14 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         .catch((e: Error) => handleError(e))
     }
 
-    for (const [id, message] of Object.entries(pendingMessages)) {
-      if (message.startTime + timeout < now) {
+    for (const [id, request] of Object.entries(pendingRequests)) {
+      if (request.startTime + timeout < now) {
         try {
-          message.task.deferred.reject(new Error('Timeout'))
+          request.task.deferred.reject(new Error('Timeout'))
         } catch (e) {
           log.error(e.message)
         }
-        removeItem(pendingMessages, id)
+        removeItem(pendingRequests, id)
       }
     }
     wakeUp()
@@ -244,8 +244,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const setupTimer = (): void => {
     log(`setupTimer with server ${uri}`)
     let nextWakeUp = lastWakeUp + WAKE_UP_MS
-    for (const message of Object.values(pendingMessages)) {
-      const to = message.startTime + timeout
+    for (const request of Object.values(pendingRequests)) {
+      const to = request.startTime + timeout
       if (to < nextWakeUp) nextWakeUp = to
     }
 
@@ -281,9 +281,9 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         }
 
         // Handle response message
-        const message = pendingMessages[id]
-        if (message != null) {
-          removeItem(pendingMessages, id)
+        const request = pendingRequests[id]
+        if (request != null) {
+          removeItem(pendingRequests, id)
           const { error } = json
           try {
             if (error != null) {
@@ -291,14 +291,14 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
                 error.message != null ? error.message : error.connected
               throw new Error(errorMessage)
             }
-            if (message.task.cleaner != null) {
-              message.task.deferred.resolve(message.task.cleaner(json.data))
+            if (request.task.cleaner != null) {
+              request.task.deferred.resolve(request.task.cleaner(json.data))
             } else {
-              message.task.deferred.resolve(json.data)
+              request.task.deferred.resolve(json.data)
             }
           } catch (error) {
-            console.log({ uri, error, json, message })
-            message.task.deferred.reject(error)
+            console.log({ uri, error, json, message: request })
+            request.task.deferred.reject(error)
           }
           return
         }
