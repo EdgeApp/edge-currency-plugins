@@ -252,7 +252,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         method: request.task.method,
         params: request.task.params ?? {}
       }
-      socket.send(JSON.stringify(message))
+      socket.send(JSON.stringify(message) + '\n')
     }
   }
 
