@@ -71,7 +71,9 @@ interface WsRequest<T> {
   startTime: number
 }
 
-export interface WsResponse {
+export type WsResponse = WsResponseMessage[]
+
+export interface WsResponseMessage {
   id: string
   data?: unknown
   error?: { message: string } | { connected: string }
@@ -87,8 +89,8 @@ interface PendingRequests<T> {
   [key: string]: WsRequest<T>
 }
 
-const asResponseDefault = asJSON(
-  asObject<WsResponse>({
+const asResponseMessageDefault = asJSON(
+  asObject<WsResponseMessage>({
     id: asString,
     data: asOptional(asUnknown),
     error: asOptional(
@@ -99,6 +101,9 @@ const asResponseDefault = asJSON(
     )
   })
 )
+const asResponseDefault = (raw: unknown): WsResponse => [
+  asResponseMessageDefault(raw)
+]
 
 export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
@@ -268,7 +273,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     for (const [id, request] of Object.entries(pendingRequests)) {
       if (request.startTime + timeout < now) {
         try {
-          request.task.deferred.reject(new Error('Timeout'))
+          request.task.deferred.reject(new Error(`Timeout for request ${id}`))
         } catch (e) {
           log.error(e.message)
         }
@@ -295,56 +300,65 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const onMessage = (message: string): void => {
     try {
       const response = asResponse(message)
-      if (response.id != null) {
-        const id: string = response.id.toString()
+      for (const responseMessage of response) {
+        if (responseMessage.id != null) {
+          const id: string = responseMessage.id.toString()
 
-        // Handle subscription message
-        const subscription = subscriptions[id]
-        if (subscription != null) {
-          const cleanData = asMaybe(asSubscriptionAck)(response.data)
-          if (cleanData?.subscribed != null) {
-            subscription.subscribed = true
-            subscription.deferred.resolve(response.data)
-            return
-          }
-          if (!subscription.subscribed) {
-            subscription.deferred.reject()
-          }
-          try {
-            subscription.cb(subscription.cleaner(response.data))
-          } catch (error) {
-            console.log({ uri, error, response, subscription })
-            throw error
-          }
-          return
-        }
-
-        // Handle response message
-        const request = pendingRequests[id]
-        if (request != null) {
-          removeItem(pendingRequests, id)
-          const { error } = response
-          try {
-            if (error != null) {
-              const errorMessage =
-                'message' in error ? error.message : error.connected
-              throw new Error(errorMessage)
+          // Handle subscription message
+          const subscription = subscriptions[id]
+          if (subscription != null) {
+            const cleanData = asMaybe(asSubscriptionAck)(responseMessage.data)
+            if (cleanData?.subscribed != null) {
+              subscription.subscribed = true
+              subscription.deferred.resolve(responseMessage.data)
+              continue
             }
-            if (request.task.cleaner != null) {
-              request.task.deferred.resolve(request.task.cleaner(response.data))
-            } else {
-              request.task.deferred.resolve(response.data)
+            if (!subscription.subscribed) {
+              subscription.deferred.reject()
             }
-          } catch (error) {
-            console.log({ uri, error, response, request })
-            request.task.deferred.reject(error)
+            try {
+              subscription.cb(subscription.cleaner(responseMessage.data))
+            } catch (error) {
+              console.log({
+                uri,
+                error,
+                response: responseMessage,
+                subscription
+              })
+              throw error
+            }
+            continue
           }
-          return
-        }
 
-        throw new Error(
-          `Unknown message id from incoming ws message: ${message}`
-        )
+          // Handle response message
+          const request = pendingRequests[id]
+          if (request != null) {
+            removeItem(pendingRequests, id)
+            const { error } = responseMessage
+            try {
+              if (error != null) {
+                const errorMessage =
+                  'message' in error ? error.message : error.connected
+                throw new Error(errorMessage)
+              }
+              if (request.task.cleaner != null) {
+                request.task.deferred.resolve(
+                  request.task.cleaner(responseMessage.data)
+                )
+              } else {
+                request.task.deferred.resolve(responseMessage.data)
+              }
+            } catch (error) {
+              console.log({ uri, error, response: responseMessage, request })
+              request.task.deferred.reject(error)
+            }
+            continue
+          }
+
+          throw new Error(
+            `Unknown message id from incoming ws message: ${message}`
+          )
+        }
       }
     } catch (e) {
       handleError(e)
