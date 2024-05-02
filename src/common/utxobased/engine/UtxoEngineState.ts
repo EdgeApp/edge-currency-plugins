@@ -154,19 +154,19 @@ export function makeUtxoEngineState(
 
     // We expect the total number of progress updates to equal the number of
     // addresses multiplied the number of processes per address.
-    const expectedProccessCount =
+    const expectedProcessCount =
       Object.keys(taskCache.addressSubscribeCache).length * processesPerAddress
 
     // Increment the processed count
     processedCount = processedCount + 1
 
     // If we have no addresses, we should not have not yet began processing.
-    if (expectedProccessCount === 0) throw new Error('No addresses to process')
+    if (expectedProcessCount === 0) throw new Error('No addresses to process')
 
-    const percent = processedCount / expectedProccessCount
+    const percent = processedCount / expectedProcessCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       log(
-        `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${expectedProccessCount}`
+        `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${expectedProcessCount}`
       )
       processedPercent = percent
       emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
