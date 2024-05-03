@@ -15,6 +15,7 @@ import {
   BlockbookTransaction,
   SubscribeAddressResponse
 } from '../network/blockbookApi'
+import { makeBlockbookElectrum } from '../network/BlockbookElectrum'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
 import { SocketEmitter, SocketEvent } from '../network/SocketEmitter'
@@ -218,7 +219,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const doRefillServers = (): void => {
-    const includePatterns = ['wss:', 'ws:']
+    const includePatterns = ['wss:', 'ws:', 'electrumwss:', 'electrumws:']
     if (serverList.length === 0) {
       serverList = pluginState.getLocalServers(NEW_CONNECTIONS, includePatterns)
     }
@@ -252,30 +253,62 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         continue
       }
 
-      // Make new Blockbook instance
-      const blockbook = makeBlockbook({
-        asAddress: pluginInfo.engineInfo.asBlockbookAddress,
-        connectionUri: uri,
-        engineEmitter,
-        log,
-        onQueueSpaceCB: async (): Promise<
-          WsTask<any> | boolean | undefined
-        > => {
-          // Exit if the connection is no longer active
-          if (!(uri in serverStatesCache)) return
+      // Blockbook instance variable
+      let blockbook: Blockbook
 
-          const task = await pickNextTaskCB(uri)
-          if (task != null && typeof task !== 'boolean') {
-            const taskMessage = `${task.method} params: ${JSON.stringify(
-              task.params
-            )}`
-            log(`${uri} nextTask: ${taskMessage}`)
-          }
-          return task
-        },
-        socketEmitter,
-        walletId: walletInfo.id
-      })
+      // Create a new blockbook instance based on the URI scheme
+      if (['electrumwss', 'electrumws'].includes(parsed.scheme)) {
+        // Electrum wrapper
+        blockbook = makeBlockbookElectrum({
+          asAddress: pluginInfo.engineInfo.asBlockbookAddress,
+          connectionUri: uri,
+          engineEmitter,
+          log,
+          onQueueSpaceCB: async (): Promise<
+            WsTask<any> | boolean | undefined
+          > => {
+            // Exit if the connection is no longer active
+            if (!(uri in serverStatesCache)) return
+
+            const task = await pickNextTaskCB(uri)
+            if (task != null && typeof task !== 'boolean') {
+              const taskMessage = `${task.method} params: ${JSON.stringify(
+                task.params
+              )}`
+              log(`${uri} nextTask: ${taskMessage}`)
+            }
+            return task
+          },
+          pluginInfo,
+          socketEmitter,
+          walletId: walletInfo.id
+        })
+      } else {
+        // Regular blockbook instance
+        blockbook = makeBlockbook({
+          asAddress: pluginInfo.engineInfo.asBlockbookAddress,
+          connectionUri: uri,
+          engineEmitter,
+          log,
+          onQueueSpaceCB: async (): Promise<
+            WsTask<any> | boolean | undefined
+          > => {
+            // Exit if the connection is no longer active
+            if (!(uri in serverStatesCache)) return
+
+            const task = await pickNextTaskCB(uri)
+            if (task != null && typeof task !== 'boolean') {
+              const taskMessage = `${task.method} params: ${JSON.stringify(
+                task.params
+              )}`
+              log(`${uri} nextTask: ${taskMessage}`)
+            }
+            return task
+          },
+          socketEmitter,
+          walletId: walletInfo.id
+        })
+      }
 
       // Make new ServerStates instance
       serverStatesCache[uri] = makeServerStatesCacheEntry(blockbook)

@@ -391,7 +391,17 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         }
 
         // Append "/websocket" if needed:
-        const fullUri = uri.replace(/\/websocket\/?$/, '') + '/websocket'
+        let fullUri = uri
+        if (uri.startsWith('wss:') || uri.startsWith('ws:')) {
+          fullUri = uri.replace(/\/websocket\/?$/, '') + '/websocket'
+        }
+        if (uri.startsWith('electrumwss:')) {
+          fullUri = uri.replace(/^electrumwss:/, 'wss:')
+        }
+        if (uri.startsWith('electrumws:')) {
+          fullUri = uri.replace(/^electrumws:/, 'ws:')
+        }
+
         try {
           socket = setupBrowser(fullUri, cbs)
         } catch {

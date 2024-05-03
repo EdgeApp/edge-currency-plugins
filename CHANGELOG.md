@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: Support for ElectrumX server WebSocket connections under 'electrumws(s):' protocol scheme.
+- added: Query for UTXO data from ElectrumX servers (sans transaction data).
+
 ## 2.6.2 (2024-04-24)
 
 - changed: Reorganize `currencyInfo`.
