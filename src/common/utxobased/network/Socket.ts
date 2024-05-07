@@ -74,10 +74,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   log('makeSocket connects to', uri)
   const version = ''
   const socketQueueId = walletId + '==' + uri
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subscriptions: Subscriptions<any> = {}
   let onQueueSpace = config.onQueueSpaceCB
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let pendingMessages: PendingMessages<any> = {}
   let nextId = 0
   let lastKeepAlive = 0
@@ -261,50 +259,53 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       const json = JSON.parse(messageJson)
       if (json.id != null) {
         const id: string = json.id.toString()
-        for (const cId of Object.keys(subscriptions)) {
-          if (id === cId) {
-            const subscription = subscriptions[id]
-            if (subscription == null) {
-              throw new Error(`cannot find subscription for ${id}`)
-            }
-            if (json.data?.subscribed != null) {
-              subscription.subscribed = true
-              subscription.deferred.resolve(json.data)
-              return
-            }
-            if (!subscription.subscribed) {
-              subscription.deferred.reject()
-            }
-            try {
-              subscription.cb(subscription.cleaner(json.data))
-            } catch (error) {
-              console.log({ uri, error, json, subscription })
-              throw error
-            }
+
+        // Handle subscription message
+        const subscription = subscriptions[id]
+        if (subscription != null) {
+          if (json.data?.subscribed != null) {
+            subscription.subscribed = true
+            subscription.deferred.resolve(json.data)
             return
           }
+          if (!subscription.subscribed) {
+            subscription.deferred.reject()
+          }
+          try {
+            subscription.cb(subscription.cleaner(json.data))
+          } catch (error) {
+            console.log({ uri, error, json, subscription })
+            throw error
+          }
+          return
         }
+
+        // Handle response message
         const message = pendingMessages[id]
-        if (message == null) {
-          throw new Error(`Bad response id in ${messageJson}`)
-        }
-        removeItem(pendingMessages, id)
-        const { error } = json
-        try {
-          if (error != null) {
-            const errorMessage =
-              error.message != null ? error.message : error.connected
-            throw new Error(errorMessage)
+        if (message != null) {
+          removeItem(pendingMessages, id)
+          const { error } = json
+          try {
+            if (error != null) {
+              const errorMessage =
+                error.message != null ? error.message : error.connected
+              throw new Error(errorMessage)
+            }
+            if (message.task.cleaner != null) {
+              message.task.deferred.resolve(message.task.cleaner(json.data))
+            } else {
+              message.task.deferred.resolve(json.data)
+            }
+          } catch (error) {
+            console.log({ uri, error, json, message })
+            message.task.deferred.reject(error)
           }
-          if (message.task.cleaner != null) {
-            message.task.deferred.resolve(message.task.cleaner(json.data))
-          } else {
-            message.task.deferred.resolve(json.data)
-          }
-        } catch (error) {
-          console.log({ uri, error, json, message })
-          message.task.deferred.reject(error)
+          return
         }
+
+        throw new Error(
+          `Unknown message id from incoming ws message: ${messageJson}`
+        )
       }
     } catch (e) {
       handleError(e)
