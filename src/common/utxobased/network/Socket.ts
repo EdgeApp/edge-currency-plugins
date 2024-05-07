@@ -1,6 +1,8 @@
 import {
+  asBoolean,
   asEither,
   asJSON,
+  asMaybe,
   asObject,
   asOptional,
   asString,
@@ -71,13 +73,15 @@ interface WsRequest<T> {
 
 export interface WsResponse {
   id: string
-  data?: any
+  data?: unknown
   error?: { message: string } | { connected: string }
 }
 
 interface Subscriptions<T> {
   [key: string]: WsSubscription<T>
 }
+
+const asSubscriptionAck = asObject({ subscribed: asBoolean })
 
 interface PendingRequests<T> {
   [key: string]: WsRequest<T>
@@ -297,7 +301,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         // Handle subscription message
         const subscription = subscriptions[id]
         if (subscription != null) {
-          if (response.data?.subscribed != null) {
+          const cleanData = asMaybe(asSubscriptionAck)(response.data)
+          if (cleanData?.subscribed != null) {
             subscription.subscribed = true
             subscription.deferred.resolve(response.data)
             return
