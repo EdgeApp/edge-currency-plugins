@@ -1,4 +1,12 @@
-import { Cleaner } from 'cleaners'
+import {
+  asEither,
+  asJSON,
+  asObject,
+  asOptional,
+  asString,
+  asUnknown,
+  Cleaner
+} from 'cleaners'
 import { EdgeLog } from 'edge-core-js/types'
 
 import { removeItem } from '../../plugin/utils'
@@ -46,6 +54,7 @@ export type OnQueueSpaceCB = (
 ) => Promise<WsTask<unknown> | boolean | undefined>
 
 interface SocketConfig {
+  asResponse?: Cleaner<WsResponse>
   queueSize?: number
   timeout?: number
   walletId: string
@@ -60,6 +69,12 @@ interface WsRequest<T> {
   startTime: number
 }
 
+export interface WsResponse {
+  id: string
+  data?: any
+  error?: { message: string } | { connected: string }
+}
+
 interface Subscriptions<T> {
   [key: string]: WsSubscription<T>
 }
@@ -68,9 +83,28 @@ interface PendingRequests<T> {
   [key: string]: WsRequest<T>
 }
 
+const asResponseDefault = asJSON(
+  asObject<WsResponse>({
+    id: asString,
+    data: asOptional(asUnknown),
+    error: asOptional(
+      asEither(
+        asObject({ message: asString }),
+        asObject({ connected: asString })
+      )
+    )
+  })
+)
+
 export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
-  const { emitter, log, queueSize = 50, walletId } = config
+  const {
+    asResponse = asResponseDefault,
+    emitter,
+    log,
+    queueSize = 50,
+    walletId
+  } = config
   log('makeSocket connects to', uri)
   const version = ''
   const socketQueueId = walletId + '==' + uri
@@ -254,27 +288,27 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     timer = setTimeout(() => onTimer(), delay)
   }
 
-  const onMessage = (messageJson: string): void => {
+  const onMessage = (message: string): void => {
     try {
-      const json = JSON.parse(messageJson)
-      if (json.id != null) {
-        const id: string = json.id.toString()
+      const response = asResponse(message)
+      if (response.id != null) {
+        const id: string = response.id.toString()
 
         // Handle subscription message
         const subscription = subscriptions[id]
         if (subscription != null) {
-          if (json.data?.subscribed != null) {
+          if (response.data?.subscribed != null) {
             subscription.subscribed = true
-            subscription.deferred.resolve(json.data)
+            subscription.deferred.resolve(response.data)
             return
           }
           if (!subscription.subscribed) {
             subscription.deferred.reject()
           }
           try {
-            subscription.cb(subscription.cleaner(json.data))
+            subscription.cb(subscription.cleaner(response.data))
           } catch (error) {
-            console.log({ uri, error, json, subscription })
+            console.log({ uri, error, response, subscription })
             throw error
           }
           return
@@ -284,27 +318,27 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         const request = pendingRequests[id]
         if (request != null) {
           removeItem(pendingRequests, id)
-          const { error } = json
+          const { error } = response
           try {
             if (error != null) {
               const errorMessage =
-                error.message != null ? error.message : error.connected
+                'message' in error ? error.message : error.connected
               throw new Error(errorMessage)
             }
             if (request.task.cleaner != null) {
-              request.task.deferred.resolve(request.task.cleaner(json.data))
+              request.task.deferred.resolve(request.task.cleaner(response.data))
             } else {
-              request.task.deferred.resolve(json.data)
+              request.task.deferred.resolve(response.data)
             }
           } catch (error) {
-            console.log({ uri, error, json, message: request })
+            console.log({ uri, error, response, request })
             request.task.deferred.reject(error)
           }
           return
         }
 
         throw new Error(
-          `Unknown message id from incoming ws message: ${messageJson}`
+          `Unknown message id from incoming ws message: ${message}`
         )
       }
     } catch (e) {

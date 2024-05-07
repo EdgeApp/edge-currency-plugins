@@ -25,7 +25,7 @@ import {
   TransactionResponse
 } from './blockbookApi'
 import Deferred from './Deferred'
-import { makeSocket, OnQueueSpaceCB, WsTask } from './Socket'
+import { makeSocket, OnQueueSpaceCB, WsResponse, WsTask } from './Socket'
 import { SocketEmitter } from './SocketEmitter'
 
 export type WatchAddressesCB = (
@@ -99,6 +99,7 @@ export interface Blockbook {
 
 interface BlockbookConfig {
   asAddress?: Cleaner<string>
+  asResponse?: Cleaner<WsResponse>
   connectionUri: string
   engineEmitter: EngineEmitter
   log: EdgeLog
@@ -111,6 +112,7 @@ interface BlockbookConfig {
 export function makeBlockbook(config: BlockbookConfig): Blockbook {
   const {
     asAddress,
+    asResponse,
     connectionUri,
     engineEmitter,
     log,
@@ -259,6 +261,7 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
   }
 
   const socket = makeSocket(connectionUri, {
+    asResponse,
     healthCheck: config.ping ?? ping,
     onQueueSpaceCB,
     log,
