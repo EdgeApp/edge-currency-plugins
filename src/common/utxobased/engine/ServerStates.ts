@@ -8,10 +8,14 @@ import { removeItem } from '../../plugin/utils'
 import { SafeWalletInfo } from '../keymanager/cleaners'
 import { Blockbook, makeBlockbook } from '../network/Blockbook'
 import {
+  AddressResponse,
+  AddressUtxosResponse,
   asBlockbookResponse,
   asBroadcastTxResponse,
+  BlockbookTransaction,
   SubscribeAddressResponse
 } from '../network/blockbookApi'
+import { makeBlockbookElectrum } from '../network/BlockbookElectrum'
 import Deferred from '../network/Deferred'
 import { WsTask } from '../network/Socket'
 import { SocketEmitter, SocketEvent } from '../network/SocketEmitter'
@@ -39,7 +43,6 @@ interface ServerStateConfig {
 
 export interface ServerStates {
   setPickNextTaskCB: (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
   ) => void
   stop: () => void
@@ -58,6 +61,35 @@ export interface ServerStates {
   ) => void
   watchBlocks: (uri: string) => void
   getBlockHeight: (uri: string) => number
+
+  //
+  // Task Methods:
+  //
+
+  addressQueryTask: (
+    serverUri: string,
+    address: string,
+    params: { lastQueriedBlockHeight: number; page: number },
+    deferred: Deferred<AddressResponse>
+  ) => WsTask<AddressResponse>
+
+  transactionQueryTask: (
+    serverUri: string,
+    txId: string,
+    deferred: Deferred<BlockbookTransaction>
+  ) => WsTask<BlockbookTransaction>
+
+  transactionSpecialQueryTask: (
+    serverUri: string,
+    txId: string,
+    deferred: Deferred<unknown>
+  ) => WsTask<unknown>
+
+  utxoListQueryTask: (
+    serverUri: string,
+    address: string,
+    deferred: Deferred<AddressUtxosResponse>
+  ) => WsTask<AddressUtxosResponse>
 }
 
 interface ServerStatesCache {
@@ -135,7 +167,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
   let pickNextTaskCB: (
     uri: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) => Promise<boolean | WsTask<any> | undefined>
 
   const makeServerStatesCacheEntry = (blockbook: Blockbook): ServerState => ({
@@ -146,7 +177,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     blockHeight: 0
   })
   const setPickNextTaskCB = (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
   ): void => {
     pickNextTaskCB = callback
@@ -189,7 +219,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const doRefillServers = (): void => {
-    const includePatterns = ['wss:', 'ws:']
+    const includePatterns = ['wss:', 'ws:', 'electrumwss:', 'electrumws:']
     if (serverList.length === 0) {
       serverList = pluginState.getLocalServers(NEW_CONNECTIONS, includePatterns)
     }
@@ -223,31 +253,62 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         continue
       }
 
-      // Make new Blockbook instance
-      const blockbook = makeBlockbook({
-        asAddress: pluginInfo.engineInfo.asBlockbookAddress,
-        connectionUri: uri,
-        engineEmitter,
-        log,
-        onQueueSpaceCB: async (): Promise<
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          WsTask<any> | boolean | undefined
-        > => {
-          // Exit if the connection is no longer active
-          if (!(uri in serverStatesCache)) return
+      // Blockbook instance variable
+      let blockbook: Blockbook
 
-          const task = await pickNextTaskCB(uri)
-          if (task != null && typeof task !== 'boolean') {
-            const taskMessage = `${task.method} params: ${JSON.stringify(
-              task.params
-            )}`
-            log(`${uri} nextTask: ${taskMessage}`)
-          }
-          return task
-        },
-        socketEmitter,
-        walletId: walletInfo.id
-      })
+      // Create a new blockbook instance based on the URI scheme
+      if (['electrumwss', 'electrumws'].includes(parsed.scheme)) {
+        // Electrum wrapper
+        blockbook = makeBlockbookElectrum({
+          asAddress: pluginInfo.engineInfo.asBlockbookAddress,
+          connectionUri: uri,
+          engineEmitter,
+          log,
+          onQueueSpaceCB: async (): Promise<
+            WsTask<any> | boolean | undefined
+          > => {
+            // Exit if the connection is no longer active
+            if (!(uri in serverStatesCache)) return
+
+            const task = await pickNextTaskCB(uri)
+            if (task != null && typeof task !== 'boolean') {
+              const taskMessage = `${task.method} params: ${JSON.stringify(
+                task.params
+              )}`
+              log(`${uri} nextTask: ${taskMessage}`)
+            }
+            return task
+          },
+          pluginInfo,
+          socketEmitter,
+          walletId: walletInfo.id
+        })
+      } else {
+        // Regular blockbook instance
+        blockbook = makeBlockbook({
+          asAddress: pluginInfo.engineInfo.asBlockbookAddress,
+          connectionUri: uri,
+          engineEmitter,
+          log,
+          onQueueSpaceCB: async (): Promise<
+            WsTask<any> | boolean | undefined
+          > => {
+            // Exit if the connection is no longer active
+            if (!(uri in serverStatesCache)) return
+
+            const task = await pickNextTaskCB(uri)
+            if (task != null && typeof task !== 'boolean') {
+              const taskMessage = `${task.method} params: ${JSON.stringify(
+                task.params
+              )}`
+              log(`${uri} nextTask: ${taskMessage}`)
+            }
+            return task
+          },
+          socketEmitter,
+          walletId: walletInfo.id
+        })
+      }
 
       // Make new ServerStates instance
       serverStatesCache[uri] = makeServerStatesCacheEntry(blockbook)
@@ -495,7 +556,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     return serverStatesCache[uri].blockHeight
   }
 
-  return {
+  const instance: ServerStates = {
     setPickNextTaskCB,
     stop,
     serverCanGetTx,
@@ -508,6 +569,74 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     broadcastTx,
     watchAddresses,
     watchBlocks,
-    getBlockHeight
+    getBlockHeight,
+
+    //
+    // Task Methods:
+    //
+
+    addressQueryTask(
+      serverUri: string,
+      address: string,
+      params: { lastQueriedBlockHeight: number; page: number },
+      deferred: Deferred<AddressResponse>
+    ): WsTask<AddressResponse> {
+      const serverState = serverStatesCache[serverUri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${serverUri}`)
+
+      return serverState.blockbook.addressQueryTask(
+        address,
+        {
+          asBlockbookAddress: pluginInfo.engineInfo.asBlockbookAddress,
+          lastQueriedBlockHeight: params.lastQueriedBlockHeight,
+          page: params.page
+        },
+        deferred
+      )
+    },
+
+    transactionQueryTask(
+      serverUri: string,
+      txId: string,
+      deferred: Deferred<BlockbookTransaction>
+    ): WsTask<BlockbookTransaction> {
+      const serverState = serverStatesCache[serverUri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${serverUri}`)
+
+      return serverState.blockbook.transactionQueryTask(txId, deferred)
+    },
+
+    transactionSpecialQueryTask(
+      serverUri: string,
+      txId: string,
+      deferred: Deferred<unknown>
+    ): WsTask<unknown> {
+      const serverState = serverStatesCache[serverUri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${serverUri}`)
+
+      return serverState.blockbook.transactionSpecialQueryTask(txId, deferred)
+    },
+    utxoListQueryTask(
+      serverUri: string,
+      address: string,
+      deferred: Deferred<AddressUtxosResponse>
+    ): WsTask<AddressUtxosResponse> {
+      const serverState = serverStatesCache[serverUri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${serverUri}`)
+
+      return serverState.blockbook.utxoListQueryTask(
+        address,
+        {
+          asBlockbookAddress: pluginInfo.engineInfo.asBlockbookAddress
+        },
+        deferred
+      )
+    }
   }
+
+  return instance
 }

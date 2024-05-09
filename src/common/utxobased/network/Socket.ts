@@ -1,4 +1,14 @@
-import { Cleaner } from 'cleaners'
+import {
+  asBoolean,
+  asEither,
+  asJSON,
+  asMaybe,
+  asObject,
+  asOptional,
+  asString,
+  asUnknown,
+  Cleaner
+} from 'cleaners'
 import { EdgeLog } from 'edge-core-js/types'
 
 import { removeItem } from '../../plugin/utils'
@@ -46,6 +56,7 @@ export type OnQueueSpaceCB = (
 ) => Promise<WsTask<unknown> | boolean | undefined>
 
 interface SocketConfig {
+  asResponse?: Cleaner<WsResponse>
   queueSize?: number
   timeout?: number
   walletId: string
@@ -55,30 +66,60 @@ interface SocketConfig {
   onQueueSpaceCB: OnQueueSpaceCB
 }
 
-interface WsMessage<T> {
+interface WsRequest<T> {
   task: WsTask<T>
   startTime: number
+}
+
+export type WsResponse = WsResponseMessage[]
+
+export interface WsResponseMessage {
+  id: string
+  data?: unknown
+  error?: { message: string } | { connected: string }
 }
 
 interface Subscriptions<T> {
   [key: string]: WsSubscription<T>
 }
 
-interface PendingMessages<T> {
-  [key: string]: WsMessage<T>
+const asSubscriptionAck = asObject({ subscribed: asBoolean })
+
+interface PendingRequests<T> {
+  [key: string]: WsRequest<T>
 }
+
+const asResponseMessageDefault = asJSON(
+  asObject<WsResponseMessage>({
+    id: asString,
+    data: asOptional(asUnknown),
+    error: asOptional(
+      asEither(
+        asObject({ message: asString }),
+        asObject({ connected: asString })
+      )
+    )
+  })
+)
+const asResponseDefault = (raw: unknown): WsResponse => [
+  asResponseMessageDefault(raw)
+]
 
 export function makeSocket(uri: string, config: SocketConfig): Socket {
   let socket: InnerSocket | null
-  const { emitter, log, queueSize = 50, walletId } = config
+  const {
+    asResponse = asResponseDefault,
+    emitter,
+    log,
+    queueSize = 50,
+    walletId
+  } = config
   log('makeSocket connects to', uri)
   const version = ''
   const socketQueueId = walletId + '==' + uri
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subscriptions: Subscriptions<any> = {}
   let onQueueSpace = config.onQueueSpaceCB
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let pendingMessages: PendingMessages<any> = {}
+  let pendingRequests: PendingRequests<any> = {}
   let nextId = 0
   let lastKeepAlive = 0
   let lastWakeUp = 0
@@ -111,14 +152,14 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     connected = false
     socket = null
     cancelConnect = false
-    for (const message of Object.values(pendingMessages)) {
+    for (const request of Object.values(pendingRequests)) {
       try {
-        message.task.deferred.reject(err)
+        request.task.deferred.reject(err)
       } catch (e) {
         log.error(e.message)
       }
     }
-    pendingMessages = {}
+    pendingRequests = {}
     try {
       emitter.emit(SocketEvent.CONNECTION_CLOSE, uri, err)
     } catch (e) {
@@ -139,8 +180,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     } catch (e) {
       handleError(e)
     }
-    for (const [id, message] of Object.entries(pendingMessages)) {
-      transmitMessage(id, message)
+    for (const [id, request] of Object.entries(pendingRequests)) {
+      transmitRequest(id, request)
     }
 
     wakeUp()
@@ -163,8 +204,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     log(`doWakeUp socket with server ${uri}`)
     lastWakeUp = Date.now()
     if (connected && version != null) {
-      while (Object.keys(pendingMessages).length < queueSize) {
-        const task = await onQueueSpace?.(uri)
+      while (Object.keys(pendingRequests).length < queueSize) {
+        const task = await onQueueSpace(uri)
         if (task == null) break
         if (typeof task === 'boolean') {
           if (task) continue
@@ -192,12 +233,12 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   // add any exception, since the passed in template parameter needs to be re-assigned
   const submitTask = <T>(task: WsTask<T>): void => {
     const id = (nextId++).toString()
-    const message = { task, startTime: Date.now() }
-    pendingMessages[id] = message
-    transmitMessage(id, message)
+    const request = { task, startTime: Date.now() }
+    pendingRequests[id] = request
+    transmitRequest(id, request)
   }
 
-  const transmitMessage = <T>(id: string, pending: WsMessage<T>): void => {
+  const transmitRequest = <T>(id: string, request: WsRequest<T>): void => {
     const now = Date.now()
     if (
       socket != null &&
@@ -205,13 +246,13 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       connected &&
       !cancelConnect
     ) {
-      pending.startTime = now
+      request.startTime = now
       const message = {
         id,
-        method: pending.task.method,
-        params: pending.task.params ?? {}
+        method: request.task.method,
+        params: request.task.params ?? {}
       }
-      socket.send(JSON.stringify(message))
+      socket.send(JSON.stringify(message) + '\n')
     }
   }
 
@@ -229,14 +270,14 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         .catch((e: Error) => handleError(e))
     }
 
-    for (const [id, message] of Object.entries(pendingMessages)) {
-      if (message.startTime + timeout < now) {
+    for (const [id, request] of Object.entries(pendingRequests)) {
+      if (request.startTime + timeout < now) {
         try {
-          message.task.deferred.reject(new Error('Timeout'))
+          request.task.deferred.reject(new Error(`Timeout for request ${id}`))
         } catch (e) {
           log.error(e.message)
         }
-        removeItem(pendingMessages, id)
+        removeItem(pendingRequests, id)
       }
     }
     wakeUp()
@@ -246,8 +287,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const setupTimer = (): void => {
     log(`setupTimer with server ${uri}`)
     let nextWakeUp = lastWakeUp + WAKE_UP_MS
-    for (const message of Object.values(pendingMessages)) {
-      const to = message.startTime + timeout
+    for (const request of Object.values(pendingRequests)) {
+      const to = request.startTime + timeout
       if (to < nextWakeUp) nextWakeUp = to
     }
 
@@ -256,54 +297,67 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     timer = setTimeout(() => onTimer(), delay)
   }
 
-  const onMessage = (messageJson: string): void => {
+  const onMessage = (message: string): void => {
     try {
-      const json = JSON.parse(messageJson)
-      if (json.id != null) {
-        const id: string = json.id.toString()
-        for (const cId of Object.keys(subscriptions)) {
-          if (id === cId) {
-            const subscription = subscriptions[id]
-            if (subscription == null) {
-              throw new Error(`cannot find subscription for ${id}`)
-            }
-            if (json.data?.subscribed != null) {
+      const response = asResponse(message)
+      for (const responseMessage of response) {
+        if (responseMessage.id != null) {
+          const id: string = responseMessage.id.toString()
+
+          // Handle subscription message
+          const subscription = subscriptions[id]
+          if (subscription != null) {
+            const cleanData = asMaybe(asSubscriptionAck)(responseMessage.data)
+            if (cleanData?.subscribed != null) {
               subscription.subscribed = true
-              subscription.deferred.resolve(json.data)
-              return
+              subscription.deferred.resolve(responseMessage.data)
+              continue
             }
             if (!subscription.subscribed) {
               subscription.deferred.reject()
             }
             try {
-              subscription.cb(subscription.cleaner(json.data))
+              subscription.cb(subscription.cleaner(responseMessage.data))
             } catch (error) {
-              console.log({ uri, error, json, subscription })
+              console.log({
+                uri,
+                error,
+                response: responseMessage,
+                subscription
+              })
               throw error
             }
-            return
+            continue
           }
-        }
-        const message = pendingMessages[id]
-        if (message == null) {
-          throw new Error(`Bad response id in ${messageJson}`)
-        }
-        removeItem(pendingMessages, id)
-        const { error } = json
-        try {
-          if (error != null) {
-            const errorMessage =
-              error.message != null ? error.message : error.connected
-            throw new Error(errorMessage)
+
+          // Handle response message
+          const request = pendingRequests[id]
+          if (request != null) {
+            removeItem(pendingRequests, id)
+            const { error } = responseMessage
+            try {
+              if (error != null) {
+                const errorMessage =
+                  'message' in error ? error.message : error.connected
+                throw new Error(errorMessage)
+              }
+              if (request.task.cleaner != null) {
+                request.task.deferred.resolve(
+                  request.task.cleaner(responseMessage.data)
+                )
+              } else {
+                request.task.deferred.resolve(responseMessage.data)
+              }
+            } catch (error) {
+              console.log({ uri, error, response: responseMessage, request })
+              request.task.deferred.reject(error)
+            }
+            continue
           }
-          if (message.task.cleaner != null) {
-            message.task.deferred.resolve(message.task.cleaner(json.data))
-          } else {
-            message.task.deferred.resolve(json.data)
-          }
-        } catch (error) {
-          console.log({ uri, error, json, message })
-          message.task.deferred.reject(error)
+
+          throw new Error(
+            `Unknown message id from incoming ws message: ${message}`
+          )
         }
       }
     } catch (e) {
@@ -337,7 +391,17 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
         }
 
         // Append "/websocket" if needed:
-        const fullUri = uri.replace(/\/websocket\/?$/, '') + '/websocket'
+        let fullUri = uri
+        if (uri.startsWith('wss:') || uri.startsWith('ws:')) {
+          fullUri = uri.replace(/\/websocket\/?$/, '') + '/websocket'
+        }
+        if (uri.startsWith('electrumwss:')) {
+          fullUri = uri.replace(/^electrumwss:/, 'wss:')
+        }
+        if (uri.startsWith('electrumws:')) {
+          fullUri = uri.replace(/^electrumws:/, 'ws:')
+        }
+
         try {
           socket = setupBrowser(fullUri, cbs)
         } catch {

@@ -10,7 +10,6 @@ import {
   Cleaner,
   uncleaner
 } from 'cleaners'
-import { EdgeTransaction } from 'edge-core-js/types'
 
 /**
  * Websocket Task
@@ -227,11 +226,11 @@ export const transactionMessageSpecific = (
  * Send Transaction
  */
 export const broadcastTxMessage = (
-  transaction: EdgeTransaction
+  signedTx: string
 ): BlockbookTask<BroadcastTxResponse> => {
   return {
     method: 'sendTransaction',
-    params: { hex: transaction.signedTx },
+    params: { hex: signedTx },
     cleaner: asBlockbookResponse(asBroadcastTxResponse)
   }
 }
@@ -279,9 +278,10 @@ export interface AddressResponse {
   totalPages: number
   itemsOnPage: number
 }
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const asAddressResponse = (asAddress: Cleaner<string> = asString) =>
-  asObject({
+export const asAddressResponse = (
+  asAddress: Cleaner<string> = asString
+): Cleaner<AddressResponse> =>
+  asObject<AddressResponse>({
     // details: basic
     address: asAddress,
     balance: asString,
