@@ -6,7 +6,9 @@ import {
   EdgeCurrencyTools,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+import { setMemletConfig } from 'memlet'
 
+import { EdgeCurrencyPluginNativeIo } from '../../react-native'
 import {
   asUtxoInitOptions,
   asUtxoUserSettings
@@ -17,12 +19,14 @@ import { makeEngineEmitter } from './EngineEmitter'
 import { makePluginState } from './PluginState'
 import { EngineConfig, PluginInfo } from './types'
 
+let hasMemletBeenSet = false
+
 export function makeCurrencyPlugin(
   pluginOptions: EdgeCorePluginOptions,
   pluginInfo: PluginInfo
 ): EdgeCurrencyPlugin {
   const { currencyInfo } = pluginInfo
-  const { io, log, pluginDisklet, initOptions } = pluginOptions
+  const { initOptions, io, log, nativeIo, pluginDisklet } = pluginOptions
   const currencyTools = makeCurrencyTools(io, pluginInfo)
   const { defaultSettings, pluginId, currencyCode } = currencyInfo
   const pluginState = makePluginState({
@@ -33,6 +37,18 @@ export function makeCurrencyPlugin(
     log,
     defaultSettings: asUtxoUserSettings(defaultSettings)
   })
+
+  if (!hasMemletBeenSet) {
+    const { memletConfig } = nativeIo[
+      'edge-currency-plugins'
+    ] as EdgeCurrencyPluginNativeIo
+
+    if (memletConfig != null) {
+      hasMemletBeenSet = true
+      setMemletConfig(memletConfig)
+    }
+  }
+
   return {
     currencyInfo,
 

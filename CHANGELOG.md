@@ -5,6 +5,7 @@
 - added: Added blockbook-nownode server configs to BTC, BCH, DASH, DGB, GRS, LTC, and FIRO
 - added: Support for ElectrumX server WebSocket connections under 'electrumws(s):' protocol scheme.
 - added: Query for UTXO data from ElectrumX servers (sans transaction data).
+- added: `memletConfig` option to new `makePluginIo` API to config memlet memory usage.
 - changed: Plugin package now builds itself into a react-native module using webpack (see README for installation guide).
 - changed: Upgrade edge-core-js dependency to v2
 

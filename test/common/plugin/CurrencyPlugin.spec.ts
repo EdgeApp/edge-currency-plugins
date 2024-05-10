@@ -11,6 +11,7 @@ import { before, describe, it } from 'mocha'
 
 import edgeCorePlugins from '../../../src/index'
 import { testLog } from '../../util/testLog'
+import { makeFakeNativeIo } from '../../utils'
 import { fixtures } from './CurrencyPlugin.fixtures/index'
 
 describe('currencyPlugins.spec', () => {
@@ -23,6 +24,7 @@ describe('currencyPlugins.spec', () => {
     let tools: EdgeCurrencyTools
 
     const fakeIo = makeFakeIo()
+    const nativeIo = makeFakeNativeIo()
     const pluginOpts: EdgeCorePluginOptions = {
       initOptions: {},
       infoPayload: {},
@@ -31,7 +33,7 @@ describe('currencyPlugins.spec', () => {
         random: () => Uint8Array.from(fixture.key)
       },
       log: testLog,
-      nativeIo: {},
+      nativeIo,
       pluginDisklet: fakeIo.disklet
     }
     const factory = edgeCorePlugins[fixture.pluginId]

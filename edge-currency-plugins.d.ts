@@ -1,14 +1,17 @@
+import { EdgeCorePluginOptions, EdgeCurrencyPlugin } from 'edge-core-js/types'
+
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyPlugin,
-  EdgeOtherMethods
-} from 'edge-core-js/types'
+  EdgeCurrencyPluginIoOptions,
+  EdgeCurrencyPluginNativeIo
+} from './src/react-native'
 
 /**
  * Add this to your `nativeIo` object on React Native,
  * as `{ 'edge-currency-plugins': makePluginIo() }`
  */
-export function makePluginIo(): EdgeOtherMethods
+export function makePluginIo(
+  options?: EdgeCurrencyPluginIoOptions
+): EdgeCurrencyPluginNativeIo
 
 /**
  * Debugging-URI to use on React Native,
