@@ -1,5 +1,7 @@
 # Build output:
 /.cache/
+/android/*.jar
+/android/src/main/assets/edge-currency-plugins/
 /dist/
 /lib/
 

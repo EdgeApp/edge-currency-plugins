@@ -2,6 +2,7 @@
   "name": "edge-currency-plugins",
   "version": "2.6.2",
   "description": "Edge currency plugins to fetch and process wallet accounts, balances and transactions.",
+  "homepage": "https://edge.app/",
   "repository": "https://github.com/EdgeApp/edge-currency-plugins",
   "license": "MIT",
   "author": "Airbitz, Inc.",
@@ -9,25 +10,31 @@
   "browser": {
     "ws": false
   },
-  "types": "./lib/src/index.d.ts",
+  "types": "./edge-currency-plugins.d.ts",
   "files": [
+    "/android/build.gradle",
+    "/android/src/*",
+    "/edge-currency-plugins.d.ts",
+    "/edge-currency-plugins.podspec",
+    "ios/*",
     "lib/*",
-    "package.json",
-    "README.md"
+    "/LICENSE",
+    "/package.json",
+    "/README.md"
   ],
   "scripts": {
-    "clean": "rimraf lib",
+    "clean": "rimraf android/src/main/assets/edge-currency-plugins dist lib",
     "coverage": "nyc mocha && nyc report --reporter=cobertura --reporter=html",
     "fix": "eslint . --fix",
     "lib": "sucrase -q -t typescript,imports -d ./lib ./src",
     "lint": "eslint .",
     "precommit": "lint-staged && npm-run-all types test",
-    "prepare": "husky install && npm-run-all clean -p lib types",
-    "start": "node -r sucrase/register src/index.ts",
-    "start.dev": "nodemon",
+    "prepare": "husky install && npm-run-all clean lib types webpack",
+    "start": "webpack serve",
     "test": "mocha",
     "types": "tsc",
-    "verify": "npm-run-all lint types"
+    "webpack": "webpack && cp -r android/src/main/assets/edge-currency-plugins dist",
+    "verify": "npm-run-all prepare lint types test"
   },
   "lint-staged": {
     "*.{js,ts,json}": "eslint"
@@ -59,6 +66,7 @@
     "ws": "^7.4.6"
   },
   "devDependencies": {
+    "@sucrase/webpack-loader": "^2.0.0",
     "@types/base-x": "^3.0.6",
     "@types/bn.js": "^5.1.0",
     "@types/bs58": "^4.0.1",
@@ -80,6 +88,7 @@
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "edge-core-js": "^2.5.0",
+    "esbuild-loader": "^4.1.0",
     "eslint": "^7.14.0",
     "eslint-config-standard-kit": "0.15.1",
     "eslint-plugin-import": "^2.22.1",
@@ -105,6 +114,10 @@
     "rimraf": "^3.0.2",
     "sucrase": "^3.12.1",
     "typescript": "^4.1.2",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.0.4",
     "wif": "^2.0.6"
-  }
+  },
+  "react-native": "./lib/react-native.js"
 }

@@ -10,10 +10,14 @@ for (const info of all) {
     makeCurrencyPlugin(options, info)
 }
 
+declare global {
+  interface Window {
+    addEdgeCorePlugins?: (plugins: EdgeCorePlugins) => void
+  }
+}
+
 if (typeof window !== 'undefined') {
   window.addEdgeCorePlugins?.(plugins)
 }
 
 export default plugins
-
-export { setMemletConfig } from 'memlet'
