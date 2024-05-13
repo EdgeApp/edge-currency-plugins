@@ -42,6 +42,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const engineInfo: EngineInfo = {
+  serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['https://firobook.nownodes.io']
+    }
+  ],
   formats: ['bip44', 'bip32'],
   uriPrefix: 'firo',
   gapLimit: 10,

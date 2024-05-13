@@ -427,7 +427,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       // Broadcast through any HTTP URI that may be configured, only if no
       // blockbook instances are connected.
       if (!isAnyBlockbookConnected) {
-        // This is for the future when we want to HTTP servers from the user
+        // This is for the future when we want to get HTTP servers from the user
         // settings:
         // const httpUris = pluginState.getLocalServers(Infinity, [
         //   /^http(?:s)?:/i
@@ -459,6 +459,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         }
 
         for (const uri of nowNodeUris) {
+          log.warn('Falling back to NOWNode server broadcast over HTTP:', uri)
+
           // HTTP Fallback
           io.fetchCors(`${uri}/api/v2/sendtx/`, {
             method: 'POST',
