@@ -1,10 +1,6 @@
+dist: focal
 language: node_js
 node_js:
-  - 16
-install:
-  - yarn install --frozen-lockfile --ignore-optional --network-concurrency 1
-  - yarn prepare
+  - 18
 script:
-  - yarn lint
-  - yarn types
-  - yarn test
+  - yarn verify

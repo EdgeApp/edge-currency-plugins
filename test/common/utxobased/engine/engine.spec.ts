@@ -22,6 +22,7 @@ import request from 'request'
 import edgeCorePlugins from '../../../../src/index'
 import { objectKeys } from '../../../util/objectKeys'
 import { noOp, testLog } from '../../../util/testLog'
+import { makeFakeNativeIo } from '../../../utils'
 import { fixtures } from './engine.fixtures/index'
 
 const fetchHack: EdgeFetchFunction = fetch as any
@@ -44,6 +45,7 @@ describe('engine.spec', function () {
     const fakeIo = makeFakeIo()
     const fixtureDisklet = makeNodeDisklet(tests.dummyDataPath)
     const fakeIoDisklet = makeMemoryDisklet()
+    const nativeIo = makeFakeNativeIo()
     // FOR DEBUGGING:
     // const fakeIoDisklet = makeNodeDisklet(
     //   join(__dirname, 'engine.fixtures/bitcoinTestnet2')
@@ -58,7 +60,7 @@ describe('engine.spec', function () {
       },
       log: testLog,
       infoPayload: {},
-      nativeIo: {},
+      nativeIo,
       pluginDisklet: fakeIoDisklet
     }
     const factory = edgeCorePlugins[tests.pluginId]

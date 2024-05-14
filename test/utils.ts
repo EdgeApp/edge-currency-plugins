@@ -8,6 +8,7 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginInfo } from '../src/common/plugin/types'
+import { EdgeCurrencyPluginNativeIo } from '../src/react-native'
 
 export const makeFakePluginInfo = (): PluginInfo => {
   return {
@@ -151,5 +152,13 @@ const makeFakeFetch = (): EdgeFetchFunction => async (
     async text(): Promise<string> {
       return await Promise.resolve('')
     }
+  }
+}
+
+export const makeFakeNativeIo = (): {
+  'edge-currency-plugins': EdgeCurrencyPluginNativeIo
+} => {
+  return {
+    'edge-currency-plugins': {}
   }
 }

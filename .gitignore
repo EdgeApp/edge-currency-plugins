@@ -1,9 +1,9 @@
 # Build output:
 /.cache/
+/android/*.jar
+/android/src/main/assets/edge-currency-plugins/
 /dist/
 /lib/
-/config.json
-tsconfig.tsbuildinfo
 
 # Package managers:
 node_modules/

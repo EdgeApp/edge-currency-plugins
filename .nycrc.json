@@ -1,6 +1,6 @@
 {
-  "include": ["src/**/*.ts"],
   "extension": [".ts"],
+  "include": ["src/**/*.ts"],
   "require": ["sucrase/register"],
   "all": true
 }

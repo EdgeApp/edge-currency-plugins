@@ -1,4 +1,6 @@
+/.nyc_output/
+/android/src/main/assets/edge-currency-plugins/
+/dist/
+/coverage/
 /lib/
 /node_modules/
-/.nyc_output/
-/coverage/
