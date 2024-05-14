@@ -8,12 +8,12 @@ export interface SpendTests {
 }
 const Spend: SpendTests = {
   'low fee': {
+    tokenId: null,
     networkFeeOption: 'low',
     metadata: {
       name: 'Transfer to College Fund',
       category: 'Transfer:Wallet:College Fund'
     },
-    currencyCode: 'TESTBTC',
     spendTargets: [
       {
         publicAddress: '2MutAAY6tW2HEyrhSadT1aQhP4KdCAKkC74',
@@ -26,12 +26,12 @@ const Spend: SpendTests = {
     ]
   },
   'low standard fee': {
+    tokenId: null,
     networkFeeOption: 'standard',
     metadata: {
       name: 'Transfer to College Fund',
       category: 'Transfer:Wallet:College Fund'
     },
-    currencyCode: 'TESTBTC',
     spendTargets: [
       {
         publicAddress: '2MutAAY6tW2HEyrhSadT1aQhP4KdCAKkC74',
@@ -40,12 +40,12 @@ const Spend: SpendTests = {
     ]
   },
   'middle standard fee': {
+    tokenId: null,
     networkFeeOption: 'standard',
     metadata: {
       name: 'Transfer to College Fund',
       category: 'Transfer:Wallet:College Fund'
     },
-    currencyCode: 'TESTBTC',
     spendTargets: [
       {
         publicAddress: '2MutAAY6tW2HEyrhSadT1aQhP4KdCAKkC74',
@@ -54,12 +54,12 @@ const Spend: SpendTests = {
     ]
   },
   'high standard fee': {
+    tokenId: null,
     networkFeeOption: 'standard',
     metadata: {
       name: 'Transfer to College Fund',
       category: 'Transfer:Wallet:College Fund'
     },
-    currencyCode: 'TESTBTC',
     spendTargets: [
       {
         publicAddress: '2MutAAY6tW2HEyrhSadT1aQhP4KdCAKkC74',
@@ -72,12 +72,12 @@ const Spend: SpendTests = {
     ]
   },
   'high fee': {
+    tokenId: null,
     networkFeeOption: 'high',
     metadata: {
       name: 'Transfer to College Fund',
       category: 'Transfer:Wallet:College Fund'
     },
-    currencyCode: 'TESTBTC',
     spendTargets: [
       {
         publicAddress: '2MutAAY6tW2HEyrhSadT1aQhP4KdCAKkC74',
@@ -90,13 +90,13 @@ const Spend: SpendTests = {
     ]
   },
   'custom fee': {
+    tokenId: null,
     networkFeeOption: 'custom',
     customNetworkFee: { satPerByte: '1000' },
     metadata: {
       name: 'Transfer to College Fund',
       category: 'Transfer:Wallet:College Fund'
     },
-    currencyCode: 'TESTBTC',
     spendTargets: [
       {
         publicAddress: '2MutAAY6tW2HEyrhSadT1aQhP4KdCAKkC74',
@@ -111,12 +111,12 @@ const Spend: SpendTests = {
 }
 const InsufficientFundsError: SpendTests = {
   'an amount over the balance': {
+    tokenId: null,
     networkFeeOption: 'high',
     metadata: {
       name: 'Transfer to College Fund',
       category: 'Transfer:Wallet:College Fund'
     },
-    currencyCode: 'TESTBTC',
     spendTargets: [
       {
         publicAddress: '2MutAAY6tW2HEyrhSadT1aQhP4KdCAKkC74',
@@ -129,12 +129,12 @@ const InsufficientFundsError: SpendTests = {
     ]
   },
   'a really big amount': {
+    tokenId: null,
     networkFeeOption: 'high',
     metadata: {
       name: 'Transfer to College Fund',
       category: 'Transfer:Wallet:College Fund'
     },
-    currencyCode: 'TESTBTC',
     spendTargets: [
       {
         publicAddress: '2MutAAY6tW2HEyrhSadT1aQhP4KdCAKkC74',
@@ -150,6 +150,7 @@ const InsufficientFundsError: SpendTests = {
 const Sweep: SpendTests = {
   'low fee': {
     spendTargets: [],
+    tokenId: null,
     networkFeeOption: 'low',
     metadata: {
       name: 'Transfer to College Fund',
@@ -159,6 +160,7 @@ const Sweep: SpendTests = {
   },
   'low standard fee': {
     spendTargets: [],
+    tokenId: null,
     networkFeeOption: 'low',
     metadata: {
       name: 'Transfer to College Fund',
@@ -168,6 +170,7 @@ const Sweep: SpendTests = {
   },
   'high fee': {
     spendTargets: [],
+    tokenId: null,
     networkFeeOption: 'high',
     metadata: {
       name: 'Transfer to College Fund',
@@ -177,6 +180,7 @@ const Sweep: SpendTests = {
   },
   'custom fee': {
     spendTargets: [],
+    tokenId: null,
     networkFeeOption: 'custom',
     customNetworkFee: { satPerByte: '1000' },
     metadata: {

@@ -2,7 +2,6 @@ import { Psbt } from 'altcoin-js'
 import { asCodec, asString } from 'cleaners'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import {
@@ -28,10 +27,6 @@ const currencyInfo: EdgeCurrencyInfo = {
   blockExplorer: 'https://whatsonchain.com/block/%s',
   addressExplorer: 'https://whatsonchain.com/address/%s',
   transactionExplorer: 'https://whatsonchain.com/tx/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoinsv-logo-solo-64.png`,
 
   denominations: [
     { name: 'BSV', multiplier: '100000000', symbol: '₿' },

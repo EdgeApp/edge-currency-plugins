@@ -3,7 +3,6 @@ import { asMaybe } from 'cleaners'
 import { makeMemoryDisklet } from 'disklet'
 import {
   DustSpendError,
-  EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
   EdgeDataDump,
   EdgeFreshAddress,
@@ -12,6 +11,7 @@ import {
   EdgePaymentProtocolInfo,
   EdgeSignMessageOptions,
   EdgeSpendInfo,
+  EdgeTokenIdOptions,
   EdgeTokenInfo,
   EdgeTransaction,
   InsufficientFundsError,
@@ -367,7 +367,7 @@ export async function makeUtxoEngine(
       pluginState.removeEngine(engineState)
     },
 
-    getBalance(_opts: EdgeCurrencyCodeOptions): string {
+    getBalance(_opts: EdgeTokenIdOptions): string {
       return metadata.state.balance
     },
 
@@ -463,7 +463,7 @@ export async function makeUtxoEngine(
       return await engineState.getFreshAddress({ forceIndex })
     },
 
-    getNumTransactions(_opts: EdgeCurrencyCodeOptions): number {
+    getNumTransactions(_opts: EdgeTokenIdOptions): number {
       return processor.numTransactions()
     },
 
@@ -543,7 +543,7 @@ export async function makeUtxoEngine(
         bs.gt(totalAmountToSend, `${sumUtxos(utxos)}`) ||
         utxos.length === 0
       ) {
-        throw new InsufficientFundsError(currencyInfo.currencyCode)
+        throw new InsufficientFundsError({ tokenId: null })
       }
 
       let targets: MakeTxTarget[] = []
@@ -684,6 +684,7 @@ export async function makeUtxoEngine(
         otherParams,
         ourReceiveAddresses,
         signedTx: '',
+        tokenId: null,
         txid: '',
         walletId: walletInfo.id
       }
@@ -948,7 +949,7 @@ export async function makeUtxoEngine(
             if (tmpUtxos === null || tmpUtxos.length < 1) {
               throw new Error('Private key has no funds')
             }
-            const destAddress = await this.getFreshAddress({})
+            const destAddress = await this.getFreshAddress({ tokenId: null })
             const nativeAmount = tmpMetadata.state.balance
             const txOptions: TxOptions = { utxos: tmpUtxos, subtractFee: true }
             spendInfo.spendTargets = [

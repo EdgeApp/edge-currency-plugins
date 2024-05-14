@@ -1,6 +1,5 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import {
@@ -21,10 +20,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://insight.zcoin.io/address/%s',
   blockExplorer: 'https://insight.zcoin.io/block/%s',
   transactionExplorer: 'https://insight.zcoin.io/tx/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/zcoin-logo-solo-64.png`,
 
   denominations: [
     { name: 'FIRO', multiplier: '100000000', symbol: 'ƒ' },

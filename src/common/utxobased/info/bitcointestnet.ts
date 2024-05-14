@@ -1,6 +1,5 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import {
   legacyMemoInfo,
@@ -21,10 +20,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
   blockExplorer: 'https://blockchair.com/bitcoin/testnet/block/%s',
   addressExplorer: 'https://blockchair.com/bitcoin/testnet/address/%s',
   transactionExplorer: 'https://blockchair.com/bitcoin/testnet/transaction/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoin-logo-solo-64.png`,
 
   denominations: [
     { name: 'TESTBTC', multiplier: '100000000', symbol: '₿' },

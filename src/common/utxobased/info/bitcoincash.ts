@@ -2,7 +2,6 @@ import { Psbt } from 'altcoin-js'
 import { asCodec, asString } from 'cleaners'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { IMAGE_SERVER_URL } from '../../constants'
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
 import {
@@ -25,10 +24,6 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://blockchair.com/bitcoin-cash/address/%s',
   transactionExplorer: 'https://blockchair.com/bitcoin-cash/transaction/%s',
   xpubExplorer: 'https://bch1.trezor.io/xpub/%s',
-
-  // Images:
-  symbolImage: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
-  symbolImageDarkMono: `${IMAGE_SERVER_URL}/bitcoincash-logo-solo-64.png`,
 
   denominations: [
     { name: 'BCH', multiplier: '100000000', symbol: '₿' },

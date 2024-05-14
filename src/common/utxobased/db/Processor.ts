@@ -33,7 +33,12 @@ interface FetchTransactionArgs {
   blockHeight?: number
   blockHeightMax?: number
   txId?: string
-  options?: EdgeGetTransactionsOptions
+  options?: EdgeGetTransactionsOptions & {
+    endDate?: Date
+    startDate?: Date
+    startEntries?: number
+    startIndex?: number
+  }
 }
 
 interface FetchUtxosArgs {

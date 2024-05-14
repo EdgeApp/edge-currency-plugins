@@ -11,7 +11,6 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeFetchFunction,
-  EdgeGetTransactionsOptions,
   EdgeSpendInfo,
   JsonObject,
   makeFakeIo
@@ -58,6 +57,7 @@ describe('engine.spec', function () {
         fetch: fetchHack
       },
       log: testLog,
+      infoPayload: {},
       nativeIo: {},
       pluginDisklet: fakeIoDisklet
     }
@@ -84,7 +84,9 @@ describe('engine.spec', function () {
         fakeLogger.info('onBlockHeightChange:', height)
         emitter.emit('onBlockHeightChange', height)
       },
+      onNewTokens() {},
       onStakingStatusChanged() {},
+      onTokenBalanceChanged() {},
       onTransactionsChanged(transactionList) {
         fakeLogger.info('onTransactionsChanged:', transactionList)
         emitter.emit('onTransactionsChanged', transactionList)
@@ -284,29 +286,20 @@ describe('engine.spec', function () {
     describe(`Get Transactions from Wallet type ${WALLET_TYPE}`, function () {
       it('Should get number of transactions from cache', function () {
         assert.equal(
-          engine.getNumTransactions({}),
+          engine.getNumTransactions({ tokenId: null }),
           TX_AMOUNT,
           `should have ${TX_AMOUNT} tx from cache`
         )
       })
 
       it('Should get transactions from cache', async function () {
-        await engine.getTransactions({}).then(txs => {
+        await engine.getTransactions({ tokenId: null }).then(txs => {
           assert.equal(
             txs.length,
             TX_AMOUNT,
             `should have ${TX_AMOUNT} tx from cache`
           )
         })
-      })
-
-      it('Should get transactions from cache with options', async function () {
-        const options: EdgeGetTransactionsOptions = {
-          startIndex: 1,
-          startEntries: 2
-        }
-        const txs = await engine.getTransactions(options)
-        assert.equal(txs.length, 2, 'should have 2 tx from cache')
       })
     })
 
@@ -417,6 +410,7 @@ describe('engine.spec', function () {
 
       it('Should fail since no spend target is given', async function () {
         const spendInfo: EdgeSpendInfo = {
+          tokenId: null,
           networkFeeOption: 'high',
           metadata: {
             name: 'Transfer to College Fund',

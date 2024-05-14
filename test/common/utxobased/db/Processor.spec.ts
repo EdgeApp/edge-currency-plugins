@@ -589,16 +589,25 @@ describe('Processor transactions tests', () => {
     expect(tx3?.ourIns[0]).to.eqls('0')
     expect(tx3?.ourAmount).to.eqls('1')
 
-    const [tx4] = await processor.fetchTransactions({ options: {} })
+    const [tx4] = await processor.fetchTransactions({
+      options: {
+        tokenId: null
+      }
+    })
     expect(tx4).not.to.be.undefined
 
     const results = await processor.fetchTransactions({
-      options: { startDate: new Date(11_000), endDate: new Date(15_000) }
+      options: {
+        tokenId: null,
+        startDate: new Date(11_000),
+        endDate: new Date(15_000)
+      }
     })
     expect(results).to.deep.equal([])
 
     const [tx6] = await processor.fetchTransactions({
       options: {
+        tokenId: null,
         startDate: new Date(9_000),
         endDate: new Date(15_000)
       }
@@ -693,11 +702,16 @@ describe('Processor transactions tests', () => {
     expect(tx3?.ourIns[0]).to.eqls('0')
     expect(tx3?.ourAmount).to.eqls('1')
 
-    const [tx4] = await processor.fetchTransactions({ options: {} })
+    const [tx4] = await processor.fetchTransactions({
+      options: {
+        tokenId: null
+      }
+    })
     expect(tx4).not.to.be.undefined
 
     const [tx5] = await processor.fetchTransactions({
       options: {
+        tokenId: null,
         startDate: new Date(11_000),
         endDate: new Date(20_000)
       }
@@ -706,6 +720,7 @@ describe('Processor transactions tests', () => {
 
     const tx6 = await processor.fetchTransactions({
       options: {
+        tokenId: null,
         startDate: new Date(9_000),
         endDate: new Date(21_000)
       }
