@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.0.1 (2024-05-29)
+
 - changed: Changed webpack dev server port to 8084 to resolve conflict with metro's 8081 usage.
 
 ## 3.0.0 (2024-05-14)
