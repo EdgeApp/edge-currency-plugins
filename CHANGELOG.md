@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Changed webpack dev server port to 8084 to resolve conflict with metro's 8081 usage.
+
 ## 3.0.0 (2024-05-14)
 
 - added: Added blockbook-nownode server configs to BTC, BCH, DASH, DGB, GRS, LTC, and FIRO
