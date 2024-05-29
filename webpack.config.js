@@ -8,8 +8,8 @@ const debug = process.env.WEBPACK_SERVE
 
 // Try exposing our socket to adb (errors are fine):
 if (process.env.WEBPACK_SERVE) {
-  console.log('adb reverse tcp:8081 tcp:8081')
-  exec('adb reverse tcp:8081 tcp:8081', () => {})
+  console.log('adb reverse tcp:8084 tcp:8084')
+  exec('adb reverse tcp:8084 tcp:8084', () => {})
 }
 
 const bundlePath = path.resolve(
@@ -22,7 +22,7 @@ module.exports = {
   devServer: {
     allowedHosts: 'all',
     hot: false,
-    port: 8081,
+    port: 8084,
     static: bundlePath
   },
   entry: './src/index.ts',

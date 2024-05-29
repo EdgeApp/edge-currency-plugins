@@ -41,7 +41,7 @@ The bundle located in `dist/edge-currency-plugins.js` will automatically registe
 ```
 
 If you want to debug this project, run `yarn start` to start a Webpack server,
-and then adjust your script URL to http://localhost:8081/edge-currency-plugins.js.
+and then adjust your script URL to http://localhost:8084/edge-currency-plugins.js.
 
 ### React Native
 
