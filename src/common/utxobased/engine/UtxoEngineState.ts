@@ -1332,7 +1332,7 @@ const processTransactionResponse = (
       })
     return {
       txId: vin.txid,
-      outputIndex: vin.vout, // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674` no `vout` for input
+      outputIndex: vin.vout,
       n: vin.n,
       scriptPubkey,
       amount: vin.value

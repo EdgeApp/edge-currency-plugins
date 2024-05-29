@@ -89,7 +89,11 @@ export const asBlockbookTransaction = (
         txid: asString,
         sequence: asOptional(asNumber),
         n: asNumber,
-        vout: asOptional(asNumber, 0), // If Blockbook doesn't provide vout, assume 0 (empirically observed)
+        // If Blockbook doesn't provide vout, assume 0. Empirically observed
+        // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674`
+        // which has no `vout` for input in WebSocket response payload but block
+        // will show the input's vout value to be `0`.
+        vout: asOptional(asNumber, 0),
         addresses: asArray(asAddress),
         isAddress: asBoolean,
         value: asString,
