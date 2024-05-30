@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Check transaction input sequence values for RBF transaction acceleration.
+
 ## 3.0.1 (2024-05-29)
 
 - changed: Changed webpack dev server port to 8084 to resolve conflict with metro's 8081 usage.

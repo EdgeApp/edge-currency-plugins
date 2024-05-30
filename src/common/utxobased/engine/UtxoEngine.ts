@@ -155,8 +155,12 @@ export async function makeUtxoEngine(
       })
 
       // Transaction checks:
-      // The transaction must be found and not confirmed or dropped.
+      // Must be found
       if (replacedTx == null) return null
+      // Must have at least one input with the sequence enabling RBF policy
+      if (replacedTx.inputs.every(input => input.sequence > 0xfffffffd))
+        return null
+      // Must not be confirmed or dropped.
       if (replacedTx.blockHeight !== 0) return null
 
       // Double the fee used for the RBF transaction:
