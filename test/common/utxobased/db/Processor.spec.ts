@@ -527,6 +527,7 @@ describe('Processor transactions tests', () => {
       txId: 'random',
       outputIndex: 0,
       scriptPubkey: 'pubkeyin1',
+      sequence: 0xfffffffe,
       n: 0,
       amount: '1'
     }
@@ -624,6 +625,7 @@ describe('Processor transactions tests', () => {
       txId: 'random',
       outputIndex: 0,
       scriptPubkey: 'pubkeyin1',
+      sequence: 0xfffffffe,
       n: 0,
       amount: '1'
     }
@@ -737,6 +739,7 @@ describe('Processor transactions tests', () => {
       txId: 'random',
       outputIndex: 0,
       scriptPubkey: 'pubkeyin1',
+      sequence: 0xfffffffe,
       n: 0,
       amount: '1'
     }

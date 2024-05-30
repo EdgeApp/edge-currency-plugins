@@ -80,5 +80,6 @@ export interface ITransactionInput {
   n: number
   outputIndex: number
   scriptPubkey: string
+  sequence: number
   txId: string
 }

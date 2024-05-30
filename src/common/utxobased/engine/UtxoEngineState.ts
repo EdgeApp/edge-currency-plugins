@@ -1335,6 +1335,7 @@ const processTransactionResponse = (
       outputIndex: vin.vout,
       n: vin.n,
       scriptPubkey,
+      sequence: vin.sequence,
       amount: vin.value
     }
   })
