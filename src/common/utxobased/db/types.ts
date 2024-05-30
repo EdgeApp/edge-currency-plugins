@@ -71,11 +71,14 @@ export interface IProcessorTransaction {
 
 export interface ITransactionOutput {
   amount: string
-  scriptPubkey: string
   n: number
+  scriptPubkey: string
 }
 
-export interface ITransactionInput extends ITransactionOutput {
-  txId: string
+export interface ITransactionInput {
+  amount: string
+  n: number
   outputIndex: number
+  scriptPubkey: string
+  txId: string
 }
