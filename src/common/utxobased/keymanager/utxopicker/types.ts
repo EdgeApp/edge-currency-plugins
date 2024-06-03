@@ -6,7 +6,7 @@ export type Input = UTXO
 export interface UTXO extends PsbtInput {
   hash: Buffer
   index: number
-  sequence?: number
+  sequence: number
   value: number
   script: Buffer
   scriptPubkey: Buffer

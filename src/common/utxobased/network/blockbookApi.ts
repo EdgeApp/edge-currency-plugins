@@ -59,7 +59,7 @@ export interface BlockbookTransaction {
   fees: string
   vin: Array<{
     txid: string
-    sequence?: number
+    sequence: number
     n: number
     vout: number
     addresses: string[]
@@ -87,9 +87,15 @@ export const asBlockbookTransaction = (
     vin: asArray(
       asObject({
         txid: asString,
-        sequence: asOptional(asNumber),
+        // Empirically observed omitted sequence is possible for when sequence is zero.
+        // Is the case for tx `19ecc679cfc7e71ad616a22bbee96fd5abe8616e4f408f1f5daaf137400ae091`.
+        sequence: asOptional(asNumber, 0),
         n: asNumber,
-        vout: asOptional(asNumber, 0), // If Blockbook doesn't provide vout, assume 0 (empirically observed)
+        // If Blockbook doesn't provide vout, assume 0. Empirically observed
+        // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674`
+        // which has no `vout` for input in WebSocket response payload but block
+        // will show the input's vout value to be `0`.
+        vout: asOptional(asNumber, 0),
         addresses: asArray(asAddress),
         isAddress: asBoolean,
         value: asString,
