@@ -62,18 +62,95 @@ export interface PluginInfo {
 }
 
 export interface EngineInfo {
+  /**
+   * Supported wallet formats for address derivation.
+   *
+   * See https://github.com/EdgeApp/edge-core-js/blob/master/docs/key-formats.md#detailed-key-formats
+   **/
   formats?: CurrencyFormat[]
+
+  /**
+   * Optional list of currency pluginId strings of which this currency is a fork.
+   * These fork currencies are able to be split into this currency.
+   **/
   forks?: string[]
+
   uriPrefix?: string
+
+  /**
+   * The gap limit defines the number of indexes to derive from the last used
+   * address. This is typically set to 10 for most currencies with the exception
+   * of Bitcoin which is set to 25 for historical reasons.
+   */
   gapLimit: number
+
+  /**
+   * The number of milliseconds defining the frequency that the engine will
+   * fetch new fee rates.
+   */
   feeUpdateInterval: number
+
+  /**
+   * Optional mempool.space URI for fetching fee info.
+   *
+   * See https://mempool.space/docs/api/rest#get-recommended-fees
+   */
   mempoolSpaceFeeInfoServer?: string
+
+  /**
+   * Default fee info used before fetching up-to-date fee info from Edge
+   * Info Servers.
+   */
   defaultFeeInfo: FeeInfo
+
+  /**
+   * Optional script template functions for non-standard output script types.
+   * These are used to generate the output scriptPubkey for a transaction given
+   * pubkey as an argument.
+   *
+   * The derivation path includes a changeIndex using the 2 bytes of the hash
+   * of the script template function output given an empty pubkey value.
+   * The engine will search for funds on this derivation path using address
+   * indexes up to the gapLimit.
+   *
+   * This feature is mainly used for replay-protection script templates for
+   * Bitcoin Cash and Bitcoin SV replay protection. It it currently limited
+   * to supporting only `replayProtection` keyed entries.
+   */
   scriptTemplates?: ScriptTemplates
+
+  /**
+   * Optional server configurations for the currency engine. Currently only supports
+   * NOWNode Blockbook servers configuration types for HTTP fallback.
+   *
+   * Use `blockbookServers` config in `EdgeCurrencyInfo['defaultSettings']` for
+   * the time being. This config controls the WebSocket URI for Blockbook
+   * connections over the WebSocket protocol.
+   */
   serverConfigs?: ServerConfig[]
-  // Codec Cleaners
+
+  /**
+   * An optional codec cleaner (asCodec) for serializing and deserializing an
+   * address over network interfaces. This can be used to resolve issues with
+   * network interfaces that expect addresses to be formatted differently than
+   * what is expected by the engine.
+   *
+   * For example, if a Blockbook server expects
+   * an address URI prefix (mycurrency:), then this cleaner codec can add the
+   * necessary translations.
+   *
+   * See https://cleaners.js.org/#/reference?id=ascodec cleaner codec
+   * documentation.
+   */
   asBlockbookAddress?: Cleaner<string>
-  // Coin specific transaction handling
+
+  /**
+   * Some currencies require an additional blockbook payload
+   * 'getTransactionSpecific' in order to provide all relevant transaction
+   * data. If this function is defined, it should merge the unknown `specialTx`
+   * data from the Blockbook endpoint with the `IProcessorTransaction` object
+   * which is stored to disk.
+   **/
   txSpecificHandling?: (
     tx: IProcessorTransaction,
     specialTx: unknown
