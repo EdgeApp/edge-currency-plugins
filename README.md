@@ -60,3 +60,13 @@ import { pluginUri, makePluginIo } from "edge-currency-plugins";
 ```
 
 To debug this project, run `yarn start` to start a Webpack server, and then use `debugUri` instead of `pluginUri`.
+
+## How to Contribute
+
+Contributions are welcome and appreciated. Please reference these guides for
+specific contribution information:
+
+- [Currency Contribution Guide](./docs/currency-integration.md)
+
+Additionally, any issues or bugs found can be reported by opening a issue on
+GitHub.

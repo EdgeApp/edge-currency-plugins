@@ -43,7 +43,6 @@ const engineInfo: EngineInfo = {
   formats: ['bip44', 'bip32'],
   forks: ['bitcoinsv'],
   gapLimit: 10,
-  defaultFee: 10000,
   feeUpdateInterval: 60000,
   defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,

@@ -2,8 +2,7 @@ import { all as plugins } from '../utxobased/info/all'
 
 export const getFormatsForNetwork = (coinName: string): string[] => {
   for (const plugin of plugins) {
-    if (plugin.coinInfo.name === coinName)
-      return plugin.engineInfo.formats ?? []
+    if (plugin.coinInfo.name === coinName) return plugin.engineInfo.formats
   }
   return []
 }

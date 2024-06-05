@@ -105,7 +105,7 @@ export const getSupportedFormats = (
         return ['bip49', 'bip84']
     }
   })()
-  const engineInfoFormats = engineInfo.formats ?? ['bip44', 'bip32']
+  const engineInfoFormats = engineInfo.formats
   return formats.filter(format => engineInfoFormats.includes(format))
 }
 

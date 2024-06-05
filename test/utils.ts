@@ -32,7 +32,7 @@ export const makeFakePluginInfo = (): PluginInfo => {
       walletType: ''
     },
     engineInfo: {
-      defaultFee: 0,
+      formats: ['bip44', 'bip32'],
       feeUpdateInterval: 0,
       gapLimit: 0,
       defaultFeeInfo: {

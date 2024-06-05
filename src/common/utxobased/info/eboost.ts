@@ -39,7 +39,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 const engineInfo: EngineInfo = {
   formats: ['bip44', 'bip32'],
   gapLimit: 10,
-  defaultFee: 500000,
   feeUpdateInterval: 60000,
   defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
