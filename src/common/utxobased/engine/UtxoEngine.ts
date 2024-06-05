@@ -102,10 +102,7 @@ export async function makeUtxoEngine(
   const walletInfo = asSafeWalletInfo(pluginInfo)(config.walletInfo)
   const { privateKeyFormat, publicKey, walletFormats } = walletInfo.keys
 
-  if (
-    engineInfo.formats == null ||
-    !engineInfo.formats.includes(privateKeyFormat)
-  ) {
+  if (!engineInfo.formats.includes(privateKeyFormat)) {
     const message = `Wallet format is not supported: ${privateKeyFormat}`
     log.error(message)
     throw new Error(message)
@@ -904,11 +901,6 @@ export async function makeUtxoEngine(
 
       // The temporary wallet info should include all formats for the currency
       const allFormats = engineInfo.formats
-      if (allFormats == null) {
-        throw new Error(
-          `Missing  formats for wallet type ${currencyInfo.walletType}`
-        )
-      }
 
       const tmpWalletInfo: SafeWalletInfo = {
         id: walletInfo.id,

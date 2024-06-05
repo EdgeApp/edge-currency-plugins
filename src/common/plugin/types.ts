@@ -67,7 +67,7 @@ export interface EngineInfo {
    *
    * See https://github.com/EdgeApp/edge-core-js/blob/master/docs/key-formats.md#detailed-key-formats
    **/
-  formats?: CurrencyFormat[]
+  formats: CurrencyFormat[]
 
   /**
    * Optional list of currency pluginId strings of which this currency is a fork.

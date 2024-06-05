@@ -63,7 +63,7 @@ export function makeCurrencyTools(
       const privateKey: PrivateKey = {
         imported: false,
         seed: mnemonic,
-        format: opts?.format ?? engineInfo.formats?.[0] ?? 'bip44',
+        format: opts?.format ?? engineInfo.formats[0] ?? 'bip44',
         coinType: opts?.coinType ?? coinInfo.coinType ?? 0
       }
 
