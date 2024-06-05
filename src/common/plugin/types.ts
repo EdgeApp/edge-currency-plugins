@@ -166,30 +166,108 @@ export interface ServerConfig {
  * Coin Info
  */
 
+/**
+ * This info is to be used to interface with the AltcoinJs library. It contains
+ * network and encoding parameters for the currency.
+ */
 export interface CoinInfo {
-  name: string // The offical network name in lower case. Must match the Bitcoin Lib Network Type
+  /**
+   * The official network name in lower case. This is a unique network name
+   * to identify the `CoinInfo`. It should not conflict with other currency
+   * plugins using the same UTXO plugin implementation.
+   */
+  name: string
+
+  /**
+   * Whether the currency uses segwit addresses (wrapped-segwit P2SH, P2WSH, etc).
+   */
   segwit: boolean
+
+  /**
+   * The SLIP-0044 coin type number. This is used to derive the BIP32 path for
+   * addresses.
+   */
   coinType: number
+
+  /**
+   * Optional sighash value to be passed to AltcoinJS as the sighashType field
+   * on inputs. This is primarily used by currencies that leverage it as
+   * build-in replay-protection mechanisms.
+   */
   sighash?: number
+
+  /**
+   * A function to be passed to AltcoinJS `signInput` method. This is used to
+   * get the input hash for the signature algorithm before signing the input.
+   *
+   * This is used if the currency has a custom signature hash function that
+   * deviates from the default `bcrypto.hash256` function used for Bitcoin.
+   */
   sighashFunction?: (Hash: Buffer) => Buffer
+
+  /**
+   * A function to be passed to AltcoinJS `getId` method. This is used to get
+   * the transaction hash (txid) for a transaction.
+   *
+   * This is used if the currency has a custom signature hash function that
+   * deviates from the default `bcrypto.hash256` function used for Bitcoin.
+   */
   txHashFunction?: (Hash: Buffer) => Buffer
+
+  /**
+   * A optional custom decode function passed to AltcoinJS `PaymentCreator`
+   * function. This is used to decode the base58 address encoding.
+   */
   bs58DecodeFunc?: BaseConverter['decode']
+
+  /**
+   * A optional custom encode function passed to AltcoinJS `PaymentCreator`
+   * function. This is used to encode the address to a base58 encoding.
+   */
   bs58EncodeFunc?: BaseConverter['encode']
+
+  /**
+   * A optional custom WIF encoding function passed to AltcoinJS `toWIF` method.
+   * This is used to encode the private key into a WIF.
+   */
   wifEncodeFunc?: typeof wif.encode
+
+  /**
+   * A optional custom extended public/private key encoding function.
+   * This is used when converting a public or private key to an xpub/xpriv.
+   */
   bip32FromBase58Func?: (
     xKey: string,
     network: BitcoinJSNetwork
   ) => bip32.BIP32Interface
+
+  /**
+   * A optional custom seed encoding function.
+   * This is used when converting a seed to root private key.
+   */
   bip32FromSeedFunc?: (seed: Buffer) => bip32.BIP32Interface
+
+  /**
+   * A optional custom UTXO picker function for currencies that may require
+   * different UTXO selection algorithms.
+   */
   utxoPicker?: UtxoPicker
+
+  /**
+   * This is all the currency specific prefixes for encoding and decoding
+   * of various data types.
+   */
   prefixes: CoinPrefixes
 }
 
-/*
-  The first entry in the array is used for standard serialization
-  The second entry in the array is used for legacy serialization
-  All entries in the array are checked whether they can de-serialize the content
-*/
+/**
+ * This is all the currency specific prefixes for encoding and decoding
+ * of various data types.
+ *
+ * The first entry in the array is used for standard serialization.
+ * The second entry in the array is used for legacy serialization.
+ * All entries in the array are checked whether they can de-serialize the content
+ */
 export interface CoinPrefixes {
   messagePrefix: string[]
   wif: number[]
