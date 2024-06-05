@@ -66,7 +66,6 @@ export interface EngineInfo {
   forks?: string[]
   uriPrefix?: string
   gapLimit: number
-  defaultFee: number
   feeUpdateInterval: number
   mempoolSpaceFeeInfoServer?: string
   defaultFeeInfo: FeeInfo
