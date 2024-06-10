@@ -617,6 +617,13 @@ export async function makeUtxoEngine(
         targets = []
       }
 
+      // Determine whether the transaction should enable RBF given that the
+      // currency supports RBF.
+      const enableRbf =
+        currencyInfo.canReplaceByFee === true
+          ? edgeSpendInfo.enableRbf ?? spendInfoOtherParams.enableRbf ?? true
+          : false
+
       log.warn(`spend: Using fee rate ${feeRate} sat/B`)
       const subtractFee =
         txOptions.subtractFee != null ? txOptions.subtractFee : false
@@ -628,10 +635,7 @@ export async function makeUtxoEngine(
         feeRate,
         coin: coinInfo.name,
         currencyCode: currencyInfo.currencyCode,
-        enableRbf:
-          spendInfoOtherParams.enableRbf ??
-          currencyInfo.canReplaceByFee ??
-          false,
+        enableRbf,
         freshChangeAddress,
         subtractFee,
         log,

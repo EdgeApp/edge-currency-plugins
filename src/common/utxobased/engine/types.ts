@@ -48,6 +48,7 @@ export type UtxoSpendInfoOtherParams = ReturnType<
   typeof asUtxoSpendInfoOtherParams
 >
 export const asUtxoSpendInfoOtherParams = asObject({
+  /** @deprecated use `EdgeSpendInfo['enableRbf']` */
   enableRbf: asOptional(asBoolean),
   forceChangeAddress: asOptional(asString),
   outputSort: asOptional(asOutputSort, 'bip69'),

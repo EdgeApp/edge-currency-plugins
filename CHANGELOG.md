@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: Use new `enableRbf` field on `EdgeSpendInfo`
+- changed: Deprecated `enableRbf` in `EdgeSpendInfo['otherParams']`
+
 ## 3.0.2 (2024-06-03)
 
 - fixed: Check transaction input sequence values for RBF transaction acceleration.
