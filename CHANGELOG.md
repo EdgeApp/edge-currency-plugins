@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.1.0 (2024-06-11)
+
 - changed: Use new `enableRbf` field on `EdgeSpendInfo`
 - changed: Deprecated `enableRbf` in `EdgeSpendInfo['otherParams']`
 
