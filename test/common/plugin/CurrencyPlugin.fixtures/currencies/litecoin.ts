@@ -277,5 +277,11 @@ export const litecoin: FixtureType = {
         }
       }
     ]
+  },
+  getSplittableTypes: {
+    bip32: ['wallet:bitcoin'],
+    bip44: ['wallet:bitcoin'],
+    bip49: ['wallet:bitcoin'],
+    bip84: ['wallet:bitcoin']
   }
 }

@@ -51,6 +51,7 @@ export const engineInfo: EngineInfo = {
     }
   ],
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
+  forks: ['bitcoin'],
   gapLimit: 10,
   feeUpdateInterval: 60000,
   defaultFeeInfo: {
