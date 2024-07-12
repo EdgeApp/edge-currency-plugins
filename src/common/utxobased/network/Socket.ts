@@ -126,11 +126,11 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   let connected = false
   let cancelConnect = false
   const timeout: number = 1000 * (config.timeout ?? 30)
-  let error: unknown | undefined
+  let trackedError: unknown | undefined
   let timer: NodeJS.Timeout
 
   const handleError = (e: unknown): void => {
-    if (error == null) error = e
+    if (trackedError == null) trackedError = e
     if (connected && socket != null && socket.readyState === ReadyState.OPEN)
       disconnect()
     else cancelConnect = true
@@ -147,16 +147,17 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const onSocketClose = (): void => {
     const errObj =
-      error != null
-        ? error instanceof Error
-          ? error
-          : new Error(String(error))
+      trackedError != null
+        ? trackedError instanceof Error
+          ? trackedError
+          : new Error(String(trackedError))
         : new Error('Socket closed without error')
     log.warn(`onSocketClose with server ${uri}: ${errObj.message}`)
     clearTimeout(timer)
     connected = false
     socket = null
     cancelConnect = false
+    trackedError = undefined
     for (const request of Object.values(pendingRequests)) {
       try {
         request.task.deferred.reject(errObj)
@@ -390,7 +391,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
           },
           onMessage: onMessage,
           onError: err => {
-            error = new Error(String(err))
+            trackedError = new Error(String(err))
           },
           onClose: onSocketClose
         }
