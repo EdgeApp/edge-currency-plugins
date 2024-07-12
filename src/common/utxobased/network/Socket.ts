@@ -384,8 +384,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
             resolve()
           },
           onMessage: onMessage,
-          onError: event => {
-            error = new Error(JSON.stringify(event))
+          onError: err => {
+            error = new Error(String(err))
           },
           onClose: onSocketClose
         }
