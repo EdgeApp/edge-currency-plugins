@@ -146,8 +146,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   }
 
   const onSocketClose = (): void => {
-    const err = error ?? new Error('Socket close')
-    log.warn(`onSocketClose due to ${err.message} with server ${uri}`)
+    const err = error ?? new Error('Socket closed without error')
+    log.warn(`onSocketClose with server ${uri}: ${err.message}`)
     clearTimeout(timer)
     connected = false
     socket = null
