@@ -73,6 +73,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
   let serverCache: ServerCache = {
     customServers: {},
+    enableCustomServers: defaultSettings.enableCustomServers,
     internalServers: {}
   }
   let serverCacheDirty = false
@@ -258,6 +259,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       // only using the exact customServers provided.
       serverCache = {
         ...serverCache,
+        enableCustomServers: settings.enableCustomServers,
         customServers: {}
       }
       serverCacheDirty = true

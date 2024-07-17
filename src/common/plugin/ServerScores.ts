@@ -1,6 +1,6 @@
 // Typescript translation from original code in edge-currency-bitcoin
 
-import { asNumber, asObject, asString } from 'cleaners'
+import { asBoolean, asMaybe, asNumber, asObject, asString } from 'cleaners'
 import { EdgeLog } from 'edge-core-js/types'
 
 export type ServerInfo = ReturnType<typeof asServerInfo>
@@ -16,6 +16,7 @@ export const asServerList = asObject(asServerInfo)
 export type ServerCache = ReturnType<typeof asServerCache>
 export const asServerCache = asObject({
   customServers: asServerList,
+  enableCustomServers: asMaybe(asBoolean, false),
   internalServers: asServerList
 })
 
