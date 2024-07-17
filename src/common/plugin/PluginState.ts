@@ -53,7 +53,7 @@ export interface PluginState {
     numServersWanted: number,
     includePatterns?: Array<string | RegExp>
   ) => string[]
-  refreshServers: () => Promise<void>
+  refreshServers: (updatedCustomServers?: string[]) => Promise<void>
   updateServers: (settings: UtxoUserSettings) => Promise<void>
 }
 
@@ -66,7 +66,6 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     pluginDisklet,
     log
   } = settings
-  let userSettings: UtxoUserSettings = defaultSettings
 
   let engines: UtxoEngineState[] = []
   const memlet = makeMemlet(pluginDisklet)
@@ -200,16 +199,24 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       )
     },
 
-    async refreshServers(): Promise<void> {
+    async refreshServers(updatedCustomServers?: string[]): Promise<void> {
       let newServers: string[]
-      if (userSettings.enableCustomServers) {
-        newServers = userSettings.blockbookServers
+      if (serverCache.enableCustomServers) {
+        newServers =
+          // Use the updated custom servers if provided
+          updatedCustomServers ??
+          // Use the existing custom servers from cache
+          Object.keys(serverCache.customServers) ??
+          // Use the default servers from info file as final fallback
+          defaultSettings.blockbookServers
       } else {
         const fetchedServers = await fetchServers()
         newServers =
           fetchedServers.length > 0
-            ? fetchedServers
-            : defaultSettings.blockbookServers
+            ? // Use the servers from the network query
+              fetchedServers
+            : // Use the default servers from info file as final fallback
+              defaultSettings.blockbookServers
       }
 
       serverScores.serverScoresLoad(getSelectedServerList(), newServers)
@@ -223,8 +230,9 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     async updateServers(settings: UtxoUserSettings): Promise<void> {
       const hasServerListChanged = (): boolean => {
+        const currentCustomServers = Object.keys(serverCache.customServers)
         const newServers = new Set(settings.blockbookServers)
-        const existingServers = new Set(userSettings.blockbookServers)
+        const existingServers = new Set(currentCustomServers)
         if (newServers.size !== existingServers.size) return true
         for (const server of settings.blockbookServers) {
           if (existingServers.has(server)) continue
@@ -235,14 +243,11 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
       // If no changes to the user settings, then exit early
       if (
-        settings.enableCustomServers === userSettings.enableCustomServers &&
+        settings.enableCustomServers === serverCache.enableCustomServers &&
         !hasServerListChanged()
       ) {
         return
       }
-
-      // Update the internal user settings  state
-      userSettings = settings
 
       // Stop all engines and clear the server list:
       const enginesToBeStarted = []
@@ -264,7 +269,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
       serverCacheDirty = true
       await saveServerCache()
-      await instance.refreshServers()
+      await instance.refreshServers(settings.blockbookServers)
       for (const engine of enginesToBeStarted) {
         await engine.start()
       }
