@@ -77,10 +77,16 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     internalServers: {}
   }
   let serverCacheDirty = false
-  let knownServers: ServerList = {}
+
+  const getSelectedServerList = (): ServerList => {
+    const serverCacheIndex = serverCache.enableCustomServers
+      ? 'customServers'
+      : 'internalServers'
+    return serverCache[serverCacheIndex]
+  }
 
   const saveServerCache = async (): Promise<void> => {
-    serverScores.printServers(knownServers)
+    serverScores.printServers(getSelectedServerList())
     if (serverCacheDirty) {
       await memlet.setJson(SERVER_CACHE_FILE, serverCache).catch(e => {
         log(`${pluginId} - ${JSON.stringify(e.toString())}`)
@@ -150,7 +156,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     dumpData(): JsonObject {
       return {
-        'pluginState.servers_': knownServers
+        'pluginState.servers_': getSelectedServerList()
       }
     },
 
@@ -170,16 +176,15 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     },
 
     serverScoreDown(uri: string): void {
-      serverScores.serverScoreDown(knownServers, uri)
+      serverScores.serverScoreDown(getSelectedServerList(), uri)
     },
 
     serverScoreUp(uri: string, score: number): void {
-      serverScores.serverScoreUp(knownServers, uri, score)
+      serverScores.serverScoreUp(getSelectedServerList(), uri, score)
     },
 
     async clearCache(): Promise<void> {
       serverScores.clearServerScoreTimes()
-      knownServers = {}
       serverCacheDirty = true
       await memlet.delete(SERVER_CACHE_FILE)
     },
@@ -189,7 +194,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       includePatterns: Array<string | RegExp> = []
     ): string[] {
       return serverScores.getServers(
-        knownServers,
+        getSelectedServerList(),
         numServersWanted,
         includePatterns
       )
@@ -207,12 +212,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
             : defaultSettings.blockbookServers
       }
 
-      const serverCacheIndex = userSettings.enableCustomServers
-        ? 'customServers'
-        : 'internalServers'
-
-      knownServers = serverCache[serverCacheIndex]
-      serverScores.serverScoresLoad(knownServers, newServers)
+      serverScores.serverScoresLoad(getSelectedServerList(), newServers)
       await saveServerCache()
 
       // Tell the engines about the new servers:
