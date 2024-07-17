@@ -133,30 +133,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     }
   }
 
-  const refreshServers = async (): Promise<void> => {
-    let newServers: string[]
-    if (enableCustomServers) {
-      newServers = customServers
-    } else {
-      const fetchedServers = await fetchServers()
-      newServers = fetchedServers.length > 0 ? fetchedServers : builtInServers
-    }
-
-    const serverCacheIndex = enableCustomServers
-      ? 'customServers'
-      : 'internalServers'
-
-    knownServers = serverCache[serverCacheIndex]
-    serverScores.serverScoresLoad(knownServers, newServers)
-    await saveServerCache()
-
-    // Tell the engines about the new servers:
-    for (const engine of engines) {
-      engine.refillServers()
-    }
-  }
-
-  return {
+  const instance: PluginState = {
     /**
      * Begins notifying the engine of state changes. Used at connection time.
      */
@@ -185,7 +162,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
 
       // Fetch servers in the background:
-      refreshServers().catch(e => {
+      instance.refreshServers().catch(e => {
         log(`${pluginId} - ${JSON.stringify(e.toString())}`)
       })
 
@@ -218,7 +195,28 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       )
     },
 
-    refreshServers,
+    async refreshServers(): Promise<void> {
+      let newServers: string[]
+      if (enableCustomServers) {
+        newServers = customServers
+      } else {
+        const fetchedServers = await fetchServers()
+        newServers = fetchedServers.length > 0 ? fetchedServers : builtInServers
+      }
+
+      const serverCacheIndex = enableCustomServers
+        ? 'customServers'
+        : 'internalServers'
+
+      knownServers = serverCache[serverCacheIndex]
+      serverScores.serverScoresLoad(knownServers, newServers)
+      await saveServerCache()
+
+      // Tell the engines about the new servers:
+      for (const engine of engines) {
+        engine.refillServers()
+      }
+    },
 
     async updateServers(settings: UtxoUserSettings): Promise<void> {
       enableCustomServers = settings.enableCustomServers
@@ -241,10 +239,12 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
       serverCacheDirty = true
       await saveServerCache()
-      await refreshServers()
+      await instance.refreshServers()
       for (const engine of enginesToBeStarted) {
         await engine.start()
       }
     }
   }
+
+  return instance
 }
