@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Unnecessary reconnect to Blockbook servers during ever call to engine's `changeUserSettings`
+
 ## 3.2.0 (2024-06-17)
 
 - added: Support for splitting LTC->BTC

@@ -66,9 +66,8 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     pluginDisklet,
     log
   } = settings
-  const builtInServers: string[] = defaultSettings.blockbookServers
-  let customServers: string[] = []
-  let enableCustomServers = defaultSettings.enableCustomServers
+  let userSettings: UtxoUserSettings = defaultSettings
+
   let engines: UtxoEngineState[] = []
   const memlet = makeMemlet(pluginDisklet)
 
@@ -197,14 +196,17 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     async refreshServers(): Promise<void> {
       let newServers: string[]
-      if (enableCustomServers) {
-        newServers = customServers
+      if (userSettings.enableCustomServers) {
+        newServers = userSettings.blockbookServers
       } else {
         const fetchedServers = await fetchServers()
-        newServers = fetchedServers.length > 0 ? fetchedServers : builtInServers
+        newServers =
+          fetchedServers.length > 0
+            ? fetchedServers
+            : defaultSettings.blockbookServers
       }
 
-      const serverCacheIndex = enableCustomServers
+      const serverCacheIndex = userSettings.enableCustomServers
         ? 'customServers'
         : 'internalServers'
 
@@ -219,9 +221,29 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     },
 
     async updateServers(settings: UtxoUserSettings): Promise<void> {
-      enableCustomServers = settings.enableCustomServers
-      customServers = settings.blockbookServers
+      const hasServerListChanged = (): boolean => {
+        const newServers = new Set(settings.blockbookServers)
+        const existingServers = new Set(userSettings.blockbookServers)
+        if (newServers.size !== existingServers.size) return true
+        for (const server of settings.blockbookServers) {
+          if (existingServers.has(server)) continue
+          return true
+        }
+        return false
+      }
 
+      // If no changes to the user settings, then exit early
+      if (
+        settings.enableCustomServers === userSettings.enableCustomServers &&
+        !hasServerListChanged()
+      ) {
+        return
+      }
+
+      // Update the internal user settings  state
+      userSettings = settings
+
+      // Stop all engines and clear the server list:
       const enginesToBeStarted = []
       const disconnects = []
       for (const engine of engines) {
@@ -231,6 +253,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
       await Promise.all(disconnects)
       serverScores.clearServerScoreTimes()
+
       // We must always clear custom servers in order to enforce a policy of
       // only using the exact customServers provided.
       serverCache = {
