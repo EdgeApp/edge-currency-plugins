@@ -1,5 +1,5 @@
 export interface InnerSocketCallbacks {
-  onError: (error?: Error) => void
+  onError: (error?: unknown) => void
   onMessage: (message: string) => void
   onClose: (error?: Error) => void
   onOpen: () => void

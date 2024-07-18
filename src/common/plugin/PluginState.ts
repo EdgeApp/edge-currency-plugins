@@ -53,7 +53,7 @@ export interface PluginState {
     numServersWanted: number,
     includePatterns?: Array<string | RegExp>
   ) => string[]
-  refreshServers: () => Promise<void>
+  refreshServers: (updatedCustomServers?: string[]) => Promise<void>
   updateServers: (settings: UtxoUserSettings) => Promise<void>
 }
 
@@ -66,21 +66,26 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     pluginDisklet,
     log
   } = settings
-  const builtInServers: string[] = defaultSettings.blockbookServers
-  let customServers: string[] = []
-  let enableCustomServers = defaultSettings.enableCustomServers
+
   let engines: UtxoEngineState[] = []
   const memlet = makeMemlet(pluginDisklet)
 
   let serverCache: ServerCache = {
     customServers: {},
+    enableCustomServers: defaultSettings.enableCustomServers,
     internalServers: {}
   }
   let serverCacheDirty = false
-  let knownServers: ServerList = {}
+
+  const getSelectedServerList = (): ServerList => {
+    const serverCacheIndex = serverCache.enableCustomServers
+      ? 'customServers'
+      : 'internalServers'
+    return serverCache[serverCacheIndex]
+  }
 
   const saveServerCache = async (): Promise<void> => {
-    serverScores.printServers(knownServers)
+    serverScores.printServers(getSelectedServerList())
     if (serverCacheDirty) {
       await memlet.setJson(SERVER_CACHE_FILE, serverCache).catch(e => {
         log(`${pluginId} - ${JSON.stringify(e.toString())}`)
@@ -133,30 +138,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     }
   }
 
-  const refreshServers = async (): Promise<void> => {
-    let newServers: string[]
-    if (enableCustomServers) {
-      newServers = customServers
-    } else {
-      const fetchedServers = await fetchServers()
-      newServers = fetchedServers.length > 0 ? fetchedServers : builtInServers
-    }
-
-    const serverCacheIndex = enableCustomServers
-      ? 'customServers'
-      : 'internalServers'
-
-    knownServers = serverCache[serverCacheIndex]
-    serverScores.serverScoresLoad(knownServers, newServers)
-    await saveServerCache()
-
-    // Tell the engines about the new servers:
-    for (const engine of engines) {
-      engine.refillServers()
-    }
-  }
-
-  return {
+  const instance: PluginState = {
     /**
      * Begins notifying the engine of state changes. Used at connection time.
      */
@@ -173,7 +155,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     dumpData(): JsonObject {
       return {
-        'pluginState.servers_': knownServers
+        'pluginState.servers_': getSelectedServerList()
       }
     },
 
@@ -185,7 +167,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
 
       // Fetch servers in the background:
-      refreshServers().catch(e => {
+      instance.refreshServers().catch(e => {
         log(`${pluginId} - ${JSON.stringify(e.toString())}`)
       })
 
@@ -193,16 +175,15 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     },
 
     serverScoreDown(uri: string): void {
-      serverScores.serverScoreDown(knownServers, uri)
+      serverScores.serverScoreDown(getSelectedServerList(), uri)
     },
 
     serverScoreUp(uri: string, score: number): void {
-      serverScores.serverScoreUp(knownServers, uri, score)
+      serverScores.serverScoreUp(getSelectedServerList(), uri, score)
     },
 
     async clearCache(): Promise<void> {
       serverScores.clearServerScoreTimes()
-      knownServers = {}
       serverCacheDirty = true
       await memlet.delete(SERVER_CACHE_FILE)
     },
@@ -212,18 +193,63 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       includePatterns: Array<string | RegExp> = []
     ): string[] {
       return serverScores.getServers(
-        knownServers,
+        getSelectedServerList(),
         numServersWanted,
         includePatterns
       )
     },
 
-    refreshServers,
+    async refreshServers(updatedCustomServers?: string[]): Promise<void> {
+      let newServers: string[]
+      if (serverCache.enableCustomServers) {
+        newServers =
+          // Use the updated custom servers if provided
+          updatedCustomServers ??
+          // Use the existing custom servers from cache
+          Object.keys(serverCache.customServers) ??
+          // Use the default servers from info file as final fallback
+          defaultSettings.blockbookServers
+      } else {
+        const fetchedServers = await fetchServers()
+        newServers =
+          fetchedServers.length > 0
+            ? // Use the servers from the network query
+              fetchedServers
+            : // Use the default servers from info file as final fallback
+              defaultSettings.blockbookServers
+      }
+
+      serverScores.serverScoresLoad(getSelectedServerList(), newServers)
+      await saveServerCache()
+
+      // Tell the engines about the new servers:
+      for (const engine of engines) {
+        engine.refillServers()
+      }
+    },
 
     async updateServers(settings: UtxoUserSettings): Promise<void> {
-      enableCustomServers = settings.enableCustomServers
-      customServers = settings.blockbookServers
+      const hasServerListChanged = (): boolean => {
+        const currentCustomServers = Object.keys(serverCache.customServers)
+        const newServers = new Set(settings.blockbookServers)
+        const existingServers = new Set(currentCustomServers)
+        if (newServers.size !== existingServers.size) return true
+        for (const server of settings.blockbookServers) {
+          if (existingServers.has(server)) continue
+          return true
+        }
+        return false
+      }
 
+      // If no changes to the user settings, then exit early
+      if (
+        settings.enableCustomServers === serverCache.enableCustomServers &&
+        !hasServerListChanged()
+      ) {
+        return
+      }
+
+      // Stop all engines and clear the server list:
       const enginesToBeStarted = []
       const disconnects = []
       for (const engine of engines) {
@@ -233,18 +259,22 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
       await Promise.all(disconnects)
       serverScores.clearServerScoreTimes()
+
       // We must always clear custom servers in order to enforce a policy of
       // only using the exact customServers provided.
       serverCache = {
         ...serverCache,
+        enableCustomServers: settings.enableCustomServers,
         customServers: {}
       }
       serverCacheDirty = true
       await saveServerCache()
-      await refreshServers()
+      await instance.refreshServers(settings.blockbookServers)
       for (const engine of enginesToBeStarted) {
         await engine.start()
       }
     }
   }
+
+  return instance
 }

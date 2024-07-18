@@ -176,25 +176,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     addresses: new Set(),
     blockHeight: 0
   })
-  const setPickNextTaskCB = (
-    callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
-  ): void => {
-    pickNextTaskCB = callback
-  }
-
-  const stop = async (): Promise<void> => {
-    isEngineOn = false
-    log(`stopping server states`)
-    removeIdFromQueue(walletInfo.id)
-    clearTimeout(reconnectTimer)
-    for (const uri of Object.keys(serverStatesCache)) {
-      const serverState = serverStatesCache[uri]
-      const { blockbook } = serverState
-      if (blockbook == null) continue
-      await blockbook.disconnect()
-      removeItem(serverStatesCache, uri)
-    }
-  }
 
   const reconnect = (): void => {
     if (isEngineOn) {
@@ -202,20 +183,9 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       const reconnectionDelay = Math.max(5, reconnectCounter++) * 1000
       reconnectTimer = setTimeout(() => {
         clearTimeout(reconnectTimer)
-        refillServers()
+        instance.refillServers()
       }, reconnectionDelay)
     }
-  }
-
-  const refillServers = (): void => {
-    log(`refilling servers...`)
-    isEngineOn = true
-    pushUpdate({
-      id: walletInfo.id,
-      updateFunc: () => {
-        doRefillServers()
-      }
-    })
   }
 
   const doRefillServers = (): void => {
@@ -338,240 +308,257 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     }
   }
 
-  const serverCanGetTx = (uri: string, txid: string): boolean => {
-    const serverState = serverStatesCache[uri]
-    if (serverState == null) return false
-    if (serverState.txids.has(txid)) return true
-
-    for (const state of Object.values(serverStatesCache)) {
-      if (state.txids.has(txid)) return false
-    }
-    return true
-  }
-
-  const serverCanGetAddress = (uri: string, address: string): boolean => {
-    const serverState = serverStatesCache[uri]
-    if (serverState == null) return false
-    if (serverState.addresses.has(address)) return true
-
-    for (const state of Object.values(serverStatesCache)) {
-      if (state.addresses.has(address)) return false
-    }
-    return true
-  }
-
-  const serverIsAwareOfAddress = (uri: string, address: string): boolean => {
-    const serverState = serverStatesCache[uri]
-    if (serverState == null) return false
-    if (serverState.addresses.has(address)) return true
-    return false
-  }
-
-  const getServerState = (uri: string): ServerState | undefined => {
-    return serverStatesCache[uri]
-  }
-
-  const getServerList = (): string[] => {
-    return serverList
-  }
-
-  const setServerList = (updatedServerList: string[]): void => {
-    serverList = updatedServerList
-  }
-
-  const broadcastTx = async (transaction: EdgeTransaction): Promise<string> => {
-    return await new Promise((resolve, reject) => {
-      let resolved = false
-      let bad = 0
-
-      const wsUris = Object.keys(serverStatesCache).filter(
-        uri => serverStatesCache[uri].blockbook != null
-      )
-
-      // If there are no blockbook instances, reject the promise
-      if (wsUris.length < 1) {
-        reject(new Error('Unexpected error. Missing WebSocket connections.'))
-        // Exit early if there are blockbook instances
-        return
-      }
-
-      // Determine if there are any connected blockbook instances
-      const isAnyBlockbookConnected = wsUris.some(
-        uri => serverStatesCache[uri].blockbook.isConnected
-      )
-
-      if (isAnyBlockbookConnected) {
-        for (const uri of wsUris) {
-          const { blockbook } = serverStatesCache[uri]
-          if (blockbook == null) continue
-          blockbook
-            .broadcastTx(transaction)
-            .then(response => {
-              if (!resolved) {
-                resolved = true
-                resolve(response.result)
-              }
-            })
-            .catch((e?: Error) => {
-              if (++bad === wsUris.length) {
-                const msg = e != null ? `With error ${e.message}` : ''
-                log.error(
-                  `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
-                )
-                reject(e)
-              }
-            })
-        }
-      }
-
-      // Broadcast through any HTTP URI that may be configured, only if no
-      // blockbook instances are connected.
-      if (!isAnyBlockbookConnected) {
-        // This is for the future when we want to get HTTP servers from the user
-        // settings:
-        // const httpUris = pluginState.getLocalServers(Infinity, [
-        //   /^http(?:s)?:/i
-        // ])
-
-        const { nowNodeApiKey } = initOptions
-        const nowNodeUris = serverConfigs
-          .filter(config => config.type === 'blockbook-nownode')
-          .map(config => config.uris)
-          .flat(1)
-
-        // If there are no HTTP servers, reject the promise
-        if (nowNodeUris.length < 1) {
-          // If no HTTP servers are available, and we had no connected blockbook
-          // instances, reject the promise with a message indicating no
-          // available connections. It's clear we have some connection instances
-          // if we gotten to this point, but we just don't have any of those
-          // instances connected at this time.
-          reject(
-            new Error('No available connections. Check your internet signal.')
-          )
-          return
-        }
-
-        // If there is no key for the NowNode servers:
-        if (nowNodeApiKey == null) {
-          reject(new Error('Missing connection key for fallback servers.'))
-          return
-        }
-
-        for (const uri of nowNodeUris) {
-          log.warn('Falling back to NOWNode server broadcast over HTTP:', uri)
-
-          // HTTP Fallback
-          io.fetchCors(`${uri}/api/v2/sendtx/`, {
-            method: 'POST',
-            headers: {
-              'api-key': nowNodeApiKey
-            },
-            body: transaction.signedTx
-          })
-            .then(async response => {
-              if (!response.ok) {
-                throw new Error(
-                  `Failed to broadcast transaction via Blockbook: HTTP ${response.status}`
-                )
-              }
-              const json = await response.json()
-              return asBlockbookResponse(asBroadcastTxResponse)(json)
-            })
-            .then(response => {
-              if (!resolved) {
-                resolved = true
-                resolve(response.result)
-              }
-            })
-            .catch((e?: Error) => {
-              if (++bad === nowNodeUris.length) {
-                const msg = e != null ? `With error ${e.message}` : ''
-                log.error(
-                  `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
-                )
-                reject(e)
-              }
-            })
-        }
-      }
-    })
-  }
-
-  const watchAddresses = (
-    uri: string,
-    addresses: string[],
-    deferredAddressSub?: Deferred<unknown>
-  ): void => {
-    const serverState = serverStatesCache[uri]
-    if (serverState == null)
-      throw new Error(`No blockbook connection with ${uri}`)
-
-    const { blockbook } = serverState
-
-    // Add new addresses to the set of known addresses
-    for (const address of addresses) {
-      serverState.addresses.add(address)
-    }
-
-    const queryTime = Date.now()
-    const deferred = new Deferred<unknown>()
-    deferred.promise
-      .then((value: unknown) => {
-        pluginState.serverScoreUp(uri, Date.now() - queryTime)
-        deferredAddressSub?.resolve(value)
-      })
-      .catch(() => {
-        // Remove new addresses to the set of known addresses
-        for (const address of addresses) {
-          serverState.addresses.delete(address)
-        }
-        pluginState.serverScoreDown(uri)
-        deferredAddressSub?.reject()
-      })
-    blockbook.watchAddresses(Array.from(serverState.addresses), deferred)
-  }
-
-  const watchBlocks = (uri: string): void => {
-    const serverState = serverStatesCache[uri]
-    if (serverState == null)
-      throw new Error(`No blockbook connection with ${uri}`)
-
-    const { blockbook } = serverState
-
-    serverState.blockSubscriptionStatus = 'subscribing'
-
-    const queryTime = Date.now()
-    const deferred = new Deferred()
-    deferred.promise
-      .then(() => {
-        serverState.blockSubscriptionStatus = 'subscribed'
-        pluginState.serverScoreUp(uri, Date.now() - queryTime)
-      })
-      .catch(() => {
-        serverState.blockSubscriptionStatus = 'unsubscribed'
-      })
-    blockbook.watchBlocks(deferred)
-  }
-
-  const getBlockHeight = (uri: string): number => {
-    return serverStatesCache[uri].blockHeight
-  }
-
   const instance: ServerStates = {
-    setPickNextTaskCB,
-    stop,
-    serverCanGetTx,
-    serverCanGetAddress,
-    serverIsAwareOfAddress,
-    getServerState,
-    refillServers,
-    getServerList,
-    setServerList,
-    broadcastTx,
-    watchAddresses,
-    watchBlocks,
-    getBlockHeight,
+    async broadcastTx(transaction: EdgeTransaction): Promise<string> {
+      return await new Promise((resolve, reject) => {
+        let resolved = false
+        let bad = 0
+
+        const wsUris = Object.keys(serverStatesCache).filter(
+          uri => serverStatesCache[uri].blockbook != null
+        )
+
+        // If there are no blockbook instances, reject the promise
+        if (wsUris.length < 1) {
+          reject(new Error('Unexpected error. Missing WebSocket connections.'))
+          // Exit early if there are blockbook instances
+          return
+        }
+
+        // Determine if there are any connected blockbook instances
+        const isAnyBlockbookConnected = wsUris.some(
+          uri => serverStatesCache[uri].blockbook.isConnected
+        )
+
+        if (isAnyBlockbookConnected) {
+          for (const uri of wsUris) {
+            const { blockbook } = serverStatesCache[uri]
+            if (blockbook == null) continue
+            blockbook
+              .broadcastTx(transaction)
+              .then(response => {
+                if (!resolved) {
+                  resolved = true
+                  resolve(response.result)
+                }
+              })
+              .catch((e?: Error) => {
+                if (++bad === wsUris.length) {
+                  const msg = e != null ? `With error ${e.message}` : ''
+                  log.error(
+                    `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
+                  )
+                  reject(e)
+                }
+              })
+          }
+        }
+
+        // Broadcast through any HTTP URI that may be configured, only if no
+        // blockbook instances are connected.
+        if (!isAnyBlockbookConnected) {
+          // This is for the future when we want to get HTTP servers from the user
+          // settings:
+          // const httpUris = pluginState.getLocalServers(Infinity, [
+          //   /^http(?:s)?:/i
+          // ])
+
+          const { nowNodeApiKey } = initOptions
+          const nowNodeUris = serverConfigs
+            .filter(config => config.type === 'blockbook-nownode')
+            .map(config => config.uris)
+            .flat(1)
+
+          // If there are no HTTP servers, reject the promise
+          if (nowNodeUris.length < 1) {
+            // If no HTTP servers are available, and we had no connected blockbook
+            // instances, reject the promise with a message indicating no
+            // available connections. It's clear we have some connection instances
+            // if we gotten to this point, but we just don't have any of those
+            // instances connected at this time.
+            reject(
+              new Error('No available connections. Check your internet signal.')
+            )
+            return
+          }
+
+          // If there is no key for the NowNode servers:
+          if (nowNodeApiKey == null) {
+            reject(new Error('Missing connection key for fallback servers.'))
+            return
+          }
+
+          for (const uri of nowNodeUris) {
+            log.warn('Falling back to NOWNode server broadcast over HTTP:', uri)
+
+            // HTTP Fallback
+            io.fetchCors(`${uri}/api/v2/sendtx/`, {
+              method: 'POST',
+              headers: {
+                'api-key': nowNodeApiKey
+              },
+              body: transaction.signedTx
+            })
+              .then(async response => {
+                if (!response.ok) {
+                  throw new Error(
+                    `Failed to broadcast transaction via Blockbook: HTTP ${response.status}`
+                  )
+                }
+                const json = await response.json()
+                return asBlockbookResponse(asBroadcastTxResponse)(json)
+              })
+              .then(response => {
+                if (!resolved) {
+                  resolved = true
+                  resolve(response.result)
+                }
+              })
+              .catch((e?: Error) => {
+                if (++bad === nowNodeUris.length) {
+                  const msg = e != null ? `With error ${e.message}` : ''
+                  log.error(
+                    `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
+                  )
+                  reject(e)
+                }
+              })
+          }
+        }
+      })
+    },
+
+    getBlockHeight(uri: string): number {
+      return serverStatesCache[uri].blockHeight
+    },
+
+    getServerList(): string[] {
+      return serverList
+    },
+
+    getServerState(uri: string): ServerState | undefined {
+      return serverStatesCache[uri]
+    },
+
+    refillServers(): void {
+      log(`refilling servers...`)
+      isEngineOn = true
+      pushUpdate({
+        id: walletInfo.id,
+        updateFunc: () => {
+          doRefillServers()
+        }
+      })
+    },
+
+    setPickNextTaskCB(
+      callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
+    ): void {
+      pickNextTaskCB = callback
+    },
+
+    setServerList(updatedServerList: string[]): void {
+      serverList = updatedServerList
+    },
+
+    serverCanGetTx(uri: string, txid: string): boolean {
+      const serverState = serverStatesCache[uri]
+      if (serverState == null) return false
+      if (serverState.txids.has(txid)) return true
+
+      for (const state of Object.values(serverStatesCache)) {
+        if (state.txids.has(txid)) return false
+      }
+      return true
+    },
+
+    serverCanGetAddress(uri: string, address: string): boolean {
+      const serverState = serverStatesCache[uri]
+      if (serverState == null) return false
+      if (serverState.addresses.has(address)) return true
+
+      for (const state of Object.values(serverStatesCache)) {
+        if (state.addresses.has(address)) return false
+      }
+      return true
+    },
+
+    serverIsAwareOfAddress(uri: string, address: string): boolean {
+      const serverState = serverStatesCache[uri]
+      if (serverState == null) return false
+      if (serverState.addresses.has(address)) return true
+      return false
+    },
+
+    async stop(): Promise<void> {
+      isEngineOn = false
+      log(`stopping server states`)
+      removeIdFromQueue(walletInfo.id)
+      clearTimeout(reconnectTimer)
+      for (const uri of Object.keys(serverStatesCache)) {
+        const serverState = serverStatesCache[uri]
+        const { blockbook } = serverState
+        if (blockbook == null) continue
+        await blockbook.disconnect()
+        removeItem(serverStatesCache, uri)
+      }
+    },
+
+    watchAddresses(
+      uri: string,
+      addresses: string[],
+      deferredAddressSub?: Deferred<unknown>
+    ): void {
+      const serverState = serverStatesCache[uri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${uri}`)
+
+      const { blockbook } = serverState
+
+      // Add new addresses to the set of known addresses
+      for (const address of addresses) {
+        serverState.addresses.add(address)
+      }
+
+      const queryTime = Date.now()
+      const deferred = new Deferred<unknown>()
+      deferred.promise
+        .then((value: unknown) => {
+          pluginState.serverScoreUp(uri, Date.now() - queryTime)
+          deferredAddressSub?.resolve(value)
+        })
+        .catch(() => {
+          // Remove new addresses to the set of known addresses
+          for (const address of addresses) {
+            serverState.addresses.delete(address)
+          }
+          pluginState.serverScoreDown(uri)
+          deferredAddressSub?.reject()
+        })
+      blockbook.watchAddresses(Array.from(serverState.addresses), deferred)
+    },
+
+    watchBlocks(uri: string): void {
+      const serverState = serverStatesCache[uri]
+      if (serverState == null)
+        throw new Error(`No blockbook connection with ${uri}`)
+
+      const { blockbook } = serverState
+
+      serverState.blockSubscriptionStatus = 'subscribing'
+
+      const queryTime = Date.now()
+      const deferred = new Deferred()
+      deferred.promise
+        .then(() => {
+          serverState.blockSubscriptionStatus = 'subscribed'
+          pluginState.serverScoreUp(uri, Date.now() - queryTime)
+        })
+        .catch(() => {
+          serverState.blockSubscriptionStatus = 'unsubscribed'
+        })
+      blockbook.watchBlocks(deferred)
+    },
 
     //
     // Task Methods:
