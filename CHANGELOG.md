@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.2.1 (2024-07-19)
+
 - fixed: Bug causing default currency info server list to overwrite user's customer servers
 - fixed: Unnecessary reconnect to Blockbook servers during ever call to engine's `changeUserSettings`
 
