@@ -184,7 +184,7 @@ export function makeUtxoEngineProcessor(
     pluginState,
     walletInfo
   })
-  const commonArgs: CommonArgs = {
+  const common: CommonParams = {
     pluginInfo,
     walletInfo,
     walletTools,
@@ -201,7 +201,7 @@ export function makeUtxoEngineProcessor(
   }
 
   serverStates.setPickNextTaskCB(async serverUri => {
-    return await pickNextTask(commonArgs, serverUri)
+    return await pickNextTask(common, serverUri)
   })
 
   let running = false
@@ -210,7 +210,7 @@ export function makeUtxoEngineProcessor(
     running = true
 
     await initializeAddressSubscriptions()
-    await setLookAhead(commonArgs)
+    await setLookAhead(common)
   }
 
   emitter.on(
@@ -236,16 +236,15 @@ export function makeUtxoEngineProcessor(
           processing: false,
           path
         }
-        addToAddressTransactionCache(
-          commonArgs,
-          response.address,
-          path,
-          0,
-          taskCache.addressTransactionCache
-        ).catch(() => {
+        addToAddressTransactionCache(common, {
+          address: response.address,
+          changePath: path,
+          blockHeight: 0,
+          addressTransactionCache: taskCache.addressTransactionCache
+        }).catch(() => {
           throw new Error('failed to add to transaction cache')
         })
-        setLookAhead(commonArgs).catch(e => {
+        setLookAhead(common).catch(e => {
           log(e)
         })
       }
@@ -302,7 +301,7 @@ export function makeUtxoEngineProcessor(
             })
           }
         }
-        addToAddressSubscribeCache(commonArgs.taskCache, addressesToSubscribe, {
+        addToAddressSubscribeCache(common.taskCache, addressesToSubscribe, {
           format,
           changeIndex: branch
         })
@@ -348,8 +347,7 @@ export function makeUtxoEngineProcessor(
         address: publicAddress,
         nativeBalance = '0',
         legacyAddress
-      } = await internalGetFreshAddress({
-        ...commonArgs,
+      } = await internalGetFreshAddress(common, {
         forceIndex,
         changePath: {
           format: privateKeyFormat,
@@ -380,8 +378,7 @@ export function makeUtxoEngineProcessor(
           const {
             address,
             nativeBalance = '0'
-          } = await internalGetFreshAddress({
-            ...commonArgs,
+          } = await internalGetFreshAddress(common, {
             forceIndex,
             changePath: {
               format,
@@ -399,10 +396,10 @@ export function makeUtxoEngineProcessor(
 
     async deriveScriptAddress(script): Promise<EdgeFreshAddress> {
       const { address } = await internalDeriveScriptAddress({
-        walletTools: commonArgs.walletTools,
-        engineInfo: commonArgs.pluginInfo.engineInfo,
-        dataLayer: commonArgs.dataLayer,
-        taskCache: commonArgs.taskCache,
+        walletTools: common.walletTools,
+        engineInfo: common.pluginInfo.engineInfo,
+        dataLayer: common.dataLayer,
+        taskCache: common.taskCache,
         format: walletInfo.keys.privateKeyFormat,
         script
       })
@@ -499,8 +496,7 @@ export function makeUtxoEngineProcessor(
         // Add updated utxos to utxo set
         const combinedUtxos = [...filteredUtxos, ...utxos]
 
-        await processDataLayerUtxos({
-          ...commonArgs,
+        await processDataLayerUtxos(common, {
           scriptPubkey,
           utxos: combinedUtxos
         })
@@ -509,7 +505,7 @@ export function makeUtxoEngineProcessor(
   }
 }
 
-interface CommonArgs {
+interface CommonParams {
   pluginInfo: PluginInfo
   walletInfo: SafeWalletInfo
   walletTools: UtxoWalletTools
@@ -574,37 +570,36 @@ interface AddressTransactionCache {
   }
 }
 
-const setLookAhead = async (common: CommonArgs): Promise<void> => {
-  const {
-    pluginInfo: { engineInfo },
-    lock,
-    dataLayer,
-    walletFormats,
-    walletTools
-  } = common
-
+const setLookAhead = async (common: CommonParams): Promise<void> => {
   // Wait for the lock to be released before continuing invocation.
   // This is to ensure that setLockAhead is not called while the lock is held.
-  await lock.acquireAsync()
+  await common.lock.acquireAsync()
 
   try {
-    for (const format of walletFormats) {
-      const branches = getFormatSupportedBranches(engineInfo, format)
+    for (const format of common.walletFormats) {
+      const branches = getFormatSupportedBranches(
+        common.pluginInfo.engineInfo,
+        format
+      )
       for (const branch of branches) {
         await deriveKeys({ format, changeIndex: branch })
       }
     }
   } finally {
-    lock.release()
+    common.lock.release()
   }
 
   async function deriveKeys(changePath: ChangePath): Promise<void> {
     const addressesToSubscribe = new Set<string>()
-    const totalAddressCount = dataLayer.numAddressesByFormatPath(changePath)
-    let lastUsedIndex = await dataLayer.lastUsedIndexByFormatPath(changePath)
+    const totalAddressCount = common.dataLayer.numAddressesByFormatPath(
+      changePath
+    )
+    let lastUsedIndex = await common.dataLayer.lastUsedIndexByFormatPath(
+      changePath
+    )
 
     // Loop until the total address count equals the lookahead count
-    let lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
+    let lookAheadIndex = lastUsedIndex + common.pluginInfo.engineInfo.gapLimit
     let nextAddressIndex = totalAddressCount
     while (nextAddressIndex <= lookAheadIndex) {
       const path: AddressPath = {
@@ -612,14 +607,16 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
         addressIndex: nextAddressIndex
       }
 
-      const { scriptPubkey, redeemScript } = walletTools.getScriptPubkey(path)
-      const { address } = walletTools.scriptPubkeyToAddress({
+      const { scriptPubkey, redeemScript } = common.walletTools.getScriptPubkey(
+        path
+      )
+      const { address } = common.walletTools.scriptPubkeyToAddress({
         changePath: path,
         scriptPubkey
       })
 
       // Make a new IAddress and save it
-      await dataLayer.saveAddress(
+      await common.dataLayer.saveAddress(
         makeAddressData({ scriptPubkey, redeemScript, path })
       )
 
@@ -627,9 +624,11 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
       addressesToSubscribe.add(address)
 
       // Update the state for the loop
-      lastUsedIndex = await dataLayer.lastUsedIndexByFormatPath(changePath)
-      lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
-      nextAddressIndex = dataLayer.numAddressesByFormatPath(changePath)
+      lastUsedIndex = await common.dataLayer.lastUsedIndexByFormatPath(
+        changePath
+      )
+      lookAheadIndex = lastUsedIndex + common.pluginInfo.engineInfo.gapLimit
+      nextAddressIndex = common.dataLayer.numAddressesByFormatPath(changePath)
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
@@ -655,19 +654,22 @@ const addToAddressSubscribeCache = (
 }
 
 const addToAddressTransactionCache = async (
-  common: CommonArgs,
-  address: string,
-  changePath: ChangePath,
-  blockHeight: number,
-  addressTransactionCache: AddressTransactionCache
+  common: CommonParams,
+  args: {
+    address: string
+    changePath: ChangePath
+    blockHeight: number
+    addressTransactionCache: AddressTransactionCache
+  }
 ): Promise<void> => {
-  const { walletTools, dataLayer } = common
+  const { address, changePath, addressTransactionCache } = args
+  let { blockHeight } = args
   // Fetch the blockHeight for the address from the database
-  const scriptPubkey = walletTools.addressToScriptPubkey(address)
+  const scriptPubkey = common.walletTools.addressToScriptPubkey(address)
 
   if (blockHeight === 0) {
     const { lastQueriedBlockHeight = 0 } =
-      (await dataLayer.fetchAddress(scriptPubkey)) ?? {}
+      (await common.dataLayer.fetchAddress(scriptPubkey)) ?? {}
     blockHeight = lastQueriedBlockHeight
   }
 
@@ -679,19 +681,15 @@ const addToAddressTransactionCache = async (
   }
 }
 
-interface TransactionChangedArgs {
-  walletId: string
-  tx: TransactionData
-  emitter: EngineEmitter
-  walletTools: UtxoWalletTools
-  pluginInfo: PluginInfo
+export const transactionChanged = async (args: {
   dataLayer: DataLayer
-}
-
-export const transactionChanged = async (
-  args: TransactionChangedArgs
-): Promise<void> => {
-  const { emitter, walletTools, dataLayer, pluginInfo, tx, walletId } = args
+  emitter: EngineEmitter
+  pluginInfo: PluginInfo
+  tx: TransactionData
+  walletTools: UtxoWalletTools
+  walletId: string
+}): Promise<void> => {
+  const { dataLayer, emitter, pluginInfo, tx, walletTools, walletId } = args
   emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
     await toEdgeTransaction({
       walletId,
@@ -704,11 +702,9 @@ export const transactionChanged = async (
 }
 
 export const pickNextTask = async (
-  args: CommonArgs,
+  common: CommonParams,
   serverUri: string
 ): Promise<WsTask<any> | undefined | boolean> => {
-  const { pluginInfo, taskCache, serverStates } = args
-
   const {
     addressSubscribeCache,
     addressUtxoCache,
@@ -717,21 +713,22 @@ export const pickNextTask = async (
     addressTransactionCache,
     updateTransactionCache,
     updateTransactionSpecificCache
-  } = taskCache
+  } = common.taskCache
 
   /**
    * Some currencies require an additional blockbook payload 'getTransactionSpecific' in order
    * to provide all relevant transaction data. Since this is currency-specific, we can limit
-   * the useage to currencies that require it.
+   * the usage to currencies that require it.
    **/
-  const needsTxSpecific = pluginInfo.engineInfo.txSpecificHandling != null
+  const needsTxSpecific =
+    common.pluginInfo.engineInfo.txSpecificHandling != null
 
-  const serverState = serverStates.getServerState(serverUri)
+  const serverState = common.serverStates.getServerState(serverUri)
   if (serverState == null) return
 
   // subscribe all servers to new blocks
   if (serverState.blockSubscriptionStatus === 'unsubscribed') {
-    serverStates.watchBlocks(serverUri)
+    common.serverStates.watchBlocks(serverUri)
     return true
   }
 
@@ -741,8 +738,7 @@ export const pickNextTask = async (
       // Only process when all utxos for a specific address have been gathered
       if (!state.processing && state.full) {
         state.processing = true
-        await processDataLayerUtxos({
-          ...args,
+        await processDataLayerUtxos(common, {
           scriptPubkey,
           utxos: state.utxos
         })
@@ -760,7 +756,7 @@ export const pickNextTask = async (
       // check if we need to fetch additional network content for legacy purpose type
       const purposeType = pathToPurposeType(
         state.path,
-        pluginInfo.engineInfo.scriptTemplates
+        common.pluginInfo.engineInfo.scriptTemplates
       )
       if (
         purposeType === BIP43PurposeTypeEnum.Airbitz ||
@@ -768,12 +764,11 @@ export const pickNextTask = async (
         purposeType === BIP43PurposeTypeEnum.ReplayProtection
       ) {
         // if we do need to make a network call, check with the serverState
-        if (!serverStates.serverCanGetTx(serverUri, utxo.txid)) return
+        if (!common.serverStates.serverCanGetTx(serverUri, utxo.txid)) return
       }
       state.processing = true
       removeItem(rawUtxoCache, utxoId)
-      const wsTask = await processRawUtxo({
-        ...args,
+      const wsTask = await processRawUtxo(common, {
         ...state,
         address: state.address,
         serverUri,
@@ -789,15 +784,14 @@ export const pickNextTask = async (
     // Check if we need to fetch address UTXOs
     if (
       !state.processing &&
-      serverStates.serverCanGetAddress(serverUri, address)
+      common.serverStates.serverCanGetAddress(serverUri, address)
     ) {
       state.processing = true
 
       removeItem(addressUtxoCache, address)
 
       // Fetch and process address UTXOs
-      const wsTask = await processAddressUtxos({
-        ...args,
+      const wsTask = await processAddressUtxos(common, {
         ...state,
         address,
         serverUri
@@ -809,7 +803,7 @@ export const pickNextTask = async (
         .catch(err => {
           addressUtxoCache[address] = state
           console.error(err)
-          args.log('error in addressUtxoCache:', err)
+          common.log('error in addressUtxoCache:', err)
         })
       return wsTask
     }
@@ -819,11 +813,11 @@ export const pickNextTask = async (
   if (Object.keys(addressSubscribeCache).length > 0) {
     // These are addresses to which the server has not subscribed
     const newAddresses: string[] = []
-    const blockHeight = serverStates.getBlockHeight(serverUri)
+    const blockHeight = common.serverStates.getBlockHeight(serverUri)
 
     // Loop each address in the cache
     for (const [address, state] of Object.entries(addressSubscribeCache)) {
-      const isAddressNewlySubscribed = !serverStates.serverIsAwareOfAddress(
+      const isAddressNewlySubscribed = !common.serverStates.serverIsAwareOfAddress(
         serverUri,
         address
       )
@@ -845,19 +839,18 @@ export const pickNextTask = async (
         }
       }
 
-      await addToAddressTransactionCache(
-        args,
+      await addToAddressTransactionCache(common, {
         address,
-        state.path,
+        changePath: state.path,
         blockHeight,
         addressTransactionCache
-      )
+      })
       state.processing = true
     }
 
     // Subscribe to any new addresses
     if (newAddresses.length > 0) {
-      serverStates.watchAddresses(serverUri, newAddresses)
+      common.serverStates.watchAddresses(serverUri, newAddresses)
       return true
     }
   }
@@ -868,15 +861,17 @@ export const pickNextTask = async (
     for (const [txId, state] of Object.entries(
       updateTransactionSpecificCache
     )) {
-      if (!state.processing && serverStates.serverCanGetTx(serverUri, txId)) {
+      if (
+        !state.processing &&
+        common.serverStates.serverCanGetTx(serverUri, txId)
+      ) {
         hasProcessedAtLeastOnce = true
         state.processing = true
         removeItem(updateTransactionSpecificCache, txId)
-        const updateTransactionSpecificTask = updateTransactionsSpecific({
-          ...args,
-          serverUri,
-          txId
-        })
+        const updateTransactionSpecificTask = updateTransactionsSpecific(
+          common,
+          { serverUri, txId }
+        )
         // once resolved, add the txid to the server cache
         updateTransactionSpecificTask.deferred.promise
           .then(() => {
@@ -885,7 +880,7 @@ export const pickNextTask = async (
           .catch(err => {
             updateTransactionSpecificCache[txId] = state
             console.error(err)
-            args.log('error in updateTransactionSpecificCache:', err)
+            common.log('error in updateTransactionSpecificCache:', err)
           })
         return updateTransactionSpecificTask
       }
@@ -898,14 +893,16 @@ export const pickNextTask = async (
   if (Object.keys(updateTransactionCache).length > 0) {
     let hasProcessedAtLeastOnce = false
     for (const [txId, state] of Object.entries(updateTransactionCache)) {
-      if (!state.processing && serverStates.serverCanGetTx(serverUri, txId)) {
+      if (
+        !state.processing &&
+        common.serverStates.serverCanGetTx(serverUri, txId)
+      ) {
         hasProcessedAtLeastOnce = true
         state.processing = true
         removeItem(updateTransactionCache, txId)
-        const updateTransactionTask = updateTransactions({
-          ...args,
-          serverUri,
+        const updateTransactionTask = updateTransactions(common, {
           needsTxSpecific,
+          serverUri,
           txId
         })
         // once resolved, add the txid to the server cache
@@ -916,7 +913,7 @@ export const pickNextTask = async (
           .catch(err => {
             updateTransactionCache[txId] = state
             console.error(err)
-            args.log('error in updateTransactionCache:', err)
+            common.log('error in updateTransactionCache:', err)
           })
         return updateTransactionTask
       }
@@ -929,15 +926,14 @@ export const pickNextTask = async (
   for (const [address, state] of Object.entries(addressTransactionCache)) {
     if (
       !state.processing &&
-      serverStates.serverCanGetAddress(serverUri, address)
+      common.serverStates.serverCanGetAddress(serverUri, address)
     ) {
       state.processing = true
 
       removeItem(addressTransactionCache, address)
 
       // Fetch and process address UTXOs
-      const wsTask = await processAddressTransactions({
-        ...args,
+      const wsTask = await processAddressTransactions(common, {
         addressTransactionState: state,
         address,
         needsTxSpecific,
@@ -950,165 +946,135 @@ export const pickNextTask = async (
         .catch(err => {
           addressTransactionCache[address] = state
           console.error(err)
-          args.log('error in updateTransactionCache:', err)
+          common.log('error in updateTransactionCache:', err)
         })
       return wsTask
     }
   }
 }
 
-interface UpdateTransactionsSpecificArgs extends CommonArgs {
-  serverUri: string
-  txId: string
-}
-
 const updateTransactionsSpecific = (
-  args: UpdateTransactionsSpecificArgs
+  common: CommonParams,
+  args: { serverUri: string; txId: string }
 ): WsTask<unknown> => {
-  const {
-    walletInfo,
-    emitter,
-    walletTools,
-    pluginInfo,
-    dataLayer,
-    serverUri,
-    txId,
-    taskCache
-  } = args
+  const { serverUri, txId } = args
   const deferred = new Deferred<unknown>()
   deferred.promise
     .then(async (txResponse: unknown) => {
       // Grab tx to update it
-      const txs = await dataLayer.fetchTransactions({ txId })
+      const txs = await common.dataLayer.fetchTransactions({ txId })
       let tx = txs[0]
       if (tx == null) return
 
-      if (pluginInfo.engineInfo.txSpecificHandling != null) {
+      if (common.pluginInfo.engineInfo.txSpecificHandling != null) {
         // Do coin-specific things to it
-        tx = pluginInfo.engineInfo.txSpecificHandling(tx, txResponse)
+        tx = common.pluginInfo.engineInfo.txSpecificHandling(tx, txResponse)
       }
 
       // Process and save new tx
-      const processedTx = await dataLayer.saveTransaction({
+      const processedTx = await common.dataLayer.saveTransaction({
         tx
       })
 
       await transactionChanged({
-        walletId: walletInfo.id,
-        emitter,
-        walletTools,
-        dataLayer,
-        pluginInfo,
+        walletId: common.walletInfo.id,
+        emitter: common.emitter,
+        walletTools: common.walletTools,
+        dataLayer: common.dataLayer,
+        pluginInfo: common.pluginInfo,
         tx: processedTx
       })
     })
     .catch(err => {
       console.error(err)
-      args.log('error in updateTransactionsSpecific:', err)
-      taskCache.updateTransactionSpecificCache[txId] = { processing: false }
+      common.log('error in updateTransactionsSpecific:', err)
+      common.taskCache.updateTransactionSpecificCache[txId] = {
+        processing: false
+      }
     })
 
-  return args.serverStates.transactionSpecialQueryTask(
+  return common.serverStates.transactionSpecialQueryTask(
     serverUri,
     txId,
     deferred
   )
 }
 
-interface UpdateTransactionsArgs extends CommonArgs {
-  needsTxSpecific: boolean
-  serverUri: string
-  txId: string
-}
-
 const updateTransactions = (
-  args: UpdateTransactionsArgs
+  common: CommonParams,
+  args: {
+    needsTxSpecific: boolean
+    serverUri: string
+    txId: string
+  }
 ): WsTask<TransactionResponse> => {
-  const {
-    walletInfo,
-    emitter,
-    walletTools,
-    txId,
-    needsTxSpecific,
-    pluginInfo,
-    dataLayer,
-    serverUri,
-    taskCache
-  } = args
+  const { needsTxSpecific, serverUri, txId } = args
   const deferred = new Deferred<TransactionResponse>()
   deferred.promise
     .then(async (txResponse: TransactionResponse) => {
       // check if raw tx is still not confirmed, if so, don't change anything
       if (txResponse.blockHeight < 1) return
       // Create new tx from raw tx
-      const tx = processTransactionResponse({ ...args, txResponse })
+      const tx = processTransactionResponse(common, { txResponse })
       // Remove any existing input utxos from the dataLayer
       for (const input of tx.inputs) {
-        await dataLayer.removeUtxos([`${input.txId}_${input.outputIndex}`])
+        await common.dataLayer.removeUtxos([
+          `${input.txId}_${input.outputIndex}`
+        ])
       }
       // Update output utxos's blockHeight any existing input utxos from the dataLayer
       const utxoIds = tx.outputs.map(output => `${tx.txid}_${output.n}`)
-      const utxos = await dataLayer.fetchUtxos({
+      const utxos = await common.dataLayer.fetchUtxos({
         utxoIds
       })
       for (const utxo of utxos) {
         if (utxo == null) continue
         utxo.blockHeight = tx.blockHeight
-        await dataLayer.saveUtxo(utxo)
+        await common.dataLayer.saveUtxo(utxo)
       }
       // Process and save new tx
-      const processedTx = await dataLayer.saveTransaction({
+      const processedTx = await common.dataLayer.saveTransaction({
         tx
       })
 
       await transactionChanged({
-        walletId: walletInfo.id,
-        emitter,
-        walletTools,
-        dataLayer,
-        pluginInfo,
+        walletId: common.walletInfo.id,
+        emitter: common.emitter,
+        walletTools: common.walletTools,
+        dataLayer: common.dataLayer,
+        pluginInfo: common.pluginInfo,
         tx: processedTx
       })
 
       if (needsTxSpecific) {
         // Add task to grab transactionSpecific payload
-        taskCache.updateTransactionSpecificCache[txId] = {
+        common.taskCache.updateTransactionSpecificCache[txId] = {
           processing: false
         }
       }
     })
     .catch(err => {
       console.error(err)
-      args.log('error in updateTransactions:', err)
-      taskCache.updateTransactionCache[txId] = { processing: false }
+      common.log('error in updateTransactions:', err)
+      common.taskCache.updateTransactionCache[txId] = { processing: false }
     })
 
-  return args.serverStates.transactionQueryTask(serverUri, txId, deferred)
+  return common.serverStates.transactionQueryTask(serverUri, txId, deferred)
 }
 
-interface DeriveScriptAddressArgs {
+const internalDeriveScriptAddress = async (args: {
   walletTools: UtxoWalletTools
   engineInfo: EngineInfo
   dataLayer: DataLayer
   format: CurrencyFormat
   taskCache: TaskCache
   script: string
-}
-
-interface DeriveScriptAddressReturn {
+}): Promise<{
   address: string
   scriptPubkey: string
   redeemScript: string
-}
-
-const internalDeriveScriptAddress = async ({
-  walletTools,
-  engineInfo,
-  dataLayer,
-  format,
-  taskCache,
-  script
-}: DeriveScriptAddressArgs): Promise<DeriveScriptAddressReturn> => {
+}> => {
+  const { walletTools, engineInfo, dataLayer, format, taskCache, script } = args
   if (engineInfo.scriptTemplates == null) {
     throw new Error(
       `cannot derive script address ${script} without defined script template`
@@ -1140,30 +1106,27 @@ const internalDeriveScriptAddress = async ({
   return { address, scriptPubkey, redeemScript }
 }
 
-interface GetFreshAddressArgs extends CommonArgs {
-  forceIndex?: number
-  changePath: ChangePath
-}
-
-interface GetFreshAddressReturn {
+const internalGetFreshAddress = async (
+  common: CommonParams,
+  args: {
+    forceIndex?: number
+    changePath: ChangePath
+  }
+): Promise<{
   address: string
   legacyAddress: string
   nativeBalance?: string
-}
+}> => {
+  const { changePath, forceIndex } = args
 
-const internalGetFreshAddress = async (
-  args: GetFreshAddressArgs
-): Promise<GetFreshAddressReturn> => {
-  const { changePath, walletTools, dataLayer, forceIndex } = args
-
-  const numAddresses = dataLayer.numAddressesByFormatPath(changePath)
+  const numAddresses = common.dataLayer.numAddressesByFormatPath(changePath)
 
   const path: AddressPath = {
     format: changePath.format,
     changeIndex: changePath.changeIndex,
     // while syncing, we may hit negative numbers when only subtracting. Use the address at /0 in that case.
     addressIndex: Math.max(
-      numAddresses - args.pluginInfo.engineInfo.gapLimit,
+      numAddresses - common.pluginInfo.engineInfo.gapLimit,
       0
     )
   }
@@ -1171,14 +1134,15 @@ const internalGetFreshAddress = async (
     path.addressIndex = forceIndex
   }
 
-  const iAddress = await dataLayer.fetchAddress(path)
+  const iAddress = await common.dataLayer.fetchAddress(path)
   const nativeBalance = iAddress?.balance ?? '0'
-  const { scriptPubkey } = iAddress ?? (await walletTools.getScriptPubkey(path))
+  const { scriptPubkey } =
+    iAddress ?? (await common.walletTools.getScriptPubkey(path))
 
   if (scriptPubkey == null) {
     throw new Error('Unknown address path')
   }
-  const address = walletTools.scriptPubkeyToAddress({
+  const address = common.walletTools.scriptPubkeyToAddress({
     changePath: path,
     scriptPubkey
   })
@@ -1189,34 +1153,21 @@ const internalGetFreshAddress = async (
   }
 }
 
-interface ProcessAddressTxsArgs extends CommonArgs {
-  address: string
-  addressTransactionState: AddressTransactionCache[string]
-  serverUri: string
-  needsTxSpecific: boolean
-}
-
 const processAddressTransactions = async (
-  args: ProcessAddressTxsArgs
+  common: CommonParams,
+  args: {
+    address: string
+    addressTransactionState: AddressTransactionCache[string]
+    needsTxSpecific: boolean
+    serverUri: string
+  }
 ): Promise<WsTask<AddressResponse>> => {
-  const {
-    walletInfo,
-    address,
-    addressTransactionState,
-    emitter,
-    needsTxSpecific,
-    pluginInfo,
-    dataLayer,
-    walletTools,
-    taskCache,
-    pluginState,
-    serverUri
-  } = args
+  const { address, addressTransactionState, needsTxSpecific, serverUri } = args
   const { page = 1, blockHeight } = addressTransactionState
-  const addressTransactionCache = taskCache.addressTransactionCache
+  const addressTransactionCache = common.taskCache.addressTransactionCache
 
-  const scriptPubkey = walletTools.addressToScriptPubkey(address)
-  const addressData = await dataLayer.fetchAddress(scriptPubkey)
+  const scriptPubkey = common.walletTools.addressToScriptPubkey(address)
+  const addressData = await common.dataLayer.fetchAddress(scriptPubkey)
   if (addressData == null) {
     throw new Error(`could not find address with script pubkey ${scriptPubkey}`)
   }
@@ -1225,7 +1176,7 @@ const processAddressTransactions = async (
   const deferred = new Deferred<AddressResponse>()
   deferred.promise
     .then(async (value: AddressResponse) => {
-      pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
+      common.pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
       // If address is used and previously not marked as used, mark as used.
@@ -1236,23 +1187,23 @@ const processAddressTransactions = async (
 
       // Process and save the address's transactions
       for (const txResponse of transactions) {
-        const tx = processTransactionResponse({ ...args, txResponse })
-        const processedTx = await dataLayer.saveTransaction({
+        const tx = processTransactionResponse(common, { txResponse })
+        const processedTx = await common.dataLayer.saveTransaction({
           tx,
           scriptPubkeys: [scriptPubkey]
         })
         await transactionChanged({
-          walletId: walletInfo.id,
-          emitter,
-          walletTools,
-          dataLayer,
-          pluginInfo,
+          walletId: common.walletInfo.id,
+          emitter: common.emitter,
+          walletTools: common.walletTools,
+          dataLayer: common.dataLayer,
+          pluginInfo: common.pluginInfo,
           tx: processedTx
         })
 
         if (needsTxSpecific) {
           // Add task to grab transactionSpecific payload
-          taskCache.updateTransactionSpecificCache[tx.txid] = {
+          common.taskCache.updateTransactionSpecificCache[tx.txid] = {
             processing: false
           }
         }
@@ -1274,13 +1225,13 @@ const processAddressTransactions = async (
       addressData.lastQueriedBlockHeight = blockHeight
 
       // Save/update the fully-processed address
-      await dataLayer.saveAddress(addressData)
+      await common.dataLayer.saveAddress(addressData)
 
       // Update the progress now that the transactions for an address have processed
-      await args.updateProgressRatio()
+      await common.updateProgressRatio()
 
       // Call setLookAhead to update the lookahead
-      await setLookAhead(args)
+      await setLookAhead(common)
     })
     .catch(err => {
       // Log the error for debugging purposes without crashing the engine
@@ -1289,7 +1240,7 @@ const processAddressTransactions = async (
       addressTransactionCache[address] = addressTransactionState
     })
 
-  return args.serverStates.addressQueryTask(
+  return common.serverStates.addressQueryTask(
     serverUri,
     address,
     {
@@ -1300,17 +1251,11 @@ const processAddressTransactions = async (
   )
 }
 
-interface processTransactionResponseArgs extends CommonArgs {
-  txResponse: TransactionResponse
-}
-
 const processTransactionResponse = (
-  args: processTransactionResponseArgs
+  common: CommonParams,
+  args: { txResponse: TransactionResponse }
 ): TransactionData => {
-  const {
-    txResponse,
-    pluginInfo: { coinInfo }
-  } = args
+  const { txResponse } = args
   const inputs = txResponse.vin.map(vin => {
     const scriptPubkey =
       // Note: Blockbook has empirically not sent a hex value as the
@@ -1321,7 +1266,7 @@ const processTransactionResponse = (
         'unknown'
       )({
         address: vin.addresses[0],
-        coin: coinInfo.name
+        coin: common.pluginInfo.coinInfo.name
       })
     return {
       txId: vin.txid,
@@ -1340,7 +1285,7 @@ const processTransactionResponse = (
         'unknown'
       )({
         address: vout.addresses[0],
-        coin: coinInfo.name
+        coin: common.pluginInfo.coinInfo.name
       })
     return {
       n: vout.n,
@@ -1363,33 +1308,28 @@ const processTransactionResponse = (
   }
 }
 
-interface ProcessAddressUtxosArgs extends CommonArgs {
-  address: string
-  path: ChangePath
-  processing: boolean
-  serverUri: string
-}
-
 const processAddressUtxos = async (
-  args: ProcessAddressUtxosArgs
+  common: CommonParams,
+  args: {
+    address: string
+    path: ChangePath
+    processing: boolean
+    serverUri: string
+  }
 ): Promise<WsTask<AddressUtxosResponse>> => {
+  const { address, path, serverUri } = args
   const {
-    address,
-    walletTools,
-    dataLayer,
-    taskCache,
-    path,
-    pluginState,
-    serverUri
-  } = args
-  const { addressUtxoCache, rawUtxoCache, dataLayerUtxoCache } = taskCache
+    addressUtxoCache,
+    rawUtxoCache,
+    dataLayerUtxoCache
+  } = common.taskCache
   const queryTime = Date.now()
   const deferred = new Deferred<AddressUtxosResponse>()
   deferred.promise
     .then(async (utxos: AddressUtxosResponse) => {
-      pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
-      const scriptPubkey = walletTools.addressToScriptPubkey(address)
-      const addressData = await dataLayer.fetchAddress(scriptPubkey)
+      common.pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
+      const scriptPubkey = common.walletTools.addressToScriptPubkey(address)
+      const addressData = await common.dataLayer.fetchAddress(scriptPubkey)
       if (addressData == null || addressData.path == null) {
         return
       }
@@ -1419,31 +1359,23 @@ const processAddressUtxos = async (
       }
     })
 
-  return args.serverStates.utxoListQueryTask(serverUri, address, deferred)
-}
-
-interface ProcessDataLayerUtxosArgs extends CommonArgs {
-  scriptPubkey: string
-  utxos: UtxoData[]
+  return common.serverStates.utxoListQueryTask(serverUri, address, deferred)
 }
 
 const processDataLayerUtxos = async (
-  args: ProcessDataLayerUtxosArgs
+  common: CommonParams,
+  args: {
+    scriptPubkey: string
+    utxos: UtxoData[]
+  }
 ): Promise<void> => {
-  const {
-    utxos,
-    dataLayer,
-    scriptPubkey,
-    log,
-    emitter,
-    pluginInfo: { currencyInfo }
-  } = args
+  const { utxos, scriptPubkey } = args
 
   const updatedUtxos: { [utxoId: string]: UtxoData } = Object.fromEntries(
     [...utxos].map(utxo => [utxo.id, utxo])
   )
   const utxoIdsToRemove: string[] = []
-  const currentUtxos = await dataLayer.fetchUtxos({ scriptPubkey })
+  const currentUtxos = await common.dataLayer.fetchUtxos({ scriptPubkey })
 
   //
   // Modify existing UTXO set
@@ -1468,7 +1400,7 @@ const processDataLayerUtxos = async (
   }
 
   // Remove any spent UTXOs that have confirmations
-  await dataLayer.removeUtxos(utxoIdsToRemove)
+  await common.dataLayer.removeUtxos(utxoIdsToRemove)
 
   //
   // Save updated UTXO set
@@ -1481,7 +1413,7 @@ const processDataLayerUtxos = async (
       newBalance = add(utxo.value, newBalance)
     }
     // Save new UTXOs
-    await dataLayer.saveUtxo(utxo)
+    await common.dataLayer.saveUtxo(utxo)
   }
 
   //
@@ -1490,10 +1422,14 @@ const processDataLayerUtxos = async (
 
   // Address balance and emit address balance change event
   if (newBalance !== oldBalance) {
-    log('address balance changed:', { scriptPubkey, oldBalance, newBalance })
-    emitter.emit(
+    common.log('address balance changed:', {
+      scriptPubkey,
+      oldBalance,
+      newBalance
+    })
+    common.emitter.emit(
       EngineEvent.ADDRESS_BALANCE_CHANGED,
-      currencyInfo.currencyCode,
+      common.pluginInfo.currencyInfo.currencyCode,
       [
         {
           scriptPubkey,
@@ -1503,13 +1439,13 @@ const processDataLayerUtxos = async (
     )
 
     // Update balances for address that have this scriptPubkey
-    const address = await dataLayer.fetchAddress(scriptPubkey)
+    const address = await common.dataLayer.fetchAddress(scriptPubkey)
 
     if (address == null) {
       throw new Error('address not found when processing UTXO transactions')
     }
 
-    await dataLayer.saveAddress({
+    await common.dataLayer.saveAddress({
       ...address,
       balance: newBalance,
       used: true
@@ -1517,43 +1453,30 @@ const processDataLayerUtxos = async (
   }
 
   // Update the progress now that the UTXOs for an address have been processed
-  await args.updateProgressRatio()
+  await common.updateProgressRatio()
 
-  await setLookAhead(args).catch(err => {
-    log.error(err)
+  await setLookAhead(common).catch(err => {
+    common.log.error(err)
     throw err
   })
 }
 
-interface ProcessRawUtxoArgs extends CommonArgs {
-  address: AddressData
-  path: ChangePath
-  id: string
-  requiredCount: number
-  serverUri: string
-  utxo: BlockbookAccountUtxo
-}
-
 const processRawUtxo = async (
-  args: ProcessRawUtxoArgs
+  common: CommonParams,
+  args: {
+    address: AddressData
+    path: ChangePath
+    id: string
+    requiredCount: number
+    serverUri: string
+    utxo: BlockbookAccountUtxo
+  }
 ): Promise<WsTask<TransactionResponse> | undefined> => {
-  const {
-    utxo,
-    id,
-    address,
-    pluginInfo,
-    dataLayer,
-    path,
-    taskCache,
-    requiredCount,
-    pluginState,
-    serverUri,
-    log
-  } = args
-  const { rawUtxoCache, dataLayerUtxoCache } = taskCache
+  const { address, path, id, requiredCount, serverUri, utxo } = args
+  const { rawUtxoCache, dataLayerUtxoCache } = common.taskCache
   const purposeType = pathToPurposeType(
     path,
-    pluginInfo.engineInfo.scriptTemplates
+    common.pluginInfo.engineInfo.scriptTemplates
   )
   const scriptType: ScriptTypeEnum = getScriptTypeFromPurposeType(purposeType)
   let script: string
@@ -1591,7 +1514,7 @@ const processRawUtxo = async (
       // Legacy UTXOs need the previous transaction hex as the script
       // If we do not currently have it, add it to the queue to fetch it
       {
-        const [tx] = await dataLayer.fetchTransactions({
+        const [tx] = await common.dataLayer.fetchTransactions({
           txId: utxo.txid
         })
         if (tx == null) {
@@ -1599,9 +1522,11 @@ const processRawUtxo = async (
           const deferred = new Deferred<TransactionResponse>()
           deferred.promise
             .then((txResponse: TransactionResponse) => {
-              pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
-              const processedTx = processTransactionResponse({
-                ...args,
+              common.pluginState.serverScoreUp(
+                serverUri,
+                Date.now() - queryTime
+              )
+              const processedTx = processTransactionResponse(common, {
                 txResponse
               })
               script = processedTx.hex
@@ -1610,7 +1535,7 @@ const processRawUtxo = async (
             })
             .catch(err => {
               // If something went wrong, add the UTXO back to the queue
-              log('error in processRawUtxo:', err)
+              common.log('error in processRawUtxo:', err)
               const utxoId = `${utxo.txid}_${utxo.vout}`
               rawUtxoCache[utxoId] = {
                 blockbookUtxo: utxo,
@@ -1621,7 +1546,7 @@ const processRawUtxo = async (
               }
             })
 
-          return args.serverStates.transactionQueryTask(
+          return common.serverStates.transactionQueryTask(
             serverUri,
             utxo.txid,
             deferred
