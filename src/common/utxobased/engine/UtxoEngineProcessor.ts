@@ -350,9 +350,11 @@ export function makeUtxoEngineProcessor(
         legacyAddress
       } = await internalGetFreshAddress({
         ...commonArgs,
-        format: privateKeyFormat,
         forceIndex,
-        changeIndex: branch
+        changePath: {
+          format: privateKeyFormat,
+          changeIndex: branch
+        }
       })
 
       const freshAddress: EdgeFreshAddress = {
@@ -380,9 +382,11 @@ export function makeUtxoEngineProcessor(
             nativeBalance = '0'
           } = await internalGetFreshAddress({
             ...commonArgs,
-            format,
             forceIndex,
-            changeIndex: branch
+            changePath: {
+              format,
+              changeIndex: branch
+            }
           })
 
           freshAddress.segwitAddress = address
@@ -569,8 +573,6 @@ interface AddressTransactionCache {
     blockHeight: number
   }
 }
-
-interface FormatArgs extends CommonArgs, ChangePath {}
 
 const setLookAhead = async (common: CommonArgs): Promise<void> => {
   const {
@@ -1138,8 +1140,9 @@ const internalDeriveScriptAddress = async ({
   return { address, scriptPubkey, redeemScript }
 }
 
-interface GetFreshAddressArgs extends FormatArgs {
+interface GetFreshAddressArgs extends CommonArgs {
   forceIndex?: number
+  changePath: ChangePath
 }
 
 interface GetFreshAddressReturn {
@@ -1151,22 +1154,13 @@ interface GetFreshAddressReturn {
 const internalGetFreshAddress = async (
   args: GetFreshAddressArgs
 ): Promise<GetFreshAddressReturn> => {
-  const {
-    format,
-    changeIndex: branch,
-    walletTools,
-    dataLayer,
-    forceIndex
-  } = args
+  const { changePath, walletTools, dataLayer, forceIndex } = args
 
-  const numAddresses = dataLayer.numAddressesByFormatPath({
-    format,
-    changeIndex: branch
-  })
+  const numAddresses = dataLayer.numAddressesByFormatPath(changePath)
 
   const path: AddressPath = {
-    format,
-    changeIndex: branch,
+    format: changePath.format,
+    changeIndex: changePath.changeIndex,
     // while syncing, we may hit negative numbers when only subtracting. Use the address at /0 in that case.
     addressIndex: Math.max(
       numAddresses - args.pluginInfo.engineInfo.gapLimit,
