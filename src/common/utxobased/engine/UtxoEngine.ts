@@ -61,7 +61,10 @@ import {
   pathToPurposeType,
   sumUtxos
 } from './utils'
-import { makeUtxoEngineState, transactionChanged } from './UtxoEngineState'
+import {
+  makeUtxoEngineProcessor,
+  transactionChanged
+} from './UtxoEngineProcessor'
 import { makeUtxoWalletTools } from './UtxoWalletTools'
 
 export async function makeUtxoEngine(
@@ -128,7 +131,7 @@ export async function makeUtxoEngine(
   const dataLayer = await makeDataLayer({
     disklet: walletLocalDisklet
   })
-  const engineState = makeUtxoEngineState({
+  const engineProcessor = makeUtxoEngineProcessor({
     ...config,
     walletTools,
     walletInfo,
@@ -235,7 +238,7 @@ export async function makeUtxoEngine(
       // Use the found change address or generate a new one:
       const freshAddress =
         foundChangeAddress == null
-          ? await engineState.getFreshAddress({ branch: 1 })
+          ? await engineProcessor.getFreshAddress({ branch: 1 })
           : { publicAddress: foundChangeAddress }
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
@@ -357,15 +360,15 @@ export async function makeUtxoEngine(
         metadata.state.balance
       )
 
-      pluginState.addEngine(engineState)
+      pluginState.addEngine(engineProcessor)
       await fees.start()
-      await engineState.start()
+      await engineProcessor.start()
     },
 
     async killEngine(): Promise<void> {
-      await engineState.stop()
+      await engineProcessor.stop()
       fees.stop()
-      pluginState.removeEngine(engineState)
+      pluginState.removeEngine(engineProcessor)
     },
 
     getBalance(_opts: EdgeTokenIdOptions): string {
@@ -381,7 +384,7 @@ export async function makeUtxoEngine(
     },
 
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
-      return await engineState.addGapLimitAddresses(addresses)
+      return await engineProcessor.addGapLimitAddresses(addresses)
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
@@ -401,7 +404,7 @@ export async function makeUtxoEngine(
           )
         }
       }
-      const id = await engineState.broadcastTx(transaction).catch(err => {
+      const id = await engineProcessor.broadcastTx(transaction).catch(err => {
         if (String(err).includes('Error: Blockbook Error: -26: dust')) {
           throw new DustSpendError()
         }
@@ -461,7 +464,7 @@ export async function makeUtxoEngine(
       opts: EdgeGetReceiveAddressOptions
     ): Promise<EdgeFreshAddress> {
       const { forceIndex } = opts
-      return await engineState.getFreshAddress({ forceIndex })
+      return await engineProcessor.getFreshAddress({ forceIndex })
     },
 
     getNumTransactions(_opts: EdgeTokenIdOptions): number {
@@ -559,7 +562,7 @@ export async function makeUtxoEngine(
           const { script } = target.otherParams
           if (script.type === 'replayProtection') {
             // construct a replay protection p2sh address
-            const { publicAddress } = await engineState.deriveScriptAddress(
+            const { publicAddress } = await engineProcessor.deriveScriptAddress(
               script.type
             )
             targets.push({
@@ -593,7 +596,7 @@ export async function makeUtxoEngine(
         throw new Error('Need to provide Spend Targets')
       }
 
-      const freshAddress = await engineState.getFreshAddress({ branch: 1 })
+      const freshAddress = await engineProcessor.getFreshAddress({ branch: 1 })
       const freshChangeAddress =
         forceChangeAddress ??
         freshAddress.segwitAddress ??
@@ -753,7 +756,7 @@ export async function makeUtxoEngine(
       Get the wallet's UTXOs from the new transaction and save them to the processsor.
       */
       const ownUtxos = await getOwnUtxosFromTx(engineInfo, dataLayer, tx)
-      await engineState.processUtxos(ownUtxos)
+      await engineProcessor.processUtxos(ownUtxos)
     },
 
     async signMessage(
@@ -967,7 +970,7 @@ export async function makeUtxoEngine(
         }
       })
 
-      const tmpState = makeUtxoEngineState({
+      const tmpState = makeUtxoEngineProcessor({
         ...config,
         options: {
           ...config.options,

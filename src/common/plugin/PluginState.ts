@@ -6,7 +6,7 @@ import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet } from 'memlet'
 
 import { UtxoUserSettings } from '../utxobased/engine/types'
-import { UtxoEngineState } from '../utxobased/engine/UtxoEngineState'
+import { UtxoEngineProcessor } from '../utxobased/engine/UtxoEngineProcessor'
 import {
   asServerCache,
   ServerCache,
@@ -42,8 +42,8 @@ export interface PluginStateSettings {
 }
 
 export interface PluginState {
-  addEngine: (engineState: UtxoEngineState) => void
-  removeEngine: (engineState: UtxoEngineState) => void
+  addEngine: (engineProcessor: UtxoEngineProcessor) => void
+  removeEngine: (engineProcessor: UtxoEngineProcessor) => void
   dumpData: () => JsonObject
   load: () => Promise<PluginState>
   serverScoreDown: (uri: string) => void
@@ -67,7 +67,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     log
   } = settings
 
-  let engines: UtxoEngineState[] = []
+  let engines: UtxoEngineProcessor[] = []
   const memlet = makeMemlet(pluginDisklet)
 
   let serverCache: ServerCache = {
@@ -142,15 +142,15 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     /**
      * Begins notifying the engine of state changes. Used at connection time.
      */
-    addEngine(engineState: UtxoEngineState): void {
-      engines.push(engineState)
+    addEngine(engineProcessor: UtxoEngineProcessor): void {
+      engines.push(engineProcessor)
     },
 
     /**
      * Stops notifying the engine of state changes. Used at disconnection time.
      */
-    removeEngine(engineState: UtxoEngineState): void {
-      engines = engines.filter(engine => engine !== engineState)
+    removeEngine(engineProcessor: UtxoEngineProcessor): void {
+      engines = engines.filter(engine => engine !== engineProcessor)
     },
 
     dumpData(): JsonObject {

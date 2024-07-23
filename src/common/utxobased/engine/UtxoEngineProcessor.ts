@@ -52,7 +52,7 @@ import {
 } from './utils'
 import { UtxoWalletTools } from './UtxoWalletTools'
 
-export interface UtxoEngineState {
+export interface UtxoEngineProcessor {
   processedPercent: number
 
   start: () => Promise<void>
@@ -81,15 +81,15 @@ export interface UtxoEngineState {
   processUtxos: (utxos: UtxoData[]) => Promise<void>
 }
 
-export interface UtxoEngineStateConfig extends EngineConfig {
+export interface UtxoEngineProcessorConfig extends EngineConfig {
   walletTools: UtxoWalletTools
   walletInfo: SafeWalletInfo
   dataLayer: DataLayer
 }
 
-export function makeUtxoEngineState(
-  config: UtxoEngineStateConfig
-): UtxoEngineState {
+export function makeUtxoEngineProcessor(
+  config: UtxoEngineProcessorConfig
+): UtxoEngineProcessor {
   const {
     initOptions,
     io,

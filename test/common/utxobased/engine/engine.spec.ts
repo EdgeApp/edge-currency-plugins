@@ -398,9 +398,9 @@ describe('engine.spec', function () {
       const txs = await dataLayer.fetchTransactions({ blockHeight: 0 })
 
       // $FlowFixMe
-      const engineState: any = engine.engineState
-      const scriptHash = engineState.scriptHashes[address.publicAddress]
-      const transactions = engineState.addressInfos[scriptHash].txids
+      const engineProcessor: any = engine.engineProcessor
+      const scriptHash = engineProcessor.scriptHashes[address.publicAddress]
+      const transactions = engineProcessor.addressInfos[scriptHash].txids
       assert(transactions.length === 0, 'Should have never received coins')
     })
   })
