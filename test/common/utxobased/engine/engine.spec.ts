@@ -391,11 +391,11 @@ describe('engine.spec', function () {
     it('Should provide a non used BTC address when no options are provided', async function () {
       this.timeout(3000)
       const address = await engine.getFreshAddress({}) // TODO
-      const processor = await makeProcessor({
+      const dataLayer = await makeDataLayer({
         disklet: engineOpts.walletLocalDisklet
       })
 
-      const txs = await processor.fetchTransactions({ blockHeight: 0 })
+      const txs = await dataLayer.fetchTransactions({ blockHeight: 0 })
 
       // $FlowFixMe
       const engineState: any = engine.engineState

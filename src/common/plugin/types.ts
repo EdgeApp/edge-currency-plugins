@@ -22,7 +22,7 @@ import {
 } from 'edge-core-js/types'
 import * as wif from 'wif'
 
-import { asIUTXO, IProcessorTransaction, IUTXO } from '../utxobased/db/types'
+import { asUtxoData, TransactionData, UtxoData } from '../utxobased/db/types'
 import { UtxoInitOptions } from '../utxobased/engine/types'
 import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
 import { UtxoPicker } from '../utxobased/keymanager/utxopicker'
@@ -45,12 +45,12 @@ export interface AddressPath {
 }
 
 export interface TxOptions {
-  utxos?: IUTXO[]
+  utxos?: UtxoData[]
   subtractFee?: boolean
   CPFP?: string
 }
 export const asTxOptions = asObject<TxOptions>({
-  utxos: asOptional(asArray(asIUTXO)),
+  utxos: asOptional(asArray(asUtxoData)),
   subtractFee: asOptional(asBoolean),
   CPFP: asOptional(asString)
 })
@@ -148,13 +148,13 @@ export interface EngineInfo {
    * Some currencies require an additional blockbook payload
    * 'getTransactionSpecific' in order to provide all relevant transaction
    * data. If this function is defined, it should merge the unknown `specialTx`
-   * data from the Blockbook endpoint with the `IProcessorTransaction` object
+   * data from the Blockbook endpoint with the `TransactionData` object
    * which is stored to disk.
    **/
   txSpecificHandling?: (
-    tx: IProcessorTransaction,
+    tx: TransactionData,
     specialTx: unknown
-  ) => IProcessorTransaction
+  ) => TransactionData
 }
 
 export interface ServerConfig {

@@ -4,7 +4,7 @@ import { SoftPick } from '../../../util/typeUtil'
 import { AddressPath } from '../../plugin/types'
 import { asScriptTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 
-export interface IAddress {
+export interface AddressData {
   scriptPubkey: string
   redeemScript?: string
   lastQueriedBlockHeight: number
@@ -15,9 +15,9 @@ export interface IAddress {
   balance?: string
 }
 
-export const makeIAddress = (
-  addressFields: SoftPick<IAddress, 'scriptPubkey'>
-): IAddress => {
+export const makeAddressData = (
+  addressFields: SoftPick<AddressData, 'scriptPubkey'>
+): AddressData => {
   const { scriptPubkey, used = false, ...rest } = addressFields
 
   return {
@@ -30,7 +30,7 @@ export const makeIAddress = (
   }
 }
 
-export interface IUTXO {
+export interface UtxoData {
   id: string
   txid: string
   vout: number
@@ -42,7 +42,7 @@ export interface IUTXO {
   blockHeight: number
   spent: boolean
 }
-export const asIUTXO = asObject<IUTXO>({
+export const asUtxoData = asObject<UtxoData>({
   id: asString,
   txid: asString,
   vout: asNumber,
@@ -55,27 +55,27 @@ export const asIUTXO = asObject<IUTXO>({
   spent: asBoolean
 })
 
-export interface IProcessorTransaction {
+export interface TransactionData {
   txid: string
   hex: string
   blockHeight: number
   confirmations?: 'confirmed' | 'unconfirmed' | 'dropped' | number
   date: number
   fees: string
-  inputs: ITransactionInput[]
-  outputs: ITransactionOutput[]
+  inputs: TransactionDataInput[]
+  outputs: TransactionDataOutput[]
   ourIns: string[]
   ourOuts: string[]
   ourAmount: string
 }
 
-export interface ITransactionOutput {
+export interface TransactionDataOutput {
   amount: string
   n: number
   scriptPubkey: string
 }
 
-export interface ITransactionInput {
+export interface TransactionDataInput {
   amount: string
   n: number
   outputIndex: number

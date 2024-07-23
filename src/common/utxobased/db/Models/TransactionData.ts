@@ -6,12 +6,10 @@ import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
 import { PluginInfo } from '../../../plugin/types'
 import { UtxoTxOtherParams } from '../../engine/types'
 import { UtxoWalletTools } from '../../engine/UtxoWalletTools'
-import { Processor } from '../Processor'
-import { IProcessorTransaction } from '../types'
+import { DataLayer } from '../DataLayer'
+import { TransactionData } from '../types'
 
-export const fromEdgeTransaction = (
-  tx: EdgeTransaction
-): IProcessorTransaction => {
+export const fromEdgeTransaction = (tx: EdgeTransaction): TransactionData => {
   const otherParams = tx.otherParams as UtxoTxOtherParams
   if (otherParams == null) throw new Error('Invalid transaction data')
   if (otherParams.psbt == null)
@@ -44,7 +42,7 @@ export const fromEdgeTransaction = (
     inputs: inputs,
     outputs: outputs,
     // We can leave ourIns/ourOuts blank because they'll be updated by the
-    // processor when receiving the transaction from blockbook.
+    // DataLayer when receiving the transaction from blockbook.
     // We may want to calculate these preemptively, but for now this will work.
     ourIns: [],
     ourOuts: [],
@@ -54,21 +52,21 @@ export const fromEdgeTransaction = (
 
 interface ToEdgeTransactionArgs {
   walletId: string
-  tx: IProcessorTransaction
+  tx: TransactionData
   walletTools: UtxoWalletTools
-  processor: Processor
+  dataLayer: DataLayer
   pluginInfo: PluginInfo
 }
 
 export const toEdgeTransaction = async (
   args: ToEdgeTransactionArgs
 ): Promise<EdgeTransaction> => {
-  const { tx, processor, walletTools, pluginInfo, walletId } = args
+  const { tx, dataLayer, walletTools, pluginInfo, walletId } = args
   const { currencyInfo } = pluginInfo
   const ourReceiveAddresses: string[] = []
   for (const out of tx.ourOuts) {
     const { scriptPubkey } = tx.outputs[parseInt(out)]
-    const address = await processor.fetchAddress(scriptPubkey)
+    const address = await dataLayer.fetchAddress(scriptPubkey)
 
     if (address?.path != null) {
       const { address: addrStr } = walletTools.scriptPubkeyToAddress({

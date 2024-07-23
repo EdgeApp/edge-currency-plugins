@@ -3,7 +3,7 @@ import { Disklet } from 'disklet'
 import { EdgeParsedUri } from 'edge-core-js/types'
 
 import { ChangePath, CurrencyFormat, EngineInfo } from '../../plugin/types'
-import { IUTXO } from '../db/types'
+import { UtxoData } from '../db/types'
 import { ScriptTemplates } from '../info/scriptTemplates/types'
 import { getSupportedFormats, PrivateKey } from '../keymanager/cleaners'
 import {
@@ -269,7 +269,7 @@ export const parsePathname = (args: {
   return edgeParsedUri
 }
 
-export const sumUtxos = (utxos: IUTXO[]): string =>
+export const sumUtxos = (utxos: UtxoData[]): string =>
   utxos.reduce(
     (sum, { spent, value }) => (spent ? sum : bs.add(sum, value)),
     '0'

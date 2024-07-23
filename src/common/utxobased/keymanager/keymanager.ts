@@ -19,7 +19,7 @@ import { EdgeLog, EdgeMemo } from 'edge-core-js/types'
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
 import { ChangePath, CoinInfo, CoinPrefixes, FeeInfo } from '../../plugin/types'
-import { IUTXO } from '../db/types'
+import { UtxoData } from '../db/types'
 import { ScriptTemplate, ScriptTemplates } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
 import {
@@ -223,8 +223,8 @@ export interface TxOutput {
 }
 
 export interface MakeTxArgs {
-  forceUseUtxo: IUTXO[]
-  utxos: IUTXO[]
+  forceUseUtxo: UtxoData[]
+  utxos: UtxoData[]
   targets: MakeTxTarget[]
   memos: EdgeMemo[]
   feeRate: number
@@ -961,7 +961,7 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
   const uniqueUtxos = [
     ...mergedArray
       .filter(utxo => !utxo.spent)
-      .reduce((map, obj) => map.set(obj.id, obj), new Map<string, IUTXO>())
+      .reduce((map, obj) => map.set(obj.id, obj), new Map<string, UtxoData>())
       .values()
   ].sort((a, b) => {
     if (a.blockHeight <= 0 && b.blockHeight > 0) return 1

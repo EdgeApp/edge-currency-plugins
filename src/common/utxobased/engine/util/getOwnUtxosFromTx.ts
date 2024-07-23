@@ -1,15 +1,15 @@
 import { EngineInfo } from '../../../plugin/types'
-import { Processor } from '../../db/Processor'
-import { IProcessorTransaction, IUTXO } from '../../db/types'
+import { DataLayer } from '../../db/DataLayer'
+import { TransactionData, UtxoData } from '../../db/types'
 import { BIP43PurposeTypeEnum } from '../../keymanager/keymanager'
 import { getScriptTypeFromPurposeType, pathToPurposeType } from '../utils'
 
 export const getOwnUtxosFromTx = async (
   engineInfo: EngineInfo,
-  processor: Processor,
-  tx: IProcessorTransaction
-): Promise<IUTXO[]> => {
-  const ownUtxos: IUTXO[] = []
+  dataLayer: DataLayer,
+  tx: TransactionData
+): Promise<UtxoData[]> => {
+  const ownUtxos: UtxoData[] = []
 
   //
   // Spent UTXOs (Inputs)
@@ -18,12 +18,12 @@ export const getOwnUtxosFromTx = async (
   const inputUtxoIds = tx.inputs.map(
     input => `${input.txId}_${input.outputIndex}`
   )
-  const inputUtxos = await processor.fetchUtxos({
+  const inputUtxos = await dataLayer.fetchUtxos({
     utxoIds: inputUtxoIds
   })
   for (const utxo of inputUtxos) {
     if (utxo == null) continue
-    // Must create a new IUTXO object when mutating processor objects because
+    // Must create a new UtxoData object when mutating DataLayer objects because
     // memlet may keep a reference in memory.
     ownUtxos.push({ ...utxo, spent: true })
   }
@@ -34,7 +34,7 @@ export const getOwnUtxosFromTx = async (
 
   for (const output of tx.outputs) {
     const scriptPubkey = output.scriptPubkey
-    const address = await processor.fetchAddress(scriptPubkey)
+    const address = await dataLayer.fetchAddress(scriptPubkey)
     if (address != null) {
       const id = `${tx.txid}_${output.n}`
       const path = address.path
@@ -50,7 +50,7 @@ export const getOwnUtxosFromTx = async (
 
         const scriptType = getScriptTypeFromPurposeType(purposeType)
         const script = isAirbitzOrLegacy ? tx.hex : address.scriptPubkey
-        const utxo: IUTXO = {
+        const utxo: UtxoData = {
           id,
           txid: tx.txid,
           vout: output.n,

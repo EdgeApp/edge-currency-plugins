@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
-import { IUTXO } from '../../../../../src/common/utxobased/db/types'
+import { UtxoData } from '../../../../../src/common/utxobased/db/types'
 import { info as bitcoin } from '../../../../../src/common/utxobased/info/bitcoin'
 import {
   addressToScriptPubkey,
@@ -391,7 +391,7 @@ describe('bitcoin transaction creation and signing test', function () {
   })
 
   it.skip('create a segwit tx with segwit outputs, then create another tx consuming these outputs', async () => {
-    const getUtxo = (i: number, value: string = '100'): IUTXO => ({
+    const getUtxo = (i: number, value: string = '100'): UtxoData => ({
       id: `${i}`,
       scriptType: ScriptTypeEnum.p2wpkh,
       txid: '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
@@ -433,7 +433,7 @@ describe('bitcoin transaction creation and signing test', function () {
   })
 
   it.skip('create a mixed input and mixed output transaction', async () => {
-    const utxoLegacy: IUTXO = {
+    const utxoLegacy: UtxoData = {
       id: '0',
       scriptType: ScriptTypeEnum.p2pkh,
       txid: '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
@@ -451,7 +451,7 @@ describe('bitcoin transaction creation and signing test', function () {
       vout: 0
     }
 
-    const utxoSegwit: IUTXO = {
+    const utxoSegwit: UtxoData = {
       id: '1',
       scriptType: ScriptTypeEnum.p2wpkh,
       txid: '8b26fa4d0238788ffc3a7d96e4169acf6fe993a28791e9e748819ac216ee85b3',
@@ -463,7 +463,7 @@ describe('bitcoin transaction creation and signing test', function () {
       vout: 1
     }
 
-    const utxoWrappedSegwit: IUTXO = {
+    const utxoWrappedSegwit: UtxoData = {
       id: '2',
       scriptType: ScriptTypeEnum.p2wpkhp2sh,
       txid: 'e9f28846381667b6beb57698ab824b597312428cd026d45e9e3a13c95e335d9e',
@@ -514,7 +514,7 @@ describe('bitcoin transaction creation and signing test', function () {
 
   it.skip('create a legacy tx with one input and 100 outputs, then create another legacy tx with 100 inputs and two outputs', async () => {
     const nOutputs = 100
-    const utxo: IUTXO = {
+    const utxo: UtxoData = {
       id: '0',
       scriptType: ScriptTypeEnum.p2pkh,
       txid: '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
@@ -562,7 +562,7 @@ describe('bitcoin transaction creation and signing test', function () {
       psbtBase64
     })
 
-    const utxos: IUTXO[] = Array(100)
+    const utxos: UtxoData[] = Array(100)
       .fill(1)
       .map((_, i) => ({
         id: `${i}`,

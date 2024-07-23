@@ -18,13 +18,13 @@ import {
   PluginInfo
 } from '../../plugin/types'
 import { removeItem } from '../../plugin/utils'
-import { toEdgeTransaction } from '../db/Models/ProcessorTransaction'
-import { Processor } from '../db/Processor'
+import { DataLayer } from '../db/DataLayer'
+import { toEdgeTransaction } from '../db/Models/TransactionData'
 import {
-  IAddress,
-  IProcessorTransaction,
-  IUTXO,
-  makeIAddress
+  AddressData,
+  makeAddressData,
+  TransactionData,
+  UtxoData
 } from '../db/types'
 import { getSupportedFormats, SafeWalletInfo } from '../keymanager/cleaners'
 import {
@@ -78,13 +78,13 @@ export interface UtxoEngineState {
 
   loadWifs: (wifs: string[]) => Promise<void>
 
-  processUtxos: (utxos: IUTXO[]) => Promise<void>
+  processUtxos: (utxos: UtxoData[]) => Promise<void>
 }
 
 export interface UtxoEngineStateConfig extends EngineConfig {
   walletTools: UtxoWalletTools
   walletInfo: SafeWalletInfo
-  processor: Processor
+  dataLayer: DataLayer
 }
 
 export function makeUtxoEngineState(
@@ -96,7 +96,7 @@ export function makeUtxoEngineState(
     options,
     pluginState,
     pluginInfo,
-    processor,
+    dataLayer,
     walletInfo,
     walletTools
   } = config
@@ -110,7 +110,7 @@ export function makeUtxoEngineState(
     addressTransactionCache: {},
     addressUtxoCache: {},
     rawUtxoCache: {},
-    processorUtxoCache: {},
+    dataLayerUtxoCache: {},
     updateTransactionCache: {},
     updateTransactionSpecificCache: {}
   }
@@ -129,8 +129,8 @@ export function makeUtxoEngineState(
     for (const key of Object.keys(taskCache.rawUtxoCache)) {
       removeItem(taskCache.rawUtxoCache, key)
     }
-    for (const key of Object.keys(taskCache.processorUtxoCache)) {
-      removeItem(taskCache.processorUtxoCache, key)
+    for (const key of Object.keys(taskCache.dataLayerUtxoCache)) {
+      removeItem(taskCache.dataLayerUtxoCache, key)
     }
     for (const key of Object.keys(taskCache.updateTransactionCache)) {
       removeItem(taskCache.updateTransactionCache, key)
@@ -188,7 +188,7 @@ export function makeUtxoEngineState(
     pluginInfo,
     walletInfo,
     walletTools,
-    processor,
+    dataLayer,
     emitter,
     taskCache,
     updateProgressRatio,
@@ -216,7 +216,7 @@ export function makeUtxoEngineState(
   emitter.on(
     EngineEvent.BLOCK_HEIGHT_CHANGED,
     async (_uri: string, _blockHeight: number): Promise<void> => {
-      const txs = await processor.fetchTransactions({
+      const txs = await dataLayer.fetchTransactions({
         blockHeight: 0
       })
       for (const tx of txs) {
@@ -253,7 +253,7 @@ export function makeUtxoEngineState(
   )
 
   // Initialize the addressSubscribeCache with the existing addresses already
-  // processed by the processor. This happens only once before any call to
+  // processed by the DataLayer. This happens only once before any call to
   // setLookAhead.
   const initializeAddressSubscriptions = async (): Promise<void> => {
     const addressBalanceChanges: Array<{
@@ -269,10 +269,10 @@ export function makeUtxoEngineState(
           format,
           changeIndex: branch
         }
-        const branchAddressCount = processor.numAddressesByFormatPath(
+        const branchAddressCount = dataLayer.numAddressesByFormatPath(
           changePath
         )
-        // If the processor has not processed any addresses then the loop
+        // If the DataLayer has not processed any addresses then the loop
         // condition will only iterate once when branchAddressCount is 0 for the
         // first address in the derivation path.
         for (
@@ -280,25 +280,25 @@ export function makeUtxoEngineState(
           addressIndex < branchAddressCount;
           addressIndex++
         ) {
-          const processorAddress = await processor.fetchAddress({
+          const addressData = await dataLayer.fetchAddress({
             format,
             changeIndex: branch,
             addressIndex
           })
-          if (processorAddress == null) {
+          if (addressData == null) {
             throw new Error(
-              `Missing processor address ${format} ${branch} ${addressIndex} during initialization`
+              `Missing data-layer address with '${format}/${branch}/${addressIndex}' path during initialization`
             )
           }
           const { address } = walletTools.scriptPubkeyToAddress({
             changePath,
-            scriptPubkey: processorAddress.scriptPubkey
+            scriptPubkey: addressData.scriptPubkey
           })
           addressesToSubscribe.add(address)
-          if (processorAddress.balance != null) {
+          if (addressData.balance != null) {
             addressBalanceChanges.push({
-              scriptPubkey: processorAddress.scriptPubkey,
-              balance: processorAddress.balance
+              scriptPubkey: addressData.scriptPubkey,
+              balance: addressData.balance
             })
           }
         }
@@ -397,7 +397,7 @@ export function makeUtxoEngineState(
       const { address } = await internalDeriveScriptAddress({
         walletTools: commonArgs.walletTools,
         engineInfo: commonArgs.pluginInfo.engineInfo,
-        processor: commonArgs.processor,
+        dataLayer: commonArgs.dataLayer,
         taskCache: commonArgs.taskCache,
         format: walletInfo.keys.privateKeyFormat,
         script
@@ -410,8 +410,8 @@ export function makeUtxoEngineState(
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
       const promises = addresses.map(async address => {
         const scriptPubkey = walletTools.addressToScriptPubkey(address)
-        await processor.saveAddress(
-          makeIAddress({
+        await dataLayer.saveAddress(
+          makeAddressData({
             scriptPubkey,
             used: true
           })
@@ -457,8 +457,8 @@ export function makeUtxoEngineState(
           })
 
           // Make a new IAddress and save it
-          await processor.saveAddress(
-            makeIAddress({ scriptPubkey, redeemScript, path })
+          await dataLayer.saveAddress(
+            makeAddressData({ scriptPubkey, redeemScript, path })
           )
 
           taskCache.addressSubscribeCache[address] = {
@@ -468,9 +468,8 @@ export function makeUtxoEngineState(
         }
       }
     },
-    async processUtxos(utxos: IUTXO[]) {
-      // Map of scriptPubkey to IUTXOs
-      const utxoMap: Map<string, IUTXO[]> = new Map()
+    async processUtxos(utxos: UtxoData[]) {
+      const utxoMap: Map<string, UtxoData[]> = new Map()
       const utxoIds: Set<string> = new Set()
 
       // Map updated utxos
@@ -487,16 +486,16 @@ export function makeUtxoEngineState(
       // Process UTXO sets for each scriptPubkey in map
       for (const [scriptPubkey, utxos] of utxoMap.entries()) {
         // Get saved utxo set
-        const savedUtxos = await processor.fetchUtxos({ scriptPubkey })
+        const savedUtxos = await dataLayer.fetchUtxos({ scriptPubkey })
         // Filter UTXOs to de-duplicate (and undefined utxo as a type assert)
         const filteredUtxos = savedUtxos.filter(
           utxo => utxo != null && !utxoIds.has(utxo?.id)
-        ) as IUTXO[]
+        ) as UtxoData[]
 
         // Add updated utxos to utxo set
         const combinedUtxos = [...filteredUtxos, ...utxos]
 
-        await processProcessorUtxos({
+        await processDataLayerUtxos({
           ...commonArgs,
           scriptPubkey,
           utxos: combinedUtxos
@@ -510,7 +509,7 @@ interface CommonArgs {
   pluginInfo: PluginInfo
   walletInfo: SafeWalletInfo
   walletTools: UtxoWalletTools
-  processor: Processor
+  dataLayer: DataLayer
   emitter: EngineEmitter
   taskCache: TaskCache
   updateProgressRatio: () => void
@@ -527,7 +526,7 @@ interface TaskCache {
   readonly addressSubscribeCache: AddressSubscribeCache
   readonly addressUtxoCache: AddressUtxoCache
   readonly rawUtxoCache: RawUtxoCache
-  readonly processorUtxoCache: ProcessorUtxoCache
+  readonly dataLayerUtxoCache: DataLayerUtxoCache
   readonly addressTransactionCache: AddressTransactionCache
   readonly updateTransactionCache: UpdateTransactionCache
   readonly updateTransactionSpecificCache: UpdateTransactionSpecificCache
@@ -545,11 +544,11 @@ interface AddressSubscribeCache {
 interface AddressUtxoCache {
   [key: string]: { processing: boolean; path: ChangePath }
 }
-interface ProcessorUtxoCache {
+interface DataLayerUtxoCache {
   [key: string]: {
     processing: boolean
     full: boolean
-    utxos: IUTXO[]
+    utxos: UtxoData[]
     path: ChangePath
   }
 }
@@ -558,7 +557,7 @@ interface RawUtxoCache {
     blockbookUtxo: BlockbookAccountUtxo
     processing: boolean
     path: ChangePath
-    address: IAddress
+    address: AddressData
     requiredCount: number
   }
 }
@@ -577,7 +576,7 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
   const {
     pluginInfo: { engineInfo },
     lock,
-    processor,
+    dataLayer,
     walletFormats,
     walletTools
   } = common
@@ -599,8 +598,8 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
 
   async function deriveKeys(changePath: ChangePath): Promise<void> {
     const addressesToSubscribe = new Set<string>()
-    const totalAddressCount = processor.numAddressesByFormatPath(changePath)
-    let lastUsedIndex = await processor.lastUsedIndexByFormatPath(changePath)
+    const totalAddressCount = dataLayer.numAddressesByFormatPath(changePath)
+    let lastUsedIndex = await dataLayer.lastUsedIndexByFormatPath(changePath)
 
     // Loop until the total address count equals the lookahead count
     let lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
@@ -618,17 +617,17 @@ const setLookAhead = async (common: CommonArgs): Promise<void> => {
       })
 
       // Make a new IAddress and save it
-      await processor.saveAddress(
-        makeIAddress({ scriptPubkey, redeemScript, path })
+      await dataLayer.saveAddress(
+        makeAddressData({ scriptPubkey, redeemScript, path })
       )
 
       // Add the displayAddress to the set of addresses to subscribe to after loop
       addressesToSubscribe.add(address)
 
       // Update the state for the loop
-      lastUsedIndex = await processor.lastUsedIndexByFormatPath(changePath)
+      lastUsedIndex = await dataLayer.lastUsedIndexByFormatPath(changePath)
       lookAheadIndex = lastUsedIndex + engineInfo.gapLimit
-      nextAddressIndex = processor.numAddressesByFormatPath(changePath)
+      nextAddressIndex = dataLayer.numAddressesByFormatPath(changePath)
     }
 
     // Add all the addresses to the subscribe cache for registering subscriptions later
@@ -660,13 +659,13 @@ const addToAddressTransactionCache = async (
   blockHeight: number,
   addressTransactionCache: AddressTransactionCache
 ): Promise<void> => {
-  const { walletTools, processor } = common
+  const { walletTools, dataLayer } = common
   // Fetch the blockHeight for the address from the database
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
 
   if (blockHeight === 0) {
     const { lastQueriedBlockHeight = 0 } =
-      (await processor.fetchAddress(scriptPubkey)) ?? {}
+      (await dataLayer.fetchAddress(scriptPubkey)) ?? {}
     blockHeight = lastQueriedBlockHeight
   }
 
@@ -680,23 +679,23 @@ const addToAddressTransactionCache = async (
 
 interface TransactionChangedArgs {
   walletId: string
-  tx: IProcessorTransaction
+  tx: TransactionData
   emitter: EngineEmitter
   walletTools: UtxoWalletTools
   pluginInfo: PluginInfo
-  processor: Processor
+  dataLayer: DataLayer
 }
 
 export const transactionChanged = async (
   args: TransactionChangedArgs
 ): Promise<void> => {
-  const { emitter, walletTools, processor, pluginInfo, tx, walletId } = args
+  const { emitter, walletTools, dataLayer, pluginInfo, tx, walletId } = args
   emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
     await toEdgeTransaction({
       walletId,
       tx,
       walletTools,
-      processor,
+      dataLayer,
       pluginInfo
     })
   ])
@@ -712,7 +711,7 @@ export const pickNextTask = async (
     addressSubscribeCache,
     addressUtxoCache,
     rawUtxoCache,
-    processorUtxoCache,
+    dataLayerUtxoCache,
     addressTransactionCache,
     updateTransactionCache,
     updateTransactionSpecificCache
@@ -735,17 +734,17 @@ export const pickNextTask = async (
   }
 
   // Loop processed utxos, these are just database ops, triggers setLookAhead
-  if (Object.keys(processorUtxoCache).length > 0) {
-    for (const [scriptPubkey, state] of Object.entries(processorUtxoCache)) {
+  if (Object.keys(dataLayerUtxoCache).length > 0) {
+    for (const [scriptPubkey, state] of Object.entries(dataLayerUtxoCache)) {
       // Only process when all utxos for a specific address have been gathered
       if (!state.processing && state.full) {
         state.processing = true
-        await processProcessorUtxos({
+        await processDataLayerUtxos({
           ...args,
           scriptPubkey,
           utxos: state.utxos
         })
-        removeItem(processorUtxoCache, scriptPubkey)
+        removeItem(dataLayerUtxoCache, scriptPubkey)
         return true
       }
     }
@@ -969,7 +968,7 @@ const updateTransactionsSpecific = (
     emitter,
     walletTools,
     pluginInfo,
-    processor,
+    dataLayer,
     serverUri,
     txId,
     taskCache
@@ -978,7 +977,7 @@ const updateTransactionsSpecific = (
   deferred.promise
     .then(async (txResponse: unknown) => {
       // Grab tx to update it
-      const txs = await processor.fetchTransactions({ txId })
+      const txs = await dataLayer.fetchTransactions({ txId })
       let tx = txs[0]
       if (tx == null) return
 
@@ -988,7 +987,7 @@ const updateTransactionsSpecific = (
       }
 
       // Process and save new tx
-      const processedTx = await processor.saveTransaction({
+      const processedTx = await dataLayer.saveTransaction({
         tx
       })
 
@@ -996,7 +995,7 @@ const updateTransactionsSpecific = (
         walletId: walletInfo.id,
         emitter,
         walletTools,
-        processor,
+        dataLayer,
         pluginInfo,
         tx: processedTx
       })
@@ -1030,7 +1029,7 @@ const updateTransactions = (
     txId,
     needsTxSpecific,
     pluginInfo,
-    processor,
+    dataLayer,
     serverUri,
     taskCache
   } = args
@@ -1041,22 +1040,22 @@ const updateTransactions = (
       if (txResponse.blockHeight < 1) return
       // Create new tx from raw tx
       const tx = processTransactionResponse({ ...args, txResponse })
-      // Remove any existing input utxos from the processor
+      // Remove any existing input utxos from the dataLayer
       for (const input of tx.inputs) {
-        await processor.removeUtxos([`${input.txId}_${input.outputIndex}`])
+        await dataLayer.removeUtxos([`${input.txId}_${input.outputIndex}`])
       }
-      // Update output utxos's blockHeight any existing input utxos from the processor
+      // Update output utxos's blockHeight any existing input utxos from the dataLayer
       const utxoIds = tx.outputs.map(output => `${tx.txid}_${output.n}`)
-      const utxos = await processor.fetchUtxos({
+      const utxos = await dataLayer.fetchUtxos({
         utxoIds
       })
       for (const utxo of utxos) {
         if (utxo == null) continue
         utxo.blockHeight = tx.blockHeight
-        await processor.saveUtxo(utxo)
+        await dataLayer.saveUtxo(utxo)
       }
       // Process and save new tx
-      const processedTx = await processor.saveTransaction({
+      const processedTx = await dataLayer.saveTransaction({
         tx
       })
 
@@ -1064,7 +1063,7 @@ const updateTransactions = (
         walletId: walletInfo.id,
         emitter,
         walletTools,
-        processor,
+        dataLayer,
         pluginInfo,
         tx: processedTx
       })
@@ -1088,7 +1087,7 @@ const updateTransactions = (
 interface DeriveScriptAddressArgs {
   walletTools: UtxoWalletTools
   engineInfo: EngineInfo
-  processor: Processor
+  dataLayer: DataLayer
   format: CurrencyFormat
   taskCache: TaskCache
   script: string
@@ -1103,7 +1102,7 @@ interface DeriveScriptAddressReturn {
 const internalDeriveScriptAddress = async ({
   walletTools,
   engineInfo,
-  processor,
+  dataLayer,
   format,
   taskCache,
   script
@@ -1122,13 +1121,13 @@ const internalDeriveScriptAddress = async ({
     addressIndex: 0
   }
 
-  // save the address to the processor and add it to the cache
+  // save the address to the dataLayer and add it to the cache
   const { address, scriptPubkey, redeemScript } = walletTools.getScriptAddress({
     path,
     scriptTemplate
   })
-  await processor.saveAddress(
-    makeIAddress({ scriptPubkey, redeemScript, path })
+  await dataLayer.saveAddress(
+    makeAddressData({ scriptPubkey, redeemScript, path })
   )
   const addresses = new Set<string>()
   addresses.add(address)
@@ -1156,11 +1155,11 @@ const internalGetFreshAddress = async (
     format,
     changeIndex: branch,
     walletTools,
-    processor,
+    dataLayer,
     forceIndex
   } = args
 
-  const numAddresses = processor.numAddressesByFormatPath({
+  const numAddresses = dataLayer.numAddressesByFormatPath({
     format,
     changeIndex: branch
   })
@@ -1178,7 +1177,7 @@ const internalGetFreshAddress = async (
     path.addressIndex = forceIndex
   }
 
-  const iAddress = await processor.fetchAddress(path)
+  const iAddress = await dataLayer.fetchAddress(path)
   const nativeBalance = iAddress?.balance ?? '0'
   const { scriptPubkey } = iAddress ?? (await walletTools.getScriptPubkey(path))
 
@@ -1213,7 +1212,7 @@ const processAddressTransactions = async (
     emitter,
     needsTxSpecific,
     pluginInfo,
-    processor,
+    dataLayer,
     walletTools,
     taskCache,
     pluginState,
@@ -1223,7 +1222,7 @@ const processAddressTransactions = async (
   const addressTransactionCache = taskCache.addressTransactionCache
 
   const scriptPubkey = walletTools.addressToScriptPubkey(address)
-  const addressData = await processor.fetchAddress(scriptPubkey)
+  const addressData = await dataLayer.fetchAddress(scriptPubkey)
   if (addressData == null) {
     throw new Error(`could not find address with script pubkey ${scriptPubkey}`)
   }
@@ -1244,7 +1243,7 @@ const processAddressTransactions = async (
       // Process and save the address's transactions
       for (const txResponse of transactions) {
         const tx = processTransactionResponse({ ...args, txResponse })
-        const processedTx = await processor.saveTransaction({
+        const processedTx = await dataLayer.saveTransaction({
           tx,
           scriptPubkeys: [scriptPubkey]
         })
@@ -1252,7 +1251,7 @@ const processAddressTransactions = async (
           walletId: walletInfo.id,
           emitter,
           walletTools,
-          processor,
+          dataLayer,
           pluginInfo,
           tx: processedTx
         })
@@ -1281,7 +1280,7 @@ const processAddressTransactions = async (
       addressData.lastQueriedBlockHeight = blockHeight
 
       // Save/update the fully-processed address
-      await processor.saveAddress(addressData)
+      await dataLayer.saveAddress(addressData)
 
       // Update the progress now that the transactions for an address have processed
       await args.updateProgressRatio()
@@ -1313,7 +1312,7 @@ interface processTransactionResponseArgs extends CommonArgs {
 
 const processTransactionResponse = (
   args: processTransactionResponseArgs
-): IProcessorTransaction => {
+): TransactionData => {
   const {
     txResponse,
     pluginInfo: { coinInfo }
@@ -1383,26 +1382,26 @@ const processAddressUtxos = async (
   const {
     address,
     walletTools,
-    processor,
+    dataLayer,
     taskCache,
     path,
     pluginState,
     serverUri
   } = args
-  const { addressUtxoCache, rawUtxoCache, processorUtxoCache } = taskCache
+  const { addressUtxoCache, rawUtxoCache, dataLayerUtxoCache } = taskCache
   const queryTime = Date.now()
   const deferred = new Deferred<AddressUtxosResponse>()
   deferred.promise
     .then(async (utxos: AddressUtxosResponse) => {
       pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
-      const addressData = await processor.fetchAddress(scriptPubkey)
+      const addressData = await dataLayer.fetchAddress(scriptPubkey)
       if (addressData == null || addressData.path == null) {
         return
       }
 
       if (utxos.length === 0) {
-        addToProcessorUtxoCache(processorUtxoCache, path, scriptPubkey, 0)
+        addToDataLayerUtxoCache(dataLayerUtxoCache, path, scriptPubkey, 0)
         return
       }
 
@@ -1429,28 +1428,28 @@ const processAddressUtxos = async (
   return args.serverStates.utxoListQueryTask(serverUri, address, deferred)
 }
 
-interface ProcessUtxoTransactionArgs extends CommonArgs {
+interface ProcessDataLayerUtxosArgs extends CommonArgs {
   scriptPubkey: string
-  utxos: IUTXO[]
+  utxos: UtxoData[]
 }
 
-const processProcessorUtxos = async (
-  args: ProcessUtxoTransactionArgs
+const processDataLayerUtxos = async (
+  args: ProcessDataLayerUtxosArgs
 ): Promise<void> => {
   const {
     utxos,
-    processor,
+    dataLayer,
     scriptPubkey,
     log,
     emitter,
     pluginInfo: { currencyInfo }
   } = args
 
-  const updatedUtxos: { [utxoId: string]: IUTXO } = Object.fromEntries(
+  const updatedUtxos: { [utxoId: string]: UtxoData } = Object.fromEntries(
     [...utxos].map(utxo => [utxo.id, utxo])
   )
   const utxoIdsToRemove: string[] = []
-  const currentUtxos = await processor.fetchUtxos({ scriptPubkey })
+  const currentUtxos = await dataLayer.fetchUtxos({ scriptPubkey })
 
   //
   // Modify existing UTXO set
@@ -1475,7 +1474,7 @@ const processProcessorUtxos = async (
   }
 
   // Remove any spent UTXOs that have confirmations
-  await processor.removeUtxos(utxoIdsToRemove)
+  await dataLayer.removeUtxos(utxoIdsToRemove)
 
   //
   // Save updated UTXO set
@@ -1488,7 +1487,7 @@ const processProcessorUtxos = async (
       newBalance = add(utxo.value, newBalance)
     }
     // Save new UTXOs
-    await processor.saveUtxo(utxo)
+    await dataLayer.saveUtxo(utxo)
   }
 
   //
@@ -1510,13 +1509,13 @@ const processProcessorUtxos = async (
     )
 
     // Update balances for address that have this scriptPubkey
-    const address = await processor.fetchAddress(scriptPubkey)
+    const address = await dataLayer.fetchAddress(scriptPubkey)
 
     if (address == null) {
       throw new Error('address not found when processing UTXO transactions')
     }
 
-    await processor.saveAddress({
+    await dataLayer.saveAddress({
       ...address,
       balance: newBalance,
       used: true
@@ -1533,7 +1532,7 @@ const processProcessorUtxos = async (
 }
 
 interface ProcessRawUtxoArgs extends CommonArgs {
-  address: IAddress
+  address: AddressData
   path: ChangePath
   id: string
   requiredCount: number
@@ -1549,7 +1548,7 @@ const processRawUtxo = async (
     id,
     address,
     pluginInfo,
-    processor,
+    dataLayer,
     path,
     taskCache,
     requiredCount,
@@ -1557,7 +1556,7 @@ const processRawUtxo = async (
     serverUri,
     log
   } = args
-  const { rawUtxoCache, processorUtxoCache } = taskCache
+  const { rawUtxoCache, dataLayerUtxoCache } = taskCache
   const purposeType = pathToPurposeType(
     path,
     pluginInfo.engineInfo.scriptTemplates
@@ -1568,7 +1567,7 @@ const processRawUtxo = async (
 
   // Function to call once we are finished
   const done = (): void => {
-    const processorUtxo: IUTXO = {
+    const utxoData: UtxoData = {
       id,
       txid: utxo.txid,
       vout: utxo.vout,
@@ -1580,12 +1579,12 @@ const processRawUtxo = async (
       blockHeight: utxo.height ?? -1,
       spent: false
     }
-    addToProcessorUtxoCache(
-      processorUtxoCache,
+    addToDataLayerUtxoCache(
+      dataLayerUtxoCache,
       path,
       address.scriptPubkey,
       requiredCount,
-      processorUtxo
+      utxoData
     )
   }
 
@@ -1598,7 +1597,7 @@ const processRawUtxo = async (
       // Legacy UTXOs need the previous transaction hex as the script
       // If we do not currently have it, add it to the queue to fetch it
       {
-        const [tx] = await processor.fetchTransactions({
+        const [tx] = await dataLayer.fetchTransactions({
           txId: utxo.txid
         })
         if (tx == null) {
@@ -1659,20 +1658,20 @@ const processRawUtxo = async (
   done()
 }
 
-const addToProcessorUtxoCache = (
-  processorUtxoCache: ProcessorUtxoCache,
+const addToDataLayerUtxoCache = (
+  dataLayerUtxoCache: DataLayerUtxoCache,
   path: ChangePath,
   scriptPubkey: string,
   requiredCount: number,
-  utxo?: IUTXO
+  utxo?: UtxoData
 ): void => {
-  const processorUtxos = processorUtxoCache[scriptPubkey] ?? {
+  const dataLayerUtxos = dataLayerUtxoCache[scriptPubkey] ?? {
     utxos: [],
     processing: false,
     path,
     full: false
   }
-  if (utxo != null) processorUtxos.utxos.push(utxo)
-  processorUtxoCache[scriptPubkey] = processorUtxos
-  processorUtxos.full = processorUtxos.utxos.length >= requiredCount
+  if (utxo != null) dataLayerUtxos.utxos.push(utxo)
+  dataLayerUtxoCache[scriptPubkey] = dataLayerUtxos
+  dataLayerUtxos.full = dataLayerUtxos.utxos.length >= requiredCount
 }
