@@ -3,7 +3,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { CoinInfo, EngineInfo, PluginInfo } from '../../plugin/types'
 import { maximumFeeRateCalculator } from '../../plugin/util/maximumFeeRateCalculator'
-import { IProcessorTransaction } from '../db/types'
+import { TransactionData } from '../db/types'
 import {
   legacyMemoInfo,
   utxoCustomFeeTemplate,
@@ -70,9 +70,9 @@ const engineInfo: EngineInfo = {
     maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 25.8)
   },
   txSpecificHandling: (
-    tx: IProcessorTransaction,
+    tx: TransactionData,
     txSpecific: unknown
-  ): IProcessorTransaction => {
+  ): TransactionData => {
     const asDashTransactionSpecific = asObject({
       instantlock: asOptional(asBoolean)
     })

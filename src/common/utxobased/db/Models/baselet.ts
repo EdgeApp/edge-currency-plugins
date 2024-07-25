@@ -8,7 +8,7 @@ import {
 } from 'baselet'
 
 import { ChangePath } from '../../../plugin/types'
-import { IAddress, IProcessorTransaction, IUTXO } from '../types'
+import { AddressData, TransactionData, UtxoData } from '../types'
 
 export const addressPathToPrefix = (path: ChangePath): string =>
   `${path.format}_${path.changeIndex}`
@@ -19,7 +19,7 @@ export const scriptPubkeyByPathOptions: CountBaseOptions = {
   bucketSize: 50
 }
 
-export type AddressByScriptPubkeyBaselet = HashBase<IAddress>
+export type AddressByScriptPubkeyBaselet = HashBase<AddressData>
 export const addressByScriptPubkeyOptions: HashBaseOptions = {
   name: 'addressByScriptPubkey',
   prefixSize: 4
@@ -50,7 +50,7 @@ export const txIdsByBlockHeightOptions: RangeBaseOptions<
   idKey: 'txid'
 }
 
-export type TxByIdBaselet = HashBase<IProcessorTransaction>
+export type TxByIdBaselet = HashBase<TransactionData>
 export const txByIdOptions: HashBaseOptions = {
   name: 'txById',
   prefixSize: 2
@@ -68,7 +68,7 @@ export const txIdsByDateOptions: RangeBaseOptions<'date', 'txid'> = {
   idKey: 'txid'
 }
 
-export type UtxoByIdBaselet = HashBase<IUTXO>
+export type UtxoByIdBaselet = HashBase<UtxoData>
 export const utxoByIdOptions: HashBaseOptions = {
   name: 'utxoById',
   prefixSize: 2

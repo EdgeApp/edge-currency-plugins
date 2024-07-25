@@ -3,17 +3,17 @@ import {
   BIP43PurposeTypeEnum,
   ScriptTypeEnum
 } from '../../keymanager/keymanager'
-import { Processor } from '../Processor'
-import { IProcessorTransaction, IUTXO } from '../types'
+import { DataLayer } from '../DataLayer'
+import { TransactionData, UtxoData } from '../types'
 
-export const utxoFromProcessorTransactionInput = async (
-  processor: Processor,
-  processorTransaction: IProcessorTransaction,
+export const utxoFromTransactionDataInput = async (
+  dataLayer: DataLayer,
+  transactionData: TransactionData,
   inputIndex: number
-): Promise<IUTXO> => {
-  const input = processorTransaction.inputs[inputIndex]
+): Promise<UtxoData> => {
+  const input = transactionData.inputs[inputIndex]
   const { scriptPubkey } = input
-  const address = await processor.fetchAddress(scriptPubkey)
+  const address = await dataLayer.fetchAddress(scriptPubkey)
 
   if (address == null)
     throw new Error(`Cannot find address for ${scriptPubkey}`)
@@ -34,7 +34,7 @@ export const utxoFromProcessorTransactionInput = async (
       case BIP43PurposeTypeEnum.Airbitz:
       case BIP43PurposeTypeEnum.Legacy: {
         return {
-          script: processorTransaction.hex,
+          script: transactionData.hex,
           scriptType:
             redeemScript != null ? ScriptTypeEnum.p2sh : ScriptTypeEnum.p2pkh
         }
@@ -64,7 +64,7 @@ export const utxoFromProcessorTransactionInput = async (
     script,
     redeemScript,
     scriptType,
-    blockHeight: processorTransaction.blockHeight,
+    blockHeight: transactionData.blockHeight,
     spent: true
   }
 }

@@ -25,13 +25,13 @@ import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
 import { makeMetadata } from '../../plugin/Metadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
 import { upgradeMemos } from '../../upgradeMemos'
+import { makeDataLayer } from '../db/DataLayer'
 import {
   fromEdgeTransaction,
   toEdgeTransaction
-} from '../db/Models/ProcessorTransaction'
-import { makeProcessor } from '../db/Processor'
-import { IProcessorTransaction, IUTXO } from '../db/types'
-import { utxoFromProcessorTransactionInput } from '../db/util/utxo'
+} from '../db/Models/TransactionData'
+import { TransactionData, UtxoData } from '../db/types'
+import { utxoFromTransactionDataInput } from '../db/util/utxo'
 import {
   asPrivateKey,
   asSafeWalletInfo,
@@ -61,7 +61,10 @@ import {
   pathToPurposeType,
   sumUtxos
 } from './utils'
-import { makeUtxoEngineState, transactionChanged } from './UtxoEngineState'
+import {
+  makeUtxoEngineProcessor,
+  transactionChanged
+} from './UtxoEngineProcessor'
 import { makeUtxoWalletTools } from './UtxoWalletTools'
 
 export async function makeUtxoEngine(
@@ -125,14 +128,14 @@ export async function makeUtxoEngine(
     emitter,
     log
   })
-  const processor = await makeProcessor({
+  const dataLayer = await makeDataLayer({
     disklet: walletLocalDisklet
   })
-  const engineState = makeUtxoEngineState({
+  const engineProcessor = makeUtxoEngineProcessor({
     ...config,
     walletTools,
     walletInfo,
-    processor,
+    dataLayer,
     pluginState
   })
 
@@ -145,9 +148,9 @@ export async function makeUtxoEngine(
       if (privateKeyFormat === 'bip32' || privateKeyFormat === 'bip44')
         return null
 
-      // Get the replaced transaction from the processor:
+      // Get the replaced transaction from the DataLayer:
       const replacedTxid = edgeTx.txid
-      const [replacedTx] = await processor.fetchTransactions({
+      const [replacedTx] = await dataLayer.fetchTransactions({
         txId: replacedTxid
       })
 
@@ -165,11 +168,11 @@ export async function makeUtxoEngine(
       const newFeeRate = Math.round((parseInt(replacedTx.fees) / vBytes) * 2)
 
       const replacedTxInputs = replacedTx.inputs
-      // Recreate UTXOs from processor transaction and mark them as unspent:
+      // Recreate UTXOs from DataLayer transaction and mark them as unspent:
       const replacedTxUtxos = await Promise.all(
         replacedTxInputs.map(async (_, index) => {
-          const utxo = await utxoFromProcessorTransactionInput(
-            processor,
+          const utxo = await utxoFromTransactionDataInput(
+            dataLayer,
             replacedTx,
             index
           )
@@ -189,7 +192,7 @@ export async function makeUtxoEngine(
       let foundChangeAddress: string | undefined
       for (const output of replacedTx.outputs) {
         // Fetch address by output's scriptPubkey to determine output ownership
-        const ourAddress = await processor.fetchAddress(output.scriptPubkey)
+        const ourAddress = await dataLayer.fetchAddress(output.scriptPubkey)
 
         // This isn't our output, so include it as a target
         if (ourAddress == null) {
@@ -235,14 +238,14 @@ export async function makeUtxoEngine(
       // Use the found change address or generate a new one:
       const freshAddress =
         foundChangeAddress == null
-          ? await engineState.getFreshAddress({ branch: 1 })
+          ? await engineProcessor.getFreshAddress({ branch: 1 })
           : { publicAddress: foundChangeAddress }
       const freshChangeAddress =
         freshAddress.segwitAddress ?? freshAddress.publicAddress
 
       // Get all current UTXOs:
       const currentUtxos = filterUndefined(
-        await processor.fetchUtxos({
+        await dataLayer.fetchUtxos({
           utxoIds: []
         })
       )
@@ -305,7 +308,7 @@ export async function makeUtxoEngine(
       let nativeAmount = '0'
       for (const output of newTx.outputs) {
         const scriptPubkey = output.scriptPubkey.toString('hex')
-        const own = await processor.fetchAddress(scriptPubkey)
+        const own = await dataLayer.fetchAddress(scriptPubkey)
         if (own == null) {
           // Not our output
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
@@ -357,15 +360,15 @@ export async function makeUtxoEngine(
         metadata.state.balance
       )
 
-      pluginState.addEngine(engineState)
+      pluginState.addEngine(engineProcessor)
       await fees.start()
-      await engineState.start()
+      await engineProcessor.start()
     },
 
     async killEngine(): Promise<void> {
-      await engineState.stop()
+      await engineProcessor.stop()
       fees.stop()
-      pluginState.removeEngine(engineState)
+      pluginState.removeEngine(engineProcessor)
     },
 
     getBalance(_opts: EdgeTokenIdOptions): string {
@@ -381,7 +384,7 @@ export async function makeUtxoEngine(
     },
 
     async addGapLimitAddresses(addresses: string[]): Promise<void> {
-      return await engineState.addGapLimitAddresses(addresses)
+      return await engineProcessor.addGapLimitAddresses(addresses)
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<EdgeTransaction> {
@@ -401,7 +404,7 @@ export async function makeUtxoEngine(
           )
         }
       }
-      const id = await engineState.broadcastTx(transaction).catch(err => {
+      const id = await engineProcessor.broadcastTx(transaction).catch(err => {
         if (String(err).includes('Error: Blockbook Error: -26: dust')) {
           throw new DustSpendError()
         }
@@ -432,7 +435,7 @@ export async function makeUtxoEngine(
             walletFormats
           },
           metadataState: metadata.state,
-          processorState: await processor.dumpData(),
+          storageState: await dataLayer.dumpData(),
           pluginState: pluginState.dumpData()
         }
       }
@@ -461,11 +464,11 @@ export async function makeUtxoEngine(
       opts: EdgeGetReceiveAddressOptions
     ): Promise<EdgeFreshAddress> {
       const { forceIndex } = opts
-      return await engineState.getFreshAddress({ forceIndex })
+      return await engineProcessor.getFreshAddress({ forceIndex })
     },
 
     getNumTransactions(_opts: EdgeTokenIdOptions): number {
-      return processor.numTransactions()
+      return dataLayer.numTransactions()
     },
 
     async getPaymentProtocolInfo(
@@ -482,16 +485,16 @@ export async function makeUtxoEngine(
       options: EdgeGetTransactionsOptions
     ): Promise<EdgeTransaction[]> {
       const txs = filterUndefined(
-        await processor.fetchTransactions({ options })
+        await dataLayer.fetchTransactions({ options })
       )
       return await Promise.all(
         txs.map(
-          async (tx: IProcessorTransaction) =>
+          async (tx: TransactionData) =>
             await toEdgeTransaction({
               walletId: walletInfo.id,
               tx,
               walletTools,
-              processor,
+              dataLayer,
               pluginInfo
             })
         )
@@ -500,7 +503,7 @@ export async function makeUtxoEngine(
 
     async isAddressUsed(address: string): Promise<boolean> {
       const scriptPubkey = walletTools.addressToScriptPubkey(address)
-      const addressData = await processor.fetchAddress(scriptPubkey)
+      const addressData = await dataLayer.fetchAddress(scriptPubkey)
       if (addressData == null) throw new Error('Address not found in wallet')
       return addressData.used
     },
@@ -534,10 +537,10 @@ export async function makeUtxoEngine(
       const utxos =
         txOptions.utxos ??
         filterUndefined(
-          (await processor.fetchUtxos({
+          (await dataLayer.fetchUtxos({
             scriptPubkey: utxoScriptPubkey,
             utxoIds: []
-          })) as IUTXO[]
+          })) as UtxoData[]
         )
 
       if (
@@ -559,7 +562,7 @@ export async function makeUtxoEngine(
           const { script } = target.otherParams
           if (script.type === 'replayProtection') {
             // construct a replay protection p2sh address
-            const { publicAddress } = await engineState.deriveScriptAddress(
+            const { publicAddress } = await engineProcessor.deriveScriptAddress(
               script.type
             )
             targets.push({
@@ -575,7 +578,7 @@ export async function makeUtxoEngine(
             const scriptPubkey = walletTools.addressToScriptPubkey(
               target.publicAddress
             )
-            if ((await processor.fetchAddress(scriptPubkey)) != null) {
+            if ((await dataLayer.fetchAddress(scriptPubkey)) != null) {
               ourReceiveAddresses.push(target.publicAddress)
             }
           }
@@ -593,7 +596,7 @@ export async function makeUtxoEngine(
         throw new Error('Need to provide Spend Targets')
       }
 
-      const freshAddress = await engineState.getFreshAddress({ branch: 1 })
+      const freshAddress = await engineProcessor.getFreshAddress({ branch: 1 })
       const freshChangeAddress =
         forceChangeAddress ??
         freshAddress.segwitAddress ??
@@ -601,15 +604,15 @@ export async function makeUtxoEngine(
 
       const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
 
-      let maxUtxo: undefined | IUTXO
+      let maxUtxo: undefined | UtxoData
       if (txOptions.CPFP != null) {
-        const [childTx] = await processor.fetchTransactions({
+        const [childTx] = await dataLayer.fetchTransactions({
           txId: txOptions.CPFP
         })
         if (childTx == null) throw new Error('transaction not found')
-        const utxos: IUTXO[] = []
+        const utxos: UtxoData[] = []
         for (const txid of childTx.ourOuts) {
-          const [output] = await processor.fetchUtxos({ utxoIds: [txid] })
+          const [output] = await dataLayer.fetchUtxos({ utxoIds: [txid] })
           if (output != null) utxos.push(output)
         }
         maxUtxo = utxos.reduce((a, b) => (bs.gt(a.value, b.value) ? a : b))
@@ -651,7 +654,7 @@ export async function makeUtxoEngine(
       )
       for (const output of tx.outputs) {
         const scriptPubkey = output.scriptPubkey.toString('hex')
-        const own = await processor.fetchAddress(scriptPubkey)
+        const own = await dataLayer.fetchAddress(scriptPubkey)
         if (own == null) {
           // Not our output
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
@@ -702,7 +705,7 @@ export async function makeUtxoEngine(
       await engine.killEngine()
 
       // Clear cache and state
-      await processor.clearAll()
+      await dataLayer.clearAll()
       await pluginState.clearCache()
       await metadata.clear()
       await fees.clearCache()
@@ -719,7 +722,7 @@ export async function makeUtxoEngine(
       const replacedTxid: string | undefined = edgeTx.otherParams?.replacedTxid
       if (replacedTxid != null) {
         // Get the replaced transaction using the replacedTxid
-        const [rbfTx] = await processor.fetchTransactions({
+        const [rbfTx] = await dataLayer.fetchTransactions({
           txId: replacedTxid
         })
         if (rbfTx != null) {
@@ -730,7 +733,7 @@ export async function makeUtxoEngine(
             pluginInfo,
             emitter,
             walletTools,
-            processor
+            dataLayer
           })
         }
       }
@@ -742,9 +745,9 @@ export async function makeUtxoEngine(
         pluginInfo,
         emitter,
         walletTools,
-        processor
+        dataLayer
       })
-      await processor.saveTransaction({
+      await dataLayer.saveTransaction({
         tx,
         scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys
       })
@@ -752,8 +755,8 @@ export async function makeUtxoEngine(
       /*
       Get the wallet's UTXOs from the new transaction and save them to the processsor.
       */
-      const ownUtxos = await getOwnUtxosFromTx(engineInfo, processor, tx)
-      await engineState.processUtxos(ownUtxos)
+      const ownUtxos = await getOwnUtxosFromTx(engineInfo, dataLayer, tx)
+      await engineProcessor.processUtxos(ownUtxos)
     },
 
     async signMessage(
@@ -764,9 +767,9 @@ export async function makeUtxoEngine(
       const otherParams = asUtxoSignMessageOtherParams(opts.otherParams)
       const { publicAddress } = otherParams
       const scriptPubkey = walletTools.addressToScriptPubkey(publicAddress)
-      const processorAddress = await processor.fetchAddress(scriptPubkey)
-      if (processorAddress?.path == null) {
-        throw new Error('Missing address to sign with')
+      const addressData = await dataLayer.fetchAddress(scriptPubkey)
+      if (addressData?.path == null) {
+        throw new Error('Missing data-layer address to sign with')
       }
       const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
 
@@ -781,7 +784,7 @@ export async function makeUtxoEngine(
       })
 
       const signature = await walletTools.signMessageBase64({
-        path: processorAddress?.path,
+        path: addressData?.path,
         message,
         xprivKeys
       })
@@ -824,7 +827,7 @@ export async function makeUtxoEngine(
             psbt.inputs.map(async ({ hash, index: vout }) => {
               const txId = Buffer.from(hash).reverse().toString('hex')
 
-              const [transaction] = await processor.fetchTransactions({ txId })
+              const [transaction] = await dataLayer.fetchTransactions({ txId })
               if (transaction == null)
                 throw new Error(
                   'Unable to find previous transaction data for input'
@@ -838,7 +841,7 @@ export async function makeUtxoEngine(
 
               // Use the scriptPubkey to find the private key from the address
               // derivation path
-              const address = await processor.fetchAddress(scriptPubkey)
+              const address = await dataLayer.fetchAddress(scriptPubkey)
               if (address == null) {
                 throw new Error(
                   `Address for scriptPubkey '${scriptPubkey}' not found`
@@ -931,7 +934,7 @@ export async function makeUtxoEngine(
         log
       }
       const tmpMetadata = await makeMetadata(tmpConfig)
-      const tmpProcessor = await makeProcessor(tmpConfig)
+      const tmpDataLayer = await makeDataLayer(tmpConfig)
       const tmpWalletTools = makeUtxoWalletTools({
         pluginInfo,
         publicKey: tmpWalletInfo.keys.publicKey
@@ -943,9 +946,9 @@ export async function makeUtxoEngine(
           try {
             await tmpState.stop()
 
-            const tmpUtxos = (await tmpProcessor.fetchUtxos({
+            const tmpUtxos = (await tmpDataLayer.fetchUtxos({
               utxoIds: []
-            })) as IUTXO[]
+            })) as UtxoData[]
             if (tmpUtxos === null || tmpUtxos.length < 1) {
               throw new Error('Private key has no funds')
             }
@@ -967,7 +970,7 @@ export async function makeUtxoEngine(
         }
       })
 
-      const tmpState = makeUtxoEngineState({
+      const tmpState = makeUtxoEngineProcessor({
         ...config,
         options: {
           ...config.options,
@@ -983,7 +986,7 @@ export async function makeUtxoEngine(
             gapLimit: 0
           }
         },
-        processor: tmpProcessor,
+        dataLayer: tmpDataLayer,
         walletTools: tmpWalletTools,
         walletInfo: tmpWalletInfo
       })

@@ -9,23 +9,23 @@ import { AddressPath, ChangePath } from '../../plugin/types'
 import { makeBaselets } from './Baselets'
 import { addressPathToPrefix, TxIdByDate } from './Models/baselet'
 import {
-  IAddress,
-  IProcessorTransaction,
-  ITransactionInput,
-  ITransactionOutput,
-  IUTXO
+  AddressData,
+  TransactionData,
+  TransactionDataInput,
+  TransactionDataOutput,
+  UtxoData
 } from './types'
 
 const BASELET_DIR = 'tables'
 
-interface ProcessorConfig {
+interface DataLayerConfig {
   disklet: Disklet
 }
 
 /* Transaction table interfaces */
 
 interface SaveTransactionArgs {
-  tx: IProcessorTransaction
+  tx: TransactionData
   scriptPubkeys?: string[]
 }
 
@@ -51,7 +51,13 @@ interface DumpDataReturn {
   data: unknown
 }
 
-export interface Processor {
+/**
+ * The Data Access Layer for the UTXO-based wallet engine.
+ *
+ * It provides all the methods necessary to interact with underlying
+ * database/storage mechanism.
+ */
+export interface DataLayer {
   clearAll: () => Promise<void>
   dumpData: () => Promise<DumpDataReturn[]>
 
@@ -64,13 +70,13 @@ export interface Processor {
   Used to store UTXOs. Needs to be able to track UTXOs that are already used in
   a transaction, but not confirmed yet */
 
-  saveUtxo: (utxo: IUTXO) => Promise<void>
+  saveUtxo: (utxo: UtxoData) => Promise<void>
   // remove either all UTXOs if the array is empty, or as selected from an array
   // of UTXO ids
   removeUtxos: (utxoIds: string[]) => Promise<void>
   // fetch either all UTXOs if the array is empty or as selected from an array
   // of UTXO ids
-  fetchUtxos: (args: FetchUtxosArgs) => Promise<Array<IUTXO | undefined>>
+  fetchUtxos: (args: FetchUtxosArgs) => Promise<Array<UtxoData | undefined>>
 
   /* Transaction processing
   **********************
@@ -87,12 +93,12 @@ export interface Processor {
   Used to store transactions. Needs to be updated for confirmation
   heights, and detecting used script pubkeys */
 
-  saveTransaction: (args: SaveTransactionArgs) => Promise<IProcessorTransaction>
+  saveTransaction: (args: SaveTransactionArgs) => Promise<TransactionData>
   numTransactions: () => number
   removeTransaction: (txId: string) => Promise<void>
   fetchTransactions: (
     args: FetchTransactionArgs
-  ) => Promise<Array<IProcessorTransaction | undefined>>
+  ) => Promise<Array<TransactionData | undefined>>
 
   /* Address processing
   *********************
@@ -105,17 +111,17 @@ export interface Processor {
   Used to store script pubkeys / addresses. Needs to be updated for 'used' flag
   and path */
 
-  saveAddress: (args: IAddress) => Promise<void>
+  saveAddress: (args: AddressData) => Promise<void>
   // used to calculate total number of addresses
   numAddressesByFormatPath: (path: ChangePath) => number
   // get the last used address index for a specific format
   lastUsedIndexByFormatPath: (path: ChangePath) => Promise<number>
-  fetchAddress: (args: AddressPath | string) => Promise<IAddress | undefined>
+  fetchAddress: (args: AddressPath | string) => Promise<AddressData | undefined>
 }
 
-export async function makeProcessor(
-  config: ProcessorConfig
-): Promise<Processor> {
+export async function makeDataLayer(
+  config: DataLayerConfig
+): Promise<DataLayer> {
   const disklet = navigateDisklet(config.disklet, BASELET_DIR)
   let memlet = makeMemlet(disklet)
   let baselets = await makeBaselets({ storage: memlet }).catch(async error => {
@@ -126,11 +132,11 @@ export async function makeProcessor(
   /**
    * Calculates the transaction value supplied (negative) or received (positive). In order to calculate
    * a value, the `ourIns` and `ourOuts` of the object must be populated with indices.
-   * @param tx {IProcessorTransaction} A transaction object with `ourIns` and `ourOuts` populated
+   * @param tx {TransactionData} A transaction object with `ourIns` and `ourOuts` populated
    */
-  const calculateTxAmount = (tx: IProcessorTransaction): string => {
+  const calculateTxAmount = (tx: TransactionData): string => {
     interface TxIndexMap {
-      [index: string]: ITransactionInput | ITransactionOutput
+      [index: string]: TransactionDataInput | TransactionDataOutput
     }
     let ourAmount = '0'
     let txIndexMap: TxIndexMap = {}
@@ -152,7 +158,7 @@ export async function makeProcessor(
     return ourAmount
   }
 
-  const processor: Processor = {
+  const dataLayer: DataLayer = {
     async clearAll(): Promise<void> {
       await memlet.onFlush.next().value
       await clearMemletCache()
@@ -176,7 +182,7 @@ export async function makeProcessor(
       )
     },
 
-    async saveUtxo(utxo: IUTXO): Promise<void> {
+    async saveUtxo(utxo: UtxoData): Promise<void> {
       return await baselets.utxo(async tables => {
         const [utxoIds = []] = await tables.utxoIdsByScriptPubkey.query('', [
           utxo.scriptPubkey
@@ -203,7 +209,7 @@ export async function makeProcessor(
         // 2. Use the map to remove utxoIds from the utxoIdsByScriptPubkey table
         const utxos = (await tables.utxoById.query('', utxoIds)).filter(
           utxo => utxo != null
-        ) as IUTXO[]
+        ) as UtxoData[]
         const utxoIdsMap: { [scriptPubkey: string]: string[] } = {}
         for (const utxo of utxos) {
           utxoIdsMap[utxo.scriptPubkey] = [
@@ -234,7 +240,7 @@ export async function makeProcessor(
       })
     },
 
-    async fetchUtxos(args): Promise<Array<IUTXO | undefined>> {
+    async fetchUtxos(args): Promise<Array<UtxoData | undefined>> {
       const { scriptPubkey, utxoIds = [] } = args
       return await baselets.utxo(async tables => {
         if (scriptPubkey != null) {
@@ -261,19 +267,17 @@ export async function makeProcessor(
       })
     },
 
-    async saveTransaction(
-      args: SaveTransactionArgs
-    ): Promise<IProcessorTransaction> {
+    async saveTransaction(args: SaveTransactionArgs): Promise<TransactionData> {
       const { scriptPubkeys = [], tx } = args
       return await baselets.tx(async tables => {
         // Check if the transaction already exists
-        const processorTx = await tables.txById
+        const transactionData = await tables.txById
           .query('', [tx.txid])
           .then(transactions => transactions[0])
           .catch(_ => undefined)
 
         // Use the existing transaction if it does exist.
-        const transaction = processorTx ?? tx
+        const transaction = transactionData ?? tx
 
         // Mark the used inputs with the provided script pubkey
         for (const scriptPubkey of scriptPubkeys) {
@@ -325,7 +329,7 @@ export async function makeProcessor(
         await tables.txById.insert('', transaction.txid, transaction)
 
         // Save index entry only for first transaction insert
-        if (processorTx == null) {
+        if (transactionData == null) {
           await tables.txIdsByDate.insert('', {
             txid: tx.txid,
             date: tx.date
@@ -346,10 +350,10 @@ export async function makeProcessor(
 
     async fetchTransactions(
       args: FetchTransactionArgs
-    ): Promise<Array<IProcessorTransaction | undefined>> {
+    ): Promise<Array<TransactionData | undefined>> {
       const { blockHeightMax, txId, options } = args
       let { blockHeight } = args
-      const txs: Array<IProcessorTransaction | undefined> = []
+      const txs: Array<TransactionData | undefined> = []
       await baselets.tx(async tables => {
         // Fetch transactions by id
         if (txId != null) {
@@ -407,7 +411,7 @@ export async function makeProcessor(
       return txs
     },
 
-    async saveAddress(address: IAddress): Promise<void> {
+    async saveAddress(address: AddressData): Promise<void> {
       await baselets.address(async tables => {
         // This variable is used to update the scriptPubkeyByPath table.
         // The path table must be written after the address table because the
@@ -564,7 +568,7 @@ export async function makeProcessor(
 
     async fetchAddress(
       fetchAddressArg: AddressPath | string
-    ): Promise<IAddress | undefined> {
+    ): Promise<AddressData | undefined> {
       return await baselets.address(async tables => {
         if (typeof fetchAddressArg === 'string') {
           // if it is a string, it is a scriptPubkey
@@ -594,5 +598,5 @@ export async function makeProcessor(
       })
     }
   }
-  return processor
+  return dataLayer
 }
