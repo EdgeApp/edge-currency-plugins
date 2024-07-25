@@ -164,7 +164,7 @@ describe('Blockbook', function () {
 
   beforeEach(async () => {
     blockbook = makeBlockbook({
-      connectionUri: 'wss://btc1.trezor.io/websocket',
+      connectionUri: 'wss://bitcoin.atomicwallet.io/websocket',
       engineEmitter,
       log,
       onQueueSpaceCB,
