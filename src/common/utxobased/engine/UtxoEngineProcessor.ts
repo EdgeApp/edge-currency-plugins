@@ -1383,6 +1383,10 @@ const processAddressForUtxos = async (
   return common.serverStates.utxoListQueryTask(serverUri, address, deferred)
 }
 
+/**
+ * Processes UtxoData from the DataLayerUtxoCache by saving/removing UTXOs
+ * to/from the DataLayer and updating the address balance.
+ */
 const processDataLayerUtxos = async (
   common: CommonParams,
   args: {
