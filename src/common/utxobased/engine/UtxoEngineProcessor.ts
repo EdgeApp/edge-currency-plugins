@@ -105,7 +105,6 @@ export function makeUtxoEngineProcessor(
   const { walletFormats } = walletInfo.keys
 
   const taskCache: TaskCache = {
-    blockWatching: false,
     addressForTransactionsCache: {},
     addressForUtxosCache: {},
     addressSubscribeCache: {},
@@ -116,7 +115,6 @@ export function makeUtxoEngineProcessor(
   }
 
   const clearTaskCache = (): void => {
-    taskCache.blockWatching = false
     for (const key of Object.keys(taskCache.addressForTransactionsCache)) {
       removeItem(taskCache.addressForTransactionsCache, key)
     }
@@ -522,7 +520,6 @@ interface CommonParams {
 }
 
 interface TaskCache {
-  blockWatching: boolean
   readonly addressForTransactionsCache: AddressForTransactionsCache
   readonly addressForUtxosCache: AddressForUtxosCache
   readonly addressSubscribeCache: AddressSubscribeCache
