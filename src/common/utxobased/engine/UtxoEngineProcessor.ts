@@ -695,6 +695,15 @@ export const transactionChanged = async (args: {
   ])
 }
 
+/**
+ * Some currencies require an additional blockbook payload 'getTransactionSpecific' in order
+ * to provide all relevant transaction data. Since this is currency-specific, we can limit
+ * the usage to currencies that require it.
+ **/
+const needsTxSpecific = (common: CommonParams): boolean => {
+  return common.pluginInfo.engineInfo.txSpecificHandling != null
+}
+
 export const pickNextTask = async (
   common: CommonParams,
   serverUri: string
@@ -708,14 +717,6 @@ export const pickNextTask = async (
     transactionSpecificUpdateCache,
     transactionUpdateCache
   } = common.taskCache
-
-  /**
-   * Some currencies require an additional blockbook payload 'getTransactionSpecific' in order
-   * to provide all relevant transaction data. Since this is currency-specific, we can limit
-   * the usage to currencies that require it.
-   **/
-  const needsTxSpecific =
-    common.pluginInfo.engineInfo.txSpecificHandling != null
 
   const serverState = common.serverStates.getServerState(serverUri)
   if (serverState == null) return
@@ -896,7 +897,6 @@ export const pickNextTask = async (
         cacheItem.processing = true
         removeItem(transactionUpdateCache, txId)
         const updateTransactionTask = processTransactionUpdate(common, {
-          needsTxSpecific,
           serverUri,
           txId
         })
@@ -933,7 +933,6 @@ export const pickNextTask = async (
       const wsTask = await processAddressForTransactions(common, {
         address,
         cacheItem,
-        needsTxSpecific,
         serverUri
       })
       wsTask.deferred.promise
@@ -1009,12 +1008,11 @@ const processTransactionsSpecificUpdate = (
 const processTransactionUpdate = (
   common: CommonParams,
   args: {
-    needsTxSpecific: boolean
     serverUri: string
     txId: string
   }
 ): WsTask<TransactionResponse> => {
-  const { needsTxSpecific, serverUri, txId } = args
+  const { serverUri, txId } = args
   const deferred = new Deferred<TransactionResponse>()
   deferred.promise
     .then(async (txResponse: TransactionResponse) => {
@@ -1052,7 +1050,7 @@ const processTransactionUpdate = (
         tx: processedTx
       })
 
-      if (needsTxSpecific) {
+      if (needsTxSpecific(common)) {
         // Add task to grab transactionSpecific payload
         common.taskCache.transactionSpecificUpdateCache[txId] = {
           processing: false
@@ -1168,11 +1166,10 @@ const processAddressForTransactions = async (
   args: {
     address: string
     cacheItem: AddressForTransactionsCache[string]
-    needsTxSpecific: boolean
     serverUri: string
   }
 ): Promise<WsTask<AddressResponse>> => {
-  const { address, cacheItem, needsTxSpecific, serverUri } = args
+  const { address, cacheItem, serverUri } = args
   const { page = 1, blockHeight } = cacheItem
   const addressForTransactionsCache =
     common.taskCache.addressForTransactionsCache
@@ -1210,7 +1207,7 @@ const processAddressForTransactions = async (
           tx: processedTx
         })
 
-        if (needsTxSpecific) {
+        if (needsTxSpecific(common)) {
           // Add task to grab transactionSpecific payload
           common.taskCache.transactionSpecificUpdateCache[tx.txid] = {
             processing: false
