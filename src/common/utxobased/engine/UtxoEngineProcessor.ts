@@ -501,6 +501,96 @@ export function makeUtxoEngineProcessor(
   }
 }
 
+const internalDeriveScriptAddress = async (args: {
+  walletTools: UtxoWalletTools
+  engineInfo: EngineInfo
+  dataLayer: DataLayer
+  format: CurrencyFormat
+  taskCache: TaskCache
+  script: string
+}): Promise<{
+  address: string
+  scriptPubkey: string
+  redeemScript: string
+}> => {
+  const { walletTools, engineInfo, dataLayer, format, taskCache, script } = args
+  if (engineInfo.scriptTemplates == null) {
+    throw new Error(
+      `cannot derive script address ${script} without defined script template`
+    )
+  }
+
+  const scriptTemplate = engineInfo.scriptTemplates[script]
+
+  const path: AddressPath = {
+    format,
+    changeIndex: derivationLevelScriptHash(scriptTemplate),
+    addressIndex: 0
+  }
+
+  // save the address to the dataLayer and add it to the cache
+  const { address, scriptPubkey, redeemScript } = walletTools.getScriptAddress({
+    path,
+    scriptTemplate
+  })
+  await dataLayer.saveAddress(
+    makeAddressData({ scriptPubkey, redeemScript, path })
+  )
+  const addresses = new Set<string>()
+  addresses.add(address)
+  addToAddressSubscribeCache(taskCache, addresses, {
+    format: path.format,
+    changeIndex: path.changeIndex
+  })
+  return { address, scriptPubkey, redeemScript }
+}
+
+const internalGetFreshAddress = async (
+  common: CommonParams,
+  args: {
+    forceIndex?: number
+    changePath: ChangePath
+  }
+): Promise<{
+  address: string
+  legacyAddress: string
+  nativeBalance?: string
+}> => {
+  const { changePath, forceIndex } = args
+
+  const numAddresses = common.dataLayer.numAddressesByFormatPath(changePath)
+
+  const path: AddressPath = {
+    format: changePath.format,
+    changeIndex: changePath.changeIndex,
+    // while syncing, we may hit negative numbers when only subtracting. Use the address at /0 in that case.
+    addressIndex: Math.max(
+      numAddresses - common.pluginInfo.engineInfo.gapLimit,
+      0
+    )
+  }
+  if (forceIndex != null) {
+    path.addressIndex = forceIndex
+  }
+
+  const iAddress = await common.dataLayer.fetchAddress(path)
+  const nativeBalance = iAddress?.balance ?? '0'
+  const { scriptPubkey } =
+    iAddress ?? (await common.walletTools.getScriptPubkey(path))
+
+  if (scriptPubkey == null) {
+    throw new Error('Unknown address path')
+  }
+  const address = common.walletTools.scriptPubkeyToAddress({
+    changePath: path,
+    scriptPubkey
+  })
+
+  return {
+    ...address,
+    nativeBalance
+  }
+}
 interface CommonParams {
   pluginInfo: PluginInfo
   walletInfo: SafeWalletInfo
@@ -1064,97 +1154,6 @@ const processTransactionUpdate = (
     })
 
   return common.serverStates.transactionQueryTask(serverUri, txId, deferred)
-}
-
-const internalDeriveScriptAddress = async (args: {
-  walletTools: UtxoWalletTools
-  engineInfo: EngineInfo
-  dataLayer: DataLayer
-  format: CurrencyFormat
-  taskCache: TaskCache
-  script: string
-}): Promise<{
-  address: string
-  scriptPubkey: string
-  redeemScript: string
-}> => {
-  const { walletTools, engineInfo, dataLayer, format, taskCache, script } = args
-  if (engineInfo.scriptTemplates == null) {
-    throw new Error(
-      `cannot derive script address ${script} without defined script template`
-    )
-  }
-
-  const scriptTemplate = engineInfo.scriptTemplates[script]
-
-  const path: AddressPath = {
-    format,
-    changeIndex: derivationLevelScriptHash(scriptTemplate),
-    addressIndex: 0
-  }
-
-  // save the address to the dataLayer and add it to the cache
-  const { address, scriptPubkey, redeemScript } = walletTools.getScriptAddress({
-    path,
-    scriptTemplate
-  })
-  await dataLayer.saveAddress(
-    makeAddressData({ scriptPubkey, redeemScript, path })
-  )
-  const addresses = new Set<string>()
-  addresses.add(address)
-  addToAddressSubscribeCache(taskCache, addresses, {
-    format: path.format,
-    changeIndex: path.changeIndex
-  })
-  return { address, scriptPubkey, redeemScript }
-}
-
-const internalGetFreshAddress = async (
-  common: CommonParams,
-  args: {
-    forceIndex?: number
-    changePath: ChangePath
-  }
-): Promise<{
-  address: string
-  legacyAddress: string
-  nativeBalance?: string
-}> => {
-  const { changePath, forceIndex } = args
-
-  const numAddresses = common.dataLayer.numAddressesByFormatPath(changePath)
-
-  const path: AddressPath = {
-    format: changePath.format,
-    changeIndex: changePath.changeIndex,
-    // while syncing, we may hit negative numbers when only subtracting. Use the address at /0 in that case.
-    addressIndex: Math.max(
-      numAddresses - common.pluginInfo.engineInfo.gapLimit,
-      0
-    )
-  }
-  if (forceIndex != null) {
-    path.addressIndex = forceIndex
-  }
-
-  const iAddress = await common.dataLayer.fetchAddress(path)
-  const nativeBalance = iAddress?.balance ?? '0'
-  const { scriptPubkey } =
-    iAddress ?? (await common.walletTools.getScriptPubkey(path))
-
-  if (scriptPubkey == null) {
-    throw new Error('Unknown address path')
-  }
-  const address = common.walletTools.scriptPubkeyToAddress({
-    changePath: path,
-    scriptPubkey
-  })
-
-  return {
-    ...address,
-    nativeBalance
-  }
 }
 
 /**
