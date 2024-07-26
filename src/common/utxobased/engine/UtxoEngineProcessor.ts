@@ -797,7 +797,7 @@ const needsTxSpecific = (common: CommonParams): boolean => {
 export const pickNextTask = async (
   common: CommonParams,
   serverUri: string
-): Promise<WsTask<any> | undefined | boolean> => {
+): Promise<WsTask<any> | boolean> => {
   const {
     addressForTransactionsCache,
     addressForUtxosCache,
@@ -809,7 +809,7 @@ export const pickNextTask = async (
   } = common.taskCache
 
   const serverState = common.serverStates.getServerState(serverUri)
-  if (serverState == null) return
+  if (serverState == null) return false
 
   // subscribe all servers to new blocks
   if (serverState.blockSubscriptionStatus === 'unsubscribed') {
@@ -850,7 +850,8 @@ export const pickNextTask = async (
         purposeType === BIP43PurposeTypeEnum.ReplayProtection
       ) {
         // if we do need to make a network call, check with the serverState
-        if (!common.serverStates.serverCanGetTx(serverUri, utxo.txid)) return
+        if (!common.serverStates.serverCanGetTx(serverUri, utxo.txid))
+          return false
       }
       cacheItem.processing = true
       removeItem(blockbookUtxoCache, utxoId)
@@ -858,7 +859,7 @@ export const pickNextTask = async (
         serverUri,
         cacheItem
       })
-      return wsTask ?? true
+      return wsTask
     }
   }
 
@@ -1037,6 +1038,9 @@ export const pickNextTask = async (
       return wsTask
     }
   }
+
+  // Nothing to do
+  return false
 }
 
 /**
@@ -1494,7 +1498,7 @@ const processBlockbookUtxo = async (
     serverUri: string
     cacheItem: BlockbookUtxoCache[string]
   }
-): Promise<WsTask<TransactionResponse> | undefined> => {
+): Promise<WsTask<TransactionResponse> | boolean> => {
   const { serverUri, cacheItem } = args
   const { blockbookUtxoCache, dataLayerUtxoCache } = common.taskCache
   const purposeType = pathToPurposeType(
@@ -1593,6 +1597,8 @@ const processBlockbookUtxo = async (
 
   // Since we have everything, call done
   done()
+
+  return true
 }
 
 /**

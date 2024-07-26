@@ -43,7 +43,7 @@ interface ServerStateConfig {
 
 export interface ServerStates {
   setPickNextTaskCB: (
-    callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
+    callback: (uri: string) => Promise<WsTask<any> | boolean>
   ) => void
   stop: () => void
   serverCanGetTx: (uri: string, txid: string) => boolean
@@ -165,9 +165,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     }
   )
 
-  let pickNextTaskCB: (
-    uri: string
-  ) => Promise<boolean | WsTask<any> | undefined>
+  let pickNextTaskCB: (uri: string) => Promise<WsTask<any> | boolean>
 
   const makeServerStatesCacheEntry = (blockbook: Blockbook): ServerState => ({
     blockbook,
@@ -226,6 +224,21 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       // Blockbook instance variable
       let blockbook: Blockbook
 
+      // Queue space callback
+      const onQueueSpaceCB = async (): Promise<WsTask<any> | boolean> => {
+        // Exit if the connection is no longer active
+        if (!(uri in serverStatesCache)) return false
+
+        const task = await pickNextTaskCB(uri)
+        if (typeof task !== 'boolean') {
+          const taskMessage = `${task.method} params: ${JSON.stringify(
+            task.params
+          )}`
+          log(`${uri} nextTask: ${taskMessage}`)
+        }
+        return task
+      }
+
       // Create a new blockbook instance based on the URI scheme
       if (['electrumwss', 'electrumws'].includes(parsed.scheme)) {
         // Electrum wrapper
@@ -234,21 +247,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           connectionUri: uri,
           engineEmitter,
           log,
-          onQueueSpaceCB: async (): Promise<
-            WsTask<any> | boolean | undefined
-          > => {
-            // Exit if the connection is no longer active
-            if (!(uri in serverStatesCache)) return
-
-            const task = await pickNextTaskCB(uri)
-            if (task != null && typeof task !== 'boolean') {
-              const taskMessage = `${task.method} params: ${JSON.stringify(
-                task.params
-              )}`
-              log(`${uri} nextTask: ${taskMessage}`)
-            }
-            return task
-          },
+          onQueueSpaceCB,
           pluginInfo,
           socketEmitter,
           walletId: walletInfo.id
@@ -260,21 +259,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           connectionUri: uri,
           engineEmitter,
           log,
-          onQueueSpaceCB: async (): Promise<
-            WsTask<any> | boolean | undefined
-          > => {
-            // Exit if the connection is no longer active
-            if (!(uri in serverStatesCache)) return
-
-            const task = await pickNextTaskCB(uri)
-            if (task != null && typeof task !== 'boolean') {
-              const taskMessage = `${task.method} params: ${JSON.stringify(
-                task.params
-              )}`
-              log(`${uri} nextTask: ${taskMessage}`)
-            }
-            return task
-          },
+          onQueueSpaceCB,
           socketEmitter,
           walletId: walletInfo.id
         })
@@ -476,7 +461,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     },
 
     setPickNextTaskCB(
-      callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
+      callback: (uri: string) => Promise<WsTask<any> | boolean>
     ): void {
       pickNextTaskCB = callback
     },

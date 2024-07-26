@@ -102,9 +102,7 @@ export function makeBlockbookElectrum(
     connectionUri,
     engineEmitter,
     log,
-    onQueueSpaceCB: async (
-      uri: string
-    ): Promise<WsTask<unknown> | boolean | undefined> => {
+    onQueueSpaceCB: async (uri: string): Promise<WsTask<unknown> | boolean> => {
       const task = await onQueueSpaceCB(uri)
       if (task == null || typeof task === 'boolean') return task
 

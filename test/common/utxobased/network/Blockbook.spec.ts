@@ -65,8 +65,8 @@ describe('Blockbook notifications tests with dummy server', function () {
 
     const onQueueSpaceCB = async (
       _uri: string
-    ): Promise<WsTask<unknown> | undefined> => {
-      return
+    ): Promise<WsTask<unknown> | boolean> => {
+      return false
     }
 
     let open = false
@@ -158,8 +158,8 @@ describe('Blockbook', function () {
 
   const onQueueSpaceCB = async (
     _uri: string
-  ): Promise<WsTask<unknown> | undefined> => {
-    return
+  ): Promise<WsTask<unknown> | boolean> => {
+    return false
   }
 
   beforeEach(async () => {
