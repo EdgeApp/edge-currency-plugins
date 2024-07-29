@@ -23,7 +23,7 @@ import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
 import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
 import { UtxoInitOptions } from './types'
 
-interface ServerState {
+export interface ServerState {
   blockbook: Blockbook
   blockSubscriptionStatus: 'unsubscribed' | 'subscribing' | 'subscribed'
   blockHeight: number
