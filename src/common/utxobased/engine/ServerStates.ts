@@ -225,7 +225,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       let blockbook: Blockbook
 
       // Queue space callback
-      const onQueueSpaceCB = async (): Promise<WsTask<any> | boolean> => {
+      const onQueueSpace = async (): Promise<WsTask<any> | boolean> => {
         // Exit if the connection is no longer active
         if (!(uri in serverStatesCache)) return false
 
@@ -247,7 +247,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           connectionUri: uri,
           engineEmitter,
           log,
-          onQueueSpaceCB,
+          onQueueSpace,
           pluginInfo,
           socketEmitter,
           walletId: walletInfo.id
@@ -259,7 +259,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           connectionUri: uri,
           engineEmitter,
           log,
-          onQueueSpaceCB,
+          onQueueSpace,
           socketEmitter,
           walletId: walletInfo.id
         })

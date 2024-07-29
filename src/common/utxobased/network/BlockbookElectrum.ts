@@ -23,7 +23,7 @@ import {
   ListUnspentResponse,
   pingMessage
 } from './electrumApi'
-import { OnQueueSpaceCB, WsResponse, WsResponseMessage, WsTask } from './Socket'
+import { OnQueueSpace, WsResponse, WsResponseMessage, WsTask } from './Socket'
 import { SocketEmitter } from './SocketEmitter'
 
 export interface BlockbookElectrumConfig {
@@ -31,7 +31,7 @@ export interface BlockbookElectrumConfig {
   connectionUri: string
   engineEmitter: EngineEmitter
   log: EdgeLog
-  onQueueSpaceCB: OnQueueSpaceCB
+  onQueueSpace: OnQueueSpace
   pluginInfo: PluginInfo
   socketEmitter: SocketEmitter
   walletId: string
@@ -79,7 +79,7 @@ export function makeBlockbookElectrum(
     connectionUri,
     engineEmitter,
     log,
-    onQueueSpaceCB,
+    onQueueSpace,
     pluginInfo,
     socketEmitter,
     walletId
@@ -102,8 +102,8 @@ export function makeBlockbookElectrum(
     connectionUri,
     engineEmitter,
     log,
-    onQueueSpaceCB: async (uri: string): Promise<WsTask<unknown> | boolean> => {
-      const task = await onQueueSpaceCB(uri)
+    onQueueSpace: async (uri: string): Promise<WsTask<unknown> | boolean> => {
+      const task = await onQueueSpace(uri)
       if (task == null || typeof task === 'boolean') return task
 
       // Translate getAccountUtxo to blockchain.scripthash.listunspent:

@@ -46,12 +46,11 @@ export interface Socket {
   connect: () => Promise<void>
   disconnect: () => void
   submitTask: <T>(task: WsTask<T>) => void
-  onQueueSpace: (cb: OnQueueSpaceCB) => void
   subscribe: <T>(subscription: WsSubscription<T>) => void
   isConnected: () => boolean
 }
 
-export type OnQueueSpaceCB = (uri: string) => Promise<WsTask<unknown> | boolean>
+export type OnQueueSpace = (uri: string) => Promise<WsTask<unknown> | boolean>
 
 interface SocketConfig {
   asResponse?: Cleaner<WsResponse>
@@ -61,7 +60,7 @@ interface SocketConfig {
   emitter: SocketEmitter
   log: EdgeLog
   healthCheck: () => Promise<void> // function for heartbeat, should submit task itself
-  onQueueSpaceCB: OnQueueSpaceCB
+  onQueueSpace: OnQueueSpace
 }
 
 interface WsRequest<T> {
@@ -116,7 +115,6 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const version = ''
   const socketQueueId = walletId + '==' + uri
   const subscriptions: Subscriptions<any> = {}
-  let onQueueSpace = config.onQueueSpaceCB
   let pendingRequests: PendingRequests<any> = {}
   let nextId = 0
   let lastKeepAlive = 0
@@ -209,7 +207,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     lastWakeUp = Date.now()
     if (connected && version != null) {
       while (Object.keys(pendingRequests).length < queueSize) {
-        const task = await onQueueSpace(uri)
+        const task = await config.onQueueSpace(uri)
         if (typeof task === 'boolean') {
           if (task) continue
           else break
@@ -424,10 +422,6 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     },
 
     submitTask,
-
-    onQueueSpace(cb: OnQueueSpaceCB): void {
-      onQueueSpace = cb
-    },
 
     subscribe
   }

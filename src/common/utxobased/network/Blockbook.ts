@@ -25,7 +25,7 @@ import {
   TransactionResponse
 } from './blockbookApi'
 import Deferred from './Deferred'
-import { makeSocket, OnQueueSpaceCB, WsResponse, WsTask } from './Socket'
+import { makeSocket, OnQueueSpace, WsResponse, WsTask } from './Socket'
 import { SocketEmitter } from './SocketEmitter'
 
 export type WatchAddressesCB = (
@@ -59,8 +59,6 @@ export interface Blockbook {
   ) => void
 
   watchBlocks: (deferredBlockSub: Deferred<unknown>) => void
-
-  onQueueSpace: (cb: OnQueueSpaceCB) => void
 
   promisifyWsMessage: <T>(message: BlockbookTask<T>) => Promise<T>
 
@@ -103,7 +101,7 @@ interface BlockbookConfig {
   connectionUri: string
   engineEmitter: EngineEmitter
   log: EdgeLog
-  onQueueSpaceCB: OnQueueSpaceCB
+  onQueueSpace: OnQueueSpace
   ping?: () => Promise<void>
   socketEmitter: SocketEmitter
   walletId: string
@@ -116,7 +114,7 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
     connectionUri,
     engineEmitter,
     log,
-    onQueueSpaceCB,
+    onQueueSpace,
     socketEmitter,
     walletId
   } = config
@@ -170,10 +168,6 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
 
     async fetchTransaction(hash: string): Promise<TransactionResponse> {
       return await instance.promisifyWsMessage(transactionMessage(hash))
-    },
-
-    onQueueSpace(cb: OnQueueSpaceCB): void {
-      socket.onQueueSpace(cb)
     },
 
     async promisifyWsMessage<T>(message: BlockbookTask<T>): Promise<T> {
@@ -263,7 +257,7 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
   const socket = makeSocket(connectionUri, {
     asResponse,
     healthCheck: config.ping ?? ping,
-    onQueueSpaceCB,
+    onQueueSpace,
     log,
     emitter: socketEmitter,
     walletId

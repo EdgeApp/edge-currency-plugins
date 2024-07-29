@@ -63,7 +63,7 @@ describe('Blockbook notifications tests with dummy server', function () {
 
     const log = makeFakeLog()
 
-    const onQueueSpaceCB = async (
+    const onQueueSpace = async (
       _uri: string
     ): Promise<WsTask<unknown> | boolean> => {
       return false
@@ -78,7 +78,7 @@ describe('Blockbook notifications tests with dummy server', function () {
       connectionUri: 'ws://localhost:8555',
       engineEmitter,
       log,
-      onQueueSpaceCB,
+      onQueueSpace,
       socketEmitter,
       walletId: ''
     })
@@ -156,7 +156,7 @@ describe('Blockbook', function () {
 
   let blockbook: Blockbook
 
-  const onQueueSpaceCB = async (
+  const onQueueSpace = async (
     _uri: string
   ): Promise<WsTask<unknown> | boolean> => {
     return false
@@ -167,7 +167,7 @@ describe('Blockbook', function () {
       connectionUri: 'wss://bitcoin.atomicwallet.io/websocket',
       engineEmitter,
       log,
-      onQueueSpaceCB,
+      onQueueSpace,
       socketEmitter,
       walletId: ''
     })
