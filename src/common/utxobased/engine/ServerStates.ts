@@ -308,6 +308,30 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     }
   }
 
+  const deferredWithServerScoring = <T>(
+    serverUri: string,
+    deferred: Deferred<T>
+  ): Deferred<T> => {
+    const serverState = serverStatesCache[serverUri]
+    if (serverState == null)
+      throw new Error(`No blockbook connection with ${serverUri}`)
+
+    const queryTime = Date.now()
+    const deferredWithScoring = new Deferred<T>()
+    deferredWithScoring.promise.then(
+      (value: T) => {
+        pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
+        deferred.resolve(value)
+      },
+      (err: unknown) => {
+        pluginState.serverScoreDown(serverUri)
+        deferred.reject(err)
+      }
+    )
+
+    return deferredWithScoring
+  }
+
   const instance: ServerStates = {
     async broadcastTx(transaction: EdgeTransaction): Promise<string> {
       return await new Promise((resolve, reject) => {
@@ -505,13 +529,13 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     },
 
     watchAddresses(
-      uri: string,
+      serverUri: string,
       addresses: string[],
       deferredAddressSub?: Deferred<unknown>
     ): void {
-      const serverState = serverStatesCache[uri]
+      const serverState = serverStatesCache[serverUri]
       if (serverState == null)
-        throw new Error(`No blockbook connection with ${uri}`)
+        throw new Error(`No blockbook connection with ${serverUri}`)
 
       const { blockbook } = serverState
 
@@ -520,44 +544,40 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         serverState.addresses.add(address)
       }
 
-      const queryTime = Date.now()
       const deferred = new Deferred<unknown>()
-      deferred.promise
-        .then((value: unknown) => {
-          pluginState.serverScoreUp(uri, Date.now() - queryTime)
-          deferredAddressSub?.resolve(value)
-        })
-        .catch(() => {
-          // Remove new addresses to the set of known addresses
-          for (const address of addresses) {
-            serverState.addresses.delete(address)
-          }
-          pluginState.serverScoreDown(uri)
-          deferredAddressSub?.reject()
-        })
-      blockbook.watchAddresses(Array.from(serverState.addresses), deferred)
+      deferred.promise.catch((err: unknown) => {
+        // Remove new addresses to the set of known addresses
+        for (const address of addresses) {
+          serverState.addresses.delete(address)
+        }
+        // Reject the deferredAddressSub promise if provided
+        deferredAddressSub?.reject(err)
+      })
+
+      blockbook.watchAddresses(
+        Array.from(serverState.addresses),
+        deferredWithServerScoring(serverUri, deferred)
+      )
     },
 
-    watchBlocks(uri: string): void {
-      const serverState = serverStatesCache[uri]
+    watchBlocks(serverUri: string): void {
+      const serverState = serverStatesCache[serverUri]
       if (serverState == null)
-        throw new Error(`No blockbook connection with ${uri}`)
+        throw new Error(`No blockbook connection with ${serverUri}`)
 
       const { blockbook } = serverState
 
       serverState.blockSubscriptionStatus = 'subscribing'
 
-      const queryTime = Date.now()
       const deferred = new Deferred()
       deferred.promise
         .then(() => {
           serverState.blockSubscriptionStatus = 'subscribed'
-          pluginState.serverScoreUp(uri, Date.now() - queryTime)
         })
         .catch(() => {
           serverState.blockSubscriptionStatus = 'unsubscribed'
         })
-      blockbook.watchBlocks(deferred)
+      blockbook.watchBlocks(deferredWithServerScoring(serverUri, deferred))
     },
 
     //
@@ -581,7 +601,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           lastQueriedBlockHeight: params.lastQueriedBlockHeight,
           page: params.page
         },
-        deferred
+        deferredWithServerScoring(serverUri, deferred)
       )
     },
 
@@ -594,7 +614,10 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       if (serverState == null)
         throw new Error(`No blockbook connection with ${serverUri}`)
 
-      return serverState.blockbook.transactionQueryTask(txId, deferred)
+      return serverState.blockbook.transactionQueryTask(
+        txId,
+        deferredWithServerScoring(serverUri, deferred)
+      )
     },
 
     transactionSpecialQueryTask(
@@ -606,7 +629,10 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       if (serverState == null)
         throw new Error(`No blockbook connection with ${serverUri}`)
 
-      return serverState.blockbook.transactionSpecialQueryTask(txId, deferred)
+      return serverState.blockbook.transactionSpecialQueryTask(
+        txId,
+        deferredWithServerScoring(serverUri, deferred)
+      )
     },
     utxoListQueryTask(
       serverUri: string,
@@ -622,7 +648,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         {
           asBlockbookAddress: pluginInfo.engineInfo.asBlockbookAddress
         },
-        deferred
+        deferredWithServerScoring(serverUri, deferred)
       )
     }
   }

@@ -8,7 +8,6 @@ import {
 } from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
-import { PluginState } from '../../plugin/PluginState'
 import {
   AddressPath,
   ChangePath,
@@ -193,7 +192,6 @@ export function makeUtxoEngineProcessor(
     io,
     log,
     serverStates,
-    pluginState,
     walletFormats,
     lock
   }
@@ -514,7 +512,6 @@ interface CommonParams {
   io: EdgeIo
   log: EdgeLog
   serverStates: ServerStates
-  pluginState: PluginState
   walletFormats: CurrencyFormat[]
   lock: AwaitLock
 }
@@ -1186,11 +1183,9 @@ const processAddressForTransactions = async (
     throw new Error(`could not find address with script pubkey ${scriptPubkey}`)
   }
 
-  const queryTime = Date.now()
   const deferred = new Deferred<AddressResponse>()
   deferred.promise
     .then(async (value: AddressResponse) => {
-      common.pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
       const { transactions = [], txs, unconfirmedTxs, totalPages } = value
 
       // If address is used and previously not marked as used, mark as used.
@@ -1347,11 +1342,9 @@ const processAddressForUtxos = async (
     blockbookUtxoCache,
     dataLayerUtxoCache
   } = common.taskCache
-  const queryTime = Date.now()
   const deferred = new Deferred<AddressUtxosResponse>()
   deferred.promise
     .then(async (utxos: AddressUtxosResponse) => {
-      common.pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
       const scriptPubkey = common.walletTools.addressToScriptPubkey(address)
       const addressData = await common.dataLayer.fetchAddress(scriptPubkey)
       if (addressData == null || addressData.path == null) {
@@ -1545,14 +1538,9 @@ const processBlockbookUtxo = async (
           txId: utxo.txid
         })
         if (tx == null) {
-          const queryTime = Date.now()
           const deferred = new Deferred<TransactionResponse>()
           deferred.promise
             .then((txResponse: TransactionResponse) => {
-              common.pluginState.serverScoreUp(
-                serverUri,
-                Date.now() - queryTime
-              )
               const processedTx = processTransactionResponse(common, {
                 txResponse
               })

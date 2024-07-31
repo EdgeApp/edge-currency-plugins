@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Ensure server scoring is done on all server tasks
+
 ## 3.2.1 (2024-07-19)
 
 - fixed: Bug causing default currency info server list to overwrite user's customer servers
