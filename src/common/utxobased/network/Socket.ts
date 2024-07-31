@@ -28,9 +28,16 @@ export type OnFailHandler = (error: Error) => void
 export interface WsTask<T> {
   method: string
   params: unknown
-  deferred: Deferred<T>
   cleaner?: Cleaner<T>
 }
+
+export type WsTaskGenerator<T> = Generator<WsTask<T>, T, T>
+
+export type WsTaskAsyncGenerator<T> = AsyncGenerator<
+  WsTask<T> | boolean,
+  boolean,
+  T
+>
 
 export interface WsSubscription<T> {
   method: string
@@ -45,12 +52,12 @@ export interface Socket {
   readyState: ReadyState
   connect: () => Promise<void>
   disconnect: () => void
-  submitTask: <T>(task: WsTask<T>) => void
+  submitTask: <T>(task: WsTask<T>, generator: WsTaskAsyncGenerator<T>) => void
   subscribe: <T>(subscription: WsSubscription<T>) => void
   isConnected: () => boolean
 }
 
-export type OnQueueSpace = (uri: string) => Promise<WsTask<unknown> | boolean>
+export type TaskGeneratorFn = (uri: string) => WsTaskAsyncGenerator<unknown>
 
 interface SocketConfig {
   asResponse?: Cleaner<WsResponse>
@@ -60,11 +67,12 @@ interface SocketConfig {
   emitter: SocketEmitter
   log: EdgeLog
   healthCheck: () => Promise<void> // function for heartbeat, should submit task itself
-  onQueueSpace: OnQueueSpace
+  taskGeneratorFn: TaskGeneratorFn
 }
 
 interface WsRequest<T> {
   task: WsTask<T>
+  generator: WsTaskAsyncGenerator<T>
   startTime: number
 }
 
@@ -155,11 +163,9 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     cancelConnect = false
     trackedError = undefined
     for (const request of Object.values(pendingRequests)) {
-      try {
-        request.task.deferred.reject(errObj)
-      } catch (e) {
+      request.generator.throw(errObj).catch(e => {
         log.error(e.message)
-      }
+      })
     }
     pendingRequests = {}
     try {
@@ -207,12 +213,14 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     lastWakeUp = Date.now()
     if (connected && version != null) {
       while (Object.keys(pendingRequests).length < queueSize) {
-        const task = await config.onQueueSpace(uri)
+        const generator = await config.taskGeneratorFn(uri)
+        const result = await generator.next()
+        const task = result.value
         if (typeof task === 'boolean') {
           if (task) continue
           else break
         }
-        submitTask(task)
+        instance.submitTask(task, generator)
       }
     }
   }
@@ -229,14 +237,6 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       subscriptions[id] = subscription
       socket.send(JSON.stringify(message))
     }
-  }
-
-  // add any exception, since the passed in template parameter needs to be re-assigned
-  const submitTask = <T>(task: WsTask<T>): void => {
-    const id = (nextId++).toString()
-    const request = { task, startTime: Date.now() }
-    pendingRequests[id] = request
-    transmitRequest(id, request)
   }
 
   const transmitRequest = <T>(id: string, request: WsRequest<T>): void => {
@@ -273,11 +273,11 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
     for (const [id, request] of Object.entries(pendingRequests)) {
       if (request.startTime + timeout < now) {
-        try {
-          request.task.deferred.reject(new Error(`Timeout for request ${id}`))
-        } catch (e) {
-          log.error(e.message)
-        }
+        request.generator
+          .throw(new Error(`Timeout for request ${id}`))
+          .catch(e => {
+            log.error(e.message)
+          })
         removeItem(pendingRequests, id)
       }
     }
@@ -342,16 +342,29 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
                   'message' in error ? error.message : error.connected
                 throw new Error(errorMessage)
               }
+              let nextValue
               if (request.task.cleaner != null) {
-                request.task.deferred.resolve(
-                  request.task.cleaner(responseMessage.data)
-                )
+                nextValue = request.task.cleaner(responseMessage.data)
               } else {
-                request.task.deferred.resolve(responseMessage.data)
+                nextValue = responseMessage.data
               }
+              request.generator
+                .next(nextValue)
+                .then(result => {
+                  const task = result.value
+                  if (typeof task === 'boolean') {
+                    return
+                  }
+                  instance.submitTask(task, request.generator)
+                })
+                .catch(e => {
+                  log.error(e.message)
+                })
             } catch (error) {
               console.log({ uri, error, response: responseMessage, request })
-              request.task.deferred.reject(error)
+              request.generator.throw(error).catch(e => {
+                log.error(e.message)
+              })
             }
             continue
           }
@@ -370,7 +383,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   setupTimer()
 
   // return a Socket
-  return {
+  const instance: Socket = {
     get readyState(): ReadyState {
       return socket?.readyState ?? ReadyState.CLOSED
     },
@@ -421,8 +434,18 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
       return socket?.readyState === ReadyState.OPEN
     },
 
-    submitTask,
+    submitTask: <T>(
+      task: WsTask<T>,
+      generator: WsTaskAsyncGenerator<T>
+    ): void => {
+      const id = (nextId++).toString()
+      const request: WsRequest<T> = { task, startTime: Date.now(), generator }
+      pendingRequests[id] = request
+      transmitRequest(id, request)
+    },
 
     subscribe
   }
+
+  return instance
 }

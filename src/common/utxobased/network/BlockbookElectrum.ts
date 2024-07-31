@@ -15,7 +15,6 @@ import { PluginInfo } from '../../plugin/types'
 import { addressToScriptPubkey } from '../keymanager/keymanager'
 import { Blockbook, makeBlockbook } from './Blockbook'
 import { AddressResponse, BlockbookAccountUtxo } from './blockbookApi'
-import Deferred from './Deferred'
 import {
   addressTransactionsMessage,
   AddressTransactionsResponse,
@@ -23,7 +22,12 @@ import {
   ListUnspentResponse,
   pingMessage
 } from './electrumApi'
-import { OnQueueSpace, WsResponse, WsResponseMessage, WsTask } from './Socket'
+import {
+  TaskGeneratorFn,
+  WsResponse,
+  WsResponseMessage,
+  WsTaskAsyncGenerator
+} from './Socket'
 import { SocketEmitter } from './SocketEmitter'
 
 export interface BlockbookElectrumConfig {
@@ -31,7 +35,7 @@ export interface BlockbookElectrumConfig {
   connectionUri: string
   engineEmitter: EngineEmitter
   log: EdgeLog
-  onQueueSpace: OnQueueSpace
+  taskGeneratorFn: TaskGeneratorFn
   pluginInfo: PluginInfo
   socketEmitter: SocketEmitter
   walletId: string
@@ -79,7 +83,7 @@ export function makeBlockbookElectrum(
     connectionUri,
     engineEmitter,
     log,
-    onQueueSpace,
+    taskGeneratorFn,
     pluginInfo,
     socketEmitter,
     walletId
@@ -102,83 +106,79 @@ export function makeBlockbookElectrum(
     connectionUri,
     engineEmitter,
     log,
-    onQueueSpace: async (uri: string): Promise<WsTask<unknown> | boolean> => {
-      const task = await onQueueSpace(uri)
-      if (task == null || typeof task === 'boolean') return task
+    taskGeneratorFn: async function* (
+      uri: string
+    ): WsTaskAsyncGenerator<unknown> {
+      const generator = taskGeneratorFn(uri)
+      let nextValue: unknown
 
-      // Translate getAccountUtxo to blockchain.scripthash.listunspent:
-      if (task.method === 'getAccountUtxo') {
-        const params = task.params as { descriptor: string }
-        const address =
-          asAddress != null ? asAddress(params.descriptor) : params.descriptor
-        const scriptHash = addressToScriptHash(address)
+      while (true) {
+        const result = await generator.next(nextValue)
+        const task = result.value
 
-        const deferred = new Deferred<any>()
-        deferred.promise
-          .then((electrumUtxos: ListUnspentResponse): void => {
-            const blockbookUtxos: BlockbookAccountUtxo[] = electrumUtxos.map(
-              utxo => ({
-                txid: utxo.tx_hash,
-                vout: utxo.tx_pos,
-                value: utxo.value.toString(),
-                height: utxo.height
-              })
-            )
-            task.deferred.resolve(blockbookUtxos)
-          })
-          .catch((e): void => {
-            task.deferred.reject(e)
-          })
+        // If the generator result is not a WsTask we will return it:
+        if (result?.done === true) return result.value
+        if (typeof task === 'boolean') return task
 
-        const translatedTask: WsTask<unknown> = {
-          ...listUnspentMessage(scriptHash),
-          deferred
+        // Translate getAccountUtxo to blockchain.scripthash.listunspent:
+        if (task.method === 'getAccountUtxo') {
+          const params = task.params as { descriptor: string }
+          const address =
+            asAddress != null ? asAddress(params.descriptor) : params.descriptor
+          const scriptHash = addressToScriptHash(address)
+
+          // Safe because yielding WsTask<ListUnspentResponse> should get
+          // ListUnspentResponse next.
+          const electrumUtxos = (yield {
+            ...listUnspentMessage(scriptHash)
+          }) as ListUnspentResponse
+
+          const blockbookUtxos: BlockbookAccountUtxo[] = electrumUtxos.map(
+            utxo => ({
+              txid: utxo.tx_hash,
+              vout: utxo.tx_pos,
+              value: utxo.value.toString(),
+              height: utxo.height
+            })
+          )
+          nextValue = blockbookUtxos
+          continue
         }
-        return translatedTask
-      }
 
-      // Get Address Transactions:
-      if (task.method === 'getAccountInfo') {
-        const params = task.params as { descriptor: string }
-        const address =
-          asAddress != null ? asAddress(params.descriptor) : params.descriptor
-        const scriptHash = addressToScriptHash(address)
+        // Get Address Transactions:
+        if (task.method === 'getAccountInfo') {
+          const params = task.params as { descriptor: string }
+          const address =
+            asAddress != null ? asAddress(params.descriptor) : params.descriptor
+          const scriptHash = addressToScriptHash(address)
 
-        const deferred = new Deferred<any>()
-        deferred.promise
-          .then((electrumUtxos: AddressTransactionsResponse): void => {
-            const blockbookUtxos: AddressResponse = {
-              address, // unused
-              balance: '0', // unused
-              totalReceived: '0', // unused
-              totalSent: '0', // unused
-              txs: electrumUtxos.length,
-              unconfirmedBalance: '0', // unused
-              unconfirmedTxs: electrumUtxos.reduce(
-                (sum, tx) => (sum + tx.height >= 0 ? 1 : 0),
-                0
-              ),
-              txids: [], // unused
-              transactions: [], // TODO: this requires an extra query per txid
-              page: 0, // unused
-              totalPages: 1,
-              itemsOnPage: 0 // unused
-            }
-            task.deferred.resolve(blockbookUtxos)
-          })
-          .catch((e): void => {
-            task.deferred.reject(e)
-          })
+          // Safe because yielding WsTask<AddressTransactionsResponse> should get
+          // AddressTransactionsResponse next.
+          const electrumUtxos = (yield {
+            ...addressTransactionsMessage(scriptHash)
+          }) as AddressTransactionsResponse
 
-        const translatedTask: WsTask<unknown> = {
-          ...addressTransactionsMessage(scriptHash),
-          deferred
+          const blockbookUtxos: AddressResponse = {
+            address, // unused
+            balance: '0', // unused
+            totalReceived: '0', // unused
+            totalSent: '0', // unused
+            txs: electrumUtxos.length,
+            unconfirmedBalance: '0', // unused
+            unconfirmedTxs: electrumUtxos.reduce(
+              (sum, tx) => (sum + tx.height >= 0 ? 1 : 0),
+              0
+            ),
+            txids: [], // unused
+            transactions: [], // TODO: this requires an extra query per txid
+            page: 0, // unused
+            totalPages: 1,
+            itemsOnPage: 0 // unused
+          }
+          nextValue = blockbookUtxos
+          continue
         }
-        return translatedTask
       }
-
-      // Skip unsupported task and continue with the next one:
-      return true
     },
     ping: async (): Promise<void> => {
       return await instance.promisifyWsMessage(pingMessage())
