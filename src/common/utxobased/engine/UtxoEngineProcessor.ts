@@ -38,8 +38,7 @@ import {
   SubscribeAddressResponse,
   TransactionResponse
 } from '../network/blockbookApi'
-import Deferred from '../network/Deferred'
-import { WsTask } from '../network/Socket'
+import { WsTask, WsTaskAsyncGenerator } from '../network/Socket'
 import AwaitLock from './await-lock'
 import { CACHE_THROTTLE } from './constants'
 import { makeServerStates, ServerState, ServerStates } from './ServerStates'
@@ -196,8 +195,8 @@ export function makeUtxoEngineProcessor(
     lock
   }
 
-  serverStates.setPickNextTaskCB(async serverUri => {
-    return await pickNextTask(common, serverUri)
+  serverStates.setPickNextTaskCB(serverUri => {
+    return pickNextTask(common, serverUri)
   })
 
   let running = false
@@ -794,10 +793,22 @@ const needsTxSpecific = (common: CommonParams): boolean => {
   return common.pluginInfo.engineInfo.txSpecificHandling != null
 }
 
-export const pickNextTask = async (
+/**
+ * The pickNextTask generator is responsible for selecting the next WsTask
+ * to be done by the network layer. It will yield WsTasks or booleans for early
+ * exit, and it will return a boolean when it's done.
+ */
+type PickNextTaskGenerator = AsyncGenerator<
+  boolean | WsTask<unknown>,
+  boolean,
+  // Expect only these responses from yielding:
+  AddressUtxosResponse & AddressResponse & TransactionResponse
+>
+
+export async function* pickNextTask(
   common: CommonParams,
   serverUri: string
-): Promise<WsTask<any> | boolean> => {
+): PickNextTaskGenerator {
   const {
     addressForTransactionsCache,
     addressForUtxosCache,
@@ -855,7 +866,7 @@ export const pickNextTask = async (
       }
       cacheItem.processing = true
       removeItem(blockbookUtxoCache, utxoId)
-      return await processBlockbookUtxo(common, {
+      yield* processBlockbookUtxo(common, {
         serverUri,
         cacheItem
       })
@@ -874,7 +885,7 @@ export const pickNextTask = async (
       removeItem(addressForUtxosCache, address)
 
       // Fetch and process address for UTXOs
-      return await processAddressForUtxos(common, {
+      yield* processAddressForUtxos(common, {
         address,
         cacheItem,
         serverState,
@@ -942,7 +953,7 @@ export const pickNextTask = async (
         hasProcessedAtLeastOnce = true
         cacheItem.processing = true
         removeItem(transactionSpecificUpdateCache, txId)
-        return processTransactionsSpecificUpdate(common, {
+        yield* processTransactionsSpecificUpdate(common, {
           serverState,
           serverUri,
           txId
@@ -964,7 +975,7 @@ export const pickNextTask = async (
         hasProcessedAtLeastOnce = true
         cacheItem.processing = true
         removeItem(transactionUpdateCache, txId)
-        return processTransactionUpdate(common, {
+        yield* processTransactionUpdate(common, {
           serverState,
           serverUri,
           txId
@@ -988,7 +999,7 @@ export const pickNextTask = async (
       removeItem(addressForTransactionsCache, address)
 
       // Fetch and process address UTXOs
-      return await processAddressForTransactions(common, {
+      yield* processAddressForTransactions(common, {
         address,
         cacheItem,
         serverState,
@@ -1006,134 +1017,133 @@ export const pickNextTask = async (
  * by querying the network for the transaction data using the specific handling
  * query and processing the data into the DataLayer.
  */
-const processTransactionsSpecificUpdate = (
+async function* processTransactionsSpecificUpdate(
   common: CommonParams,
   args: {
     serverState: ServerState
     serverUri: string
     txId: string
   }
-): WsTask<unknown> => {
+): WsTaskAsyncGenerator<unknown> {
   const { serverState, serverUri, txId } = args
-  const deferred = new Deferred<unknown>()
-  deferred.promise
-    .then(async (txResponse: unknown) => {
-      // Grab tx to update it
-      const txs = await common.dataLayer.fetchTransactions({ txId })
-      let tx = txs[0]
-      if (tx == null) return
+  try {
+    const txResponse: unknown = yield* common.serverStates.transactionSpecialQueryTask(
+      serverUri,
+      txId
+    )
+    // Grab tx to update it
+    const txs = await common.dataLayer.fetchTransactions({ txId })
+    let tx = txs[0]
+    if (tx == null) return true
 
-      if (common.pluginInfo.engineInfo.txSpecificHandling != null) {
-        // Do coin-specific things to it
-        tx = common.pluginInfo.engineInfo.txSpecificHandling(tx, txResponse)
-      }
+    if (common.pluginInfo.engineInfo.txSpecificHandling != null) {
+      // Do coin-specific things to it
+      tx = common.pluginInfo.engineInfo.txSpecificHandling(tx, txResponse)
+    }
 
-      // Process and save new tx
-      const processedTx = await common.dataLayer.saveTransaction({
-        tx
-      })
-
-      await transactionChanged({
-        walletId: common.walletInfo.id,
-        emitter: common.emitter,
-        walletTools: common.walletTools,
-        dataLayer: common.dataLayer,
-        pluginInfo: common.pluginInfo,
-        tx: processedTx
-      })
-
-      // Add the txid to the server cache
-      serverState.txids.add(txId)
-    })
-    .catch(err => {
-      console.error(err)
-      common.log('error while processing transaction specific update:', err)
-      common.taskCache.transactionSpecificUpdateCache[txId] = {
-        processing: false
-      }
+    // Process and save new tx
+    const processedTx = await common.dataLayer.saveTransaction({
+      tx
     })
 
-  return common.serverStates.transactionSpecialQueryTask(
-    serverUri,
-    txId,
-    deferred
-  )
+    await transactionChanged({
+      walletId: common.walletInfo.id,
+      emitter: common.emitter,
+      walletTools: common.walletTools,
+      dataLayer: common.dataLayer,
+      pluginInfo: common.pluginInfo,
+      tx: processedTx
+    })
+
+    // Add the txid to the server cache
+    serverState.txids.add(txId)
+
+    return true
+  } catch (err) {
+    console.error(err)
+    common.log('error while processing transaction specific update:', err)
+    common.taskCache.transactionSpecificUpdateCache[txId] = {
+      processing: false
+    }
+    return false
+  }
 }
 
 /**
  * Processes a transaction update from the TransactionUpdateCache by querying
  * the network for the transaction data and processing it into the DataLayer.
  */
-const processTransactionUpdate = (
+async function* processTransactionUpdate(
   common: CommonParams,
   args: {
     serverState: ServerState
     serverUri: string
     txId: string
   }
-): WsTask<TransactionResponse> => {
+): WsTaskAsyncGenerator<TransactionResponse> {
   const { serverState, serverUri, txId } = args
-  const deferred = new Deferred<TransactionResponse>()
-  deferred.promise
-    .then(async (txResponse: TransactionResponse) => {
-      // check if raw tx is still not confirmed, if so, don't change anything
-      if (txResponse.blockHeight < 1) return
-      // Create new tx from raw tx
-      const tx = processTransactionResponse(common, { txResponse })
-      // Remove any existing input utxos from the dataLayer
-      for (const input of tx.inputs) {
-        await common.dataLayer.removeUtxos([
-          `${input.txId}_${input.outputIndex}`
-        ])
-      }
-      // Update output utxos's blockHeight any existing input utxos from the dataLayer
-      const utxoIds = tx.outputs.map(output => `${tx.txid}_${output.n}`)
-      const utxos = await common.dataLayer.fetchUtxos({
-        utxoIds
-      })
-      for (const utxo of utxos) {
-        if (utxo == null) continue
-        utxo.blockHeight = tx.blockHeight
-        await common.dataLayer.saveUtxo(utxo)
-      }
-      // Process and save new tx
-      const processedTx = await common.dataLayer.saveTransaction({
-        tx
-      })
 
-      await transactionChanged({
-        walletId: common.walletInfo.id,
-        emitter: common.emitter,
-        walletTools: common.walletTools,
-        dataLayer: common.dataLayer,
-        pluginInfo: common.pluginInfo,
-        tx: processedTx
-      })
-
-      if (needsTxSpecific(common)) {
-        // Add task to grab transactionSpecific payload
-        common.taskCache.transactionSpecificUpdateCache[txId] = {
-          processing: false
-        }
-      }
-
-      // Add the txid to the server cache
-      serverState.txids.add(txId)
+  try {
+    const txResponse: TransactionResponse = yield* common.serverStates.transactionQueryTask(
+      serverUri,
+      txId
+    )
+    // check if blockbook tx is still not confirmed, if so, don't change anything
+    if (txResponse.blockHeight < 1) return false
+    // Create new tx from raw tx
+    const tx = processTransactionResponse(common, { txResponse })
+    // Remove any existing input utxos from the dataLayer
+    for (const input of tx.inputs) {
+      await common.dataLayer.removeUtxos([`${input.txId}_${input.outputIndex}`])
+    }
+    // Update output utxos's blockHeight any existing input utxos from the dataLayer
+    const utxoIds = tx.outputs.map(output => `${tx.txid}_${output.n}`)
+    const utxos = await common.dataLayer.fetchUtxos({
+      utxoIds
     })
-    .catch(err => {
-      console.error(err)
-      common.log('error while processing transaction update:', err)
-      common.taskCache.transactionUpdateCache[txId] = { processing: false }
+    for (const utxo of utxos) {
+      if (utxo == null) continue
+      utxo.blockHeight = tx.blockHeight
+      await common.dataLayer.saveUtxo(utxo)
+    }
+    // Process and save new tx
+    const processedTx = await common.dataLayer.saveTransaction({
+      tx
     })
 
-  return common.serverStates.transactionQueryTask(serverUri, txId, deferred)
+    await transactionChanged({
+      walletId: common.walletInfo.id,
+      emitter: common.emitter,
+      walletTools: common.walletTools,
+      dataLayer: common.dataLayer,
+      pluginInfo: common.pluginInfo,
+      tx: processedTx
+    })
+
+    if (needsTxSpecific(common)) {
+      // Add task to grab transactionSpecific payload
+      common.taskCache.transactionSpecificUpdateCache[txId] = {
+        processing: false
+      }
+    }
+
+    // Add the txid to the server cache
+    serverState.txids.add(txId)
+
+    return true
+  } catch (err) {
+    console.error(err)
+    common.log('error while processing transaction update:', err)
+    common.taskCache.transactionUpdateCache[txId] = { processing: false }
+    return false
+  }
 }
 
 /**
  * Processes an address for transactions by querying the network for the
  * transaction data.
  */
-const processAddressForTransactions = async (
+async function* processAddressForTransactions(
   common: CommonParams,
   args: {
     address: string
@@ -1141,7 +1151,7 @@ const processAddressForTransactions = async (
     serverState: ServerState
     serverUri: string
   }
-): Promise<WsTask<AddressResponse>> => {
+): WsTaskAsyncGenerator<AddressResponse> {
   const { address, cacheItem, serverState, serverUri } = args
   const { page = 1, blockHeight } = cacheItem
   const addressForTransactionsCache =
@@ -1153,85 +1163,88 @@ const processAddressForTransactions = async (
     throw new Error(`could not find address with script pubkey ${scriptPubkey}`)
   }
 
-  const deferred = new Deferred<AddressResponse>()
-  deferred.promise
-    .then(async (value: AddressResponse) => {
-      const { transactions = [], txs, unconfirmedTxs, totalPages } = value
-
-      // If address is used and previously not marked as used, mark as used.
-      const used = txs > 0 || unconfirmedTxs > 0
-      if (!addressData.used && used && page === 1) {
-        addressData.used = true
+  try {
+    const addressResponse = yield* common.serverStates.addressQueryTask(
+      serverUri,
+      address,
+      {
+        lastQueriedBlockHeight: addressData.lastQueriedBlockHeight,
+        page
       }
+    )
+    const {
+      transactions = [],
+      txs,
+      unconfirmedTxs,
+      totalPages
+    } = addressResponse
 
-      // Process and save the address's transactions
-      for (const txResponse of transactions) {
-        const tx = processTransactionResponse(common, { txResponse })
-        const processedTx = await common.dataLayer.saveTransaction({
-          tx,
-          scriptPubkeys: [scriptPubkey]
-        })
-        await transactionChanged({
-          walletId: common.walletInfo.id,
-          emitter: common.emitter,
-          walletTools: common.walletTools,
-          dataLayer: common.dataLayer,
-          pluginInfo: common.pluginInfo,
-          tx: processedTx
-        })
+    // If address is used and previously not marked as used, mark as used.
+    const used = txs > 0 || unconfirmedTxs > 0
+    if (!addressData.used && used && page === 1) {
+      addressData.used = true
+    }
 
-        if (needsTxSpecific(common)) {
-          // Add task to grab transactionSpecific payload
-          common.taskCache.transactionSpecificUpdateCache[tx.txid] = {
-            processing: false
-          }
+    // Process and save the address's transactions
+    for (const txResponse of transactions) {
+      const tx = processTransactionResponse(common, { txResponse })
+      const processedTx = await common.dataLayer.saveTransaction({
+        tx,
+        scriptPubkeys: [scriptPubkey]
+      })
+      await transactionChanged({
+        walletId: common.walletInfo.id,
+        emitter: common.emitter,
+        walletTools: common.walletTools,
+        dataLayer: common.dataLayer,
+        pluginInfo: common.pluginInfo,
+        tx: processedTx
+      })
+
+      if (needsTxSpecific(common)) {
+        // Add task to grab transactionSpecific payload
+        common.taskCache.transactionSpecificUpdateCache[tx.txid] = {
+          processing: false
         }
       }
+    }
 
-      // Halt on finishing the processing of address transaction until
-      // we have progressed through all of the blockbook pages
-      if (page < totalPages) {
-        // Add the address back to the cache, incrementing the page
-        addressForTransactionsCache[address] = {
-          ...cacheItem,
-          processing: false,
-          page: page + 1
-        }
-        return
+    // Halt on finishing the processing of address transaction until
+    // we have progressed through all of the blockbook pages
+    if (page < totalPages) {
+      // Add the address back to the cache, incrementing the page
+      addressForTransactionsCache[address] = {
+        ...cacheItem,
+        processing: false,
+        page: page + 1
       }
+      return true
+    }
 
-      // Update the lastQueriedBlockHeight for the address
-      addressData.lastQueriedBlockHeight = blockHeight
+    // Update the lastQueriedBlockHeight for the address
+    addressData.lastQueriedBlockHeight = blockHeight
 
-      // Save/update the fully-processed address
-      await common.dataLayer.saveAddress(addressData)
+    // Save/update the fully-processed address
+    await common.dataLayer.saveAddress(addressData)
 
-      // Update the progress now that the transactions for an address have processed
-      await common.updateProgressRatio()
+    // Update the progress now that the transactions for an address have processed
+    await common.updateProgressRatio()
 
-      // Call setLookAhead to update the lookahead
-      await setLookAhead(common)
+    // Call setLookAhead to update the lookahead
+    await setLookAhead(common)
 
-      // Add the address to the server cache
-      serverState.addresses.add(address)
-    })
-    .catch(err => {
-      // Log the error for debugging purposes without crashing the engine
-      // This will cause frozen wallet syncs
-      console.error(err)
-      common.log('error while processing address for transactions:', err)
-      addressForTransactionsCache[address] = { ...cacheItem, processing: false }
-    })
+    // Add the address to the server cache
+    serverState.addresses.add(address)
 
-  return common.serverStates.addressQueryTask(
-    serverUri,
-    address,
-    {
-      lastQueriedBlockHeight: addressData.lastQueriedBlockHeight,
-      page
-    },
-    deferred
-  )
+    return true
+  } catch (err) {
+    // Log the error for debugging purposes without crashing the engine
+    // This will cause frozen wallet syncs
+    console.error(err)
+    common.log('error while processing address for transactions:', err)
+    addressForTransactionsCache[address] = { ...cacheItem, processing: false }
+    return false
+  }
 }
 
 /**
@@ -1301,7 +1314,7 @@ const processTransactionResponse = (
  * and processing it into the `blockbookUtxoCache` to later be processed by
  * `processBlockbookUtxo`.
  */
-const processAddressForUtxos = async (
+async function* processAddressForUtxos(
   common: CommonParams,
   args: {
     address: string
@@ -1309,53 +1322,55 @@ const processAddressForUtxos = async (
     serverState: ServerState
     serverUri: string
   }
-): Promise<WsTask<AddressUtxosResponse>> => {
+): WsTaskAsyncGenerator<AddressUtxosResponse> {
   const { address, cacheItem, serverState, serverUri } = args
   const {
     addressForUtxosCache,
     blockbookUtxoCache,
     dataLayerUtxoCache
   } = common.taskCache
-  const deferred = new Deferred<AddressUtxosResponse>()
-  deferred.promise
-    .then(async (utxos: AddressUtxosResponse) => {
-      const scriptPubkey = common.walletTools.addressToScriptPubkey(address)
-      const addressData = await common.dataLayer.fetchAddress(scriptPubkey)
-      if (addressData == null || addressData.path == null) {
-        return
+  try {
+    const utxos: AddressUtxosResponse = yield* common.serverStates.utxoListQueryTask(
+      serverUri,
+      address
+    )
+    const scriptPubkey = common.walletTools.addressToScriptPubkey(address)
+    const addressData = await common.dataLayer.fetchAddress(scriptPubkey)
+    if (addressData == null || addressData.path == null) {
+      return true
+    }
+
+    if (utxos.length === 0) {
+      addToDataLayerUtxoCache(
+        dataLayerUtxoCache,
+        cacheItem.path,
+        scriptPubkey,
+        0
+      )
+      return true
+    }
+
+    for (const utxo of utxos) {
+      const utxoId = `${utxo.txid}_${utxo.vout}`
+      blockbookUtxoCache[utxoId] = {
+        blockbookUtxo: utxo,
+        processing: false,
+        requiredCount: utxos.length,
+        path: cacheItem.path,
+        // TypeScript yells otherwise
+        address: { ...addressData, path: addressData.path }
       }
+    }
 
-      if (utxos.length === 0) {
-        addToDataLayerUtxoCache(
-          dataLayerUtxoCache,
-          cacheItem.path,
-          scriptPubkey,
-          0
-        )
-        return
-      }
+    serverState.addresses.add(address)
 
-      for (const utxo of utxos) {
-        const utxoId = `${utxo.txid}_${utxo.vout}`
-        blockbookUtxoCache[utxoId] = {
-          blockbookUtxo: utxo,
-          processing: false,
-          requiredCount: utxos.length,
-          path: cacheItem.path,
-          // TypeScript yells otherwise
-          address: { ...addressData, path: addressData.path }
-        }
-      }
-
-      serverState.addresses.add(address)
-    })
-    .catch((err: unknown) => {
-      console.error(err)
-      common.log('error while processing address for UTXOs:', err)
-      addressForUtxosCache[address] = { ...cacheItem, processing: false }
-    })
-
-  return common.serverStates.utxoListQueryTask(serverUri, address, deferred)
+    return true
+  } catch (err: unknown) {
+    console.error(err)
+    common.log('error while processing address for UTXOs:', err)
+    addressForUtxosCache[address] = { ...cacheItem, processing: false }
+    return false
+  }
 }
 
 /**
@@ -1467,13 +1482,13 @@ const processDataLayerUtxos = async (
  * After the network fetching, the UTXO is processed into a UtxoData object
  * to be later processed into the DataLayer.
  */
-const processBlockbookUtxo = async (
+async function* processBlockbookUtxo(
   common: CommonParams,
   args: {
     serverUri: string
     cacheItem: BlockbookUtxoCache[string]
   }
-): Promise<WsTask<TransactionResponse> | boolean> => {
+): WsTaskAsyncGenerator<TransactionResponse> {
   const { serverUri, cacheItem } = args
   const { blockbookUtxoCache, dataLayerUtxoCache } = common.taskCache
   const purposeType = pathToPurposeType(
@@ -1520,34 +1535,33 @@ const processBlockbookUtxo = async (
           txId: cacheItem.blockbookUtxo.txid
         })
         if (tx == null) {
-          const deferred = new Deferred<TransactionResponse>()
-          deferred.promise
-            .then((txResponse: TransactionResponse) => {
-              const processedTx = processTransactionResponse(common, {
-                txResponse
-              })
-              script = processedTx.hex
-              // Only after we have successfully fetched the tx, set our script and call done
-              done()
-            })
-            .catch(err => {
-              // If something went wrong, add the UTXO back to the queue
-              common.log('error while processing Blockbook UTXO:', err)
-              const utxoId = `${cacheItem.blockbookUtxo.txid}_${cacheItem.blockbookUtxo.vout}`
-              blockbookUtxoCache[utxoId] = {
-                blockbookUtxo: cacheItem.blockbookUtxo,
-                processing: false,
-                path: cacheItem.path,
-                address: cacheItem.address,
-                requiredCount: cacheItem.requiredCount
-              }
-            })
+          try {
+            const txResponse: TransactionResponse = yield* common.serverStates.transactionQueryTask(
+              serverUri,
+              cacheItem.blockbookUtxo.txid
+            )
 
-          return common.serverStates.transactionQueryTask(
-            serverUri,
-            cacheItem.blockbookUtxo.txid,
-            deferred
-          )
+            const processedTx = processTransactionResponse(common, {
+              txResponse
+            })
+            script = processedTx.hex
+            // Only after we have successfully fetched the tx, set our script and call done
+            done()
+
+            return true
+          } catch (err) {
+            // If something went wrong, add the UTXO back to the queue
+            common.log('error while processing Blockbook UTXO:', err)
+            const utxoId = `${cacheItem.blockbookUtxo.txid}_${cacheItem.blockbookUtxo.vout}`
+            blockbookUtxoCache[utxoId] = {
+              blockbookUtxo: cacheItem.blockbookUtxo,
+              processing: false,
+              path: cacheItem.path,
+              address: cacheItem.address,
+              requiredCount: cacheItem.requiredCount
+            }
+            return false
+          }
         } else {
           script = tx.hex
         }
