@@ -25,7 +25,13 @@ import {
   TransactionResponse
 } from './blockbookApi'
 import Deferred from './Deferred'
-import { makeSocket, OnQueueSpaceCB, WsResponse, WsTask } from './Socket'
+import {
+  makeSocket,
+  TaskGeneratorFn,
+  WsResponse,
+  WsTask,
+  WsTaskGenerator
+} from './Socket'
 import { SocketEmitter } from './SocketEmitter'
 
 export type WatchAddressesCB = (
@@ -60,8 +66,6 @@ export interface Blockbook {
 
   watchBlocks: (deferredBlockSub: Deferred<unknown>) => void
 
-  onQueueSpace: (cb: OnQueueSpaceCB) => void
-
   promisifyWsMessage: <T>(message: BlockbookTask<T>) => Promise<T>
 
   //
@@ -74,27 +78,19 @@ export interface Blockbook {
       asBlockbookAddress?: Cleaner<string> | undefined
       lastQueriedBlockHeight: number
       page: number
-    },
-    deferred: Deferred<AddressResponse>
-  ) => WsTask<AddressResponse>
+    }
+  ) => WsTaskGenerator<AddressResponse>
 
-  transactionQueryTask: (
-    txId: string,
-    deferred: Deferred<BlockbookTransaction>
-  ) => WsTask<BlockbookTransaction>
+  transactionQueryTask: (txId: string) => WsTaskGenerator<BlockbookTransaction>
 
-  transactionSpecialQueryTask: (
-    txId: string,
-    deferred: Deferred<unknown>
-  ) => WsTask<unknown>
+  transactionSpecialQueryTask: (txId: string) => WsTaskGenerator<unknown>
 
   utxoListQueryTask: (
     address: string,
     params: {
       asBlockbookAddress?: Cleaner<string> | undefined
-    },
-    deferred: Deferred<AddressUtxosResponse>
-  ) => WsTask<AddressUtxosResponse>
+    }
+  ) => WsTaskGenerator<AddressUtxosResponse>
 }
 
 interface BlockbookConfig {
@@ -103,7 +99,7 @@ interface BlockbookConfig {
   connectionUri: string
   engineEmitter: EngineEmitter
   log: EdgeLog
-  onQueueSpaceCB: OnQueueSpaceCB
+  taskGeneratorFn: TaskGeneratorFn
   ping?: () => Promise<void>
   socketEmitter: SocketEmitter
   walletId: string
@@ -116,7 +112,7 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
     connectionUri,
     engineEmitter,
     log,
-    onQueueSpaceCB,
+    taskGeneratorFn,
     socketEmitter,
     walletId
   } = config
@@ -172,13 +168,24 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
       return await instance.promisifyWsMessage(transactionMessage(hash))
     },
 
-    onQueueSpace(cb: OnQueueSpaceCB): void {
-      socket.onQueueSpace(cb)
-    },
-
     async promisifyWsMessage<T>(message: BlockbookTask<T>): Promise<T> {
       const deferred = new Deferred<T>()
-      socket.submitTask<T>({ ...message, deferred })
+      const taskGeneratorFn = async function* (): AsyncGenerator<
+        WsTask<T>,
+        false,
+        T
+      > {
+        const value = yield { ...message }
+        deferred.resolve(value)
+        return false
+      }
+      const generator = taskGeneratorFn()
+      const result = await generator.next()
+      // Assertion mask the type checker
+      if (result.done !== true) {
+        const task = result.value
+        socket.submitTask<T>(task, generator)
+      }
       return await deferred.promise
     },
 
@@ -223,39 +230,32 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
     // Task Methods:
     //
 
-    addressQueryTask(address, params, deferred) {
-      return {
+    addressQueryTask: function* (address, params) {
+      return yield {
         ...addressMessage(address, params.asBlockbookAddress, {
           details: 'txs',
           from: params.lastQueriedBlockHeight,
           pageSize: BLOCKBOOK_TXS_PER_PAGE,
           page: params.page
-        }),
-        deferred
+        })
       }
     },
 
-    transactionQueryTask(txId, deferred) {
-      return {
-        ...transactionMessage(txId),
-        deferred
+    transactionQueryTask: function* (txId) {
+      return yield {
+        ...transactionMessage(txId)
       }
     },
 
-    transactionSpecialQueryTask(
-      txId: string,
-      deferred: Deferred<unknown>
-    ): WsTask<unknown> {
-      return {
-        ...transactionMessageSpecific(txId),
-        deferred
+    transactionSpecialQueryTask: function* (txId: string) {
+      return yield {
+        ...transactionMessageSpecific(txId)
       }
     },
 
-    utxoListQueryTask(address, params, deferred) {
-      return {
-        ...addressUtxosMessage(address, params.asBlockbookAddress),
-        deferred
+    utxoListQueryTask: function* (address, params) {
+      return yield {
+        ...addressUtxosMessage(address, params.asBlockbookAddress)
       }
     }
   }
@@ -263,7 +263,7 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
   const socket = makeSocket(connectionUri, {
     asResponse,
     healthCheck: config.ping ?? ping,
-    onQueueSpaceCB,
+    taskGeneratorFn,
     log,
     emitter: socketEmitter,
     walletId

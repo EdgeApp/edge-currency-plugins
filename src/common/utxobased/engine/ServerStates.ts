@@ -17,13 +17,13 @@ import {
 } from '../network/blockbookApi'
 import { makeBlockbookElectrum } from '../network/BlockbookElectrum'
 import Deferred from '../network/Deferred'
-import { WsTask } from '../network/Socket'
+import { WsTask, WsTaskGenerator } from '../network/Socket'
 import { SocketEmitter, SocketEvent } from '../network/SocketEmitter'
 import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
 import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
 import { UtxoInitOptions } from './types'
 
-interface ServerState {
+export interface ServerState {
   blockbook: Blockbook
   blockSubscriptionStatus: 'unsubscribed' | 'subscribing' | 'subscribed'
   blockHeight: number
@@ -43,7 +43,7 @@ interface ServerStateConfig {
 
 export interface ServerStates {
   setPickNextTaskCB: (
-    callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
+    callback: (uri: string) => AsyncGenerator<WsTask<unknown> | boolean>
   ) => void
   stop: () => void
   serverCanGetTx: (uri: string, txid: string) => boolean
@@ -69,27 +69,23 @@ export interface ServerStates {
   addressQueryTask: (
     serverUri: string,
     address: string,
-    params: { lastQueriedBlockHeight: number; page: number },
-    deferred: Deferred<AddressResponse>
-  ) => WsTask<AddressResponse>
+    params: { lastQueriedBlockHeight: number; page: number }
+  ) => WsTaskGenerator<AddressResponse>
 
   transactionQueryTask: (
     serverUri: string,
-    txId: string,
-    deferred: Deferred<BlockbookTransaction>
-  ) => WsTask<BlockbookTransaction>
+    txId: string
+  ) => WsTaskGenerator<BlockbookTransaction>
 
   transactionSpecialQueryTask: (
     serverUri: string,
-    txId: string,
-    deferred: Deferred<unknown>
-  ) => WsTask<unknown>
+    txId: string
+  ) => WsTaskGenerator<unknown>
 
   utxoListQueryTask: (
     serverUri: string,
-    address: string,
-    deferred: Deferred<AddressUtxosResponse>
-  ) => WsTask<AddressUtxosResponse>
+    address: string
+  ) => WsTaskGenerator<AddressUtxosResponse>
 }
 
 interface ServerStatesCache {
@@ -167,7 +163,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
   let pickNextTaskCB: (
     uri: string
-  ) => Promise<boolean | WsTask<any> | undefined>
+  ) => AsyncGenerator<WsTask<unknown> | boolean, boolean>
 
   const makeServerStatesCacheEntry = (blockbook: Blockbook): ServerState => ({
     blockbook,
@@ -226,6 +222,38 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       // Blockbook instance variable
       let blockbook: Blockbook
 
+      // Queue space callback
+      async function* taskGeneratorFn(): AsyncGenerator<
+        WsTask<unknown> | boolean,
+        boolean
+      > {
+        // Exit if the connection is no longer active
+        if (uri == null || !(uri in serverStatesCache)) return false
+
+        const generator = pickNextTaskCB(uri)
+        let nextValue: unknown
+        while (true) {
+          const result: IteratorResult<
+            WsTask<unknown> | boolean,
+            boolean
+          > = await generator.next(nextValue)
+
+          if (result?.done === true) {
+            return result.value
+          }
+
+          const task = result.value
+
+          if (typeof task !== 'boolean') {
+            const taskMessage = `${task.method} params: ${JSON.stringify(
+              task.params
+            )}`
+            log(`${uri} nextTask: ${taskMessage}`)
+          }
+          nextValue = yield task
+        }
+      }
+
       // Create a new blockbook instance based on the URI scheme
       if (['electrumwss', 'electrumws'].includes(parsed.scheme)) {
         // Electrum wrapper
@@ -234,21 +262,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           connectionUri: uri,
           engineEmitter,
           log,
-          onQueueSpaceCB: async (): Promise<
-            WsTask<any> | boolean | undefined
-          > => {
-            // Exit if the connection is no longer active
-            if (!(uri in serverStatesCache)) return
-
-            const task = await pickNextTaskCB(uri)
-            if (task != null && typeof task !== 'boolean') {
-              const taskMessage = `${task.method} params: ${JSON.stringify(
-                task.params
-              )}`
-              log(`${uri} nextTask: ${taskMessage}`)
-            }
-            return task
-          },
+          taskGeneratorFn,
           pluginInfo,
           socketEmitter,
           walletId: walletInfo.id
@@ -260,21 +274,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           connectionUri: uri,
           engineEmitter,
           log,
-          onQueueSpaceCB: async (): Promise<
-            WsTask<any> | boolean | undefined
-          > => {
-            // Exit if the connection is no longer active
-            if (!(uri in serverStatesCache)) return
-
-            const task = await pickNextTaskCB(uri)
-            if (task != null && typeof task !== 'boolean') {
-              const taskMessage = `${task.method} params: ${JSON.stringify(
-                task.params
-              )}`
-              log(`${uri} nextTask: ${taskMessage}`)
-            }
-            return task
-          },
+          taskGeneratorFn,
           socketEmitter,
           walletId: walletInfo.id
         })
@@ -306,6 +306,50 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           log.error(`${JSON.stringify(e.message)}`)
         })
     }
+  }
+
+  const deferredWithServerScoring = <T>(
+    serverUri: string,
+    deferred: Deferred<T>
+  ): Deferred<T> => {
+    const serverState = serverStatesCache[serverUri]
+    if (serverState == null)
+      throw new Error(`No blockbook connection with ${serverUri}`)
+
+    const queryTime = Date.now()
+    const deferredWithScoring = new Deferred<T>()
+    deferredWithScoring.promise.then(
+      (value: T) => {
+        pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
+        deferred.resolve(value)
+      },
+      (err: unknown) => {
+        pluginState.serverScoreDown(serverUri)
+        deferred.reject(err)
+      }
+    )
+
+    return deferredWithScoring
+  }
+
+  function* withServerScoring<T, R>(
+    serverUri: string,
+    generator: Generator<T, R>
+  ): Generator<T, R> {
+    const serverState = serverStatesCache[serverUri]
+    if (serverState == null)
+      throw new Error(`No blockbook connection with ${serverUri}`)
+
+    const queryTime = Date.now()
+    let result: R
+    try {
+      result = yield* generator
+      pluginState.serverScoreUp(serverUri, Date.now() - queryTime)
+    } catch (error: unknown) {
+      pluginState.serverScoreDown(serverUri)
+      throw error
+    }
+    return result
   }
 
   const instance: ServerStates = {
@@ -451,9 +495,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       })
     },
 
-    setPickNextTaskCB(
-      callback: (uri: string) => Promise<boolean | WsTask<any> | undefined>
-    ): void {
+    setPickNextTaskCB(callback): void {
       pickNextTaskCB = callback
     },
 
@@ -505,13 +547,13 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     },
 
     watchAddresses(
-      uri: string,
+      serverUri: string,
       addresses: string[],
       deferredAddressSub?: Deferred<unknown>
     ): void {
-      const serverState = serverStatesCache[uri]
+      const serverState = serverStatesCache[serverUri]
       if (serverState == null)
-        throw new Error(`No blockbook connection with ${uri}`)
+        throw new Error(`No blockbook connection with ${serverUri}`)
 
       const { blockbook } = serverState
 
@@ -520,109 +562,104 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         serverState.addresses.add(address)
       }
 
-      const queryTime = Date.now()
       const deferred = new Deferred<unknown>()
-      deferred.promise
-        .then((value: unknown) => {
-          pluginState.serverScoreUp(uri, Date.now() - queryTime)
-          deferredAddressSub?.resolve(value)
-        })
-        .catch(() => {
-          // Remove new addresses to the set of known addresses
-          for (const address of addresses) {
-            serverState.addresses.delete(address)
-          }
-          pluginState.serverScoreDown(uri)
-          deferredAddressSub?.reject()
-        })
-      blockbook.watchAddresses(Array.from(serverState.addresses), deferred)
+      deferred.promise.catch((err: unknown) => {
+        // Remove new addresses to the set of known addresses
+        for (const address of addresses) {
+          serverState.addresses.delete(address)
+        }
+        // Reject the deferredAddressSub promise if provided
+        deferredAddressSub?.reject(err)
+      })
+
+      blockbook.watchAddresses(
+        Array.from(serverState.addresses),
+        deferredWithServerScoring(serverUri, deferred)
+      )
     },
 
-    watchBlocks(uri: string): void {
-      const serverState = serverStatesCache[uri]
+    watchBlocks(serverUri: string): void {
+      const serverState = serverStatesCache[serverUri]
       if (serverState == null)
-        throw new Error(`No blockbook connection with ${uri}`)
+        throw new Error(`No blockbook connection with ${serverUri}`)
 
       const { blockbook } = serverState
 
       serverState.blockSubscriptionStatus = 'subscribing'
 
-      const queryTime = Date.now()
       const deferred = new Deferred()
       deferred.promise
         .then(() => {
           serverState.blockSubscriptionStatus = 'subscribed'
-          pluginState.serverScoreUp(uri, Date.now() - queryTime)
         })
         .catch(() => {
           serverState.blockSubscriptionStatus = 'unsubscribed'
         })
-      blockbook.watchBlocks(deferred)
+      blockbook.watchBlocks(deferredWithServerScoring(serverUri, deferred))
     },
 
     //
     // Task Methods:
     //
 
-    addressQueryTask(
+    addressQueryTask: function* (
       serverUri: string,
       address: string,
-      params: { lastQueriedBlockHeight: number; page: number },
-      deferred: Deferred<AddressResponse>
-    ): WsTask<AddressResponse> {
+      params: { lastQueriedBlockHeight: number; page: number }
+    ) {
       const serverState = serverStatesCache[serverUri]
       if (serverState == null)
         throw new Error(`No blockbook connection with ${serverUri}`)
 
-      return serverState.blockbook.addressQueryTask(
-        address,
-        {
-          asBlockbookAddress: pluginInfo.engineInfo.asBlockbookAddress,
-          lastQueriedBlockHeight: params.lastQueriedBlockHeight,
-          page: params.page
-        },
-        deferred
+      return yield* withServerScoring(
+        serverUri,
+        (function* () {
+          return yield* serverState.blockbook.addressQueryTask(address, {
+            asBlockbookAddress: pluginInfo.engineInfo.asBlockbookAddress,
+            lastQueriedBlockHeight: params.lastQueriedBlockHeight,
+            page: params.page
+          })
+        })()
       )
     },
 
-    transactionQueryTask(
-      serverUri: string,
-      txId: string,
-      deferred: Deferred<BlockbookTransaction>
-    ): WsTask<BlockbookTransaction> {
+    transactionQueryTask: function* (serverUri: string, txId: string) {
       const serverState = serverStatesCache[serverUri]
       if (serverState == null)
         throw new Error(`No blockbook connection with ${serverUri}`)
 
-      return serverState.blockbook.transactionQueryTask(txId, deferred)
+      return yield* withServerScoring(
+        serverUri,
+        (function* () {
+          return yield* serverState.blockbook.transactionQueryTask(txId)
+        })()
+      )
     },
 
-    transactionSpecialQueryTask(
-      serverUri: string,
-      txId: string,
-      deferred: Deferred<unknown>
-    ): WsTask<unknown> {
+    transactionSpecialQueryTask: function* (serverUri: string, txId: string) {
       const serverState = serverStatesCache[serverUri]
       if (serverState == null)
         throw new Error(`No blockbook connection with ${serverUri}`)
 
-      return serverState.blockbook.transactionSpecialQueryTask(txId, deferred)
+      return yield* withServerScoring(
+        serverUri,
+        (function* () {
+          return serverState.blockbook.transactionSpecialQueryTask(txId)
+        })()
+      )
     },
-    utxoListQueryTask(
-      serverUri: string,
-      address: string,
-      deferred: Deferred<AddressUtxosResponse>
-    ): WsTask<AddressUtxosResponse> {
+    utxoListQueryTask: function* (serverUri: string, address: string) {
       const serverState = serverStatesCache[serverUri]
       if (serverState == null)
         throw new Error(`No blockbook connection with ${serverUri}`)
 
-      return serverState.blockbook.utxoListQueryTask(
-        address,
-        {
-          asBlockbookAddress: pluginInfo.engineInfo.asBlockbookAddress
-        },
-        deferred
+      return yield* withServerScoring(
+        serverUri,
+        (function* () {
+          return yield* serverState.blockbook.utxoListQueryTask(address, {
+            asBlockbookAddress: pluginInfo.engineInfo.asBlockbookAddress
+          })
+        })()
       )
     }
   }

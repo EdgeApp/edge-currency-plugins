@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: Ensure server scoring is done on all server tasks
+- changed: Refactor pickNextTask to implement generators to replace Deferred promises
+
 ## 3.2.1 (2024-07-19)
 
 - fixed: Bug causing default currency info server list to overwrite user's customer servers
