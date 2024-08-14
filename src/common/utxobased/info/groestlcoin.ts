@@ -36,7 +36,10 @@ const currencyInfo: EdgeCurrencyInfo = {
   ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook.groestlcoin.org'],
+    blockbookServers: [
+      'wss://blockbook.groestlcoin.org',
+      'wss://grsbook.nownodes.io/wss/%{nowNodesApiKey}'
+    ],
     enableCustomServers: false
   },
   metaTokens: []

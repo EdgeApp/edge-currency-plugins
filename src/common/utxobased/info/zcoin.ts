@@ -30,7 +30,10 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook.firo.org'],
+    blockbookServers: [
+      'wss://blockbook.firo.org',
+      'wss://firobook.nownodes.io/wss/%{nowNodesApiKey}'
+    ],
     enableCustomServers: false
   },
   metaTokens: []

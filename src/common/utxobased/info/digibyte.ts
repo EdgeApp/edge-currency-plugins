@@ -30,7 +30,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://dgb1.trezor.io', 'wss://dgb2.trezor.io'],
+    blockbookServers: [
+      'wss://dgb1.trezor.io',
+      'wss://dgb2.trezor.io',
+      'wss://dgbbook.nownodes.io/wss/%{nowNodesApiKey}'
+    ],
     enableCustomServers: false
   },
   metaTokens: []
