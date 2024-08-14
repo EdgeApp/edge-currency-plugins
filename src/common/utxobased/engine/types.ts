@@ -13,10 +13,10 @@ import { asTxOptions } from '../../plugin/types'
 import { Input, Output } from '../keymanager/utxopicker/types'
 
 export interface UtxoInitOptions {
-  nowNodeApiKey?: string
+  nowNodesApiKey?: string
 }
 export const asUtxoInitOptions = asObject<UtxoInitOptions>({
-  nowNodeApiKey: asOptional(asString)
+  nowNodesApiKey: asOptional(asString)
 })
 
 export const asUtxoUserSettings = asObject({

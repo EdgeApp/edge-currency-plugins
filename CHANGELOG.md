@@ -5,6 +5,7 @@
 - added: Support for blockbook server connections with "%{key-name}" key parameters
 - fixed: Ensure server scoring is done on all server tasks
 - changed: Refactor pickNextTask to implement generators to replace Deferred promises
+- changed: Rename `initOption` nowNodeApiKey -> nowNodesApiKey
 
 ## 3.2.1 (2024-07-19)
 
