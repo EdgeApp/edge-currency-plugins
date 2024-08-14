@@ -77,6 +77,7 @@ describe('Blockbook notifications tests with dummy server', function () {
     blockbook = makeBlockbook({
       connectionUri: 'ws://localhost:8555',
       engineEmitter,
+      initOptions: {},
       log,
       taskGeneratorFn,
       socketEmitter,
@@ -166,6 +167,7 @@ describe('Blockbook', function () {
     blockbook = makeBlockbook({
       connectionUri: 'wss://bitcoin.atomicwallet.io/websocket',
       engineEmitter,
+      initOptions: {},
       log,
       taskGeneratorFn,
       socketEmitter,
