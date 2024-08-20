@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.3.0 (2024-08-20)
+
 - added: Support for blockbook server connections with "%{key-name}" key parameters
 - fixed: Ensure server scoring is done on all server tasks
 - changed: Refactor pickNextTask to implement generators to replace Deferred promises
