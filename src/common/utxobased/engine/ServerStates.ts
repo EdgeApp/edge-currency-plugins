@@ -261,6 +261,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           asAddress: pluginInfo.engineInfo.asBlockbookAddress,
           connectionUri: uri,
           engineEmitter,
+          initOptions,
           log,
           taskGeneratorFn,
           pluginInfo,
@@ -273,6 +274,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           asAddress: pluginInfo.engineInfo.asBlockbookAddress,
           connectionUri: uri,
           engineEmitter,
+          initOptions,
           log,
           taskGeneratorFn,
           socketEmitter,
@@ -407,7 +409,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           //   /^http(?:s)?:/i
           // ])
 
-          const { nowNodeApiKey } = initOptions
+          const { nowNodesApiKey } = initOptions
           const nowNodeUris = serverConfigs
             .filter(config => config.type === 'blockbook-nownode')
             .map(config => config.uris)
@@ -427,7 +429,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           }
 
           // If there is no key for the NowNode servers:
-          if (nowNodeApiKey == null) {
+          if (nowNodesApiKey == null) {
             reject(new Error('Missing connection key for fallback servers.'))
             return
           }
@@ -439,7 +441,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
             io.fetchCors(`${uri}/api/v2/sendtx/`, {
               method: 'POST',
               headers: {
-                'api-key': nowNodeApiKey
+                'api-key': nowNodesApiKey
               },
               body: transaction.signedTx
             })

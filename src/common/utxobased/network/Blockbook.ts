@@ -3,6 +3,7 @@ import { EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 
 import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
 import { BLOCKBOOK_TXS_PER_PAGE } from '../engine/constants'
+import { UtxoInitOptions } from '../engine/types'
 import {
   addressMessage,
   AddressResponse,
@@ -98,6 +99,7 @@ interface BlockbookConfig {
   asResponse?: Cleaner<WsResponse>
   connectionUri: string
   engineEmitter: EngineEmitter
+  initOptions: UtxoInitOptions
   log: EdgeLog
   taskGeneratorFn: TaskGeneratorFn
   ping?: () => Promise<void>
@@ -263,6 +265,7 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
   const socket = makeSocket(connectionUri, {
     asResponse,
     healthCheck: config.ping ?? ping,
+    initOptions: config.initOptions,
     taskGeneratorFn,
     log,
     emitter: socketEmitter,

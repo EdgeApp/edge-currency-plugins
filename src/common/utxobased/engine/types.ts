@@ -12,9 +12,11 @@ import { EdgeSpendInfo } from 'edge-core-js/types'
 import { asTxOptions } from '../../plugin/types'
 import { Input, Output } from '../keymanager/utxopicker/types'
 
-export type UtxoInitOptions = ReturnType<typeof asUtxoInitOptions>
-export const asUtxoInitOptions = asObject({
-  nowNodeApiKey: asOptional(asString)
+export interface UtxoInitOptions {
+  nowNodesApiKey?: string
+}
+export const asUtxoInitOptions = asObject<UtxoInitOptions>({
+  nowNodesApiKey: asOptional(asString)
 })
 
 export const asUtxoUserSettings = asObject({

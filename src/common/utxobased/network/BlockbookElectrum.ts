@@ -12,6 +12,7 @@ import { EdgeLog } from 'edge-core-js/types'
 
 import { EngineEmitter } from '../../plugin/EngineEmitter'
 import { PluginInfo } from '../../plugin/types'
+import { UtxoInitOptions } from '../engine/types'
 import { addressToScriptPubkey } from '../keymanager/keymanager'
 import { Blockbook, makeBlockbook } from './Blockbook'
 import { AddressResponse, BlockbookAccountUtxo } from './blockbookApi'
@@ -34,6 +35,7 @@ export interface BlockbookElectrumConfig {
   asAddress?: Cleaner<string>
   connectionUri: string
   engineEmitter: EngineEmitter
+  initOptions: UtxoInitOptions
   log: EdgeLog
   taskGeneratorFn: TaskGeneratorFn
   pluginInfo: PluginInfo
@@ -82,6 +84,7 @@ export function makeBlockbookElectrum(
     asAddress,
     connectionUri,
     engineEmitter,
+    initOptions,
     log,
     taskGeneratorFn,
     pluginInfo,
@@ -105,6 +108,7 @@ export function makeBlockbookElectrum(
     asResponse,
     connectionUri,
     engineEmitter,
+    initOptions,
     log,
     taskGeneratorFn: async function* (
       uri: string

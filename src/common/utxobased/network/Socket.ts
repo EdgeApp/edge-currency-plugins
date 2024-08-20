@@ -10,8 +10,11 @@ import {
   Cleaner
 } from 'cleaners'
 import { EdgeLog } from 'edge-core-js/types'
+import urlParse from 'url-parse'
 
+import { replaceKeyParams } from '../../../util/uriKeyParams'
 import { removeItem } from '../../plugin/utils'
+import { UtxoInitOptions } from '../engine/types'
 import Deferred from './Deferred'
 import { setupWS } from './nodejsWS'
 import { SocketEmitter, SocketEvent } from './SocketEmitter'
@@ -61,13 +64,14 @@ export type TaskGeneratorFn = (uri: string) => WsTaskAsyncGenerator<unknown>
 
 interface SocketConfig {
   asResponse?: Cleaner<WsResponse>
+  emitter: SocketEmitter
+  healthCheck: () => Promise<void> // function for heartbeat, should submit task itself
+  initOptions: UtxoInitOptions
+  log: EdgeLog
   queueSize?: number
+  taskGeneratorFn: TaskGeneratorFn
   timeout?: number
   walletId: string
-  emitter: SocketEmitter
-  log: EdgeLog
-  healthCheck: () => Promise<void> // function for heartbeat, should submit task itself
-  taskGeneratorFn: TaskGeneratorFn
 }
 
 interface WsRequest<T> {
@@ -404,11 +408,23 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
           onClose: onSocketClose
         }
 
-        // Append "/websocket" if needed:
+        // Append "/websocket" if the uri has no explicit path:
+        // We treat URIs with any path or a single trailing slash as having
+        // an explicit path.
         let fullUri = uri
         if (uri.startsWith('wss:') || uri.startsWith('ws:')) {
-          fullUri = uri.replace(/\/websocket\/?$/, '') + '/websocket'
+          // There is no path and the uri has no trailing slash
+          const pathIsExplicitlyEmpty =
+            !uri.endsWith('/') && urlParse(uri).pathname === '/'
+          // If path is explicitly empty, then append /websocket
+          if (pathIsExplicitlyEmpty) {
+            fullUri = uri + '/websocket'
+          }
         }
+
+        // Replace any "key params" in the URIs (e.g. `%{nowNodesApiKey}`)
+        fullUri = replaceKeyParams(fullUri, config.initOptions)
+
         if (uri.startsWith('electrumwss:')) {
           fullUri = uri.replace(/^electrumwss:/, 'wss:')
         }

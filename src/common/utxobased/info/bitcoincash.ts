@@ -40,7 +40,8 @@ const currencyInfo: EdgeCurrencyInfo = {
       'wss://bch2.trezor.io',
       'wss://bch3.trezor.io',
       'wss://bch4.trezor.io',
-      'wss://bch5.trezor.io'
+      'wss://bch5.trezor.io',
+      'wss://bchbook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
   },

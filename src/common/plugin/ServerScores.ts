@@ -3,6 +3,8 @@
 import { asBoolean, asMaybe, asNumber, asObject, asString } from 'cleaners'
 import { EdgeLog } from 'edge-core-js/types'
 
+import { getUriKeyParams } from '../../util/uriKeyParams'
+
 export type ServerInfo = ReturnType<typeof asServerInfo>
 export const asServerInfo = asObject({
   serverUrl: asString,
@@ -99,6 +101,14 @@ export class ServerScores {
       if (knownServerUrl.startsWith('ws') && serverScore > 0) {
         serverScore = 0
         knownServer.responseTime = RESPONSE_TIME_UNINITIALIZED
+      }
+
+      const hasKeyParams = getUriKeyParams(knownServerUrl).length > 0
+      if (hasKeyParams) {
+        // Lower the score on servers which require key params (e.g. NOWNodes).
+        // This is because public, non-authenticated nodes are more affordable.
+        // Decrease score by half (or decrease by 50%).
+        serverScore = serverScore - (MAX_SCORE + MIN_SCORE)
       }
 
       knownServer.serverScore = serverScore
