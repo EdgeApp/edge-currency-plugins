@@ -134,7 +134,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   let connected = false
   let cancelConnect = false
   const timeout: number = 1000 * (config.timeout ?? 30)
-  let trackedError: unknown | undefined
+  let trackedError: unknown
   let timer: NodeJS.Timeout
 
   const handleError = (e: unknown): void => {
@@ -153,14 +153,14 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     removeIdFromQueue(socketQueueId)
   }
 
-  const onSocketClose = (): void => {
+  const onSocketClose = (code: number): void => {
     const errObj =
-      trackedError != null
-        ? trackedError instanceof Error
-          ? trackedError
-          : new Error(String(trackedError))
-        : new Error('Socket closed without error')
-    log.warn(`onSocketClose with server ${uri}: ${errObj.message}`)
+      trackedError == null
+        ? new Error('Socket closed without error')
+        : trackedError instanceof Error
+        ? trackedError
+        : new Error(String(trackedError))
+    log.warn(`onSocketClose with server ${uri}: ${code} ${errObj.message}`)
     clearTimeout(timer)
     connected = false
     socket = null
@@ -174,8 +174,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     pendingRequests = {}
     try {
       emitter.emit(SocketEvent.CONNECTION_CLOSE, uri, errObj)
-    } catch (e) {
-      log.error(e.message)
+    } catch (e: unknown) {
+      log.error(String(e))
     }
   }
 
@@ -403,7 +403,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
           },
           onMessage: onMessage,
           onError: err => {
-            trackedError = new Error(String(err))
+            trackedError = err
           },
           onClose: onSocketClose
         }

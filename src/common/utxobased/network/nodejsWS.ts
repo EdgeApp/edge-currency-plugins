@@ -22,8 +22,8 @@ export function setupWS(
   ws.on('error', error => {
     callbacks.onError(error)
   })
-  ws.on('close', _event => {
-    callbacks.onClose()
+  ws.on('close', (code: number, reason: string) => {
+    callbacks.onClose(code, reason)
   })
 
   return {
