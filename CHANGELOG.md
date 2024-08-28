@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Update NowNodes URL's for DASH, GRS, and FIRO.
+
 ## 3.3.0 (2024-08-20)
 
 - added: Support for blockbook server connections with "%{key-name}" key parameters

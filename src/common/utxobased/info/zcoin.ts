@@ -32,7 +32,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
       'wss://blockbook.firo.org',
-      'wss://firobook.nownodes.io/wss/%{nowNodesApiKey}'
+      'wss://firo.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
   },

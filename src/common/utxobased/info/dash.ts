@@ -39,7 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       'wss://dash3.trezor.io',
       'wss://dash4.trezor.io',
       'wss://dash5.trezor.io',
-      'wss://dashbook.nownodes.io/wss/%{nowNodesApiKey}'
+      'wss://dash.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
   },

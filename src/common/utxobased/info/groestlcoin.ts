@@ -49,7 +49,7 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
-      uris: ['https://grsbook.nownodes.io']
+      uris: ['https://grs.nownodes.io']
     }
   ],
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
