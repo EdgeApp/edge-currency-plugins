@@ -1,7 +1,12 @@
 export interface InnerSocketCallbacks {
-  onError: (error?: unknown) => void
+  /**
+   * Called when the socket closes.
+   * See rfc6455 section 7.4.1 for status codes.
+   */
+  onClose: (code: number, reason: string) => void
+
+  onError: (error?: Event | Error) => void
   onMessage: (message: string) => void
-  onClose: (error?: Error) => void
   onOpen: () => void
 }
 

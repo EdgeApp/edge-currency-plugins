@@ -17,8 +17,8 @@ export function setupBrowser(
   socket.onerror = event => {
     callbacks.onError(event)
   }
-  socket.onclose = () => {
-    callbacks.onClose()
+  socket.onclose = event => {
+    callbacks.onClose(event.code, event.reason)
   }
 
   return {
