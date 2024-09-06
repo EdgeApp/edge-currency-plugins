@@ -896,16 +896,6 @@ export async function makeUtxoEngine(
     },
 
     async sweepPrivateKeys(spendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
-      // Create the promise to return
-      let success: (
-        value: EdgeTransaction | PromiseLike<EdgeTransaction>
-      ) => void
-      let failure: (err?: any) => void
-      const end = new Promise<EdgeTransaction>((resolve, reject) => {
-        success = resolve
-        failure = reject
-      })
-
       // The temporary wallet info should include all formats for the currency
       const allFormats = engineInfo.formats
 
@@ -940,34 +930,43 @@ export async function makeUtxoEngine(
         publicKey: tmpWalletInfo.keys.publicKey
       })
 
-      // Max spend after imported wallet finishes sync
-      tmpEmitter.on(EngineEvent.ADDRESSES_CHECKED, async (ratio: number) => {
-        if (ratio === 1) {
-          try {
-            await tmpState.stop()
+      // Wait for the imported wallet to finish syncing then create an
+      // EdgeTransaction using the imported wallet's balance.
+      const sweepTxPromise = new Promise<EdgeTransaction>((resolve, reject) => {
+        // Max spend after imported wallet finishes sync
+        tmpEmitter.on(EngineEvent.ADDRESSES_CHECKED, async (ratio: number) => {
+          if (ratio === 1) {
+            try {
+              await tmpState.stop()
 
-            const tmpUtxos = (await tmpDataLayer.fetchUtxos({
-              utxoIds: []
-            })) as UtxoData[]
-            if (tmpUtxos === null || tmpUtxos.length < 1) {
-              throw new Error('Private key has no funds')
+              const tmpUtxos = (await tmpDataLayer.fetchUtxos({
+                utxoIds: []
+              })) as UtxoData[]
+              if (tmpUtxos === null || tmpUtxos.length < 1) {
+                throw new Error('Private key has no funds')
+              }
+              const destAddress = await this.getFreshAddress({
+                tokenId: null
+              })
+              const nativeAmount = tmpMetadata.state.balance
+              const txOptions: TxOptions = {
+                utxos: tmpUtxos,
+                subtractFee: true
+              }
+              spendInfo.spendTargets = [
+                { publicAddress: destAddress.publicAddress, nativeAmount }
+              ]
+              spendInfo.otherParams = {
+                ...spendInfo.otherParams,
+                txOptions
+              }
+              const tx = await this.makeSpend(spendInfo)
+              resolve(tx)
+            } catch (e) {
+              reject(e)
             }
-            const destAddress = await this.getFreshAddress({ tokenId: null })
-            const nativeAmount = tmpMetadata.state.balance
-            const txOptions: TxOptions = { utxos: tmpUtxos, subtractFee: true }
-            spendInfo.spendTargets = [
-              { publicAddress: destAddress.publicAddress, nativeAmount }
-            ]
-            spendInfo.otherParams = {
-              ...spendInfo.otherParams,
-              txOptions
-            }
-            const tx = await this.makeSpend(spendInfo)
-            success(tx)
-          } catch (e) {
-            failure(e)
           }
-        }
+        })
       })
 
       const tmpState = makeUtxoEngineProcessor({
@@ -993,7 +992,7 @@ export async function makeUtxoEngine(
       await tmpState.loadWifs(privateKeys)
       await tmpState.start()
 
-      return await end
+      return await sweepTxPromise
     },
 
     otherMethods: {}
