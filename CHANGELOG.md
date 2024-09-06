@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fix incorrect `EdgeTransaction.nativeAmount` returned by `EdgeCurrencyEngine.sweepPrivateKey`
+
 ## 3.3.1 (2024-08-20)
 
 - fixed: Update NowNodes URL's for DASH, GRS, and FIRO.

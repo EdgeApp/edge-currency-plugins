@@ -25,7 +25,7 @@ import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
 import { makeMetadata } from '../../plugin/Metadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
 import { upgradeMemos } from '../../upgradeMemos'
-import { makeDataLayer } from '../db/DataLayer'
+import { DataLayer, makeDataLayer } from '../db/DataLayer'
 import {
   fromEdgeTransaction,
   toEdgeTransaction
@@ -128,9 +128,14 @@ export async function makeUtxoEngine(
     emitter,
     log
   })
+
   const dataLayer = await makeDataLayer({
     disklet: walletLocalDisklet
   })
+  // This is a temporary data layer used only once (i.e. nonce) for sweeping
+  // private keys.
+  let nonceDataLayer: DataLayer | undefined
+
   const engineProcessor = makeUtxoEngineProcessor({
     ...config,
     walletTools,
@@ -509,6 +514,10 @@ export async function makeUtxoEngine(
     },
 
     async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
+      // Define which DatLayer is used for the spend:
+      const makeSpendDataLayer = nonceDataLayer ?? dataLayer
+      if (nonceDataLayer != null) nonceDataLayer = undefined
+
       edgeSpendInfo = upgradeMemos(edgeSpendInfo, currencyInfo)
       const { memos = [], spendTargets } = edgeSpendInfo
       const spendInfoOtherParams = asUtxoSpendInfoOtherParams(
@@ -537,7 +546,7 @@ export async function makeUtxoEngine(
       const utxos =
         txOptions.utxos ??
         filterUndefined(
-          (await dataLayer.fetchUtxos({
+          (await makeSpendDataLayer.fetchUtxos({
             scriptPubkey: utxoScriptPubkey,
             utxoIds: []
           })) as UtxoData[]
@@ -578,7 +587,7 @@ export async function makeUtxoEngine(
             const scriptPubkey = walletTools.addressToScriptPubkey(
               target.publicAddress
             )
-            if ((await dataLayer.fetchAddress(scriptPubkey)) != null) {
+            if ((await makeSpendDataLayer.fetchAddress(scriptPubkey)) != null) {
               ourReceiveAddresses.push(target.publicAddress)
             }
           }
@@ -606,13 +615,15 @@ export async function makeUtxoEngine(
 
       let maxUtxo: undefined | UtxoData
       if (txOptions.CPFP != null) {
-        const [childTx] = await dataLayer.fetchTransactions({
+        const [childTx] = await makeSpendDataLayer.fetchTransactions({
           txId: txOptions.CPFP
         })
         if (childTx == null) throw new Error('transaction not found')
         const utxos: UtxoData[] = []
         for (const txid of childTx.ourOuts) {
-          const [output] = await dataLayer.fetchUtxos({ utxoIds: [txid] })
+          const [output] = await makeSpendDataLayer.fetchUtxos({
+            utxoIds: [txid]
+          })
           if (output != null) utxos.push(output)
         }
         maxUtxo = utxos.reduce((a, b) => (bs.gt(a.value, b.value) ? a : b))
@@ -654,7 +665,7 @@ export async function makeUtxoEngine(
       )
       for (const output of tx.outputs) {
         const scriptPubkey = output.scriptPubkey.toString('hex')
-        const own = await dataLayer.fetchAddress(scriptPubkey)
+        const own = await makeSpendDataLayer.fetchAddress(scriptPubkey)
         if (own == null) {
           // Not our output
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
@@ -960,7 +971,8 @@ export async function makeUtxoEngine(
                 ...spendInfo.otherParams,
                 txOptions
               }
-              const tx = await this.makeSpend(spendInfo)
+              nonceDataLayer = tmpDataLayer
+              const tx = await engine.makeSpend(spendInfo)
               resolve(tx)
             } catch (e) {
               reject(e)
