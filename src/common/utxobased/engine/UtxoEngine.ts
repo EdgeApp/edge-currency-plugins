@@ -937,7 +937,7 @@ export async function makeUtxoEngine(
         tmpEmitter.on(EngineEvent.ADDRESSES_CHECKED, async (ratio: number) => {
           if (ratio === 1) {
             try {
-              await tmpState.stop()
+              await tmpEngineProcessor.stop()
 
               const tmpUtxos = (await tmpDataLayer.fetchUtxos({
                 utxoIds: []
@@ -969,7 +969,7 @@ export async function makeUtxoEngine(
         })
       })
 
-      const tmpState = makeUtxoEngineProcessor({
+      const tmpEngineProcessor = makeUtxoEngineProcessor({
         ...config,
         options: {
           ...config.options,
@@ -989,8 +989,8 @@ export async function makeUtxoEngine(
         walletTools: tmpWalletTools,
         walletInfo: tmpWalletInfo
       })
-      await tmpState.loadWifs(privateKeys)
-      await tmpState.start()
+      await tmpEngineProcessor.loadWifs(privateKeys)
+      await tmpEngineProcessor.start()
 
       return await sweepTxPromise
     },
