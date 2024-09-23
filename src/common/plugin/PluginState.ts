@@ -235,8 +235,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
         const existingServers = new Set(currentCustomServers)
         if (newServers.size !== existingServers.size) return true
         for (const server of settings.blockbookServers) {
-          if (existingServers.has(server)) continue
-          return true
+          if (!existingServers.has(server)) return true
         }
         return false
       }
