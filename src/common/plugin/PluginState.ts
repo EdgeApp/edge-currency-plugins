@@ -228,13 +228,13 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
     },
 
-    async updateServers(settings: UtxoUserSettings): Promise<void> {
+    async updateServers(newSettings: UtxoUserSettings): Promise<void> {
       const hasServerListChanged = (): boolean => {
         const currentCustomServers = Object.keys(serverCache.customServers)
-        const newServers = new Set(settings.blockbookServers)
+        const newServers = new Set(newSettings.blockbookServers)
         const existingServers = new Set(currentCustomServers)
         if (newServers.size !== existingServers.size) return true
-        for (const server of settings.blockbookServers) {
+        for (const server of newSettings.blockbookServers) {
           if (!existingServers.has(server)) return true
         }
         return false
@@ -242,7 +242,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
       // If no changes to the user settings, then exit early
       if (
-        settings.enableCustomServers === serverCache.enableCustomServers &&
+        newSettings.enableCustomServers === serverCache.enableCustomServers &&
         !hasServerListChanged()
       ) {
         return
@@ -263,12 +263,12 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       // only using the exact customServers provided.
       serverCache = {
         ...serverCache,
-        enableCustomServers: settings.enableCustomServers,
+        enableCustomServers: newSettings.enableCustomServers,
         customServers: {}
       }
       serverCacheDirty = true
       await saveServerCache()
-      await instance.refreshServers(settings.blockbookServers)
+      await instance.refreshServers(newSettings.blockbookServers)
       for (const engine of enginesToBeStarted) {
         await engine.start()
       }
