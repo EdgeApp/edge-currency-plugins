@@ -229,21 +229,21 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     },
 
     async updateServers(newSettings: UtxoUserSettings): Promise<void> {
-      const hasServerListChanged = (): boolean => {
+      const isServerListMatching = (): boolean => {
         const currentCustomServers = Object.keys(serverCache.customServers)
         const newServers = new Set(newSettings.blockbookServers)
         const existingServers = new Set(currentCustomServers)
-        if (newServers.size !== existingServers.size) return true
+        if (newServers.size !== existingServers.size) return false
         for (const server of newSettings.blockbookServers) {
-          if (!existingServers.has(server)) return true
+          if (!existingServers.has(server)) return false
         }
-        return false
+        return true
       }
 
       // If no changes to the user settings, then exit early
       if (
         newSettings.enableCustomServers === serverCache.enableCustomServers &&
-        !hasServerListChanged()
+        isServerListMatching()
       ) {
         return
       }
