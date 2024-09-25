@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-plugins",
-  "version": "3.3.2",
+  "version": "3.4.0",
   "description": "Edge currency plugins to fetch and process wallet accounts, balances and transactions.",
   "homepage": "https://edge.app/",
   "repository": "https://github.com/EdgeApp/edge-currency-plugins",

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.4.0 (2024-09-24)
+
 - changed: No longer allow for the custom server list to be empty; fallback to default servers if no custom servers are provided.
 
 ## 3.3.2 (2024-09-09)
