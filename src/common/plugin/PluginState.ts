@@ -228,26 +228,39 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       }
     },
 
-    async updateServers(settings: UtxoUserSettings): Promise<void> {
-      const hasServerListChanged = (): boolean => {
+    async updateServers(newSettings: UtxoUserSettings): Promise<void> {
+      const isServerListMatching = (): boolean => {
         const currentCustomServers = Object.keys(serverCache.customServers)
-        const newServers = new Set(settings.blockbookServers)
+        const newServers = new Set(newSettings.blockbookServers)
         const existingServers = new Set(currentCustomServers)
-        if (newServers.size !== existingServers.size) return true
-        for (const server of settings.blockbookServers) {
-          if (existingServers.has(server)) continue
-          return true
+        if (newServers.size !== existingServers.size) return false
+        for (const server of newSettings.blockbookServers) {
+          if (!existingServers.has(server)) return false
         }
-        return false
+        return true
       }
 
       // If no changes to the user settings, then exit early
       if (
-        settings.enableCustomServers === serverCache.enableCustomServers &&
-        !hasServerListChanged()
+        newSettings.enableCustomServers === serverCache.enableCustomServers &&
+        isServerListMatching()
       ) {
         return
       }
+
+      // Force enableCustomServers to false server list is empty because
+      // an empty server list would cause the wallets to never sync, and
+      // this is unlikely the user's intention.
+      // This means policy change was decided later, which makes
+      // `enableCustomServers` functionally only useful for disabling custom
+      // servers entirely even when passing a list of servers (which could have
+      // been done by passing an empty list to begin with).
+      // In other words, this field is more of an internal field to track whether
+      // to treat the list a static or not (whether to fetch serve lists outside
+      // of the list provided by the user or not).
+      const enableCustomServers =
+        newSettings.enableCustomServers &&
+        newSettings.blockbookServers.length !== 0
 
       // Stop all engines and clear the server list:
       const enginesToBeStarted = []
@@ -264,12 +277,12 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       // only using the exact customServers provided.
       serverCache = {
         ...serverCache,
-        enableCustomServers: settings.enableCustomServers,
+        enableCustomServers,
         customServers: {}
       }
       serverCacheDirty = true
       await saveServerCache()
-      await instance.refreshServers(settings.blockbookServers)
+      await instance.refreshServers(newSettings.blockbookServers)
       for (const engine of enginesToBeStarted) {
         await engine.start()
       }
