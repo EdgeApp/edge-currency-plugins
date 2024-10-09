@@ -23,7 +23,6 @@ const currencyInfo: EdgeCurrencyInfo = {
   blockExplorer: 'https://blockchair.com/bitcoin-cash/block/%s',
   addressExplorer: 'https://blockchair.com/bitcoin-cash/address/%s',
   transactionExplorer: 'https://blockchair.com/bitcoin-cash/transaction/%s',
-  xpubExplorer: 'https://bch1.trezor.io/xpub/%s',
 
   denominations: [
     { name: 'BCH', multiplier: '100000000', symbol: '₿' },
