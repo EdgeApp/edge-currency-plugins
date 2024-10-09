@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Change DOGE minimum relay fee to 0.01 DOGE/kB.
+
 ## 3.4.0 (2024-09-24)
 
 - changed: No longer allow for the custom server list to be empty; fallback to default servers if no custom servers are provided.
