@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- removed: Removed unreliable bitcoincash `xpubExplorer` link
+
 ## 3.4.1 (2024-10-10)
 
 - fixed: Change DOGE minimum relay fee to 0.01 DOGE/kB.
