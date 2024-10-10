@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.4.1 (2024-10-10)
+
 - fixed: Change DOGE minimum relay fee to 0.01 DOGE/kB.
 
 ## 3.4.0 (2024-09-24)
