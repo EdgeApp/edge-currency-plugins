@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.4.2 (2024-10-11)
+
 - removed: Removed unreliable bitcoincash `xpubExplorer` link
 
 ## 3.4.1 (2024-10-10)
