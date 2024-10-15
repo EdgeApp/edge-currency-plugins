@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 3.4.3 (2024-10-15)
+
+- fixed: Re-publish to NPM with missing files included.
+
 ## 3.4.2 (2024-10-11)
 
 - removed: Removed unreliable bitcoincash `xpubExplorer` link
