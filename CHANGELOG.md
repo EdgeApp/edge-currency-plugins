@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Improper handling of WebSocket message processing errors, causing sync-halting.
+
 ## 3.4.3 (2024-10-15)
 
 - fixed: Re-publish to NPM with missing files included.
