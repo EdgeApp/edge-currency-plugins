@@ -272,14 +272,16 @@ describe('Blockbook', function () {
   })
 
   describe('fetchTransaction', function () {
-    const satoshiHash =
-      '3ed86f1b0a0a6fe180195bc1f93fd9d0801aea8c8ad5018de82c026dc21e2b15'
     it('should fetch details from a transaction hash', async function () {
+      const satoshiHash =
+        '3ed86f1b0a0a6fe180195bc1f93fd9d0801aea8c8ad5018de82c026dc21e2b15'
       const tx = await blockbook.fetchTransaction(satoshiHash)
 
       tx.txid.should.equal(satoshiHash)
       tx.fees.should.equal('226')
       tx.blockHeight.should.equal(651329)
+      tx.vin[0].isAddress.should.equal(true)
+      if (!tx.vin[0].isAddress) throw new Error('Type assertion failed')
       tx.vin[0].value.should.equal('97373')
       tx.vin[0].txid.should.equal(
         'fac5994d454817db2daec796cfa79cce670a372e7505fdef2a259289d5df0814'
@@ -289,10 +291,30 @@ describe('Blockbook', function () {
       tx.vin[0].addresses.should.eqls([
         'bc1qg6lwu6c8yqhhw7rrq69akknepxcft09agkkuqv'
       ])
-      tx.vin[0].isAddress.should.equal(true)
       tx.vin[0].value.should.equal('97373')
 
       tx.vout[1].value.should.equal('95000')
+      tx.should.have.property('confirmations')
+      tx.should.have.property('blockTime')
+    })
+
+    it('should fetch details from a coinbase transaction hash', async function () {
+      const blockRewardTxid =
+        'c6e617656b7b6d9fdcf8800fb5370479e5aceea4b6fe2fd74bd7bb0f3f2c64db'
+      const tx = await blockbook.fetchTransaction(blockRewardTxid)
+
+      tx.txid.should.equal(blockRewardTxid)
+      tx.fees.should.equal('0')
+      tx.blockHeight.should.equal(868078)
+      tx.vin[0].isAddress.should.equal(false)
+      if (tx.vin[0].isAddress) throw new Error('Type assertion failed')
+      tx.vin[0].coinbase.should.equal(
+        '03ee3e0d1e3c204f4345414e2e58595a203e0f456c656b74726f6e20456e657267790007155cb4e4ff33420eb387b0ccf1ee1567020000000000'
+      )
+      expect(tx.vin[0].sequence).to.equal(4294967295)
+      tx.vin[0].n.should.equal(0)
+
+      tx.vout[1].value.should.equal('135549329')
       tx.should.have.property('confirmations')
       tx.should.have.property('blockTime')
     })

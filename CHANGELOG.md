@@ -3,6 +3,7 @@
 ## Unreleased
 
 - fixed: Improper handling of WebSocket message processing errors, causing sync-halting.
+- fixed: Add support for processing coinbase inputs on block reward transactions.
 
 ## 3.4.3 (2024-10-15)
 

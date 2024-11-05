@@ -1,12 +1,14 @@
 import {
   asArray,
   asBoolean,
+  asEither,
   asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
   asUnknown,
+  asValue,
   Cleaner,
   uncleaner
 } from 'cleaners'
@@ -57,16 +59,24 @@ export interface BlockbookTransaction {
   confirmations: number
   blockTime: number
   fees: string
-  vin: Array<{
-    txid: string
-    sequence: number
-    n: number
-    vout: number
-    addresses: string[]
-    isAddress: boolean
-    value: string
-    hex?: string
-  }>
+  vin: Array<
+    | {
+        addresses: string[]
+        hex?: string
+        isAddress: true
+        n: number
+        sequence: number
+        txid: string
+        value: string
+        vout: number
+      }
+    | {
+        coinbase: string
+        isAddress: false
+        n: number
+        sequence: number
+      }
+  >
   vout: Array<{
     n: number
     value: string
@@ -85,22 +95,36 @@ export const asBlockbookTransaction = (
     blockTime: asNumber,
     fees: asString,
     vin: asArray(
-      asObject({
-        txid: asString,
-        // Empirically observed omitted sequence is possible for when sequence is zero.
-        // Is the case for tx `19ecc679cfc7e71ad616a22bbee96fd5abe8616e4f408f1f5daaf137400ae091`.
-        sequence: asOptional(asNumber, 0),
-        n: asNumber,
-        // If Blockbook doesn't provide vout, assume 0. Empirically observed
-        // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674`
-        // which has no `vout` for input in WebSocket response payload but block
-        // will show the input's vout value to be `0`.
-        vout: asOptional(asNumber, 0),
-        addresses: asArray(asAddress),
-        isAddress: asBoolean,
-        value: asString,
-        hex: asOptional(asString)
-      })
+      asEither(
+        // Address input:
+        asObject({
+          addresses: asArray(asAddress),
+          // `isAddress` is a boolean flag that indicates whether the input is an address.
+          // And therefore has `addresses` field. If `isAddress` is false, then the input is likely a coinbase input.
+          isAddress: asValue(true),
+          // This is the index of the input. Not to be confused with the index of the previous output (vout).
+          n: asNumber,
+          // Empirically observed omitted sequence is possible for when sequence is zero.
+          // Is the case for tx `19ecc679cfc7e71ad616a22bbee96fd5abe8616e4f408f1f5daaf137400ae091`.
+          sequence: asOptional(asNumber, 0),
+          txid: asString,
+          value: asString,
+          // If Blockbook doesn't provide vout, assume 0. Empirically observed
+          // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674`
+          // which has no `vout` for input in WebSocket response payload but block
+          // will show the input's vout value to be `0`.
+          vout: asOptional(asNumber, 0),
+          hex: asOptional(asString)
+        }),
+        // Coinbase input:
+        asObject({
+          // Coinbase input is a string of hex data (see example c6e617656b7b6d9fdcf8800fb5370479e5aceea4b6fe2fd74bd7bb0f3f2c64db)
+          coinbase: asString,
+          isAddress: asValue(false),
+          n: asNumber,
+          sequence: asNumber
+        })
+      )
     ),
     vout: asArray(
       asObject({
