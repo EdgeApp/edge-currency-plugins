@@ -12,11 +12,10 @@ export const utxoFromTransactionDataInput = async (
   inputIndex: number
 ): Promise<UtxoData> => {
   const input = transactionData.inputs[inputIndex]
-  const { scriptPubkey } = input
-  const address = await dataLayer.fetchAddress(scriptPubkey)
+  const address = await dataLayer.fetchAddress(input.scriptPubkey)
 
   if (address == null)
-    throw new Error(`Cannot find address for ${scriptPubkey}`)
+    throw new Error(`Cannot find address for ${input.scriptPubkey}`)
   if (address.path == null)
     throw new Error(`Address has no derivation path information`)
 
@@ -24,9 +23,7 @@ export const utxoFromTransactionDataInput = async (
   const redeemScript = address.redeemScript
 
   const purposeType = currencyFormatToPurposeType(address.path.format)
-  const getScripts = async (
-    scriptPubkey: string
-  ): Promise<{
+  const getScripts = async (): Promise<{
     script: string
     scriptType: ScriptTypeEnum
   }> => {
@@ -41,26 +38,26 @@ export const utxoFromTransactionDataInput = async (
       }
       case BIP43PurposeTypeEnum.WrappedSegwit:
         return {
-          script: scriptPubkey,
+          script: input.scriptPubkey,
           scriptType: ScriptTypeEnum.p2wpkhp2sh
         }
       case BIP43PurposeTypeEnum.Segwit:
         return {
-          script: scriptPubkey,
+          script: input.scriptPubkey,
           scriptType: ScriptTypeEnum.p2wpkh
         }
       default:
         throw new Error(`Unknown purpose type ${purposeType}`)
     }
   }
-  const { script, scriptType } = await getScripts(scriptPubkey)
+  const { script, scriptType } = await getScripts()
 
   return {
     id: `${input.txId}_${input.outputIndex}`,
     txid: input.txId,
     vout: input.outputIndex,
     value: input.amount,
-    scriptPubkey,
+    scriptPubkey: input.scriptPubkey,
     script,
     redeemScript,
     scriptType,
