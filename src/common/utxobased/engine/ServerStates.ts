@@ -231,13 +231,13 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         if (uri == null || !(uri in serverStatesCache)) return false
 
         const generator = pickNextTaskCB(uri)
-        let nextValue: unknown
-        while (true) {
-          const result: IteratorResult<
-            WsTask<unknown> | boolean,
-            boolean
-          > = await generator.next(nextValue)
 
+        let result: IteratorResult<
+          WsTask<unknown> | boolean,
+          boolean
+        > = await generator.next()
+
+        while (true) {
           if (result?.done === true) {
             return result.value
           }
@@ -250,7 +250,18 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
             )}`
             log(`${uri} nextTask: ${taskMessage}`)
           }
-          nextValue = yield task
+          try {
+            const nextValue = yield task
+            result = await generator.next(nextValue)
+          } catch (error) {
+            // Delegate the error handling to the task generator:
+            result = await generator.throw(error).catch(error => {
+              // If unhandled, log the error up to the core:
+              log.error(error)
+              // End the task generator routine (task threw unhandled error)
+              return { done: true, value: false }
+            })
+          }
         }
       }
 

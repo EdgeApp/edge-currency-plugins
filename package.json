@@ -54,7 +54,7 @@
     "bs58": "^4.0.1",
     "bs58grscheck": "^2.1.2",
     "bs58smartcheck": "^2.0.4",
-    "cleaners": "^0.3.12",
+    "cleaners": "^0.3.17",
     "disklet": "^0.4.5",
     "ecpair": "https://github.com/EdgeApp/ecpair.git#b193eb8ea2ec0c93b528f4b0223a605407ff43e4",
     "edge-sync-client": "^0.2.7",
