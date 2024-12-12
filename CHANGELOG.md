@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.4.5 (2024-12-12)
+
 - added: Edge servers added to blockbook server list for BTC, BCH, DOGE, FIRO, and LTC.
 
 ## 3.4.4 (2024-11-08)
