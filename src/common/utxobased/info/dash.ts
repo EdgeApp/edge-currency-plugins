@@ -51,6 +51,10 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
+      uris: ['https://dash-wusa1.edge.app']
+    },
+    {
+      type: 'blockbook-nownode',
       uris: ['https://dashbook.nownodes.io']
     }
   ],

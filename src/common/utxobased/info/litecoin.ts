@@ -49,6 +49,10 @@ export const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
+      uris: ['https://ltc-wusa1.edge.app']
+    },
+    {
+      type: 'blockbook-nownode',
       uris: ['https://ltcbook.nownodes.io']
     }
   ],

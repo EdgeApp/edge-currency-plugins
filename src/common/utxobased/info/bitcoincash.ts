@@ -52,6 +52,10 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
+      uris: ['https://bch-wusa1.edge.app']
+    },
+    {
+      type: 'blockbook-nownode',
       uris: ['https://bchbook.nownodes.io']
     }
   ],

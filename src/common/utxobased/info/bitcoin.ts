@@ -51,6 +51,10 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
+      uris: ['https://btc-wusa1.edge.app']
+    },
+    {
+      type: 'blockbook-nownode',
       uris: ['https://btcbook.nownodes.io']
     }
   ],

@@ -47,6 +47,10 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
+      uris: ['https://doge-wusa1.edge.app']
+    },
+    {
+      type: 'blockbook-nownode',
       uris: ['https://dogebook.nownodes.io']
     }
   ],

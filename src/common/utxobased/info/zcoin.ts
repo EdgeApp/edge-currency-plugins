@@ -44,6 +44,10 @@ export const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
+      uris: ['https://firo-wusa1.edge.app']
+    },
+    {
+      type: 'blockbook-nownode',
       uris: ['https://firobook.nownodes.io']
     }
   ],

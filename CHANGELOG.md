@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Edge servers added to blockbook server list for BTC, BCH, DOGE, FIRO, and LTC.
+
 ## 3.4.4 (2024-11-08)
 
 - fixed: Improper handling of WebSocket message processing errors, causing sync-halting.
