@@ -40,6 +40,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       'wss://bch3.trezor.io',
       'wss://bch4.trezor.io',
       'wss://bch5.trezor.io',
+      'wss://bch-wusa1.edge.app',
       'wss://bchbook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
@@ -49,6 +50,10 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 const engineInfo: EngineInfo = {
   serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['https://bch-wusa1.edge.app']
+    },
     {
       type: 'blockbook-nownode',
       uris: ['https://bchbook.nownodes.io']

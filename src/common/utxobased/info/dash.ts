@@ -39,6 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       'wss://dash3.trezor.io',
       'wss://dash4.trezor.io',
       'wss://dash5.trezor.io',
+      'wss://dash-wusa1.edge.app',
       'wss://dash.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
@@ -48,6 +49,10 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 const engineInfo: EngineInfo = {
   serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['https://dash-wusa1.edge.app']
+    },
     {
       type: 'blockbook-nownode',
       uris: ['https://dashbook.nownodes.io']

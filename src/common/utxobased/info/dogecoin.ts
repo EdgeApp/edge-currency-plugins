@@ -35,6 +35,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       'wss://doge3.trezor.io',
       'wss://doge4.trezor.io',
       'wss://doge5.trezor.io',
+      'wss://doge-wusa1.edge.app',
       'wss://dogebook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
@@ -44,6 +45,10 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 const engineInfo: EngineInfo = {
   serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['https://doge-wusa1.edge.app']
+    },
     {
       type: 'blockbook-nownode',
       uris: ['https://dogebook.nownodes.io']

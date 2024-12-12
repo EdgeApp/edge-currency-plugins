@@ -39,6 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       'wss://btc3.trezor.io',
       'wss://btc4.trezor.io',
       'wss://btc5.trezor.io',
+      'wss://btc-wusa1.edge.app',
       'wss://btcbook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
@@ -48,6 +49,10 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 const engineInfo: EngineInfo = {
   serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['https://btc-wusa1.edge.app']
+    },
     {
       type: 'blockbook-nownode',
       uris: ['https://btcbook.nownodes.io']
