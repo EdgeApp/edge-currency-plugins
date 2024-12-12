@@ -39,6 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       'wss://btc3.trezor.io',
       'wss://btc4.trezor.io',
       'wss://btc5.trezor.io',
+      'wss://btc-wusa1.edge.app',
       'wss://btcbook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false

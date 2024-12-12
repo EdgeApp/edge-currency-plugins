@@ -35,6 +35,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       'wss://doge3.trezor.io',
       'wss://doge4.trezor.io',
       'wss://doge5.trezor.io',
+      'wss://doge-wusa1.edge.app',
       'wss://dogebook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false

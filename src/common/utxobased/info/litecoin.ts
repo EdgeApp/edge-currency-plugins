@@ -37,6 +37,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       'wss://ltc3.trezor.io',
       'wss://ltc4.trezor.io',
       'wss://ltc5.trezor.io',
+      'wss://ltc-wusa1.edge.app',
       'wss://ltcbook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
