@@ -67,10 +67,9 @@ export function makeCurrencyPlugin(
         currencyTools,
         initOptions: asUtxoInitOptions(initOptions),
         io,
-        options: {
-          ...pluginOptions,
-          ...engineOptions,
-          emitter
+        emitter,
+        engineOptions: {
+          ...engineOptions
         },
         pluginState
       }
