@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fixed cleaner failure for getInfo Blockbook request.
+
 ## 3.4.5 (2024-12-12)
 
 - added: Edge servers added to blockbook server list for BTC, BCH, DOGE, FIRO, and LTC.
