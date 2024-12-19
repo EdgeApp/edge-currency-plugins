@@ -356,14 +356,11 @@ export interface EngineConfig {
   pluginInfo: PluginInfo
   pluginDisklet: Disklet
   currencyTools: EdgeCurrencyTools
-  options: EngineOptions
+  engineOptions: EdgeCurrencyEngineOptions
+  emitter: EngineEmitter
   initOptions: UtxoInitOptions
   io: EdgeIo
   pluginState: PluginState
-}
-
-export interface EngineOptions extends EdgeCurrencyEngineOptions {
-  emitter: EngineEmitter
 }
 
 export type LocalWalletMetadata = ReturnType<typeof asLocalWalletMetadata>
@@ -373,3 +370,8 @@ export const asLocalWalletMetadata = asObject({
   addressBalances: asObject(asString),
   lastSeenBlockHeight: asNumber
 })
+
+export const asInfoPayload = asObject({
+  blockbookServers: asObject(asBoolean)
+})
+export type InfoPayload = ReturnType<typeof asInfoPayload>

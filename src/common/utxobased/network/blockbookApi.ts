@@ -200,7 +200,7 @@ export const asInfoResponse = asObject({
   bestHash: asString,
   block0Hash: asString,
   testnet: asBoolean,
-  backend: asOptional(
+  backend: asMaybe(
     asObject({
       version: asString,
       subversion: asString
