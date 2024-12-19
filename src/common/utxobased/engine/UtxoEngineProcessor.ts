@@ -91,14 +91,15 @@ export function makeUtxoEngineProcessor(
   const {
     initOptions,
     io,
-    options,
+    emitter,
+    engineOptions,
     pluginState,
     pluginInfo,
     dataLayer,
     walletInfo,
     walletTools
   } = config
-  const { emitter, log } = options
+  const { log } = engineOptions
 
   const { walletFormats } = walletInfo.keys
 
