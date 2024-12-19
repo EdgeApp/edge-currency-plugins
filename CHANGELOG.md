@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Implement `updateInfoPayload` for `EdgeCurrencyEngine` to get currency info updates from info-server.
 - fixed: Fixed cleaner failure for getInfo Blockbook request.
 
 ## 3.4.5 (2024-12-12)

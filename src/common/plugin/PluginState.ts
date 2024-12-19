@@ -1,6 +1,3 @@
-// Typescript translation from original code in edge-currency-bitcoin
-
-import { asArray, asEither, asNull, asObject, asString } from 'cleaners'
 import { Disklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet } from 'memlet'
@@ -13,15 +10,11 @@ import {
   ServerList,
   ServerScores
 } from './ServerScores'
+import { InfoPayload } from './types'
 
-// Info server endpoint to getting ServerListInfo data
-const serverListInfoUrl = 'https://info1.edge.app/v1/blockbook/'
 // The filename for ServerInfoCache data (see ServerScores.ts)
 // Perhaps this should be in ServerScores.ts file, but that'll take some refactoring
 const SERVER_CACHE_FILE = 'serverCache.json'
-
-// ServerListInfo data structure from info server and saved to disk
-const asServerListInfo = asObject(asEither(asArray(asString), asNull))
 
 /** A JSON object (as opposed to an array or primitive). */
 interface JsonObject {
@@ -33,12 +26,13 @@ interface JsonObject {
  * Engine plugins are responsible for keeping it up to date.
  */
 export interface PluginStateSettings {
-  io: EdgeIo
-  defaultSettings: UtxoUserSettings
   currencyCode: string
-  pluginId: string
-  pluginDisklet: Disklet
+  defaultSettings: UtxoUserSettings
+  getInfoPayload: () => InfoPayload | undefined
+  io: EdgeIo
   log: EdgeLog
+  pluginDisklet: Disklet
+  pluginId: string
 }
 
 export interface PluginState {
@@ -59,12 +53,11 @@ export interface PluginState {
 
 export function makePluginState(settings: PluginStateSettings): PluginState {
   const {
-    io,
     defaultSettings,
-    currencyCode,
-    pluginId,
+    getInfoPayload,
+    log,
     pluginDisklet,
-    log
+    pluginId
   } = settings
 
   let engines: UtxoEngineProcessor[] = []
@@ -118,24 +111,18 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     onDirtyServer
   })
 
-  const fetchServers = async (): Promise<string[]> => {
-    log(`${pluginId} - GET ${serverListInfoUrl}`)
+  const getInfoPayloadServers = async (): Promise<string[]> => {
+    const infoPayload = getInfoPayload()
 
-    try {
-      const response = await io.fetch(serverListInfoUrl)
-      if (!response.ok) {
-        throw new Error(`Failed with status ${response.status}`)
-      }
-      const responseBody = await response.json()
-      const serverListInfo = asServerListInfo(responseBody)
-
-      return serverListInfo[currencyCode] ?? []
-    } catch (error) {
-      log.warn(
-        `${pluginId} - GET ${serverListInfoUrl} failed: ${error.toString()}`
-      )
+    if (infoPayload == null) {
+      log.warn(`info server list list empty`)
       return []
     }
+
+    const servers = Object.keys(infoPayload.blockbookServers)
+    log.warn(`info server list`, servers)
+
+    return servers
   }
 
   const instance: PluginState = {
@@ -210,11 +197,11 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
           // Use the default servers from info file as final fallback
           defaultSettings.blockbookServers
       } else {
-        const fetchedServers = await fetchServers()
+        const infoPayloadServers = await getInfoPayloadServers()
         newServers =
-          fetchedServers.length > 0
-            ? // Use the servers from the network query
-              fetchedServers
+          infoPayloadServers.length > 0
+            ? // Use the servers from the info-server
+              infoPayloadServers
             : // Use the default servers from info file as final fallback
               defaultSettings.blockbookServers
       }

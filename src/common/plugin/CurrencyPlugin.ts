@@ -17,7 +17,7 @@ import { makeUtxoEngine } from '../utxobased/engine/UtxoEngine'
 import { makeCurrencyTools } from './CurrencyTools'
 import { makeEngineEmitter } from './EngineEmitter'
 import { makePluginState } from './PluginState'
-import { EngineConfig, PluginInfo } from './types'
+import { asInfoPayload, EngineConfig, InfoPayload, PluginInfo } from './types'
 
 let hasMemletBeenSet = false
 
@@ -29,13 +29,18 @@ export function makeCurrencyPlugin(
   const { initOptions, io, log, nativeIo, pluginDisklet } = pluginOptions
   const currencyTools = makeCurrencyTools(io, pluginInfo)
   const { defaultSettings, pluginId, currencyCode } = currencyInfo
+
+  let cachedInfoPayload: InfoPayload | undefined
+  const getInfoPayload = (): InfoPayload | undefined => cachedInfoPayload
+
   const pluginState = makePluginState({
-    io,
+    defaultSettings: asUtxoUserSettings(defaultSettings),
     currencyCode,
-    pluginId,
-    pluginDisklet,
+    getInfoPayload,
+    io,
     log,
-    defaultSettings: asUtxoUserSettings(defaultSettings)
+    pluginId,
+    pluginDisklet
   })
 
   if (!hasMemletBeenSet) {
@@ -49,7 +54,7 @@ export function makeCurrencyPlugin(
     }
   }
 
-  return {
+  const instance: EdgeCurrencyPlugin = {
     currencyInfo,
 
     async makeCurrencyEngine(
@@ -81,6 +86,16 @@ export function makeCurrencyPlugin(
         throw e
       })
       return currencyTools
+    },
+
+    async updateInfoPayload(infoPayload) {
+      try {
+        cachedInfoPayload = asInfoPayload(infoPayload)
+      } catch (_) {
+        log.warn('invalid infoPayload', infoPayload)
+      }
     }
   }
+
+  return instance
 }
