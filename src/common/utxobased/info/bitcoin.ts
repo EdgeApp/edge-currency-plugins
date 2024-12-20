@@ -9,10 +9,11 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Bitcoin',
   canReplaceByFee: true,
+  chainDisplayName: 'Bitcoin',
   currencyCode: 'BTC',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Bitcoin',
   memoOptions: utxoMemoOptions,
   pluginId: 'bitcoin',
   walletType: 'wallet:bitcoin',
@@ -44,6 +45,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'Bitcoin',
   metaTokens: []
 }
 

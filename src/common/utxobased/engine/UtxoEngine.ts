@@ -128,10 +128,34 @@ export async function makeUtxoEngine(
   // private keys.
   let nonceDataLayer: DataLayer | undefined
 
+  /**
+   * This is a stateful function, which means it is both a setter and a getter.
+   * The state is the cached seenTxCheckpoint for the engine during runtime.
+   * It is initialized with the seenTxCheckpoint state from the core via
+   * `EdgeCurrencyEngineOptions`.
+   * It is updated by the engine's processor as the wallet syncs.
+   * Once the wallet fully syncs, the seenTxCheckpoint value is emitted to the
+   * `onSeenTxCheckpoint` callback so the core can persist this state to disk.
+   */
+  const seenTxCheckpoint = ((state?: string) => (
+    value?: string
+  ): string | undefined => {
+    if (value != null) state = value
+    return state
+  })()
+
+  // Initialize the seenTxCheckpoint with the value from the core.
+  seenTxCheckpoint(config.engineOptions.seenTxCheckpoint)
+
+  emitter.on(EngineEvent.SEEN_TX_CHECKPOINT, checkpoint => {
+    seenTxCheckpoint(checkpoint)
+  })
+
   const engineProcessor = makeUtxoEngineProcessor({
     ...config,
     dataLayer,
     pluginState,
+    seenTxCheckpoint,
     walletTools,
     walletInfo
   })
@@ -692,6 +716,12 @@ export async function makeUtxoEngine(
         memos,
         nativeAmount,
         networkFee,
+        networkFees: [
+          {
+            tokenId: null,
+            nativeAmount: networkFee
+          }
+        ],
         otherParams,
         ourReceiveAddresses,
         signedTx: '',
@@ -740,7 +770,9 @@ export async function makeUtxoEngine(
             walletId: walletInfo.id,
             walletTools
           })
-          emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [rbfEdgeTx])
+          emitter.emit(EngineEvent.TRANSACTIONS, [
+            { isNew: false, transaction: rbfEdgeTx }
+          ])
         }
       }
 
@@ -749,8 +781,6 @@ export async function makeUtxoEngine(
         tx,
         scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys
       })
-
-      emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [edgeTx])
 
       /*
       Get the wallet's UTXOs from the new transaction and save them to the processsor.
@@ -987,6 +1017,7 @@ export async function makeUtxoEngine(
             gapLimit: 0
           }
         },
+        seenTxCheckpoint: () => '0',
         walletTools: tmpWalletTools,
         walletInfo: tmpWalletInfo
       })

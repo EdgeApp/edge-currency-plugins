@@ -12,9 +12,10 @@ import {
 import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Bitcoin Cash',
+  chainDisplayName: 'Bitcoin Cash',
   currencyCode: 'BCH',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Bitcoin Cash',
   memoOptions: utxoMemoOptions,
   pluginId: 'bitcoincash',
   walletType: 'wallet:bitcoincash',
@@ -45,6 +46,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'Bitcoin Cash',
   metaTokens: []
 }
 

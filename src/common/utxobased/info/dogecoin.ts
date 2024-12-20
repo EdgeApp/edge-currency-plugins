@@ -10,9 +10,10 @@ import {
 import { makeDogeUtxoPicker } from './utxoPickers/dogeUtxoPicker'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Dogecoin',
+  chainDisplayName: 'Dogecoin',
   currencyCode: 'DOGE',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Dogecoin',
   memoOptions: utxoMemoOptions,
   pluginId: 'dogecoin',
   walletType: 'wallet:dogecoin',
@@ -40,6 +41,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'Dogecoin',
   metaTokens: []
 }
 

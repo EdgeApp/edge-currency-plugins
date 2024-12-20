@@ -8,9 +8,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Badcoin',
+  chainDisplayName: 'Badcoin',
   currencyCode: 'BAD',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Badcoin',
   memoOptions: utxoMemoOptions,
   pluginId: 'badcoin',
   walletType: 'wallet:badcoin',
@@ -32,6 +33,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: [],
     enableCustomServers: false
   },
+  displayName: 'Badcoin',
   metaTokens: []
 }
 

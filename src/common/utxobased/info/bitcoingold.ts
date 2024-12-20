@@ -10,9 +10,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Bitcoin Gold',
+  chainDisplayName: 'Bitcoin Gold',
   currencyCode: 'BTG',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Bitcoin Gold',
   memoOptions: utxoMemoOptions,
   pluginId: 'bitcoingold',
   walletType: 'wallet:bitcoingold',
@@ -41,6 +42,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'Bitcoin Gold',
   metaTokens: []
 }
 

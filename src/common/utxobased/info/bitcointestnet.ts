@@ -8,10 +8,11 @@ import {
 } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Bitcoin Testnet',
+  chainDisplayName: 'Bitcoin Testnet',
   canReplaceByFee: true,
   currencyCode: 'TESTBTC',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Bitcoin Testnet',
   memoOptions: utxoMemoOptions,
   pluginId: 'bitcointestnet',
   walletType: 'wallet:bitcointestnet',
@@ -35,6 +36,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: ['wss://tbtc1.trezor.io', 'wss://tbtc2.trezor.io'],
     enableCustomServers: false
   },
+  displayName: 'Bitcoin Testnet',
   metaTokens: []
 }
 

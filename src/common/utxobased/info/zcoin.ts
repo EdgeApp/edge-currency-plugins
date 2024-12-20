@@ -9,9 +9,10 @@ import {
 } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Firo',
+  chainDisplayName: 'Firo',
   currencyCode: 'FIRO',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Firo',
   memoOptions: utxoMemoOptions,
   pluginId: 'zcoin',
   walletType: 'wallet:zcoin',
@@ -37,6 +38,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'Firo',
   metaTokens: []
 }
 

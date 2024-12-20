@@ -81,6 +81,7 @@ export interface UtxoEngineProcessor {
 
 export interface UtxoEngineProcessorConfig extends EngineConfig {
   dataLayer: DataLayer
+  seenTxCheckpoint: (value?: string) => string | undefined
   walletTools: UtxoWalletTools
   walletInfo: SafeWalletInfo
 }
@@ -96,6 +97,7 @@ export function makeUtxoEngineProcessor(
     engineOptions,
     pluginState,
     pluginInfo,
+    seenTxCheckpoint,
     walletInfo,
     walletTools
   } = config
@@ -170,6 +172,27 @@ export function makeUtxoEngineProcessor(
     }
   }
 
+  const updateSeenTxCheckpoint = (): void => {
+    // Only update the seenTxCheckpoint if the wallet is fully synced.
+    // This ensure that initial syncs without a defined seenTxCheckpoint,
+    // will not incorrectly update the seenTxCheckpoint in the middle of an
+    // initial sync.
+    if (processedPercent < 1) return
+
+    const seenTxCheckpoint = common.seenTxCheckpoint()
+    const seenTxBlockHeight =
+      seenTxCheckpoint != null ? parseInt(seenTxCheckpoint) : undefined
+
+    // Update the seenTxCheckpoint
+    if (
+      seenTxBlockHeight == null ||
+      common.maxSeenTxBlockHeight > seenTxBlockHeight
+    ) {
+      const newSeenTxCheckpoint = common.maxSeenTxBlockHeight.toString()
+      common.emitter.emit(EngineEvent.SEEN_TX_CHECKPOINT, newSeenTxCheckpoint)
+    }
+  }
+
   const lock = new AwaitLock()
 
   const serverStates = makeServerStates({
@@ -189,8 +212,11 @@ export function makeUtxoEngineProcessor(
     emitter,
     taskCache,
     updateProgressRatio,
+    updateSeenTxCheckpoint,
     io,
     log,
+    maxSeenTxBlockHeight: 0,
+    seenTxCheckpoint,
     serverStates,
     walletFormats,
     lock
@@ -603,8 +629,11 @@ interface CommonParams {
   emitter: EngineEmitter
   taskCache: TaskCache
   updateProgressRatio: () => void
+  updateSeenTxCheckpoint: () => void
   io: EdgeIo
   log: EdgeLog
+  maxSeenTxBlockHeight: number
+  seenTxCheckpoint: (value?: string) => string | undefined
   serverStates: ServerStates
   walletFormats: CurrencyFormat[]
   lock: AwaitLock
@@ -960,7 +989,7 @@ export async function* pickNextTask(
         hasProcessedAtLeastOnce = true
         cacheItem.processing = true
         removeItem(transactionUpdateCache, txId)
-        yield* processTransactionUpdate(common, {
+        yield* processCheckTransactionConfirmation(common, {
           serverState,
           serverUri,
           txId
@@ -1038,7 +1067,9 @@ async function* processTransactionsSpecificUpdate(
       walletId: common.walletInfo.id,
       walletTools: common.walletTools
     })
-    common.emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [edgeTx])
+    common.emitter.emit(EngineEvent.TRANSACTIONS, [
+      { isNew: false, transaction: edgeTx }
+    ])
 
     // Add the txid to the server cache
     serverState.txids.add(txId)
@@ -1060,7 +1091,7 @@ async function* processTransactionsSpecificUpdate(
  * It updates the transaction and all of the transaction's UTXO with the
  * blockHeight received from the network.
  */
-async function* processTransactionUpdate(
+async function* processCheckTransactionConfirmation(
   common: CommonParams,
   args: {
     serverState: ServerState
@@ -1105,7 +1136,9 @@ async function* processTransactionUpdate(
       walletId: common.walletInfo.id,
       walletTools: common.walletTools
     })
-    common.emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [edgeTx])
+    common.emitter.emit(EngineEvent.TRANSACTIONS, [
+      { isNew: false, transaction: edgeTx }
+    ])
 
     if (needsTxSpecific(common)) {
       // Add task to grab transactionSpecific payload
@@ -1174,8 +1207,16 @@ async function* processAddressForTransactions(
       addressData.used = true
     }
 
+    const seenTxCheckpoint = common.seenTxCheckpoint()
+    const seenTxBlockHeight =
+      seenTxCheckpoint != null ? parseInt(seenTxCheckpoint) : undefined
+
     // Process and save the address's transactions
     for (const txResponse of transactions) {
+      const [existingTx] = await common.dataLayer.fetchTransactions({
+        txId: txResponse.txid
+      })
+
       const tx = processTransactionResponse(common, { txResponse })
       const processedTx = await common.dataLayer.saveTransaction({
         tx,
@@ -1188,7 +1229,22 @@ async function* processAddressForTransactions(
         walletId: common.walletInfo.id,
         walletTools: common.walletTools
       })
-      common.emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [edgeTx])
+
+      // Keep track of transactions which are determined to be unseen:
+      const isNew =
+        seenTxBlockHeight != null &&
+        // Unseen in the DataLayer
+        existingTx == null &&
+        // The tx unconfirmed or confirmed after/at the last seenTxCheckpoint
+        (tx.blockHeight === 0 || tx.blockHeight > seenTxBlockHeight)
+
+      common.emitter.emit(EngineEvent.TRANSACTIONS, [
+        { isNew, transaction: edgeTx }
+      ])
+
+      if (edgeTx.blockHeight > common.maxSeenTxBlockHeight) {
+        common.maxSeenTxBlockHeight = edgeTx.blockHeight
+      }
 
       if (needsTxSpecific(common)) {
         // Add task to grab transactionSpecific payload
@@ -1197,6 +1253,9 @@ async function* processAddressForTransactions(
         }
       }
     }
+
+    // Make sure to update the seenTxCheckpoint after processing the transactions
+    common.updateSeenTxCheckpoint()
 
     // Halt on finishing the processing of address transaction until
     // we have progressed through all of the blockbook pages

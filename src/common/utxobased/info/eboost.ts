@@ -9,9 +9,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'eBoost',
+  chainDisplayName: 'eBoost',
   currencyCode: 'EBST',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'eBoost',
   memoOptions: utxoMemoOptions,
   pluginId: 'eboost',
   walletType: 'wallet:eboost',
@@ -33,6 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: [],
     enableCustomServers: false
   },
+  displayName: 'eBoost',
   metaTokens: []
 }
 

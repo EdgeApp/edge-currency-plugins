@@ -9,9 +9,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Ravencoin',
+  chainDisplayName: 'Ravencoin',
   currencyCode: 'RVN',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Ravencoin',
   memoOptions: utxoMemoOptions,
   pluginId: 'ravencoin',
   walletType: 'wallet:ravencoin',
@@ -30,6 +31,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: ['wss://blockbook.ravencoin.org'],
     enableCustomServers: false
   },
+  displayName: 'Ravencoin',
   metaTokens: []
 }
 

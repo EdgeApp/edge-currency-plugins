@@ -9,9 +9,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'DigiByte',
+  chainDisplayName: 'DigiByte',
   currencyCode: 'DGB',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'DigiByte',
   memoOptions: utxoMemoOptions,
   pluginId: 'digibyte',
   walletType: 'wallet:digibyte',
@@ -37,6 +38,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'DigiByte',
   metaTokens: []
 }
 

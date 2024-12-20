@@ -9,9 +9,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Qtum',
+  chainDisplayName: 'Qtum',
   currencyCode: 'QTUM',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Qtum',
   memoOptions: utxoMemoOptions,
   pluginId: 'qtum',
   walletType: 'wallet:qtum',
@@ -30,6 +31,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: [],
     enableCustomServers: false
   },
+  displayName: 'Qtum',
   metaTokens: []
 }
 
