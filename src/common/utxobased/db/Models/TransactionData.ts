@@ -101,6 +101,7 @@ export const toEdgeTransaction = async (
     memos: [],
     nativeAmount: tx.ourAmount,
     networkFee: tx.fees,
+    networkFees: [],
     ourReceiveAddresses,
     signedTx: tx.hex,
     tokenId: null,

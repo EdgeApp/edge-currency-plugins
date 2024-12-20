@@ -695,6 +695,7 @@ export async function makeUtxoEngine(
         memos,
         nativeAmount,
         networkFee,
+        networkFees: [],
         otherParams,
         ourReceiveAddresses,
         signedTx: '',
