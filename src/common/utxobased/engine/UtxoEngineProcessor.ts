@@ -80,22 +80,22 @@ export interface UtxoEngineProcessor {
 }
 
 export interface UtxoEngineProcessorConfig extends EngineConfig {
+  dataLayer: DataLayer
   walletTools: UtxoWalletTools
   walletInfo: SafeWalletInfo
-  dataLayer: DataLayer
 }
 
 export function makeUtxoEngineProcessor(
   config: UtxoEngineProcessorConfig
 ): UtxoEngineProcessor {
   const {
+    dataLayer,
     initOptions,
     io,
     emitter,
     engineOptions,
     pluginState,
     pluginInfo,
-    dataLayer,
     walletInfo,
     walletTools
   } = config
@@ -212,12 +212,16 @@ export function makeUtxoEngineProcessor(
   emitter.on(
     EngineEvent.BLOCK_HEIGHT_CHANGED,
     async (_uri: string, _blockHeight: number): Promise<void> => {
+      // Add all unconfirmed transactions to the cache to check if these
+      // transactions have been confirmed:
       const txs = await dataLayer.fetchTransactions({
         blockHeight: 0
       })
       for (const tx of txs) {
         if (tx == null) continue
-        taskCache.transactionUpdateCache[tx.txid] = { processing: false }
+        taskCache.transactionUpdateCache[tx.txid] = {
+          processing: false
+        }
       }
     }
   )
@@ -765,26 +769,6 @@ const addToAddressForTransactionsCache = async (
   }
 }
 
-export const transactionChanged = async (args: {
-  dataLayer: DataLayer
-  emitter: EngineEmitter
-  pluginInfo: PluginInfo
-  tx: TransactionData
-  walletTools: UtxoWalletTools
-  walletId: string
-}): Promise<void> => {
-  const { dataLayer, emitter, pluginInfo, tx, walletTools, walletId } = args
-  emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [
-    await toEdgeTransaction({
-      walletId,
-      tx,
-      walletTools,
-      dataLayer,
-      pluginInfo
-    })
-  ])
-}
-
 /**
  * Some currencies require an additional blockbook payload 'getTransactionSpecific' in order
  * to provide all relevant transaction data. Since this is currency-specific, we can limit
@@ -1047,14 +1031,14 @@ async function* processTransactionsSpecificUpdate(
       tx
     })
 
-    await transactionChanged({
-      walletId: common.walletInfo.id,
-      emitter: common.emitter,
-      walletTools: common.walletTools,
+    const edgeTx = await toEdgeTransaction({
       dataLayer: common.dataLayer,
       pluginInfo: common.pluginInfo,
-      tx: processedTx
+      tx: processedTx,
+      walletId: common.walletInfo.id,
+      walletTools: common.walletTools
     })
+    common.emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [edgeTx])
 
     // Add the txid to the server cache
     serverState.txids.add(txId)
@@ -1071,8 +1055,10 @@ async function* processTransactionsSpecificUpdate(
 }
 
 /**
- * Processes a transaction update from the TransactionUpdateCache by querying
+ * Processes an item from transactionUpdateCache by querying
  * the network for the transaction data and processing it into the DataLayer.
+ * It updates the transaction and all of the transaction's UTXO with the
+ * blockHeight received from the network.
  */
 async function* processTransactionUpdate(
   common: CommonParams,
@@ -1112,14 +1098,14 @@ async function* processTransactionUpdate(
       tx
     })
 
-    await transactionChanged({
-      walletId: common.walletInfo.id,
-      emitter: common.emitter,
-      walletTools: common.walletTools,
+    const edgeTx = await toEdgeTransaction({
       dataLayer: common.dataLayer,
       pluginInfo: common.pluginInfo,
-      tx: processedTx
+      tx: processedTx,
+      walletId: common.walletInfo.id,
+      walletTools: common.walletTools
     })
+    common.emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [edgeTx])
 
     if (needsTxSpecific(common)) {
       // Add task to grab transactionSpecific payload
@@ -1135,7 +1121,9 @@ async function* processTransactionUpdate(
   } catch (err) {
     console.error(err)
     common.log('error while processing transaction update:', err)
-    common.taskCache.transactionUpdateCache[txId] = { processing: false }
+    common.taskCache.transactionUpdateCache[txId] = {
+      processing: false
+    }
     return false
   }
 }
@@ -1193,14 +1181,14 @@ async function* processAddressForTransactions(
         tx,
         scriptPubkeys: [scriptPubkey]
       })
-      await transactionChanged({
-        walletId: common.walletInfo.id,
-        emitter: common.emitter,
-        walletTools: common.walletTools,
+      const edgeTx = await toEdgeTransaction({
         dataLayer: common.dataLayer,
         pluginInfo: common.pluginInfo,
-        tx: processedTx
+        tx: processedTx,
+        walletId: common.walletInfo.id,
+        walletTools: common.walletTools
       })
+      common.emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [edgeTx])
 
       if (needsTxSpecific(common)) {
         // Add task to grab transactionSpecific payload

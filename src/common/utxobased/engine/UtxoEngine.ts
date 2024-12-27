@@ -61,10 +61,7 @@ import {
   pathToPurposeType,
   sumUtxos
 } from './utils'
-import {
-  makeUtxoEngineProcessor,
-  transactionChanged
-} from './UtxoEngineProcessor'
+import { makeUtxoEngineProcessor } from './UtxoEngineProcessor'
 import { makeUtxoWalletTools } from './UtxoWalletTools'
 
 export async function makeUtxoEngine(
@@ -133,10 +130,10 @@ export async function makeUtxoEngine(
 
   const engineProcessor = makeUtxoEngineProcessor({
     ...config,
-    walletTools,
-    walletInfo,
     dataLayer,
-    pluginState
+    pluginState,
+    walletTools,
+    walletInfo
   })
 
   const engine: EdgeCurrencyEngine = {
@@ -733,30 +730,27 @@ export async function makeUtxoEngine(
         })
         if (rbfTx != null) {
           rbfTx.blockHeight = -1
-          await transactionChanged({
-            walletId: walletInfo.id,
-            tx: rbfTx,
-            pluginInfo,
-            emitter,
-            walletTools,
-            dataLayer
+          await dataLayer.saveTransaction({
+            tx: rbfTx
           })
+          const rbfEdgeTx = await toEdgeTransaction({
+            dataLayer,
+            pluginInfo,
+            tx: rbfTx,
+            walletId: walletInfo.id,
+            walletTools
+          })
+          emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [rbfEdgeTx])
         }
       }
 
       const tx = fromEdgeTransaction(edgeTx)
-      await transactionChanged({
-        walletId: walletInfo.id,
-        tx,
-        pluginInfo,
-        emitter,
-        walletTools,
-        dataLayer
-      })
       await dataLayer.saveTransaction({
         tx,
         scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys
       })
+
+      emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [edgeTx])
 
       /*
       Get the wallet's UTXOs from the new transaction and save them to the processsor.
@@ -978,6 +972,7 @@ export async function makeUtxoEngine(
 
       const tmpEngineProcessor = makeUtxoEngineProcessor({
         ...config,
+        dataLayer: tmpDataLayer,
         emitter: tmpEmitter,
         engineOptions: {
           ...config.engineOptions,
@@ -992,7 +987,6 @@ export async function makeUtxoEngine(
             gapLimit: 0
           }
         },
-        dataLayer: tmpDataLayer,
         walletTools: tmpWalletTools,
         walletInfo: tmpWalletInfo
       })
