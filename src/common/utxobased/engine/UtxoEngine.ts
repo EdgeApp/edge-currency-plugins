@@ -128,10 +128,24 @@ export async function makeUtxoEngine(
   // private keys.
   let nonceDataLayer: DataLayer | undefined
 
+  // This cached value allows the engine to resync using the same checkpoint as
+  // what the core gave the plugin when the core started plugin.
+  const seenTxCheckpoint = ((state?: string) => (
+    value?: string
+  ): string | undefined => {
+    if (value != null) state = value
+    return state
+  })()
+
+  emitter.on(EngineEvent.SEEN_TX_CHECKPOINT, checkpoint => {
+    seenTxCheckpoint(checkpoint)
+  })
+
   const engineProcessor = makeUtxoEngineProcessor({
     ...config,
     dataLayer,
     pluginState,
+    seenTxCheckpoint,
     walletTools,
     walletInfo
   })
@@ -350,7 +364,9 @@ export async function makeUtxoEngine(
       }
     },
 
-    async startEngine(): Promise<void> {
+    async startEngine(opts): Promise<void> {
+      seenTxCheckpoint(opts?.seenTxCheckpoint)
+
       emitter.emit(
         EngineEvent.WALLET_BALANCE_CHANGED,
         currencyInfo.currencyCode,
@@ -718,7 +734,7 @@ export async function makeUtxoEngine(
       await pluginState.refreshServers()
 
       // Restart the engine
-      await engine.startEngine()
+      await engine.startEngine({ seenTxCheckpoint: seenTxCheckpoint() })
     },
 
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
@@ -741,7 +757,9 @@ export async function makeUtxoEngine(
             walletId: walletInfo.id,
             walletTools
           })
-          emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [rbfEdgeTx])
+          emitter.emit(EngineEvent.TRANSACTIONS, [
+            { isNew: false, transaction: rbfEdgeTx }
+          ])
         }
       }
 
@@ -750,8 +768,6 @@ export async function makeUtxoEngine(
         tx,
         scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys
       })
-
-      emitter.emit(EngineEvent.TRANSACTIONS_CHANGED, [edgeTx])
 
       /*
       Get the wallet's UTXOs from the new transaction and save them to the processsor.
@@ -988,6 +1004,7 @@ export async function makeUtxoEngine(
             gapLimit: 0
           }
         },
+        seenTxCheckpoint: () => '0',
         walletTools: tmpWalletTools,
         walletInfo: tmpWalletInfo
       })

@@ -87,8 +87,13 @@ describe('engine.spec', function () {
         emitter.emit('onBlockHeightChange', height)
       },
       onNewTokens() {},
+      onSeenTxCheckpoint() {},
       onStakingStatusChanged() {},
       onTokenBalanceChanged() {},
+      onTransactions(transactionEvents) {
+        fakeLogger.info('onTransactions:', transactionEvents)
+        emitter.emit('onTransactions', transactionEvents)
+      },
       onTransactionsChanged(transactionList) {
         fakeLogger.info('onTransactionsChanged:', transactionList)
         emitter.emit('onTransactionsChanged', transactionList)
@@ -335,7 +340,7 @@ describe('engine.spec', function () {
               done() // Can be "done" since the promise resolves before the event fires but just be on the safe side
             }
           })
-          engine.startEngine().catch(e => {
+          engine.startEngine({ seenTxCheckpoint: '' }).catch(e => {
             fakeLogger.info('startEngine error', e, e.message)
           })
         }
