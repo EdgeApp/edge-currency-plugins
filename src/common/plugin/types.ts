@@ -373,3 +373,8 @@ export const asLocalWalletMetadata = asObject({
   addressBalances: asObject(asString),
   lastSeenBlockHeight: asNumber
 })
+
+export const asInfoPayload = asObject({
+  blockbookServers: asObject(asBoolean)
+})
+export type InfoPayload = ReturnType<typeof asInfoPayload>
