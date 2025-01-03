@@ -61,10 +61,7 @@ import {
   pathToPurposeType,
   sumUtxos
 } from './utils'
-import {
-  makeUtxoEngineProcessor,
-  transactionChanged
-} from './UtxoEngineProcessor'
+import { makeUtxoEngineProcessor } from './UtxoEngineProcessor'
 import { makeUtxoWalletTools } from './UtxoWalletTools'
 
 export async function makeUtxoEngine(
@@ -131,12 +128,26 @@ export async function makeUtxoEngine(
   // private keys.
   let nonceDataLayer: DataLayer | undefined
 
+  // This cached value allows the engine to resync using the same checkpoint as
+  // what the core gave the plugin when the core started plugin.
+  const seenTxCheckpoint = ((state?: string) => (
+    value?: string
+  ): string | undefined => {
+    if (value != null) state = value
+    return state
+  })()
+
+  emitter.on(EngineEvent.SEEN_TX_CHECKPOINT, checkpoint => {
+    seenTxCheckpoint(checkpoint)
+  })
+
   const engineProcessor = makeUtxoEngineProcessor({
     ...config,
-    walletTools,
-    walletInfo,
     dataLayer,
-    pluginState
+    pluginState,
+    seenTxCheckpoint,
+    walletTools,
+    walletInfo
   })
 
   const engine: EdgeCurrencyEngine = {
@@ -353,7 +364,9 @@ export async function makeUtxoEngine(
       }
     },
 
-    async startEngine(): Promise<void> {
+    async startEngine(opts): Promise<void> {
+      seenTxCheckpoint(opts?.seenTxCheckpoint)
+
       emitter.emit(
         EngineEvent.WALLET_BALANCE_CHANGED,
         currencyInfo.currencyCode,
@@ -695,6 +708,7 @@ export async function makeUtxoEngine(
         memos,
         nativeAmount,
         networkFee,
+        networkFees: [],
         otherParams,
         ourReceiveAddresses,
         signedTx: '',
@@ -720,7 +734,7 @@ export async function makeUtxoEngine(
       await pluginState.refreshServers()
 
       // Restart the engine
-      await engine.startEngine()
+      await engine.startEngine({ seenTxCheckpoint: seenTxCheckpoint() })
     },
 
     async saveTx(edgeTx: EdgeTransaction): Promise<void> {
@@ -733,26 +747,23 @@ export async function makeUtxoEngine(
         })
         if (rbfTx != null) {
           rbfTx.blockHeight = -1
-          await transactionChanged({
-            walletId: walletInfo.id,
-            tx: rbfTx,
-            pluginInfo,
-            emitter,
-            walletTools,
-            dataLayer
+          await dataLayer.saveTransaction({
+            tx: rbfTx
           })
+          const rbfEdgeTx = await toEdgeTransaction({
+            dataLayer,
+            pluginInfo,
+            tx: rbfTx,
+            walletId: walletInfo.id,
+            walletTools
+          })
+          emitter.emit(EngineEvent.TRANSACTIONS, [
+            { isNew: false, transaction: rbfEdgeTx }
+          ])
         }
       }
 
       const tx = fromEdgeTransaction(edgeTx)
-      await transactionChanged({
-        walletId: walletInfo.id,
-        tx,
-        pluginInfo,
-        emitter,
-        walletTools,
-        dataLayer
-      })
       await dataLayer.saveTransaction({
         tx,
         scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys
@@ -978,6 +989,7 @@ export async function makeUtxoEngine(
 
       const tmpEngineProcessor = makeUtxoEngineProcessor({
         ...config,
+        dataLayer: tmpDataLayer,
         emitter: tmpEmitter,
         engineOptions: {
           ...config.engineOptions,
@@ -992,7 +1004,7 @@ export async function makeUtxoEngine(
             gapLimit: 0
           }
         },
-        dataLayer: tmpDataLayer,
+        seenTxCheckpoint: () => '0',
         walletTools: tmpWalletTools,
         walletInfo: tmpWalletInfo
       })

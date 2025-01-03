@@ -165,7 +165,7 @@ describe('Blockbook', function () {
 
   beforeEach(async () => {
     blockbook = makeBlockbook({
-      connectionUri: 'wss://bitcoin.atomicwallet.io/websocket',
+      connectionUri: 'wss://btc-wusa1.edge.app',
       engineEmitter,
       initOptions: {},
       log,
