@@ -73,19 +73,14 @@ export async function makeUtxoEngine(
   const {
     pluginInfo,
     pluginDisklet,
-    // Rename to make it explicit that this is sensitive memory
-    options,
+    emitter,
+    engineOptions,
     io,
     pluginState
   } = config
-  const {
-    walletLocalDisklet,
-    walletLocalEncryptedDisklet,
-    emitter,
-    log
-  } = options
+  const { walletLocalDisklet, walletLocalEncryptedDisklet, log } = engineOptions
   const { currencyInfo, engineInfo, coinInfo } = pluginInfo
-  const userSettings = asUtxoUserSettings(options.userSettings)
+  const userSettings = asUtxoUserSettings(engineOptions.userSettings)
 
   // We should move the active server list to the engine state,
   // since multiple accounts can be logged in at once,
@@ -120,7 +115,7 @@ export async function makeUtxoEngine(
     disklet: pluginDisklet,
     pluginInfo,
     io,
-    log: config.options.log
+    log: config.engineOptions.log
   })
 
   const metadata = await makeMetadata({
@@ -983,11 +978,11 @@ export async function makeUtxoEngine(
 
       const tmpEngineProcessor = makeUtxoEngineProcessor({
         ...config,
-        options: {
-          ...config.options,
+        emitter: tmpEmitter,
+        engineOptions: {
+          ...config.engineOptions,
           walletLocalDisklet: tmpDisklet,
-          walletLocalEncryptedDisklet: tmpEncryptedDisklet,
-          emitter: tmpEmitter
+          walletLocalEncryptedDisklet: tmpEncryptedDisklet
         },
         pluginInfo: {
           ...pluginInfo,

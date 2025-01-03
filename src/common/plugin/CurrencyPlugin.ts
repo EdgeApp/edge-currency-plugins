@@ -1,3 +1,4 @@
+import { asMaybe } from 'cleaners'
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
@@ -17,7 +18,7 @@ import { makeUtxoEngine } from '../utxobased/engine/UtxoEngine'
 import { makeCurrencyTools } from './CurrencyTools'
 import { makeEngineEmitter } from './EngineEmitter'
 import { makePluginState } from './PluginState'
-import { EngineConfig, PluginInfo } from './types'
+import { asInfoPayload, EngineConfig, PluginInfo } from './types'
 
 let hasMemletBeenSet = false
 
@@ -29,13 +30,15 @@ export function makeCurrencyPlugin(
   const { initOptions, io, log, nativeIo, pluginDisklet } = pluginOptions
   const currencyTools = makeCurrencyTools(io, pluginInfo)
   const { defaultSettings, pluginId, currencyCode } = currencyInfo
+
   const pluginState = makePluginState({
-    io,
+    defaultSettings: asUtxoUserSettings(defaultSettings),
     currencyCode,
-    pluginId,
-    pluginDisklet,
+    infoPayload: asMaybe(asInfoPayload)(pluginOptions.infoPayload),
+    io,
     log,
-    defaultSettings: asUtxoUserSettings(defaultSettings)
+    pluginId,
+    pluginDisklet
   })
 
   if (!hasMemletBeenSet) {
@@ -49,7 +52,7 @@ export function makeCurrencyPlugin(
     }
   }
 
-  return {
+  const instance: EdgeCurrencyPlugin = {
     currencyInfo,
 
     async makeCurrencyEngine(
@@ -64,10 +67,9 @@ export function makeCurrencyPlugin(
         currencyTools,
         initOptions: asUtxoInitOptions(initOptions),
         io,
-        options: {
-          ...pluginOptions,
-          ...engineOptions,
-          emitter
+        emitter,
+        engineOptions: {
+          ...engineOptions
         },
         pluginState
       }
@@ -81,6 +83,16 @@ export function makeCurrencyPlugin(
         throw e
       })
       return currencyTools
+    },
+
+    async updateInfoPayload(infoPayload) {
+      try {
+        pluginState.infoPayload = asInfoPayload(infoPayload)
+      } catch (_) {
+        log.warn('invalid infoPayload', infoPayload)
+      }
     }
   }
+
+  return instance
 }
