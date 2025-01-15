@@ -13,9 +13,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Groestlcoin',
+  chainDisplayName: 'Groestlcoin',
   currencyCode: 'GRS',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Groestlcoin',
   memoOptions: utxoMemoOptions,
   pluginId: 'groestlcoin',
   walletType: 'wallet:groestlcoin',
@@ -42,6 +43,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'Groestlcoin',
   metaTokens: []
 }
 

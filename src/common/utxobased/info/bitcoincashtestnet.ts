@@ -10,8 +10,9 @@ import {
 import { scriptTemplates } from './scriptTemplates/bitcoincashScriptTemplates'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Bitcoin Cash Testnet',
+  chainDisplayName: 'Bitcoin Cash Testnet',
   currencyCode: 'TBCH',
-  displayName: 'Bitcoin Cash',
   memoOptions: utxoMemoOptions,
   customFeeTemplate: utxoCustomFeeTemplate,
   pluginId: 'bitcoincashtestnet',
@@ -36,6 +37,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: [],
     enableCustomServers: false
   },
+  displayName: 'Bitcoin Cash',
   metaTokens: []
 }
 

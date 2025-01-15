@@ -10,9 +10,10 @@ import {
 
 export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: false,
+  assetDisplayName: 'Litecoin',
+  chainDisplayName: 'Litecoin',
   currencyCode: 'LTC',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Litecoin',
   memoOptions: utxoMemoOptions,
   pluginId: 'litecoin',
   walletType: 'wallet:litecoin',
@@ -42,6 +43,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'Litecoin',
   metaTokens: []
 }
 

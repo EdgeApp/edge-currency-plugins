@@ -9,9 +9,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'UFO',
+  chainDisplayName: 'UFO',
   currencyCode: 'UFO',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'UFO',
   memoOptions: utxoMemoOptions,
   pluginId: 'ufo',
   walletType: 'wallet:ufo',
@@ -33,6 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: ['wss://blockbook.ufobject.com'],
     enableCustomServers: false
   },
+  displayName: 'UFO',
   metaTokens: []
 }
 

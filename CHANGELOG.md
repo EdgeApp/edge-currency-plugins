@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Implement `updateInfoPayload` for `EdgeCurrencyEngine` to get currency info updates from info-server.
+- changed: Implement new Seen Tx Checkpoint API for all currencies.
 - fixed: Fixed cleaner failure for getInfo Blockbook request.
 
 ## 3.4.5 (2024-12-12)

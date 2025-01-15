@@ -61,10 +61,7 @@ import {
   pathToPurposeType,
   sumUtxos
 } from './utils'
-import {
-  makeUtxoEngineProcessor,
-  transactionChanged
-} from './UtxoEngineProcessor'
+import { makeUtxoEngineProcessor } from './UtxoEngineProcessor'
 import { makeUtxoWalletTools } from './UtxoWalletTools'
 
 export async function makeUtxoEngine(
@@ -131,12 +128,36 @@ export async function makeUtxoEngine(
   // private keys.
   let nonceDataLayer: DataLayer | undefined
 
+  /**
+   * This is a stateful function, which means it is both a setter and a getter.
+   * The state is the cached seenTxCheckpoint for the engine during runtime.
+   * It is initialized with the seenTxCheckpoint state from the core via
+   * `EdgeCurrencyEngineOptions`.
+   * It is updated by the engine's processor as the wallet syncs.
+   * Once the wallet fully syncs, the seenTxCheckpoint value is emitted to the
+   * `onSeenTxCheckpoint` callback so the core can persist this state to disk.
+   */
+  const seenTxCheckpoint = ((state?: string) => (
+    value?: string
+  ): string | undefined => {
+    if (value != null) state = value
+    return state
+  })()
+
+  // Initialize the seenTxCheckpoint with the value from the core.
+  seenTxCheckpoint(config.engineOptions.seenTxCheckpoint)
+
+  emitter.on(EngineEvent.SEEN_TX_CHECKPOINT, checkpoint => {
+    seenTxCheckpoint(checkpoint)
+  })
+
   const engineProcessor = makeUtxoEngineProcessor({
     ...config,
-    walletTools,
-    walletInfo,
     dataLayer,
-    pluginState
+    pluginState,
+    seenTxCheckpoint,
+    walletTools,
+    walletInfo
   })
 
   const engine: EdgeCurrencyEngine = {
@@ -695,6 +716,12 @@ export async function makeUtxoEngine(
         memos,
         nativeAmount,
         networkFee,
+        networkFees: [
+          {
+            tokenId: null,
+            nativeAmount: networkFee
+          }
+        ],
         otherParams,
         ourReceiveAddresses,
         signedTx: '',
@@ -733,26 +760,23 @@ export async function makeUtxoEngine(
         })
         if (rbfTx != null) {
           rbfTx.blockHeight = -1
-          await transactionChanged({
-            walletId: walletInfo.id,
-            tx: rbfTx,
-            pluginInfo,
-            emitter,
-            walletTools,
-            dataLayer
+          await dataLayer.saveTransaction({
+            tx: rbfTx
           })
+          const rbfEdgeTx = await toEdgeTransaction({
+            dataLayer,
+            pluginInfo,
+            tx: rbfTx,
+            walletId: walletInfo.id,
+            walletTools
+          })
+          emitter.emit(EngineEvent.TRANSACTIONS, [
+            { isNew: false, transaction: rbfEdgeTx }
+          ])
         }
       }
 
       const tx = fromEdgeTransaction(edgeTx)
-      await transactionChanged({
-        walletId: walletInfo.id,
-        tx,
-        pluginInfo,
-        emitter,
-        walletTools,
-        dataLayer
-      })
       await dataLayer.saveTransaction({
         tx,
         scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys
@@ -978,6 +1002,7 @@ export async function makeUtxoEngine(
 
       const tmpEngineProcessor = makeUtxoEngineProcessor({
         ...config,
+        dataLayer: tmpDataLayer,
         emitter: tmpEmitter,
         engineOptions: {
           ...config.engineOptions,
@@ -992,7 +1017,7 @@ export async function makeUtxoEngine(
             gapLimit: 0
           }
         },
-        dataLayer: tmpDataLayer,
+        seenTxCheckpoint: () => '0',
         walletTools: tmpWalletTools,
         walletInfo: tmpWalletInfo
       })

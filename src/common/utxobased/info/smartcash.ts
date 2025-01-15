@@ -12,9 +12,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'SmartCash',
+  chainDisplayName: 'SmartCash',
   currencyCode: 'SMART',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'SmartCash',
   memoOptions: utxoMemoOptions,
   pluginId: 'smartcash',
   walletType: 'wallet:smartcash',
@@ -36,6 +37,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: [],
     enableCustomServers: false
   },
+  displayName: 'SmartCash',
   metaTokens: []
 }
 

@@ -9,9 +9,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Vertcoin',
+  chainDisplayName: 'Vertcoin',
   currencyCode: 'VTC',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Vertcoin',
   memoOptions: utxoMemoOptions,
   pluginId: 'vertcoin',
   walletType: 'wallet:vertcoin',
@@ -39,6 +40,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'Vertcoin',
   metaTokens: []
 }
 

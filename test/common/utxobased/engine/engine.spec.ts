@@ -87,8 +87,13 @@ describe('engine.spec', function () {
         emitter.emit('onBlockHeightChange', height)
       },
       onNewTokens() {},
+      onSeenTxCheckpoint() {},
       onStakingStatusChanged() {},
       onTokenBalanceChanged() {},
+      onTransactions(transactionEvents) {
+        fakeLogger.info('onTransactions:', transactionEvents)
+        emitter.emit('onTransactions', transactionEvents)
+      },
       onTransactionsChanged(transactionList) {
         fakeLogger.info('onTransactionsChanged:', transactionList)
         emitter.emit('onTransactionsChanged', transactionList)

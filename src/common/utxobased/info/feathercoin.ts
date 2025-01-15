@@ -9,9 +9,10 @@ import {
 } from './commonInfo'
 
 export const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Feathercoin',
+  chainDisplayName: 'Feathercoin',
   currencyCode: 'FTC',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Feathercoin',
   memoOptions: utxoMemoOptions,
   pluginId: 'feathercoin',
   walletType: 'wallet:feathercoin',
@@ -33,6 +34,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: ['wss://blockbook.feathercoin.com'],
     enableCustomServers: false
   },
+  displayName: 'Feathercoin',
   metaTokens: []
 }
 

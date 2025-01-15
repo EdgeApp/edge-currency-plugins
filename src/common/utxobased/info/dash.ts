@@ -11,9 +11,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Dash',
+  chainDisplayName: 'Dash',
   currencyCode: 'DASH',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Dash',
   memoOptions: utxoMemoOptions,
   pluginId: 'dash',
   walletType: 'wallet:dash',
@@ -44,6 +45,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     ],
     enableCustomServers: false
   },
+  displayName: 'Dash',
   metaTokens: []
 }
 

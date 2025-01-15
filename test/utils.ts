@@ -13,7 +13,9 @@ import { EdgeCurrencyPluginNativeIo } from '../src/react-native'
 export const makeFakePluginInfo = (): PluginInfo => {
   return {
     currencyInfo: {
+      assetDisplayName: '',
       addressExplorer: '',
+      chainDisplayName: '',
       currencyCode: '',
       defaultSettings: {},
       denominations: [],

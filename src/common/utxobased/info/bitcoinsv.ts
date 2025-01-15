@@ -16,9 +16,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Bitcoin SV',
+  chainDisplayName: 'Bitcoin SV',
   currencyCode: 'BSV',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Bitcoin SV',
   memoOptions: utxoMemoOptions,
   pluginId: 'bitcoinsv',
   walletType: 'wallet:bitcoinsv',
@@ -41,6 +42,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: ['wss://blockbook.siftbitcoin.com:9146'],
     enableCustomServers: false
   },
+  displayName: 'Bitcoin SV',
   metaTokens: []
 }
 

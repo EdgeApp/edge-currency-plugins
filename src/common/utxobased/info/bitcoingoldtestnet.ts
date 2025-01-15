@@ -9,9 +9,10 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
+  assetDisplayName: 'Bitcoin Gold Testnet',
+  chainDisplayName: 'Bitcoin Gold Testnet',
   currencyCode: 'TBTG',
   customFeeTemplate: utxoCustomFeeTemplate,
-  displayName: 'Bitcoin Gold',
   memoOptions: utxoMemoOptions,
   pluginId: 'bitcoingoldtestnet',
   walletType: 'wallet:bitcoingoldtestnet',
@@ -34,6 +35,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     blockbookServers: [],
     enableCustomServers: false
   },
+  displayName: 'Bitcoin Gold Testnet',
   metaTokens: []
 }
 
