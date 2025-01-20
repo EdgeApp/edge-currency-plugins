@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: Remove Blockbook servers from persisted internal servers list when updating this list from payload/default servers.
+- fixed: Remove blockbook.firo.org Blockbook server form default Blockbook server list.
 
 ## 3.5.0 (2025-01-15)
 
