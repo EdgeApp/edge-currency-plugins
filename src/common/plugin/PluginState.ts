@@ -183,6 +183,8 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     },
 
     async refreshServers(updatedCustomServers?: string[]): Promise<void> {
+      const serverList = getSelectedServerList()
+
       let newServers: string[]
       if (serverCache.enableCustomServers) {
         newServers =
@@ -200,9 +202,17 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
               infoPayloadServers
             : // Use the default servers from info file as final fallback
               defaultSettings.blockbookServers
+
+        // Remove any server that's not included in the internal servers list.
+        // This is so we can control removal of poor servers from the
+        // info-server in real-time.
+        const missingServers = Object.keys(serverList).filter(
+          server => !newServers.includes(server)
+        )
+        serverScores.removeServers(serverList, missingServers)
       }
 
-      serverScores.serverScoresLoad(getSelectedServerList(), newServers)
+      serverScores.serverScoresLoad(serverList, newServers)
       await saveServerCache()
 
       // Tell the engines about the new servers:

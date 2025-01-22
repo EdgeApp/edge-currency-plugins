@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Remove Blockbook servers from persisted internal servers list when updating this list from payload/default servers.
+
 ## 3.5.0 (2025-01-15)
 
 - added: Implement `updateInfoPayload` for `EdgeCurrencyEngine` to get currency info updates from info-server.
