@@ -343,4 +343,11 @@ export class ServerScores {
 
     return selectedServers
   }
+
+  removeServers(servers: ServerList, serverUrls: string[]): void {
+    for (const serverUrl of serverUrls) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete servers[serverUrl]
+    }
+  }
 }
