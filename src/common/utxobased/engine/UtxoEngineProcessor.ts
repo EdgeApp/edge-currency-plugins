@@ -168,6 +168,7 @@ export function makeUtxoEngineProcessor(
         `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${expectedProcessCount}`
       )
       processedPercent = percent
+      common.updateSeenTxCheckpoint()
       emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
     }
   }
