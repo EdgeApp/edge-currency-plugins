@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Update the last-seen checkpoint when the sync finishes, even if we haven't seen any new transactions.
+
 ## 3.5.1 (2025-01-22)
 
 - changed: Remove Blockbook servers from persisted internal servers list when updating this list from payload/default servers.
