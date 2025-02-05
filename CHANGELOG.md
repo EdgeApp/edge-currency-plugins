@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.5.2 (2025-02-04)
+
 - fixed: Update the last-seen checkpoint when the sync finishes, even if we haven't seen any new transactions.
 
 ## 3.5.1 (2025-01-22)
