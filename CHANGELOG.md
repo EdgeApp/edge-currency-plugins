@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Update vin cleaner match blockbook spec with safe defaults
+
 ## 3.5.2 (2025-02-04)
 
 - fixed: Update the last-seen checkpoint when the sync finishes, even if we haven't seen any new transactions.

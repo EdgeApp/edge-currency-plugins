@@ -1328,7 +1328,7 @@ const processTransactionResponse = (
 
   const inputs: TransactionData['inputs'] = txResponse.vin.map(vin => {
     // Handle coinbase input
-    if (!vin.isAddress) {
+    if (vin.coinbase != null) {
       return {
         amount: outputTotalValue,
         n: 0,
@@ -1337,6 +1337,10 @@ const processTransactionResponse = (
         sequence: vin.sequence,
         txId: '0000000000000000000000000000000000000000000000000000000000000000'
       }
+    }
+
+    if (vin.txid == null) {
+      throw new Error(`Unexpected null txid when processing transaction inputs`)
     }
 
     const scriptPubkey =
