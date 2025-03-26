@@ -4,6 +4,10 @@
 
 - changed: Change Ravencoin explorer.
 
+## 3.5.3-1 (2025-02-26)
+
+- fixed: Re-publish to hopefully fix malformed 3.5.3 package.
+
 ## 3.5.3 (2025-02-26)
 
 - fixed: Update vin cleaner match blockbook spec with safe defaults
