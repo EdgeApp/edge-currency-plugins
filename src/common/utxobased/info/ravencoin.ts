@@ -18,9 +18,9 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:ravencoin',
 
   // Explorers:
-  addressExplorer: 'https://ravencoin.network/address/%s',
-  blockExplorer: 'https://ravencoin.network/block/%s',
-  transactionExplorer: 'https://ravencoin.network/tx/%s',
+  addressExplorer: 'https://rvn.cryptoscope.io/address/?address=%s',
+  blockExplorer: 'https://rvn.cryptoscope.io/block/?blockheight=%s',
+  transactionExplorer: 'https://rvn.cryptoscope.io/tx/?txid=%s',
 
   denominations: [{ name: 'RVN', multiplier: '100000000', symbol: 'R' }],
 
