@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.5.3 (2025-02-26)
+
 - fixed: Update vin cleaner match blockbook spec with safe defaults
 
 ## 3.5.2 (2025-02-04)
