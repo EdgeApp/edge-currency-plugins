@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.5.4 (2025-03-26)
+
 - changed: Change Ravencoin explorer.
 
 ## 3.5.3-1 (2025-02-26)
