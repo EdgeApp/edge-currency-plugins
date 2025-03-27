@@ -441,6 +441,49 @@
     "toNewFormat": []
   },
   {
+    "network": "ecash",
+    "valid": [
+      "ecash:qpmq6uvs4sktft22lhlmsqpfr53hq03snc0s4nlwna",
+      "ecash:qrxcfwvkxumlnq28we8e9v0hjes45nw34gjjtvmlsw",
+      "ecash:qqp20qq7p89w9zmgmucl2cv4gqhk2usczsx4tw4zf3",
+      "ecash:qqpwwrwaazn747vvw25hyc8z89sh7k7dkv9yjj68pt",
+      "ecash:qzgyem0r2kxyajavqvce9ahk39dv92emtck9hkvdqa",
+      "ecash:qrqr0dfpf025jat7uk9axqm5r00sqsv6lyt40h0vv7",
+      "ecash:qz5dcpc4rqyal6v5xkt4jpj7jvfkgkt7yskj2za796",
+      "qpmq6uvs4sktft22lhlmsqpfr53hq03snc0s4nlwna",
+      "qrxcfwvkxumlnq28we8e9v0hjes45nw34gjjtvmlsw",
+      "qqp20qq7p89w9zmgmucl2cv4gqhk2usczsx4tw4zf3",
+      "qqpwwrwaazn747vvw25hyc8z89sh7k7dkv9yjj68pt",
+      "qzgyem0r2kxyajavqvce9ahk39dv92emtck9hkvdqa",
+      "qrqr0dfpf025jat7uk9axqm5r00sqsv6lyt40h0vv7",
+      "qz5dcpc4rqyal6v5xkt4jpj7jvfkgkt7yskj2za796"
+    ],
+    "invalid": [
+      "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
+      "bc1qc7slrfxkknqcq2jevvvkdgvrt8080852dfjewde450xdlk4ugp7szw5tk9",
+      "XekiLaxnqpFb2m4NQAEcsKutZcZgcyfo6W",
+      "XiBQaGtW6y1C52YtPBD4PTMntpA9hkBq5p",
+      "XqWgAZEGdWDUhbS1YxSwxrK3GLGdJjSHus",
+      "XbtvGzi2JgjYTbTqabUjSREWeovDxznoyh",
+      "Xx9R3uriMAF2W71WH5kwpNdoHxqzGGih3c",
+      "Xm9TJiJ7nWjme8K7iEPUGsC5JjYGzPk2QU",
+      "XvwKzdsn46psqy6WhZ2wfhRPyRkD6GL2BG",
+      "LQL9pVH1LsMfKwt82Y2wGhNGkrjF8vwUst",
+      "LPpHectVSbk7YHa5X89Cm3FoFBfzkJBJc9",
+      "LRcYfbDMhwvXaGPFccaKuc3fZD1Nb55aGn",
+      "LY5fxZS74Ewuj1TTHwat23eUmZwimsksrU",
+      "LdP8Qox1VAhCzLJNqrr74YovaWYyNBUWvL",
+      "Laub752qu81oWwkNKEyawyKruUC6cEyD2x",
+      "LbHBMZTQBq7aM5WS5TeKYJWH8pxeaLoRXe",
+      "LPpVeFSKvH593CChqP9qpV5toEXntekjiF",
+      "LfmG6qepmucU2aQaVJK4EJgBzQHeGz5ML4",
+      "MSS1jxX7vEjHi5ujzszwTsZCnSDhkWKrBd",
+      "M816EdyuvWV7oETCfQeZb5mGWm9nHczijH",
+      "MJiPwX84iBe4WnFDwsYGgtnz1XonPhUqhf"
+    ],"toLegacy": [],
+    "toNewFormat": []
+  },
+  {
     "network": "feathercoin",
     "valid": [
       "6fLKmA19ESYgg5HPq9q3UvY3EJ6HThr5DD",

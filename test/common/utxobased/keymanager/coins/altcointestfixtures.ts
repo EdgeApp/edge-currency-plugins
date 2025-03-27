@@ -331,6 +331,66 @@ export const fixtures: Fixture = {
       ]
     },
     {
+      name: 'ecash',
+      mnemonic:
+        'slot cluster scene add sword velvet regret shoulder renew dove infant document',
+      seedToXPrivTests: [
+        {
+          xpriv:
+            'xprv9xjYP2L4HBz1zDzXaLTxvWhFjLAPE91JCw14XJvGksf7pssAepB2fPC2FKeM5FhQnJp1AH4kvtqYcDuoPUvsXkms1z5dsHF4xrt5oter1TG',
+          type: BIP43PurposeTypeEnum.Legacy
+        }
+      ],
+      xprivToXPubTests: [
+        {
+          xpriv:
+            'xprv9xjYP2L4HBz1zDzXaLTxvWhFjLAPE91JCw14XJvGksf7pssAepB2fPC2FKeM5FhQnJp1AH4kvtqYcDuoPUvsXkms1z5dsHF4xrt5oter1TG',
+          type: BIP43PurposeTypeEnum.Legacy,
+          xpub:
+            'xpub6BitnXrx7ZYKCi4zgMzyHedzHMzsdbj9a9vfKhKtKDC6hgCKCMVHDBWW6cK2UYrysFPYJAmZLLvpBWkLY5NVvqCgVFcWLWSe7CACcxNBqEZ'
+        }
+      ],
+      xpubToPubkeyTests: [
+        {
+          xpub:
+            'xpub6BitnXrx7ZYKCi4zgMzyHedzHMzsdbj9a9vfKhKtKDC6hgCKCMVHDBWW6cK2UYrysFPYJAmZLLvpBWkLY5NVvqCgVFcWLWSe7CACcxNBqEZ',
+          type: BIP43PurposeTypeEnum.Legacy,
+          bip44ChangeIndex: 0,
+          bip44AddressIndex: 0,
+          scriptType: ScriptTypeEnum.p2pkh,
+          addressType: AddressTypeEnum.p2pkh,
+          address: 'qrxcfwvkxumlnq28we8e9v0hjes45nw34gjjtvmlsw',
+          legacyAddress: '1KjgXDYhNJPPL87376TsJeXdxA25dMGZEC'
+        }
+      ],
+      wifToPrivateKeyTests: [
+        {
+          wifKey: 'L1Sdqjg1VSALZfHLLgqnFbEU5gnoVoY1ZDwJtRSKwRLPjwBN6K8v'
+        }
+      ],
+      addressToScriptPubkeyTests: [
+        {
+          address: 'ecash:qpd9vwa8pyqrkh52znpee2nrp4czcn9k3yupckwzla',
+          scriptPubkey: '76a9145a563ba709003b5e8a14c39caa630d702c4cb68988ac'
+        },
+        {
+          extraMessage: 'without prefix',
+          address: 'qpd9vwa8pyqrkh52znpee2nrp4czcn9k3yupckwzla',
+          scriptPubkey: '76a9145a563ba709003b5e8a14c39caa630d702c4cb68988ac'
+        },
+        {
+          extraMessage: 'p2sh',
+          address: 'ecash:pryec382ctn0wlysa5vjkxx27wru7s8mf5lmgc96p8',
+          scriptPubkey: 'a914c99c44eac2e6f77c90ed192b18caf387cf40fb4d87'
+        },
+        {
+          extraMessage: 'p2sh without prefix',
+          address: 'pryec382ctn0wlysa5vjkxx27wru7s8mf5lmgc96p8',
+          scriptPubkey: 'a914c99c44eac2e6f77c90ed192b18caf387cf40fb4d87'
+        }
+      ]
+    },
+    {
       name: 'dash',
       mnemonic:
         'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
