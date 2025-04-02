@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add Bitcoin Testnet4 plugin
+
 ## 3.5.4 (2025-03-26)
 
 - changed: Change Ravencoin explorer.
