@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (QTUM) Populate `blockbookServers`
+
 ## 3.5.4 (2025-03-26)
 
 - changed: Change Ravencoin explorer.

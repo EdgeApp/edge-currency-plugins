@@ -28,7 +28,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: [],
+    blockbookServers: [
+      'wss://qtum-eusa1.edge.app',
+      'wss://blockv3.qtum.info',
+      'wss://qtum.atomicwallet.io'
+    ],
     enableCustomServers: false
   },
   displayName: 'Qtum',
