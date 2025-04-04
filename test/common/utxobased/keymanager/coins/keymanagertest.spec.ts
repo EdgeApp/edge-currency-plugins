@@ -1,3 +1,4 @@
+import tinysecp from '@bitcoinerlab/secp256k1'
 import { initEccLib } from 'altcoin-js'
 import { expect } from 'chai'
 import { ECPairAPI, ECPairFactory } from 'ecpair'
@@ -17,16 +18,10 @@ import {
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
 import { fixtures } from './altcointestfixtures'
 
+initEccLib(tinysecp)
+const ECPair: ECPairAPI = ECPairFactory(tinysecp)
+
 describe('altcoin test fixtures', () => {
-  let ECPair: ECPairAPI
-
-  before(async function () {
-    await import('@bitcoin-js/tiny-secp256k1-asmjs').then(tinysecp => {
-      initEccLib(tinysecp)
-      ECPair = ECPairFactory(tinysecp)
-    })
-  })
-
   fixtures.coins.forEach(f => {
     // test deriving a xpriv from a seed for each coin
     f.seedToXPrivTests.forEach(j => {
