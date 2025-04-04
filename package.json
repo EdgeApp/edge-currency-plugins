@@ -40,7 +40,7 @@
     "*.{js,ts,json}": "eslint"
   },
   "dependencies": {
-    "@bitcoin-js/tiny-secp256k1-asmjs": "^2.2.3",
+    "@bitcoinerlab/secp256k1": "^1.2.0",
     "altcoin-js": "^1.0.0",
     "async-mutex": "^0.2.6",
     "baselet": "^0.3.0",
