@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.6.1 (2025-04-07)
+
 - fixed: (QTUM) Populate `blockbookServers`
 
 ## 3.6.0 (2025-04-07)
