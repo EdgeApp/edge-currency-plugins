@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.6.0 (2025-04-07)
+
 - added: Add Bitcoin Testnet4 plugin
 
 ## 3.5.4 (2025-03-26)
