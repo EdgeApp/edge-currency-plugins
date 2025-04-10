@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Added PIVX.
+
 ## 3.6.1 (2025-04-07)
 
 - fixed: (QTUM) Populate `blockbookServers`

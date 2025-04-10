@@ -14,6 +14,7 @@ import { info as eboost } from './eboost'
 import { info as feathercoin } from './feathercoin'
 import { info as groestlcoin } from './groestlcoin'
 import { info as litecoin } from './litecoin'
+import { info as pivx } from './pivx'
 import { info as qtum } from './qtum'
 import { info as ravencoin } from './ravencoin'
 import { info as smartcash } from './smartcash'
@@ -37,6 +38,7 @@ export { info as eboost } from './eboost'
 export { info as feathercoin } from './feathercoin'
 export { info as groestlcoin } from './groestlcoin'
 export { info as litecoin } from './litecoin'
+export { info as pivx } from './pivx'
 export { info as qtum } from './qtum'
 export { info as ravencoin } from './ravencoin'
 export { info as smartcash } from './smartcash'
@@ -61,6 +63,7 @@ export const all = [
   feathercoin,
   groestlcoin,
   litecoin,
+  pivx,
   qtum,
   ravencoin,
   smartcash,

@@ -1,0 +1,57 @@
+diff --git a/node_modules/altcoin-js/src/transaction.js b/node_modules/altcoin-js/src/transaction.js
+index ec6af8c..a137e15 100644
+--- a/node_modules/altcoin-js/src/transaction.js
++++ b/node_modules/altcoin-js/src/transaction.js
+@@ -53,6 +53,7 @@ class Transaction {
+     const flag = bufferReader.readUInt8();
+     let hasWitnesses = false;
+     if (
++      tx.version !== 3 && // avoid segwit for PIVX
+       marker === Transaction.ADVANCED_TRANSACTION_MARKER &&
+       flag === Transaction.ADVANCED_TRANSACTION_FLAG
+     ) {
+@@ -88,7 +89,14 @@ class Transaction {
+     tx.locktime = bufferReader.readUInt32();
+     if (_NO_STRICT) return tx;
+     if (bufferReader.offset !== buffer.length)
+-      throw new Error('Transaction has unexpected data');
++    {
++      // Throw for all transaction other then PIVX transactions
++      if (tx.version !== 3) {
++        throw new Error('Transaction has unexpected data');
++      }
++      // Keep the sapling data for PIVX transactions
++      tx.saplingData = bufferReader.readSlice(bufferReader.buffer.length - bufferReader.offset);
++    }
+     return tx;
+   }
+   static fromHex(hex) {
+@@ -155,6 +163,7 @@ class Transaction {
+   }
+   byteLength(_ALLOW_WITNESS = true) {
+     const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
++    const hasSaplingData = this.saplingData != null;
+     return (
+       (hasWitnesses ? 10 : 8) +
+       bufferutils_1.varuint.encodingLength(this.ins.length) +
+@@ -169,7 +178,8 @@ class Transaction {
+         ? this.ins.reduce((sum, input) => {
+             return sum + vectorSize(input.witness);
+           }, 0)
+-        : 0)
++        : 0) +
++      (hasSaplingData ? this.saplingData.length : 0)
+     );
+   }
+   clone() {
+@@ -604,6 +614,10 @@ class Transaction {
+       });
+     }
+     bufferWriter.writeUInt32(this.locktime);
++    // Read sapling data for PIVX transactions
++    if (this.saplingData) {
++      bufferWriter.writeSlice(this.saplingData);
++    }
+     // avoid slicing unless necessary
+     if (initialOffset !== undefined)
+       return buffer.slice(initialOffset, bufferWriter.offset);
