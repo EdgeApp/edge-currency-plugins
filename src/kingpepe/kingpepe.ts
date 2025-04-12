@@ -1,13 +1,9 @@
-import { makeUtxoEngine } from 'edge-currency-plugins'
+import { makeUtxoEngine } from '../../engine/makeUtxoEngine'
 import type { EdgeCurrencyEngine, EdgeCurrencyEngineOptions } from 'edge-core-js/types'
-import { validate as validateAddressFormat } from 'bitcoin-address-validation'
 import { payments, Psbt, networks } from 'bitcoinjs-lib'
 import wif from 'wif'
 import { mnemonicToSeedSync } from 'bip39'
-import { BIP32Factory } from 'bip32'
-import * as ecc from 'tiny-secp256k1'
-
-const bip32 = BIP32Factory(ecc)
+import * as bip32 from 'bip32'
 
 enum NetworkType {
   MAINNET = 'mainnet',
@@ -31,31 +27,24 @@ class RPCError extends Error {
 }
 
 export class KingPepePlugin {
-  private pubKeyHash: number
-  private wif: number
+  private pubKeyHash = 0x00
+  private wif = 0x80
   private tokenSupportEnabled = false
   private address = ''
   private privateKeysObject: Record<string, any> = {}
-  private balance: string | null = null
+  private balance = '0'
   private network: NetworkType
   private rpcUrl: string
   private rpcAuth: { username: string; password: string }
 
   constructor(config: IKingPepeConfig = {}) {
     this.network = config.network || NetworkType.MAINNET
-    this.rpcUrl = config.rpcUrl || 'http://127.0.0.1:22093'
+    this.rpcUrl = config.rpcUrl || process.env.KPEPE_RPC_URL || 'http://127.0.0.1:22093'
     this.rpcAuth = config.rpcAuth || {
-      username: 'rpc_kingpepe',
-      password: 'dR2oBQ3K1zYMZQtJFZeAerhWxaJ5Lqeq9J2'
+      username: process.env.KPEPE_RPC_USER || 'rpc_kingpepe',
+      password: process.env.KPEPE_RPC_PASSWORD || 'default_pass'
     }
-    this.setNetworkParams()
-  }
-
-  private setNetworkParams() {
-    if (this.network === NetworkType.MAINNET) {
-      this.pubKeyHash = 0x00
-      this.wif = 0x80
-    } else {
+    if (this.network === NetworkType.TESTNET) {
       this.pubKeyHash = 0x6f
       this.wif = 0xef
     }
@@ -63,6 +52,11 @@ export class KingPepePlugin {
 
   private getBitcoinJSNetwork() {
     return this.network === NetworkType.MAINNET ? networks.bitcoin : networks.testnet
+  }
+
+  async updateRpcConfig(url: string, auth: { username: string; password: string }) {
+    this.rpcUrl = url
+    this.rpcAuth = auth
   }
 
   private async rpcRequest(method: string, params: any[] = []): Promise<any> {
@@ -73,62 +67,43 @@ export class KingPepePlugin {
         'Content-Type': 'application/json',
         Authorization: `Basic ${auth}`
       },
-      body: JSON.stringify({
-        jsonrpc: '1.0',
-        id: 'edge',
-        method,
-        params
-      })
+      body: JSON.stringify({ jsonrpc: '1.0', id: 'edge', method, params })
     })
 
-    if (!res.ok) throw new Error(`RPC request failed with status ${res.status}`)
-
+    if (!res.ok) throw new Error(`RPC status ${res.status}`)
     const data = await res.json()
     if (data.error) throw new RPCError(data.error.message, data.error.code)
-
     return data.result
   }
 
-  async setPrivateKey(privateKey: string): Promise<void> {
+  async setPrivateKey(privateKey: string) {
+    this.privateKeysObject = { privateKey }
     const keyBuffer = wif.decode(privateKey).privateKey
     const keyPair = bip32.fromPrivateKey(keyBuffer, Buffer.alloc(32), this.getBitcoinJSNetwork())
-    const { address } = payments.p2pkh({
-      pubkey: keyPair.publicKey,
-      network: this.getBitcoinJSNetwork()
-    })
-    this.address = address ?? ''
-    this.privateKeysObject = { privateKey }
+    const { address } = payments.p2pkh({ pubkey: keyPair.publicKey, network: this.getBitcoinJSNetwork() })
+    this.address = address || ''
   }
 
-  async setMnemonic(mnemonic: string, passphrase?: string): Promise<void> {
+  async setMnemonic(mnemonic: string, passphrase?: string) {
     const seed = mnemonicToSeedSync(mnemonic, passphrase)
     const root = bip32.fromSeed(seed, this.getBitcoinJSNetwork())
-    this.privateKeysObject = {
-      mnemonic,
-      privateKey: root.toWIF(),
-      derivedKeys: {}
-    }
+    this.privateKeysObject = { mnemonic, privateKey: root.toWIF() }
     this.address = this.deriveAddress(root, 0)
   }
 
-  private deriveAddress(root: any, index: number): string {
+  private deriveAddress(root: bip32.BIP32Interface, index: number): string {
     const child = root.derivePath(`m/44'/0'/0'/0/${index}`)
-    const { address } = payments.p2pkh({
-      pubkey: child.publicKey,
-      network: this.getBitcoinJSNetwork()
-    })
+    const { address } = payments.p2pkh({ pubkey: child.publicKey, network: this.getBitcoinJSNetwork() })
     return address || ''
   }
 
   async getAddress(): Promise<string> {
+    if (!this.address) throw new Error('Address not set')
     return this.address
   }
 
-  async validateAddress(address: string): Promise<boolean> {
-    return validateAddressFormat(address)
-  }
-
   async getBalance(): Promise<string> {
+    if (!this.address) throw new Error('Address not set')
     const result = await this.rpcRequest('getreceivedbyaddress', [this.address])
     this.balance = result.toString()
     return this.balance
@@ -136,12 +111,10 @@ export class KingPepePlugin {
 
   async createTransaction(toAddress: string, amount: number): Promise<string> {
     const unspent = await this.rpcRequest('listunspent', [0, 9999999, [this.address]])
-    const totalAmount = unspent.reduce((sum: number, tx: any) => sum + tx.amount, 0)
-
-    if (totalAmount < amount) throw new Error('Insufficient balance')
+    const total = unspent.reduce((sum: number, tx: any) => sum + tx.amount, 0)
+    if (total < amount) throw new Error('Insufficient funds')
 
     const psbt = new Psbt({ network: this.getBitcoinJSNetwork() })
-
     unspent.forEach((utxo: any) => {
       psbt.addInput({
         hash: utxo.txid,
@@ -153,24 +126,13 @@ export class KingPepePlugin {
       })
     })
 
-    psbt.addOutput({
-      address: toAddress,
-      value: Math.round(amount * 1e8)
-    })
-
-    const fee = 1000
-    const change = totalAmount * 1e8 - amount * 1e8 - fee
-    if (change > 0) {
-      psbt.addOutput({
-        address: this.address,
-        value: change
-      })
-    }
+    psbt.addOutput({ address: toAddress, value: Math.round(amount * 1e8) })
+    const change = total * 1e8 - amount * 1e8 - 1000
+    if (change > 0) psbt.addOutput({ address: this.address, value: change })
 
     const root = bip32.fromBase58(this.privateKeysObject.privateKey, this.getBitcoinJSNetwork())
     psbt.signAllInputs(root)
     psbt.finalizeAllInputs()
-
     return psbt.extractTransaction().toHex()
   }
 
@@ -179,27 +141,26 @@ export class KingPepePlugin {
   }
 
   async getTokenBalance(tokenId: string): Promise<number> {
-    return this.rpcRequest('gettokenbalance', [this.address, tokenId])
+    if (!this.tokenSupportEnabled) throw new Error('Token support not enabled')
+    return await this.rpcRequest('gettokenbalance', [this.address, tokenId])
   }
 
-  async createTokenTransaction(tokenId: string, toAddress: string, amount: number): Promise<string> {
-    return this.rpcRequest('sendtoken', [tokenId, this.address, toAddress, amount])
+  async createTokenTransaction(tokenId: string, to: string, amount: number): Promise<string> {
+    if (!this.tokenSupportEnabled) throw new Error('Token support not enabled')
+    return await this.rpcRequest('sendtoken', [tokenId, this.address, to, amount])
   }
 
   async getBlockHeight(): Promise<number> {
-    return this.rpcRequest('getblockcount')
+    return await this.rpcRequest('getblockcount')
   }
 
   async getPepeRewards(): Promise<number> {
-    return this.rpcRequest('getblockreward')
+    return await this.rpcRequest('getblockreward')
   }
 }
 
-// Factory function for Edge
 export function makeEngine(plugin: KingPepePlugin) {
-  return async function engineFactory(
-    input: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
+  return async function engineFactory(input: EdgeCurrencyEngineOptions): Promise<EdgeCurrencyEngine> {
     const engine = await makeUtxoEngine({
       ...input,
       plugin,
@@ -208,13 +169,9 @@ export function makeEngine(plugin: KingPepePlugin) {
         displayName: 'King Pepe',
         pluginType: 'utxo',
         walletType: 'wallet:kingpepe',
-        denominations: [{
-          name: 'KPEPE',
-          multiplier: '100000000',
-          symbol: '♚'
-        }],
+        denominations: [{ name: 'KPEPE', multiplier: '100000000', symbol: '♚' }],
         defaultSettings: {
-          rpcUrls: ['http://127.0.0.1:22093'],
+          rpcUrls: [plugin['rpcUrl']],
           defaultNetworkFee: '1000'
         }
       },
@@ -226,7 +183,8 @@ export function makeEngine(plugin: KingPepePlugin) {
             }
           : {}),
         getPepeRewards: plugin.getPepeRewards.bind(plugin),
-        getBlockHeight: plugin.getBlockHeight.bind(plugin)
+        getBlockHeight: plugin.getBlockHeight.bind(plugin),
+        updateRpcConfig: plugin.updateRpcConfig.bind(plugin)
       }
     })
 
@@ -238,4 +196,3 @@ export function makeEngine(plugin: KingPepePlugin) {
     return engine
   }
 }
-
