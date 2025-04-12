@@ -1,0 +1,22 @@
+{
+  "currencyCode": "KPEPE",
+  "displayName": "King Pepe",
+  "pluginType": "utxo",
+  "walletType": "wallet:kingpepe",
+  "defaultSettings": {
+    "rpcUrls": ["http://127.0.0.1:22093"],
+    "defaultNetworkFee": "1000"
+  },
+  "symbolImage": "https://pepechain.com/img/logo.png",
+  "symbolImageDarkMono": "https://pepechain.com/img/logo-dark.png",
+  "addressExplorer": "https://pepescan.com/address/%s",
+  "transactionExplorer": "https://pepescan.com/tx/%s",
+  "blockExplorer": "https://pepescan.com/block/%s",
+  "denominations": [
+    {
+      "name": "KPEPE",
+      "multiplier": "100000000",
+      "symbol": "♚"
+    }
+  ]
+}
