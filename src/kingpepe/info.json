@@ -1,0 +1,26 @@
+{
+  "currencyCode": "KPEPE",
+  "displayName": "King Pepe",
+  "pluginId": "kingpepe",
+  "pluginType": "utxo",
+  "walletType": "wallet:kingpepe",
+  "defaultSettings": {
+    "rpcUrls": ["http://127.0.0.1:22093"],
+    "blockchairUrls": [],
+    "defaultNetworkFee": "1000",
+    "feeUpdateInterval": 60000
+  },
+  "addressExplorer": "https://kpepe-explorer.pool.sexy/address/%s",
+  "transactionExplorer": "https://kpepe-explorer.pool.sexy/tx/%s",
+  "blockExplorer": "https://kpepe-explorer.pool.sexy/block/%s",
+  "symbolImage": "./kingpepe/icon.png",
+  "symbolImageDarkMono": "./kingpepe/icon.png",
+  "metaTokens": [],
+  "denominations": [
+    {
+      "name": "KPEPE",
+      "multiplier": "100000000",
+      "symbol": "♚"
+    }
+  ]
+}
