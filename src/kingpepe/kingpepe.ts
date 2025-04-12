@@ -1,4 +1,4 @@
-import { makeUtxoEngine } from '../../engine/makeUtxoEngine'
+import { makeUtxoEngine } from 'edge-currency-plugins'
 import type { EdgeCurrencyEngine, EdgeCurrencyEngineOptions } from 'edge-core-js/types'
 import { payments, Psbt, networks } from 'bitcoinjs-lib'
 import wif from 'wif'
