@@ -32,19 +32,18 @@ import { InsufficientFundsErrorPlus } from './types'
 import * as utxopicker from './utxopicker'
 import * as pickerUtils from './utxopicker/utils'
 
-let ECPair: ECPairAPI
+let ECPairCache: ECPairAPI
+const getECPair = (): ECPairAPI => {
+  if (ECPairCache != null) return ECPairCache
 
-import('@bitcoin-js/tiny-secp256k1-asmjs')
-  .then(tinysecp => {
-    initEccLib(tinysecp)
-    ECPair = ECPairFactory(tinysecp)
-  })
-  .catch(error => {
-    console.error(error)
-  })
-  .finally(() => {
-    console.log('loaded ECPair!')
-  })
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const secp256k1 = require('@bitcoinerlab/secp256k1')
+  initEccLib(secp256k1)
+  ECPairCache = ECPairFactory(secp256k1)
+  console.log(`loaded ECPair!`)
+
+  return ECPairCache
+}
 
 // in bitcoin these are bip44, bip49, bip84 xpub prefixes
 // other coins contain different formats which still need to be gathered.
@@ -885,6 +884,7 @@ export function privateKeyToWIF(args: PrivateKeyToWIFArgs): string {
     prefixIndex: 0
   })
   const coinClass = getCoinFromString(args.coin)
+  const ECPair = getECPair()
   return ECPair.fromPrivateKey(Buffer.from(args.privateKey, 'hex'), {
     network
   }).toWIF(coinClass.wifEncodeFunc)
@@ -900,6 +900,7 @@ const wifToPrivateKeyEncodingInternal = (
     forWIF: true,
     prefixIndex
   })
+  const ECPair = getECPair()
   const ecPair = ECPair.fromWIF(args.wifKey, network, coin.bs58DecodeFunc)
   if (ecPair.privateKey == null) return
   return {
@@ -925,12 +926,14 @@ export function privateKeyEncodingToPubkey(
   privateKeyEncoding: PrivateKeyEncoding
 ): string {
   const { hex, compressed } = privateKeyEncoding
+  const ECPair = getECPair()
   return ECPair.fromPrivateKey(Buffer.from(hex, 'hex'), {
     compressed
   }).publicKey.toString('hex')
 }
 
 export function signMessageBase64(message: string, privateKey: string): string {
+  const ECPair = getECPair()
   const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'))
   if (keyPair.privateKey == null) {
     throw new Error('Address could not sign message')
@@ -1119,6 +1122,7 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
     maximumFeeRate != null ? { maximumFeeRate: parseInt(maximumFeeRate) } : {}
   const psbt = Psbt.fromBase64(args.psbtBase64, opts)
   const coin = getCoinFromString(args.coin)
+  const ECPair = getECPair()
 
   const validator = (
     pubkey: Buffer,
