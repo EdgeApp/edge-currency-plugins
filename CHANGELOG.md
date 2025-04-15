@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.7.0 (2025-04-15)
+
 - added: Added PIVX.
 - changed: Replace asmjs secp256k1 library with bigint compatible version
 
