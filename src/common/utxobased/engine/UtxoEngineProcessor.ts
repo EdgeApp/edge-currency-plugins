@@ -450,9 +450,8 @@ export function makeUtxoEngineProcessor(
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<string> {
-      const txId = await serverStates.broadcastTx(transaction)
-
-      return txId
+      await serverStates.broadcastTx(transaction)
+      return transaction.txid
     },
     refillServers(): void {
       serverStates.refillServers()

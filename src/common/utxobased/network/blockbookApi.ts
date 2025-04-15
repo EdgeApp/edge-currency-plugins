@@ -59,7 +59,7 @@ export interface BlockbookTransaction {
   fees: string
   vin: Array<{
     addresses: string[]
-    isAddress: boolean
+    isAddress?: boolean
     n: number
     sequence: number
     txid?: string
@@ -92,7 +92,7 @@ export const asBlockbookTransaction = (
         addresses: asOptional(asArray(asString), () => []),
         // `isAddress` is a boolean flag that indicates whether the input is an address.
         // And therefore has `addresses` field. If `isAddress` is false, then the input is likely a coinbase input.
-        isAddress: asBoolean,
+        isAddress: asOptional(asBoolean),
         // This is the index of the input. Not to be confused with the index of the previous output (vout).
         n: asNumber,
         // Empirically observed omitted sequence is possible for when sequence is zero.

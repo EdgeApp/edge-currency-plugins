@@ -280,8 +280,7 @@ describe('Blockbook', function () {
       tx.txid.should.equal(satoshiHash)
       tx.fees.should.equal('226')
       tx.blockHeight.should.equal(651329)
-      tx.vin[0].isAddress.should.equal(true)
-      if (!tx.vin[0].isAddress) throw new Error('Type assertion failed')
+      expect(tx.vin[0].isAddress).equal(true)
       tx.vin[0].value.should.equal('97373')
       tx.vin[0].txid?.should.equal(
         'fac5994d454817db2daec796cfa79cce670a372e7505fdef2a259289d5df0814'
@@ -306,8 +305,7 @@ describe('Blockbook', function () {
       tx.txid.should.equal(blockRewardTxid)
       tx.fees.should.equal('0')
       tx.blockHeight.should.equal(868078)
-      tx.vin[0].isAddress.should.equal(false)
-      if (tx.vin[0].isAddress) throw new Error('Type assertion failed')
+      expect(tx.vin[0].isAddress).equal(false)
       tx.vin[0].coinbase?.should.equal(
         '03ee3e0d1e3c204f4345414e2e58595a203e0f456c656b74726f6e20456e657267790007155cb4e4ff33420eb387b0ccf1ee1567020000000000'
       )
