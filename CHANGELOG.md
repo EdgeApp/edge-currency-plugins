@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Added eCash.
+
 ## 3.7.0 (2025-04-15)
 
 - added: Added PIVX.
