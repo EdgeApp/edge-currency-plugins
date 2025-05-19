@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.8.0 (2025-05-19)
+
 - added: Added eCash.
 
 ## 3.7.0 (2025-04-15)
