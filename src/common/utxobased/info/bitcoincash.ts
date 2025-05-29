@@ -62,7 +62,7 @@ const engineInfo: EngineInfo = {
     }
   ],
   formats: ['bip44', 'bip32'],
-  forks: [], // 'bitcoinsv' is currently disabled, so not included in the forks
+  forks: ['ecash'], // 'bitcoinsv' is currently disabled, so not included in the forks
   gapLimit: 10,
   feeUpdateInterval: 60000,
   defaultFeeInfo: {
