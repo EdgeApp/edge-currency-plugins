@@ -65,9 +65,10 @@ const engineInfo: EngineInfo = {
   },
   asBlockbookAddress: asCodec(
     raw => {
-      return asString(raw).split(':')[1]
+      const address = asString(raw)
+      return address.startsWith('ecash:') ? address.split(':')[1] : address
     },
-    address => `ecash:${address}`
+    address => (address.startsWith('ecash:') ? address : `ecash:${address}`)
   )
 }
 
@@ -76,6 +77,7 @@ export const coinInfo: CoinInfo = {
   segwit: false,
   sighash: Psbt.BCH_SIGHASH_ALL,
   coinType: 899,
+  includeCashaddrPrefix: true,
 
   prefixes: {
     messagePrefix: ['\x18Bitcoin Signed Message::\n'],

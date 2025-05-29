@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: Added cashaddr prefixes to ecash.
 - changed: Added ecash to bitcoincash forks.
 
 ## 3.8.0 (2025-05-19)

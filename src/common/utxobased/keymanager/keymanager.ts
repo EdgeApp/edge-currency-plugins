@@ -156,6 +156,7 @@ export interface ScriptPubkeyToAddressArgs {
   addressType: AddressTypeEnum
   coin: string
   redeemScript?: string
+  includeCashaddrPrefix?: boolean
 }
 
 export interface ScriptPubkeyToAddressReturn {
@@ -612,7 +613,8 @@ export function scriptPubkeyToAddress(
             coin: args.coin
           }),
           CashaddrTypeEnum.pubkeyhash,
-          standardPrefixes.cashaddr
+          standardPrefixes.cashaddr,
+          args.includeCashaddrPrefix
         )
       }
       if (legacyPrefixes.cashaddr != null) {
@@ -623,7 +625,8 @@ export function scriptPubkeyToAddress(
             coin: args.coin
           }),
           CashaddrTypeEnum.pubkeyhash,
-          legacyPrefixes.cashaddr
+          legacyPrefixes.cashaddr,
+          args.includeCashaddrPrefix
         )
       }
       payment = payments.p2pkh
@@ -637,7 +640,8 @@ export function scriptPubkeyToAddress(
             coin: args.coin
           }),
           CashaddrTypeEnum.scripthash,
-          standardPrefixes.cashaddr
+          standardPrefixes.cashaddr,
+          args.includeCashaddrPrefix
         )
       }
       if (legacyPrefixes.cashaddr != null) {
@@ -648,7 +652,8 @@ export function scriptPubkeyToAddress(
             coin: args.coin
           }),
           CashaddrTypeEnum.scripthash,
-          legacyPrefixes.cashaddr
+          legacyPrefixes.cashaddr,
+          args.includeCashaddrPrefix
         )
       }
       payment = payments.p2sh
