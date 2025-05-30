@@ -21,8 +21,8 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/ecash/block/%s',
-  addressExplorer: 'https://explorer.e.cash/address/ecash:%s',
-  transactionExplorer: 'https://explorer.e.cash/tx/%s',
+  addressExplorer: 'https://blockchair.com/ecash/address/%s',
+  transactionExplorer: 'https://blockchair.com/ecash/tx/%s',
 
   denominations: [
     { name: 'XEC', multiplier: '100', symbol: 'e' },
