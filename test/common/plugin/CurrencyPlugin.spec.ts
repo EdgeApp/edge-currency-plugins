@@ -4,7 +4,6 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
-  JsonObject,
   makeFakeIo
 } from 'edge-core-js'
 import { before, describe, it } from 'mocha'
@@ -20,7 +19,6 @@ describe('currencyPlugins.spec', () => {
     const WALLET_FORMAT = fixture.WALLET_FORMAT
     const keyName = WALLET_TYPE.split('wallet:')[1].split('-')[0] + 'Key'
 
-    let keys: JsonObject
     let tools: EdgeCurrencyTools
 
     const fakeIo = makeFakeIo()
@@ -63,6 +61,12 @@ describe('currencyPlugins.spec', () => {
     })
 
     describe(`createPrivateKey for Wallet type ${WALLET_TYPE}`, function () {
+      before('Plugin', async function () {
+        if (tools == null) {
+          tools = await plugin.makeCurrencyTools()
+        }
+      })
+
       it('Test Currency code', function () {
         assert.equal(
           plugin.currencyInfo.currencyCode,
@@ -71,7 +75,7 @@ describe('currencyPlugins.spec', () => {
       })
 
       it('Create valid key', async function () {
-        keys = await tools.createPrivateKey(WALLET_TYPE)
+        const keys = await tools.createPrivateKey(WALLET_TYPE)
         assert.isOk(keys)
         assert.equal(typeof keys[keyName], 'string')
         const length = keys[keyName].split(' ').length
@@ -80,6 +84,12 @@ describe('currencyPlugins.spec', () => {
     })
 
     describe(`importPrivateKey for Wallet type ${WALLET_TYPE}`, function () {
+      before('Plugin', async function () {
+        if (tools == null) {
+          tools = await plugin.makeCurrencyTools()
+        }
+      })
+
       it('Import valid keys', async function () {
         // assert that the function is implemented
         if (tools.importPrivateKey == null) return
@@ -116,7 +126,14 @@ describe('currencyPlugins.spec', () => {
 
     describe(`derivePublicKey for Wallet type ${WALLET_TYPE}`, function () {
       this.timeout(10000)
+      before('Plugin', async function () {
+        if (tools == null) {
+          tools = await plugin.makeCurrencyTools()
+        }
+      })
+
       it('Valid private key', async function () {
+        const keys = await tools.createPrivateKey(WALLET_TYPE)
         await tools
           .derivePublicKey({
             type: WALLET_TYPE,
@@ -127,7 +144,8 @@ describe('currencyPlugins.spec', () => {
             id: '!'
           })
           .then(keys => {
-            assert.deepEqual(keys.publicKeys[WALLET_FORMAT], fixture.xpub)
+            const publicKey = keys.publicKeys[WALLET_FORMAT]
+            assert.deepEqual(publicKey, fixture.xpub)
           })
       })
 
@@ -145,6 +163,12 @@ describe('currencyPlugins.spec', () => {
     })
 
     describe(`parseUri for Wallet type ${WALLET_TYPE}`, function () {
+      before('Plugin', async function () {
+        if (tools == null) {
+          tools = await plugin.makeCurrencyTools()
+        }
+      })
+
       Object.entries(fixture.parseUri).forEach(([test, [input, output]]) => {
         if (output != null) {
           it(test, async function () {
@@ -160,6 +184,12 @@ describe('currencyPlugins.spec', () => {
     })
 
     describe(`encodeUri for Wallet type ${WALLET_TYPE}`, function () {
+      before('Plugin', async function () {
+        if (tools == null) {
+          tools = await plugin.makeCurrencyTools()
+        }
+      })
+
       Object.entries(fixture.encodeUri).forEach(([test, [input, output]]) => {
         if (output != null) {
           it(test, async function () {
@@ -178,6 +208,12 @@ describe('currencyPlugins.spec', () => {
       const getSplittableTypes = fixture.getSplittableTypes
 
       if (getSplittableTypes == null) return
+
+      before('Plugin', async function () {
+        if (tools == null) {
+          tools = await plugin.makeCurrencyTools()
+        }
+      })
 
       Object.keys(getSplittableTypes).forEach(format => {
         it(`Test for the wallet type ${format}`, function () {

@@ -169,9 +169,18 @@ export function makeCurrencyTools(
       obj: EdgeEncodeUri & EncodeUriMetadata,
       _customTokens?: EdgeMetaToken[]
     ): Promise<string> {
-      const { publicAddress } = obj
+      let publicAddress = obj.publicAddress
       if (publicAddress === '') {
         throw new Error('InvalidPublicAddressError')
+      }
+
+      // Remove any cashaddr prefixes from the public address if they exist.
+      if (
+        coinInfo.prefixes.cashaddr?.some(prefix =>
+          publicAddress.startsWith(`${prefix}:`)
+        ) === true
+      ) {
+        publicAddress = publicAddress.split(':')[1]
       }
 
       // TODO: validate network address
