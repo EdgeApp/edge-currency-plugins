@@ -190,7 +190,8 @@ export function makeUtxoWalletTools(
       return scriptPubkeyToAddress({
         scriptPubkey: args.scriptPubkey,
         addressType,
-        coin
+        coin,
+        includeCashaddrPrefix: pluginInfo.coinInfo.includeCashaddrPrefix
       })
     },
 

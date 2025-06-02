@@ -190,6 +190,14 @@ export interface CoinInfo {
   coinType: number
 
   /**
+   * Whether the currency should include its cashaddr prefix in the formatted
+   * addresses.
+   *
+   * Defaults to `false`.
+   */
+  includeCashaddrPrefix?: boolean
+
+  /**
    * Optional sighash value to be passed to AltcoinJS as the sighashType field
    * on inputs. This is primarily used by currencies that leverage it as
    * build-in replay-protection mechanisms.

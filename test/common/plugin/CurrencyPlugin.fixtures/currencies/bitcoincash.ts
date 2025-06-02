@@ -275,6 +275,31 @@ export const bitcoincash: FixtureType = {
       { publicAddress: '1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu' },
       '1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu'
     ],
+    'cashaddr prefixed address only': [
+      {
+        publicAddress: 'bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a'
+      },
+      'qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a'
+    ],
+    'cashaddr prefixed address with amount': [
+      {
+        publicAddress: 'bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a',
+        nativeAmount: '123456780000'
+      },
+      'bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a?amount=1234.5678'
+    ],
+    'cashaddr prefixed address with amount and metadata': [
+      {
+        publicAddress: 'bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a',
+        nativeAmount: '123456780000',
+        currencyCode: 'BCH',
+        metadata: {
+          name: 'Johnny BitcoinCash',
+          notes: 'Hello World, I miss you !'
+        }
+      },
+      'bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a?amount=1234.5678&label=Johnny%20BitcoinCash&message=Hello%20World,%20I%20miss%20you%20!'
+    ],
     'address & amount': [
       {
         publicAddress: 'qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a',
