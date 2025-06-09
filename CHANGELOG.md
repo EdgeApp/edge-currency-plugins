@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.8.2 (2025-06-09)
+
 - changed: Remove NOWNodes blockbook connection for Firo.
 
 ## 3.8.1 (2025-06-02)
