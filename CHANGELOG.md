@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Added Edge blockbook servers to DASH, LTC, and PIVX.
 - fixed: Crash when running under NodeJS due to missing memletConfig
 
 ## 3.8.2 (2025-06-09)
