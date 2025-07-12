@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Crash when running under NodeJS due to missing memletConfig
+
 ## 3.8.2 (2025-06-09)
 
 - changed: Remove NOWNodes blockbook connection for Firo.
