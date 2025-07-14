@@ -42,14 +42,20 @@ export function makeCurrencyPlugin(
   })
 
   if (!hasMemletBeenSet) {
-    const { memletConfig } = nativeIo[
+    const pluginConfig = nativeIo[
       'edge-currency-plugins'
     ] as EdgeCurrencyPluginNativeIo
 
+    const memletConfig = pluginConfig?.memletConfig
+
     if (memletConfig != null) {
-      hasMemletBeenSet = true
       setMemletConfig(memletConfig)
+    } else {
+      setMemletConfig({
+        maxMemoryUsage: 50 * 1024 * 1024 // 50MB
+      })
     }
+    hasMemletBeenSet = true
   }
 
   const instance: EdgeCurrencyPlugin = {
