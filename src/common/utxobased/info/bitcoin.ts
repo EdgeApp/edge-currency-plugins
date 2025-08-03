@@ -35,12 +35,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
+      'wss://btc-wusa1.edge.app',
+      'wss://btc-eu1.edge.app',
       'wss://btc1.trezor.io',
       'wss://btc2.trezor.io',
       'wss://btc3.trezor.io',
       'wss://btc4.trezor.io',
       'wss://btc5.trezor.io',
-      'wss://btc-wusa1.edge.app',
       'wss://btcbook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false

@@ -32,6 +32,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
+      'wss://dgb-eu1.edge.app',
       'wss://dgb1.trezor.io',
       'wss://dgb2.trezor.io',
       'wss://dgbbook.nownodes.io/wss/%{nowNodesApiKey}'

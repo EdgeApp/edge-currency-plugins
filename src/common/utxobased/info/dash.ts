@@ -35,12 +35,12 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
+      'wss://dash-wusa1.edge.app',
       'wss://dash1.trezor.io',
       'wss://dash2.trezor.io',
       'wss://dash3.trezor.io',
       'wss://dash4.trezor.io',
       'wss://dash5.trezor.io',
-      'wss://dash-eusa1.edge.app',
       'wss://dash.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false

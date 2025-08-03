@@ -34,6 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
+      'wss://btg-wusa1.edge.app',
       'wss://btg1.trezor.io',
       'wss://btg2.trezor.io',
       'wss://btg3.trezor.io',
