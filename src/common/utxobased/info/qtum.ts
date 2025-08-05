@@ -29,7 +29,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
-      'wss://qtum-eusa1.edge.app',
+      'wss://qtum-wusa1.edge.app',
       'wss://blockv3.qtum.info',
       'wss://qtum.atomicwallet.io'
     ],
@@ -40,6 +40,12 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
+  serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['https://qtum-wusa1.edge.app']
+    }
+  ],
   formats: ['bip44', 'bip32'],
   gapLimit: 10,
   feeUpdateInterval: 60000,

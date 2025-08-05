@@ -34,7 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://pivx-eusa1.edge.app', 'wss://zkbitcoin.com'],
+    blockbookServers: ['wss://pivx-wusa1.edge.app', 'wss://zkbitcoin.com'],
     enableCustomServers: false
   },
   displayName: 'PIVX',
@@ -45,7 +45,7 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
-      uris: ['https://btc-wusa1.edge.app']
+      uris: ['https://pivx-wusa1.edge.app']
     },
     {
       type: 'blockbook-nownode',
