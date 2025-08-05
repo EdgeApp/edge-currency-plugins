@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Require the environment to support es2015 & `async` functions.
+
 ## 3.8.3 (2025-07-14)
 
 - added: Added Edge blockbook servers to DASH, LTC, and PIVX.
