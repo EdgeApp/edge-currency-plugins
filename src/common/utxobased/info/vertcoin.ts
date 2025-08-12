@@ -32,6 +32,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
+      'wss://vtc-wusa1.edge.app',
       'wss://vtc1.trezor.io',
       'wss://vtc2.trezor.io',
       'wss://vtc3.trezor.io',
@@ -45,6 +46,12 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 const engineInfo: EngineInfo = {
+  serverConfigs: [
+    {
+      type: 'blockbook-nownode',
+      uris: ['https://vtc-wusa1.edge.app']
+    }
+  ],
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
   forks: [],
   gapLimit: 10,

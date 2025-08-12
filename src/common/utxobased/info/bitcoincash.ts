@@ -36,12 +36,12 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
+      'wss://bch-eusa1.edge.app',
       'wss://bch1.trezor.io',
       'wss://bch2.trezor.io',
       'wss://bch3.trezor.io',
       'wss://bch4.trezor.io',
       'wss://bch5.trezor.io',
-      'wss://bch-wusa1.edge.app',
       'wss://bchbook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
@@ -54,7 +54,7 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
-      uris: ['https://bch-wusa1.edge.app']
+      uris: ['https://bch-eusa1.edge.app']
     },
     {
       type: 'blockbook-nownode',

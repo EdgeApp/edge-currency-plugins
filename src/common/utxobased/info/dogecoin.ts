@@ -31,12 +31,12 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
+      'wss://doge-eusa1.edge.app',
       'wss://doge1.trezor.io',
       'wss://doge2.trezor.io',
       'wss://doge3.trezor.io',
       'wss://doge4.trezor.io',
       'wss://doge5.trezor.io',
-      'wss://doge-wusa1.edge.app',
       'wss://dogebook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
@@ -49,7 +49,7 @@ const engineInfo: EngineInfo = {
   serverConfigs: [
     {
       type: 'blockbook-nownode',
-      uris: ['https://doge-wusa1.edge.app']
+      uris: ['https://doge-eusa1.edge.app']
     },
     {
       type: 'blockbook-nownode',

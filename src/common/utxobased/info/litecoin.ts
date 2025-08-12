@@ -33,12 +33,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [
+      'wss://ltc-wusa1.edge.app',
       'wss://ltc1.trezor.io',
       'wss://ltc2.trezor.io',
       'wss://ltc3.trezor.io',
       'wss://ltc4.trezor.io',
       'wss://ltc5.trezor.io',
-      'wss://ltc-eusa1.edge.app',
       'wss://ltcbook.nownodes.io/wss/%{nowNodesApiKey}'
     ],
     enableCustomServers: false
