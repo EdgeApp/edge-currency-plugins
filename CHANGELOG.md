@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 3.8.4 (2025-08-20)
+
+- changed: Update blockbook servers
 - changed: Require the environment to support es2015 & `async` functions.
 
 ## 3.8.3 (2025-07-14)
