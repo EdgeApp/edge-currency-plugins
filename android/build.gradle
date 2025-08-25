@@ -21,19 +21,19 @@ def DEFAULT_MIN_SDK_VERSION = 19
 def DEFAULT_TARGET_SDK_VERSION = 27
 
 android {
-  namespace "app.edge.reactnative.currencyplugins"
+  namespace = "app.edge.reactnative.currencyplugins"
 
-  compileSdkVersion safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)
-  buildToolsVersion safeExtGet('buildToolsVersion', DEFAULT_BUILD_TOOLS_VERSION)
+  compileSdkVersion = safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)
+  buildToolsVersion = safeExtGet('buildToolsVersion', DEFAULT_BUILD_TOOLS_VERSION)
 
   defaultConfig {
-    minSdkVersion safeExtGet('minSdkVersion', DEFAULT_MIN_SDK_VERSION)
-    targetSdkVersion safeExtGet('targetSdkVersion', DEFAULT_TARGET_SDK_VERSION)
-    versionCode 1
-    versionName '1.0'
+    minSdkVersion = safeExtGet('minSdkVersion', DEFAULT_MIN_SDK_VERSION)
+    targetSdkVersion = safeExtGet('targetSdkVersion', DEFAULT_TARGET_SDK_VERSION)
+    versionCode = 1
+    versionName = '1.0'
   }
   lintOptions {
-    abortOnError false
+    abortOnError = false
   }
 }
 

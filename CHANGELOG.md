@@ -6,6 +6,7 @@
 
 - changed: Update blockbook servers
 - changed: Require the environment to support es2015 & `async` functions.
+- fixed: Avoid deprecated Gradle syntax.
 
 ## 3.8.3 (2025-07-14)
 
