@@ -2,6 +2,7 @@ import {
   asArray,
   asBoolean,
   asMaybe,
+  asNumber,
   asObject,
   asOptional,
   asString,
@@ -53,6 +54,7 @@ export const asUtxoSpendInfoOtherParams = asObject({
   /** @deprecated use `EdgeSpendInfo['enableRbf']` */
   enableRbf: asOptional(asBoolean),
   forceChangeAddress: asOptional(asString),
+  memoIndex: asOptional(asNumber),
   outputSort: asOptional(asOutputSort, 'bip69'),
   txOptions: asOptional(asTxOptions),
   utxoSourceAddress: asOptional(asString)

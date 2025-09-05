@@ -541,6 +541,7 @@ export async function makeUtxoEngine(
       )
       const txOptions = spendInfoOtherParams.txOptions ?? {}
       const {
+        memoIndex,
         outputSort,
         utxoSourceAddress,
         forceChangeAddress
@@ -669,6 +670,7 @@ export async function makeUtxoEngine(
         freshChangeAddress,
         subtractFee,
         log,
+        memoIndex,
         outputSort
       })
       if (tx.changeUsed) {

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add optional `memoIndex` to otherParams to force output index of OP_RETURN
+
 ## 3.8.4 (2025-08-20)
 
 - changed: Update blockbook servers

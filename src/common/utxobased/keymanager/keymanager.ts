@@ -235,6 +235,7 @@ export interface MakeTxArgs {
   subtractFee?: boolean
   log?: EdgeLog
   outputSort: 'bip69' | 'targets'
+  memoIndex?: number
 }
 
 export interface MakeTxTarget {
@@ -949,7 +950,7 @@ export function signMessageBase64(message: string, privateKey: string): string {
 }
 
 export function makeTx(args: MakeTxArgs): MakeTxReturn {
-  const { log, outputSort, memos } = args
+  const { log, outputSort, memos, memoIndex } = args
   let sequence = 0xffffffff
   if (args.enableRbf) {
     sequence -= 2
@@ -1101,6 +1102,16 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
         return result.outputs
     }
   })()
+
+  if (memoIndex != null) {
+    const currentMemoIndex = sortedOutputs.findIndex(
+      output => output.value === 0
+    )
+    if (currentMemoIndex !== -1) {
+      const memoOutput = sortedOutputs.splice(currentMemoIndex, 1)
+      sortedOutputs.splice(memoIndex, 0, memoOutput[0])
+    }
+  }
 
   const psbt = new Psbt()
   try {
