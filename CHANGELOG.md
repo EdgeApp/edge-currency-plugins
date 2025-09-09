@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.8.5 (2025-09-09)
+
 - added: Add optional `memoIndex` to otherParams to force output index of OP_RETURN
 
 ## 3.8.4 (2025-08-20)
