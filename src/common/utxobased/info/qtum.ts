@@ -18,9 +18,9 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:qtum',
 
   // Explorers:
-  addressExplorer: 'https://explorer.qtum.org/address/%s',
-  blockExplorer: 'https://explorer.qtum.org/block/%s',
-  transactionExplorer: 'https://explorer.qtum.org/tx/%s',
+  addressExplorer: 'https://qtum.info/address/%s',
+  blockExplorer: 'https://qtum.info/block/%s',
+  transactionExplorer: 'https://qtum.info/tx/%s',
 
   denominations: [{ name: 'QTUM', multiplier: '100000000', symbol: 'Q' }],
 
