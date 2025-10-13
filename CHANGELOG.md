@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.8.6 (2025-10-13)
+
 - fixed: (QTUM) Explorer URLs
 
 ## 3.8.5 (2025-09-09)
