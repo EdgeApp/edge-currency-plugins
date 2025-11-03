@@ -115,6 +115,17 @@ export function makeUtxoEngineProcessor(
     transactionUpdateCache: {}
   }
 
+  // Track pending timeouts so they can be cleared on stop
+  const pendingTimeouts: Set<NodeJS.Timeout> = new Set()
+
+  // Clear all pending timeouts
+  const clearPendingTimeouts = (): void => {
+    for (const timeoutId of pendingTimeouts) {
+      clearTimeout(timeoutId)
+    }
+    pendingTimeouts.clear()
+  }
+
   const clearTaskCache = (): void => {
     for (const key of Object.keys(taskCache.addressForTransactionsCache)) {
       removeItem(taskCache.addressForTransactionsCache, key)
@@ -212,6 +223,7 @@ export function makeUtxoEngineProcessor(
     dataLayer,
     emitter,
     taskCache,
+    pendingTimeouts,
     updateProgressRatio,
     updateSeenTxCheckpoint,
     io,
@@ -358,6 +370,7 @@ export function makeUtxoEngineProcessor(
     async stop(): Promise<void> {
       serverStates.stop()
       clearTaskCache()
+      clearPendingTimeouts()
       running = false
     },
 
@@ -628,6 +641,7 @@ interface CommonParams {
   dataLayer: DataLayer
   emitter: EngineEmitter
   taskCache: TaskCache
+  pendingTimeouts: Set<NodeJS.Timeout>
   updateProgressRatio: () => void
   updateSeenTxCheckpoint: () => void
   io: EdgeIo
@@ -1154,9 +1168,18 @@ async function* processCheckTransactionConfirmation(
   } catch (err) {
     console.error(err)
     common.log('error while processing transaction update:', err)
-    common.taskCache.transactionUpdateCache[txId] = {
-      processing: false
-    }
+    // Delay putting the transaction back into the cache to avoid thrashing
+    // on dropped transactions. 10 seconds is a reasonable compromise between
+    // thrashing and not waiting too long.
+    addPendingTimeout(
+      common,
+      () => {
+        common.taskCache.transactionUpdateCache[txId] = {
+          processing: false
+        }
+      },
+      10000
+    )
     return false
   }
 }
@@ -1680,4 +1703,23 @@ const addToDataLayerUtxoCache = (
   if (utxo != null) dataLayerUtxos.utxos.push(utxo)
   dataLayerUtxoCache[scriptPubkey] = dataLayerUtxos
   dataLayerUtxos.full = dataLayerUtxos.utxos.length >= requiredCount
+}
+
+/**
+ * This adds a pending timeout to the common.pendingTimeouts set.
+ * It will call the callback after the timeout.
+ *
+ * This utility is a safe way to add pending timeouts for the processor because
+ * it will clear the timeout when the processor stops.
+ */
+const addPendingTimeout = (
+  common: CommonParams,
+  callback: () => void,
+  timeout: number
+): void => {
+  const timeoutId = setTimeout(() => {
+    common.pendingTimeouts.delete(timeoutId)
+    callback()
+  }, timeout)
+  common.pendingTimeouts.add(timeoutId)
 }

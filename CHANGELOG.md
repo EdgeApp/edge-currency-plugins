@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Added retry delay to fix dropped transaction thrashing.
+
 ## 3.8.6 (2025-10-13)
 
 - fixed: (QTUM) Explorer URLs
