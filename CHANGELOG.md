@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fix failed transaction processing for FIRO transactions with SparkSpend inputs.
+
 ## 3.8.7 (2025-11-05)
 
 - fixed: Added retry delay to fix dropped transaction thrashing.

@@ -1361,23 +1361,36 @@ const processTransactionResponse = (
       }
     }
 
-    if (vin.txid == null) {
-      throw new Error(`Unexpected null txid when processing transaction inputs`)
-    }
-
-    const scriptPubkey =
+    let scriptPubkey: string = 'unknown'
+    try {
       // Note: Blockbook has empirically not sent a hex value as the
       // scriptPubkey for vins. If we discover this to be changed for some
       // cases, we may want to use the `hex` field as an optimization.
-      asMaybe(
-        raw => validScriptPubkeyFromAddress(raw),
-        'unknown'
-      )({
+      scriptPubkey = validScriptPubkeyFromAddress({
         address: vin.addresses[0],
         coin: common.pluginInfo.coinInfo.name
       })
+    } catch (error) {
+      common.log.warn(
+        `failed to get scriptPubkey from address ${vin.addresses[0]}: `,
+        error
+      )
+    }
+
+    // Some inputs may not have a txid in addition to coinbase inputs, such as
+    // private transaction inputs from privacy chains (e.g. SparkSpend inputs in FIRO).
+    // Warning: Because the engine doesn't support private transactions, or any
+    // transaction outputs that wouldn't have a txid as their input in the spend transaction,
+    // we can safely assume an all-zero txid for these inputs.
+    // If we're to ever support private transaction spends, then this wouldn't
+    // be safe to assume as "our own input" because it wouldn't remove the UTXO
+    // from the DataLayer properly.
+    const txId =
+      vin.txid ??
+      '0000000000000000000000000000000000000000000000000000000000000000'
+
     return {
-      txId: vin.txid,
+      txId,
       outputIndex: vin.vout,
       n: vin.n,
       scriptPubkey,
