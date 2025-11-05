@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.8.7 (2025-11-05)
+
 - fixed: Added retry delay to fix dropped transaction thrashing.
 
 ## 3.8.6 (2025-10-13)
