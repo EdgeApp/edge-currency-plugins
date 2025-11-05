@@ -1354,7 +1354,8 @@ const processTransactionResponse = (
       return {
         amount: outputTotalValue,
         n: 0,
-        outputIndex: 4294967295,
+        // UINT32_MAX value, as a coinbase has no previous outpoint
+        outputIndex: 0xffffffff,
         scriptPubkey: '', // Maybe there's a bogus scriptPubkey we can use here?
         sequence: vin.sequence,
         txId: '0000000000000000000000000000000000000000000000000000000000000000'
