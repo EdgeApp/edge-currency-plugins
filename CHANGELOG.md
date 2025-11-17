@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Change PIVX blockbook server list.
+
 ## 3.8.8 (2025-11-06)
 
 - fixed: Fix failed transaction processing for FIRO transactions with SparkSpend inputs.

@@ -34,7 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://pivx-wusa1.edge.app', 'wss://zkbitcoin.com'],
+    blockbookServers: ['wss://pivx-eusa1.edge.app', 'wss://zkbitcoin.com'],
     enableCustomServers: false
   },
   displayName: 'PIVX',
