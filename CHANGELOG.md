@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.8.9 (2025-12-04)
+
 - fixed: Change PIVX blockbook server list.
 
 ## 3.8.8 (2025-11-06)
