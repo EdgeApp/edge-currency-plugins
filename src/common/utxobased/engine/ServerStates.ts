@@ -375,13 +375,6 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           uri => serverStatesCache[uri].blockbook != null
         )
 
-        // If there are no blockbook instances, reject the promise
-        if (wsUris.length < 1) {
-          reject(new Error('Unexpected error. Missing WebSocket connections.'))
-          // Exit early if there are blockbook instances
-          return
-        }
-
         // Determine if there are any connected blockbook instances
         const isAnyBlockbookConnected = wsUris.some(
           uri => serverStatesCache[uri].blockbook.isConnected
@@ -430,9 +423,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           if (nowNodeUris.length < 1) {
             // If no HTTP servers are available, and we had no connected blockbook
             // instances, reject the promise with a message indicating no
-            // available connections. It's clear we have some connection instances
-            // if we gotten to this point, but we just don't have any of those
-            // instances connected at this time.
+            // available connections.
             reject(
               new Error('No available connections. Check your internet signal.')
             )

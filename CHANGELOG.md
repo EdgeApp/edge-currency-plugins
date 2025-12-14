@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Use HTTP fallback for transaction broadcast when WebSocket connections are unavailable
+
 ## 3.8.9 (2025-12-04)
 
 - fixed: Change PIVX blockbook server list.
