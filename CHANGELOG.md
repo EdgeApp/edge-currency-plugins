@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.8.10 (2025-12-19)
+
 - fixed: Use HTTP fallback for transaction broadcast when WebSocket connections are unavailable
 
 ## 3.8.9 (2025-12-04)
