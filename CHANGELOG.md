@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: CORS headers included in `webpack.config.js` for local development
+
 ## 3.8.10 (2025-12-19)
 
 - fixed: Use HTTP fallback for transaction broadcast when WebSocket connections are unavailable
