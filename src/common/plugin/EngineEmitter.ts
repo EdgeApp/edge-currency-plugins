@@ -92,6 +92,9 @@ export declare interface EngineEmitter {
       listener: (txids: EdgeTxidMap) => Promise<void> | void
     ) => this)
 }
+// Global throttle: max 1 emitAddressesChecked per 500ms; ratio=1 always passes.
+let acLastEmitTime = 0
+
 export class EngineEmitter extends EventEmitter {
   private lastBlockHeight?: number
   private lastWalletBalance?: string
@@ -119,6 +122,13 @@ export class EngineEmitter extends EventEmitter {
   emitAddressesChecked(progressRatio: number): boolean {
     if (this.lastAddressesCheckedRatio === progressRatio) return false
     this.lastAddressesCheckedRatio = progressRatio
+
+    if (progressRatio !== 1) {
+      const now = Date.now()
+      if (now - acLastEmitTime < 500) return false
+      acLastEmitTime = now
+    }
+
     return super.emit(EngineEvent.ADDRESSES_CHECKED, progressRatio)
   }
 }
