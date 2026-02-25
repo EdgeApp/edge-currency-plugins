@@ -92,7 +92,36 @@ export declare interface EngineEmitter {
       listener: (txids: EdgeTxidMap) => Promise<void> | void
     ) => this)
 }
-export class EngineEmitter extends EventEmitter {}
+export class EngineEmitter extends EventEmitter {
+  private lastBlockHeight?: number
+  private lastWalletBalance?: string
+  private lastAddressesCheckedRatio?: number
+
+  emitBlockHeightChanged(uri: string, blockHeight: number): boolean {
+    if (this.lastBlockHeight === blockHeight) return false
+    this.lastBlockHeight = blockHeight
+    return super.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, uri, blockHeight)
+  }
+
+  emitWalletBalanceChanged(
+    currencyCode: string,
+    nativeBalance: string
+  ): boolean {
+    if (this.lastWalletBalance === nativeBalance) return false
+    this.lastWalletBalance = nativeBalance
+    return super.emit(
+      EngineEvent.WALLET_BALANCE_CHANGED,
+      currencyCode,
+      nativeBalance
+    )
+  }
+
+  emitAddressesChecked(progressRatio: number): boolean {
+    if (this.lastAddressesCheckedRatio === progressRatio) return false
+    this.lastAddressesCheckedRatio = progressRatio
+    return super.emit(EngineEvent.ADDRESSES_CHECKED, progressRatio)
+  }
+}
 
 export enum EngineEvent {
   SEEN_TX_CHECKPOINT = 'seen:tx:checkpoint',
@@ -116,12 +145,9 @@ export const makeEngineEmitter = (
   const emitter = new EngineEmitter()
 
   emitter.on(EngineEvent.ADDRESSES_CHECKED, callbacks.onAddressesChecked)
-  emitter.on(
-    EngineEvent.BLOCK_HEIGHT_CHANGED,
-    (_uri: string, height: number) => {
-      callbacks.onBlockHeightChanged(height)
-    }
-  )
+  // BLOCK_HEIGHT_CHANGED is used internally (e.g. to check unconfirmed txs)
+  // but is no longer forwarded to core-js. UTXO txs already set
+  // confirmations directly, so onBlockHeightChanged is a no-op in core-js.
   emitter.on(EngineEvent.SEEN_TX_CHECKPOINT, callbacks.onSeenTxCheckpoint)
   emitter.on(EngineEvent.TRANSACTIONS, callbacks.onTransactions)
   emitter.on(EngineEvent.TRANSACTIONS_CHANGED, callbacks.onTransactionsChanged)

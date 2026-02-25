@@ -186,7 +186,7 @@ export function makeUtxoEngineProcessor(
       )
       processedPercent = percent
       common.updateSeenTxCheckpoint()
-      emitter.emit(EngineEvent.ADDRESSES_CHECKED, percent)
+      emitter.emitAddressesChecked(percent)
     }
   }
 
