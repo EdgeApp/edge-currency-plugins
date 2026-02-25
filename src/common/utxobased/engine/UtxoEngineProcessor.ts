@@ -157,7 +157,7 @@ export function makeUtxoEngineProcessor(
    **/
   const processesPerAddress = 2
   let processedCount = 0
-  let processedPercent = 0 // last sync ratio emitted
+  let processedPercent = 0 // in-memory high-water-mark; resets to 0 on engine creation
   const updateProgressRatio = async (): Promise<void> => {
     // Avoid re-sending sync ratios / sending ratios larger than 1
     if (processedPercent >= 1) return
@@ -174,6 +174,12 @@ export function makeUtxoEngineProcessor(
     if (expectedProcessCount === 0) throw new Error('No addresses to process')
 
     const percent = processedCount / expectedProcessCount
+
+    // High-water-mark: never report progress going backwards. This can happen
+    // when setLookAhead discovers new addresses and inflates expectedProcessCount,
+    // or when start() is called again (pause/unpause) and processedCount resets.
+    if (percent <= processedPercent) return
+
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
       log(
         `processed changed, percent: ${percent}, processedCount: ${processedCount}, totalCount: ${expectedProcessCount}`
@@ -360,8 +366,11 @@ export function makeUtxoEngineProcessor(
   return {
     processedPercent,
     async start(): Promise<void> {
+      // Reset the count so the address walk restarts, but keep processedPercent
+      // as an in-memory high-water-mark. This prevents the reported ratio from
+      // rolling backwards if start() is called again (pause/unpause) or if
+      // setLookAhead discovers new addresses and inflates the denominator.
       processedCount = 0
-      processedPercent = 0
 
       await run()
       serverStates.refillServers()
