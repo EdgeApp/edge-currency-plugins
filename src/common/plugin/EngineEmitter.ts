@@ -121,7 +121,6 @@ export class EngineEmitter extends EventEmitter {
 
   emitAddressesChecked(progressRatio: number): boolean {
     if (this.lastAddressesCheckedRatio === progressRatio) return false
-    this.lastAddressesCheckedRatio = progressRatio
 
     if (progressRatio !== 1) {
       const now = Date.now()
@@ -129,6 +128,7 @@ export class EngineEmitter extends EventEmitter {
       acLastEmitTime = now
     }
 
+    this.lastAddressesCheckedRatio = progressRatio
     return super.emit(EngineEvent.ADDRESSES_CHECKED, progressRatio)
   }
 }
