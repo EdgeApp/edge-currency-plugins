@@ -1261,9 +1261,12 @@ async function* processAddressForTransactions(
         // The tx unconfirmed or confirmed after/at the last seenTxCheckpoint
         (tx.blockHeight === 0 || tx.blockHeight > seenTxBlockHeight)
 
-      common.emitter.emit(EngineEvent.TRANSACTIONS, [
-        { isNew, transaction: edgeTx }
-      ])
+      // Only emit if tx is new or changed (blockHeight changed)
+      if (existingTx == null || existingTx.blockHeight !== tx.blockHeight) {
+        common.emitter.emit(EngineEvent.TRANSACTIONS, [
+          { isNew, transaction: edgeTx }
+        ])
+      }
 
       if (edgeTx.blockHeight > common.maxSeenTxBlockHeight) {
         common.maxSeenTxBlockHeight = edgeTx.blockHeight
