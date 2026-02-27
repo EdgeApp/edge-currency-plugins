@@ -7,6 +7,7 @@ import { UtxoEngineProcessor } from '../utxobased/engine/UtxoEngineProcessor'
 import {
   asServerCache,
   ServerCache,
+  ServerInfo,
   ServerList,
   ServerScores
 } from './ServerScores'
@@ -55,6 +56,43 @@ export interface PluginState {
 
 export function makePluginState(settings: PluginStateSettings): PluginState {
   const { defaultSettings, log, pluginDisklet, pluginId } = settings
+
+  const sanitizeServerUri = (uri: string): string => {
+    // `dumpData()` is often copied into support logs.
+    // Strip anything that might accidentally contain credentials/tokens.
+    // Keep scheme/host/path, but drop username/password + query/hash.
+    // Avoid using the global `URL` class since it is not guaranteed to exist
+    // in all runtime environments.
+    const noQueryHash = uri.split(/[?#]/)[0]
+    return noQueryHash.replace(
+      /^([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)([^@/]*@)(.*)$/,
+      '$1$3'
+    )
+  }
+
+  const sanitizeServerList = (serverList: ServerList): JsonObject => {
+    const out: JsonObject = {}
+
+    for (const [serverUri, serverInfo] of Object.entries(serverList)) {
+      const sanitizedUri = sanitizeServerUri(serverUri)
+      const sanitizedInfo: ServerInfo = {
+        ...serverInfo,
+        serverUrl: sanitizeServerUri(serverInfo.serverUrl)
+      }
+
+      // In case sanitization causes collisions (ex: query string removed),
+      // preserve all entries by suffixing the key.
+      if (out[sanitizedUri] == null) {
+        out[sanitizedUri] = sanitizedInfo
+      } else {
+        let i = 2
+        while (out[`${sanitizedUri}#${i}`] != null) i++
+        out[`${sanitizedUri}#${i}`] = sanitizedInfo
+      }
+    }
+
+    return out
+  }
 
   let engines: UtxoEngineProcessor[] = []
   const memlet = makeMemlet(pluginDisklet)
@@ -137,8 +175,18 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     },
 
     dumpData(): JsonObject {
+      const selectedServerList = getSelectedServerList()
+      const infoServers = Object.keys(
+        instance.infoPayload?.blockbookServers ?? {}
+      ).map(sanitizeServerUri)
+
       return {
-        'pluginState.servers_': getSelectedServerList()
+        'pluginState.servers_': sanitizeServerList(selectedServerList),
+        infoServers,
+        customServers: Object.keys(serverCache.customServers).map(
+          sanitizeServerUri
+        ),
+        enableCustomServers: serverCache.enableCustomServers
       }
     },
 
