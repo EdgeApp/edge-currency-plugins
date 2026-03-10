@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.9.0 (2026-03-10)
+
 - changed: Enhanced `dumpData()` to include server lists by provenance (info-server, custom) with URI sanitization
 
 ## 3.8.11 (2026-02-03)
