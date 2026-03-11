@@ -309,7 +309,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           serverStatesCache[uri].blockHeight = blockHeight
 
           // Emit initial BLOCK_HEIGHT_CHANGED event
-          engineEmitter.emit(EngineEvent.BLOCK_HEIGHT_CHANGED, uri, blockHeight)
+          engineEmitter.emitBlockHeightChanged(uri, blockHeight)
 
           // Increment server score using response time
           const responseTime = Date.now() - startTime

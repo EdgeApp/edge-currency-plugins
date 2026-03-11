@@ -46,11 +46,7 @@ export const makeMetadata = async (
     )
     cache.balance = cumulativeBalance
     await setMetadata(cache)
-    emitter.emit(
-      EngineEvent.WALLET_BALANCE_CHANGED,
-      currencyCode,
-      cumulativeBalance
-    )
+    emitter.emitWalletBalanceChanged(currencyCode, cumulativeBalance)
   }
 
   emitter.on(
