@@ -1,5 +1,6 @@
 import {
   EdgeCurrencyEngineCallbacks,
+  EdgeSubscribedAddress,
   EdgeTransaction,
   EdgeTransactionEvent,
   EdgeTxidMap
@@ -10,9 +11,13 @@ import { SubscribeAddressResponse } from '../utxobased/network/blockbookApi'
 
 export declare interface EngineEmitter {
   emit: ((
-    event: EngineEvent.SEEN_TX_CHECKPOINT,
-    checkpoint: string
+    event: EngineEvent.SUBSCRIBE_ADDRESSES,
+    addresses: EdgeSubscribedAddress[]
   ) => boolean) &
+    ((
+      event: EngineEvent.SEEN_TX_CHECKPOINT,
+      checkpoint: string
+    ) => boolean) &
     ((
       event: EngineEvent.TRANSACTIONS,
       transactionEvents: EdgeTransactionEvent[]
@@ -45,9 +50,13 @@ export declare interface EngineEmitter {
     ((event: EngineEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => boolean)
 
   on: ((
-    event: EngineEvent.SEEN_TX_CHECKPOINT,
-    listener: (checkpoint: string) => Promise<void> | void
+    event: EngineEvent.SUBSCRIBE_ADDRESSES,
+    listener: (addresses: EdgeSubscribedAddress[]) => Promise<void> | void
   ) => this) &
+    ((
+      event: EngineEvent.SEEN_TX_CHECKPOINT,
+      listener: (checkpoint: string) => Promise<void> | void
+    ) => this) &
     ((
       event: EngineEvent.TRANSACTIONS,
       listener: (
@@ -95,6 +104,7 @@ export declare interface EngineEmitter {
 export class EngineEmitter extends EventEmitter {}
 
 export enum EngineEvent {
+  SUBSCRIBE_ADDRESSES = 'subscribe:addresses',
   SEEN_TX_CHECKPOINT = 'seen:tx:checkpoint',
   TRANSACTIONS = 'transactions',
   /** @deprecated Use TRANSACTIONS */
@@ -123,6 +133,7 @@ export const makeEngineEmitter = (
     }
   )
   emitter.on(EngineEvent.SEEN_TX_CHECKPOINT, callbacks.onSeenTxCheckpoint)
+  emitter.on(EngineEvent.SUBSCRIBE_ADDRESSES, callbacks.onSubscribeAddresses)
   emitter.on(EngineEvent.TRANSACTIONS, callbacks.onTransactions)
   emitter.on(EngineEvent.TRANSACTIONS_CHANGED, callbacks.onTransactionsChanged)
   emitter.on(EngineEvent.TXIDS_CHANGED, callbacks.onTxidsChanged)

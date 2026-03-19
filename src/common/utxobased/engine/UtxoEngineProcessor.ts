@@ -103,6 +103,9 @@ export function makeUtxoEngineProcessor(
   } = config
   const { log } = engineOptions
 
+  const { currencyInfo } = pluginInfo
+  const usesChangeServer = currencyInfo.usesChangeServer === true
+
   const { walletFormats } = walletInfo.keys
 
   const taskCache: TaskCache = {
@@ -245,12 +248,42 @@ export function makeUtxoEngineProcessor(
     running = true
 
     await initializeAddressSubscriptions()
+
+    // After initialization, notify core which addresses to subscribe on the
+    // change-server. Only do this when the currency opts in.
+    if (usesChangeServer) {
+      const { subscribedAddresses: restoredAddresses = [] } =
+        engineOptions
+      // Build a map of restored checkpoints for fast lookup
+      const checkpointByAddress = new Map<string, string | undefined>()
+      for (const entry of restoredAddresses) {
+        checkpointByAddress.set(entry.address, entry.checkpoint)
+      }
+
+      // Collect all current wallet addresses from the subscribe cache
+      const addressesToSubscribe = Object.keys(
+        taskCache.addressSubscribeCache
+      ).map(address => ({
+        address,
+        checkpoint: checkpointByAddress.get(address)
+      }))
+
+      if (addressesToSubscribe.length > 0) {
+        emitter.emit(EngineEvent.SUBSCRIBE_ADDRESSES, addressesToSubscribe)
+      }
+    }
+
     await setLookAhead(common)
   }
 
   emitter.on(
     EngineEvent.BLOCK_HEIGHT_CHANGED,
     async (_uri: string, _blockHeight: number): Promise<void> => {
+      // When change-server is enabled, unconfirmed→confirmed transitions are
+      // discovered via address wakeups instead of per-block network queries.
+      // Skip populating transactionUpdateCache to avoid redundant fetchTx calls.
+      if (usesChangeServer) return
+
       // Add all unconfirmed transactions to the cache to check if these
       // transactions have been confirmed:
       const txs = await dataLayer.fetchTransactions({

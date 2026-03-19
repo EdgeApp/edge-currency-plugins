@@ -5,6 +5,7 @@ import {
   DustSpendError,
   EdgeCurrencyEngine,
   EdgeDataDump,
+  EdgeEngineSyncNetworkOptions,
   EdgeFreshAddress,
   EdgeGetReceiveAddressOptions,
   EdgeGetTransactionsOptions,
@@ -61,6 +62,7 @@ import {
   pathToPurposeType,
   sumUtxos
 } from './utils'
+import { SubscribeAddressResponse } from '../network/blockbookApi'
 import { makeUtxoEngineProcessor } from './UtxoEngineProcessor'
 import { makeUtxoWalletTools } from './UtxoWalletTools'
 
@@ -1027,6 +1029,45 @@ export async function makeUtxoEngine(
       await tmpEngineProcessor.start()
 
       return await sweepTxPromise
+    },
+
+    async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
+      const syncIntervalMs = 10000
+
+      // If this currency doesn't use the change-server, behave as a normal
+      // polling engine: just return the polling interval.
+      if (currencyInfo.usesChangeServer !== true) {
+        return syncIntervalMs
+      }
+
+      const { subscribeParam } = opts
+
+      if (subscribeParam == null) {
+        // Ordinary polling wakeup — no change-server address activity.
+        // The existing Blockbook websocket subscriptions handle real-time
+        // updates; no extra work needed here.
+        return syncIntervalMs
+      }
+
+      if (subscribeParam.needsSync === false) {
+        // Core says no real sync is needed for this address.
+        // Mark addresses-checked at 100% to signal fully synced.
+        emitter.emit(EngineEvent.ADDRESSES_CHECKED, 1)
+        return syncIntervalMs
+      }
+
+      // Change-server reported activity for a specific address.
+      // Feed it into the existing address-scoped processing pipeline by
+      // emitting NEW_ADDRESS_TRANSACTION — the same event used for direct
+      // Blockbook address wakeups. The handler only uses response.address,
+      // so we cast the partial object to satisfy the type signature.
+      emitter.emit(
+        EngineEvent.NEW_ADDRESS_TRANSACTION,
+        'syncNetwork',
+        { address: subscribeParam.address } as SubscribeAddressResponse
+      )
+
+      return syncIntervalMs
     },
 
     otherMethods: {}

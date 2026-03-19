@@ -16,6 +16,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   customFeeTemplate: utxoCustomFeeTemplate,
   memoOptions: utxoMemoOptions,
   pluginId: 'litecoin',
+  usesChangeServer: true,
   walletType: 'wallet:litecoin',
 
   // Explorers:
