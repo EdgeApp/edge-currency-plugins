@@ -18,6 +18,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   customFeeTemplate: utxoCustomFeeTemplate,
   memoOptions: utxoMemoOptions,
   pluginId: 'bitcoincash',
+  usesChangeServer: true,
   walletType: 'wallet:bitcoincash',
 
   // Explorers:

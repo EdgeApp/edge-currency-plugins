@@ -16,6 +16,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   customFeeTemplate: utxoCustomFeeTemplate,
   memoOptions: utxoMemoOptions,
   pluginId: 'dogecoin',
+  usesChangeServer: true,
   walletType: 'wallet:dogecoin',
 
   // Explorers:

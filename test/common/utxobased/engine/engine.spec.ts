@@ -98,6 +98,8 @@ describe('engine.spec', function () {
         fakeLogger.info('onTransactionsChanged:', transactionList)
         emitter.emit('onTransactionsChanged', transactionList)
       },
+      onSubscribeAddresses() {},
+      onSyncStatusChanged() {},
       onTxidsChanged() {},
       onUnactivatedTokenIdsChanged() {},
       onWcNewContractCall() {}
