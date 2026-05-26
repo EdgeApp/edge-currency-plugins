@@ -64,7 +64,7 @@ sorting when placing the new currency plugin info in the `all` object.
 
 ### 3. Test the new currency plugin
 
-Run the Webpack dev-server with `yarn start` and leverage the `debugUri` in
+Run the Webpack dev-server with `npm run start` and leverage the `debugUri` in
 your application to quickly iterate while debugging/developing.
 
 ### 4. Submit a pull request

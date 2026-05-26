@@ -40,7 +40,7 @@ The bundle located in `dist/edge-currency-plugins.js` will automatically registe
 <script src='https://example.com/app/dist/edge-currency-plugins.js'>
 ```
 
-If you want to debug this project, run `yarn start` to start a Webpack server,
+If you want to debug this project, run `npm run start` to start a Webpack server,
 and then adjust your script URL to http://localhost:8084/edge-currency-plugins.js.
 
 ### React Native
@@ -59,7 +59,7 @@ import { pluginUri, makePluginIo } from "edge-currency-plugins";
 />;
 ```
 
-To debug this project, run `yarn start` to start a Webpack server, and then use `debugUri` instead of `pluginUri`.
+To debug this project, run `npm run start` to start a Webpack server, and then use `debugUri` instead of `pluginUri`.
 
 ## How to Contribute
 
