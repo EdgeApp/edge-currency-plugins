@@ -32,6 +32,15 @@ import { InsufficientFundsErrorPlus } from './types'
 import * as utxopicker from './utxopicker'
 import * as pickerUtils from './utxopicker/utils'
 
+// Eagerly initialize the ECC library at module load. Taproot (p2tr) address
+// parsing in `addressToScriptPubkey` (via `payments.p2tr`) requires the ECC
+// library, and that code path can run before any ECPair/signing operation
+// triggers the lazy `getECPair` init below — e.g. when `makeSpend` converts a
+// Taproot recipient address to a scriptPubkey. Without this, sending to a
+// `bc1p…` address fails with "No ECC Library provided".
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+initEccLib(require('@bitcoinerlab/secp256k1'))
+
 let ECPairCache: ECPairAPI
 const getECPair = (): ECPairAPI => {
   if (ECPairCache != null) return ECPairCache
