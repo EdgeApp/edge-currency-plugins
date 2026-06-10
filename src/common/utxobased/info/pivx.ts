@@ -18,9 +18,9 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:pivx',
 
   // Explorers:
-  addressExplorer: 'https://zkbitcoin.com/address/%s',
-  blockExplorer: 'https://zkbitcoin.com/block/%s',
-  transactionExplorer: 'https://zkbitcoin.com/tx/%s',
+  addressExplorer: 'https://explorer.duddino.com/address/%s',
+  blockExplorer: 'https://explorer.duddino.com/block/%s',
+  transactionExplorer: 'https://explorer.duddino.com/tx/%s',
 
   denominations: [
     {
@@ -34,7 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://pivx-eusa1.edge.app', 'wss://zkbitcoin.com'],
+    blockbookServers: ['wss://pivx-eusa1.edge.app'],
     enableCustomServers: false
   },
   displayName: 'PIVX',

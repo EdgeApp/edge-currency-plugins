@@ -5,6 +5,7 @@
 - changed: Convert the build tooling from Yarn to npm.
 - changed: Replace git dependencies with @edge.app-scoped npm packages (ecpair, groestl-hash-js, bs58grscheck).
 - security: Upgrade dependencies per Socket security recommendations.
+- fixed: Replace defunct PIVX explorer (zkbitcoin.com) with explorer.duddino.com and remove zkbitcoin.com from the PIVX blockbook server list
 
 ## 3.9.0 (2026-03-10)
 
