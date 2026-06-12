@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- changed: Convert the build tooling from Yarn to npm.
+- changed: Replace git dependencies with @edge.app-scoped npm packages (ecpair, groestl-hash-js, bs58grscheck).
+- security: Upgrade dependencies per Socket security recommendations.
+
 ## 3.9.0 (2026-03-10)
 
 - changed: Enhanced `dumpData()` to include server lists by provenance (info-server, custom) with URI sanitization
