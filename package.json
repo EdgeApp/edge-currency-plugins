@@ -56,7 +56,7 @@
     "bs58smartcheck": "^2.0.4",
     "cleaners": "^0.3.17",
     "disklet": "^0.4.5",
-    "ecpair": "https://github.com/EdgeApp/ecpair.git#b193eb8ea2ec0c93b528f4b0223a605407ff43e4",
+    "ecpair": "npm:@edge.app/ecpair@2.1.0-edge.1",
     "edge-sync-client": "^0.2.7",
     "memlet": "^0.1.7",
     "uri-js": "^4.4.0",
@@ -132,7 +132,11 @@
     "wif": "^2.0.6"
   },
   "overrides": {
-    "get-func-name": "2.0.2"
+    "get-func-name": "2.0.2",
+    "groestl-hash-js": "npm:@edge.app/groestl-hash-js@1.0.0-edge.1",
+    "wifgrs": {
+      "bs58grscheck": "npm:@edge.app/bs58grscheck@2.1.2-edge.1"
+    }
   },
   "react-native": "./lib/react-native.js"
 }
