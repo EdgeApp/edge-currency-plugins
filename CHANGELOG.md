@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.10.0 (2026-06-13)
+
 - changed: Convert the build tooling from Yarn to npm.
 - changed: Replace git dependencies (ecpair, groestl-hash-js, bs58grscheck) with @edge.app-scoped npm packages so installs no longer require git/SSH access.
 - security: Upgrade dependencies per Socket security recommendations.
