@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Add the NowNodes blockbook websocket server to eCash (XEC) so wallets can sync and send when the primary `blockbook.fabien.cash` server is unavailable.
+
 ## 3.10.0 (2026-06-13)
 
 - changed: Convert the build tooling from Yarn to npm.
