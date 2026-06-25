@@ -32,7 +32,10 @@ const currencyInfo: EdgeCurrencyInfo = {
   ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: ['wss://blockbook.fabien.cash/websocket'],
+    blockbookServers: [
+      'wss://blockbook.fabien.cash/websocket',
+      'wss://xec-blockbook.nownodes.io/wss/%{nowNodesApiKey}'
+    ],
     enableCustomServers: false
   },
   displayName: 'eCash',
