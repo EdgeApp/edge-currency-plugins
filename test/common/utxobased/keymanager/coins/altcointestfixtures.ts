@@ -1,8 +1,10 @@
+import { CurrencyFormat } from '../../../../../src/common/plugin/types'
 import {
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
   ScriptTypeEnum
 } from '../../../../../src/common/utxobased/keymanager/keymanager'
+import { UtxoSignatureFormat } from '../../../../../src/common/utxobased/keymanager/types'
 
 interface SeedToXPrivTests {
   xpriv: string
@@ -45,6 +47,9 @@ interface XPubToPubkeyTests {
 interface SignMessageTests {
   wif: string
   message: string
+  format: CurrencyFormat
+  /** Omitted to exercise the default, which must stay `electrum`. */
+  signatureFormat?: UtxoSignatureFormat
   signature: string
 }
 
@@ -842,6 +847,61 @@ export const fixtures: Fixture = {
           address: 'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh',
           scriptPubkey: '001496cd3178f3de0f307bcee1aeaa4d5987862dd30a'
         }
+      ],
+      // Signatures use Litecoin's own '\x19Litecoin Signed Message:\n' prefix,
+      // so they differ from the Bitcoin vectors above for the same key and
+      // message, and verify against Litecoin addresses only. Each was checked
+      // with bitcoinMessage.verify against the derived legacy / p2sh-p2wpkh /
+      // bech32 address, and confirmed NOT to verify under Bitcoin's prefix.
+      // The leading base64 char (H/I/J) encodes the BIP137 address type; the
+      // default-format cases stay on H for every derivation path, which is
+      // what keeps existing callers on the encoding they already produce.
+      signMessageTests: [
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip44',
+          signature:
+            'H21RXhfhR3uOi9zqIi3dTVopWSmAzC9fBuEo4S+ZHkfsHPkDnLUM2t7BBTNgVQhyofQXU7zQgZdO0GV3pRhwNfY='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip49',
+          signature:
+            'H21RXhfhR3uOi9zqIi3dTVopWSmAzC9fBuEo4S+ZHkfsHPkDnLUM2t7BBTNgVQhyofQXU7zQgZdO0GV3pRhwNfY='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip84',
+          signature:
+            'H21RXhfhR3uOi9zqIi3dTVopWSmAzC9fBuEo4S+ZHkfsHPkDnLUM2t7BBTNgVQhyofQXU7zQgZdO0GV3pRhwNfY='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip44',
+          signatureFormat: 'bip137',
+          signature:
+            'H21RXhfhR3uOi9zqIi3dTVopWSmAzC9fBuEo4S+ZHkfsHPkDnLUM2t7BBTNgVQhyofQXU7zQgZdO0GV3pRhwNfY='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip49',
+          signatureFormat: 'bip137',
+          signature:
+            'I21RXhfhR3uOi9zqIi3dTVopWSmAzC9fBuEo4S+ZHkfsHPkDnLUM2t7BBTNgVQhyofQXU7zQgZdO0GV3pRhwNfY='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip84',
+          signatureFormat: 'bip137',
+          signature:
+            'J21RXhfhR3uOi9zqIi3dTVopWSmAzC9fBuEo4S+ZHkfsHPkDnLUM2t7BBTNgVQhyofQXU7zQgZdO0GV3pRhwNfY='
+        }
       ]
     },
     {
@@ -1348,12 +1408,54 @@ export const fixtures: Fixture = {
             '5120a60869f0dbcf1dc659c9cecbaf8050135ea9e8cdc487053f1dc6880949dc684c'
         }
       ],
+      // The default (Electrum) encoding keeps the same 'H' header byte for
+      // every derivation path; only an explicit BIP-137 request shifts it into
+      // the nested-SegWit ('I') and native-SegWit ('J') ranges.
       signMessageTests: [
         {
           wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
           message: 'This is an example of a signed message.',
+          format: 'bip44',
           signature:
             'H9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip49',
+          signature:
+            'H9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip84',
+          signature:
+            'H9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip44',
+          signatureFormat: 'bip137',
+          signature:
+            'H9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip49',
+          signatureFormat: 'bip137',
+          signature:
+            'I9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip84',
+          signatureFormat: 'bip137',
+          signature:
+            'J9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
         }
       ]
     },

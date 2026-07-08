@@ -19,6 +19,7 @@ import {
   xprivToPrivateKey,
   xpubToPubkey
 } from '../keymanager/keymanager'
+import { UtxoSignatureFormat } from '../keymanager/types'
 import {
   CurrencyFormatKeys,
   currencyFormatToPurposeType,
@@ -92,6 +93,7 @@ interface SignMessageArgs {
   path: AddressPath
   message: string
   xprivKeys: CurrencyFormatKeys
+  signatureFormat: UtxoSignatureFormat
 }
 
 export function makeUtxoWalletTools(
@@ -236,12 +238,23 @@ export function makeUtxoWalletTools(
       return { address, scriptPubkey, redeemScript }
     },
 
-    signMessageBase64({ path, message, xprivKeys }: SignMessageArgs): string {
+    signMessageBase64({
+      path,
+      message,
+      xprivKeys,
+      signatureFormat
+    }: SignMessageArgs): string {
       const privKey = fns.getPrivateKey({
         path,
         xprivKeys
       })
-      return signMessageBase64(message, privKey)
+      return signMessageBase64(
+        message,
+        privKey,
+        path.format,
+        coin,
+        signatureFormat
+      )
     }
   }
 

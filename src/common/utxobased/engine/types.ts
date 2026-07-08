@@ -11,6 +11,7 @@ import {
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { asTxOptions } from '../../plugin/types'
+import { asUtxoSignatureFormat } from '../keymanager/types'
 import { Input, Output } from '../keymanager/utxopicker/types'
 
 export interface UtxoInitOptions {
@@ -42,7 +43,12 @@ export type UtxoSignMessageOtherParams = ReturnType<
   typeof asUtxoSignMessageOtherParams
 >
 export const asUtxoSignMessageOtherParams = asObject({
-  publicAddress: asString
+  publicAddress: asString,
+  // Defaults to the legacy Electrum encoding so existing callers keep the
+  // format they already produce. BIP-137 is opt-in, since emitting a BIP-137
+  // header to a verifier expecting the legacy one is just as broken as the
+  // reverse.
+  signatureFormat: asMaybe(asUtxoSignatureFormat, 'electrum')
 })
 
 const asOutputSort = asValue('bip69', 'targets')
