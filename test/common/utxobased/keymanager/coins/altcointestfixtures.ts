@@ -1,3 +1,4 @@
+import { CurrencyFormat } from '../../../../../src/common/plugin/types'
 import {
   AddressTypeEnum,
   BIP43PurposeTypeEnum,
@@ -45,6 +46,7 @@ interface XPubToPubkeyTests {
 interface SignMessageTests {
   wif: string
   message: string
+  format: CurrencyFormat
   signature: string
 }
 
@@ -842,6 +844,33 @@ export const fixtures: Fixture = {
           address: 'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh',
           scriptPubkey: '001496cd3178f3de0f307bcee1aeaa4d5987862dd30a'
         }
+      ],
+      // Signatures use Litecoin's "Litecoin Signed Message:\n" prefix, so they
+      // differ from the Bitcoin vectors above for the same key/message and
+      // verify against Litecoin addresses. The leading base64 char (H/I/J)
+      // still encodes the BIP137 address type (legacy / p2sh-p2wpkh / p2wpkh).
+      signMessageTests: [
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip44',
+          signature:
+            'H0UZW4iWKCquBbOO32dlUOkB8RqG81jJmfkMsvK8vppNDCFE5M17LvmtxQYHq6wcimb/LFk/urTz6VvbILtSth4='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip49',
+          signature:
+            'I0UZW4iWKCquBbOO32dlUOkB8RqG81jJmfkMsvK8vppNDCFE5M17LvmtxQYHq6wcimb/LFk/urTz6VvbILtSth4='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip84',
+          signature:
+            'J0UZW4iWKCquBbOO32dlUOkB8RqG81jJmfkMsvK8vppNDCFE5M17LvmtxQYHq6wcimb/LFk/urTz6VvbILtSth4='
+        }
       ]
     },
     {
@@ -1352,8 +1381,23 @@ export const fixtures: Fixture = {
         {
           wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
           message: 'This is an example of a signed message.',
+          format: 'bip44',
           signature:
             'H9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip49',
+          signature:
+            'I9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
+        },
+        {
+          wif: 'L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1',
+          message: 'This is an example of a signed message.',
+          format: 'bip84',
+          signature:
+            'J9L5yLFjti0QTHhPyFrZCT1V/MMnBtXKmoiKDZ78NDBjERki6ZTQZdSMCtkgoNmp17By9ItJr8o7ChX0XxY91nk='
         }
       ]
     },

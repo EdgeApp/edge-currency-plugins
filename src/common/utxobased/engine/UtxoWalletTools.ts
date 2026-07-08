@@ -241,7 +241,7 @@ export function makeUtxoWalletTools(
         path,
         xprivKeys
       })
-      return signMessageBase64(message, privKey)
+      return signMessageBase64(message, privKey, path.format, coin)
     }
   }
 

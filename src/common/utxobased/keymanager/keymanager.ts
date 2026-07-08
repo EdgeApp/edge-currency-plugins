@@ -18,7 +18,13 @@ import { EdgeLog, EdgeMemo } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
-import { ChangePath, CoinInfo, CoinPrefixes, FeeInfo } from '../../plugin/types'
+import {
+  ChangePath,
+  CoinInfo,
+  CoinPrefixes,
+  CurrencyFormat,
+  FeeInfo
+} from '../../plugin/types'
 import { UtxoData } from '../db/types'
 import { ScriptTemplate, ScriptTemplates } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
@@ -938,14 +944,35 @@ export function privateKeyEncodingToPubkey(
   }).publicKey.toString('hex')
 }
 
-export function signMessageBase64(message: string, privateKey: string): string {
+export function signMessageBase64(
+  message: string,
+  privateKey: string,
+  format: CurrencyFormat,
+  coin: string
+): string {
   const ECPair = getECPair()
   const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'))
   if (keyPair.privateKey == null) {
     throw new Error('Address could not sign message')
   }
+  // BIP137 encodes the address type in the signature's header byte. Native
+  // SegWit (bip84 / P2WPKH) and nested SegWit (bip49 / P2SH-P2WPKH) each have
+  // their own header range; verifiers such as Bringin reject a SegWit address
+  // whose message was signed with a legacy (bip44) header byte.
+  const segwitType =
+    format === 'bip84'
+      ? 'p2wpkh'
+      : format === 'bip49'
+      ? 'p2sh(p2wpkh)'
+      : undefined
+  // Magic-hash the message with the coin's own prefix (e.g. "Litecoin Signed
+  // Message:\n") so the signature verifies against that coin's addresses.
+  // Every UTXO coin routes through here, not just Bitcoin.
+  const messagePrefix = getCoinFromString(coin).prefixes.messagePrefix[0]
   return bitcoinMessage
-    .sign(message, keyPair.privateKey, keyPair.compressed)
+    .sign(message, keyPair.privateKey, keyPair.compressed, messagePrefix, {
+      segwitType
+    })
     .toString('base64')
 }
 
