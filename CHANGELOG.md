@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Encode BIP137 message signatures with the correct header byte for SegWit addresses (bip49 nested SegWit and bip84 native SegWit) and with each coin's own message prefix, so signatures verify on BIP137-compliant platforms across all UTXO currencies.
+
 ## 3.10.0 (2026-06-13)
 
 - changed: Convert the build tooling from Yarn to npm.
