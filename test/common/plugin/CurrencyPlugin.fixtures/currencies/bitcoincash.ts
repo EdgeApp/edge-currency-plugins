@@ -264,6 +264,27 @@ export const bitcoincash: FixtureType = {
         metadata: {},
         privateKeys: ['5JJY5LkdXsRSh1X2pLMezk3f11wHkSBJM1AmJ6zKJyzJtQnAe3F']
       }
+    ],
+    'bch-wif protohandler - Compressed': [
+      'bch-wif:L5FyMaAPJGqivZmCzFAEATptdvgha4UqwVWbLLZgr5iLGtQRo4x2',
+      {
+        metadata: {},
+        privateKeys: ['L5FyMaAPJGqivZmCzFAEATptdvgha4UqwVWbLLZgr5iLGtQRo4x2']
+      }
+    ],
+    'bch-wif protohandler - Non Compressed': [
+      'bch-wif:5Kb8kLf9zgWQnogidDA76MzPL6TsZZY36hWXMssSzNydYXYB9KF',
+      {
+        metadata: {},
+        privateKeys: ['5Kb8kLf9zgWQnogidDA76MzPL6TsZZY36hWXMssSzNydYXYB9KF']
+      }
+    ],
+    'bch-wif protohandler - Uppercase prefix': [
+      'BCH-WIF:L5FyMaAPJGqivZmCzFAEATptdvgha4UqwVWbLLZgr5iLGtQRo4x2',
+      {
+        metadata: {},
+        privateKeys: ['L5FyMaAPJGqivZmCzFAEATptdvgha4UqwVWbLLZgr5iLGtQRo4x2']
+      }
     ]
   },
   encodeUri: {

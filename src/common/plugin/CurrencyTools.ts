@@ -107,6 +107,16 @@ export function makeCurrencyTools(
     },
 
     async parseUri(uri: string): Promise<ExtendedParseUri> {
+      // CashStamps and similar paper-wallet tools prefix a WIF private key with
+      // a "<code>-wif:" protohandler (e.g. "bch-wif:<WIF>"). Strip it so the
+      // bare WIF is handled by the private-key detection in parsePathname. The
+      // prefix is derived from the wallet's own currency code, so it can only
+      // ever match this coin.
+      const wifPrefix = `${currencyInfo.currencyCode.toLowerCase()}-wif:`
+      if (uri.toLowerCase().startsWith(wifPrefix)) {
+        uri = uri.slice(wifPrefix.length)
+      }
+
       const isGateway = uri
         .toLocaleLowerCase()
         .startsWith(`${coinInfo.name}://`)
