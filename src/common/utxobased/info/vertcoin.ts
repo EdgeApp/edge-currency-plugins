@@ -77,6 +77,7 @@ export const coinInfo: CoinInfo = {
   segwit: true,
   coinType: 28,
   prefixes: {
+    // Vertcoin Core genuinely uses Bitcoin's magic; not an oversight.
     messagePrefix: ['\x18Bitcoin Signed Message:\n'],
     wif: [0x80],
     legacyXPriv: [0x0488ade4],

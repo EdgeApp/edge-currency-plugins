@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Correct the `messagePrefix` magic strings for 14 coins so signed messages verify against each chain's own node. Affects dash, pivx, qtum, ravencoin, smartcash, uniformfiscalobject, ecash, zcoin, litecoin, dogecoin, digibyte, feathercoin, bitcoingold and bitcoingoldtestnet.
+
 ## 3.11.0 (2026-07-13)
 
 - added: Support the `<code>-wif:` protohandler prefix (e.g. `bch-wif:`) in `parseUri` so CashStamps private keys can be swept.

@@ -81,7 +81,7 @@ export const coinInfo: CoinInfo = {
   coinType: 3,
   utxoPicker: makeDogeUtxoPicker(),
   prefixes: {
-    messagePrefix: ['\x18Dogecoin Signed Message:\n'],
+    messagePrefix: ['\x19Dogecoin Signed Message:\n'],
     wif: [0x9e],
     legacyXPriv: [0x02fac398],
     legacyXPub: [0x02facafd],

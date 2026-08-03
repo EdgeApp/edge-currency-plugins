@@ -63,7 +63,7 @@ export const coinInfo: CoinInfo = {
   segwit: true,
   coinType: 8,
   prefixes: {
-    messagePrefix: ['\x18Feathercoin Signed Message:\n'],
+    messagePrefix: ['\x1cFeathercoin Signed Message:\n'],
     wif: [0x8e],
     legacyXPriv: [0x0488daee],
     legacyXPub: [0x0488bc26],
