@@ -65,7 +65,7 @@ export const coinInfo: CoinInfo = {
   coinType: 1,
 
   prefixes: {
-    messagePrefix: ['\x18Bitcoin Gold Signed Message:\n'],
+    messagePrefix: ['\x1dBitcoin Gold Signed Message:\n'],
     wif: [0xef],
     legacyXPriv: [0x04358394],
     legacyXPub: [0x043587cf],

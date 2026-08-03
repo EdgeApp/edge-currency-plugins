@@ -79,7 +79,8 @@ export const coinInfo: CoinInfo = {
     /*
     [Prefix reference](https://github.com/PIVX-Project/PIVX/blob/b89a9fc04e9e31bb3fd009df0506c957a00ad536/src/chainparams.cpp#L329)
     */
-    messagePrefix: ['PIVX Signed Message:\n'],
+    // PIVX inherited DarkNet from its Dash fork ancestry; not a typo.
+    messagePrefix: ['\x18DarkNet Signed Message:\n'],
     wif: [0xd4],
     legacyXPriv: [0x0221312b],
     legacyXPub: [0x022d2533],

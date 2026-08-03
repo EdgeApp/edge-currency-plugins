@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Correct the `messagePrefix` magic strings for 14 coins so signed messages verify against each chain's own node. Affects dash, pivx, qtum, ravencoin, smartcash, uniformfiscalobject, ecash, zcoin, litecoin, dogecoin, digibyte, feathercoin, bitcoingold and bitcoingoldtestnet.
+
 ## 3.10.0 (2026-06-13)
 
 - changed: Convert the build tooling from Yarn to npm.
