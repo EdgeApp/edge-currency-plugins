@@ -1,3 +1,4 @@
+import { asMaybe, asObject, asString } from 'cleaners'
 import { EdgeIo, EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 import { parse } from 'uri-js'
 
@@ -367,9 +368,75 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
   const instance: ServerStates = {
     async broadcastTx(transaction: EdgeTransaction): Promise<string> {
+      // Query the network for the transaction to determine whether a failed
+      // broadcast actually reached the network anyway. A server can relay
+      // the transaction and still return an error or fail to respond, so an
+      // error from every server does not prove the transaction wasn't sent.
+      const isTxidKnown = async (txid: string): Promise<boolean> => {
+        // Ask connected blockbook instances first:
+        for (const uri of Object.keys(serverStatesCache)) {
+          const { blockbook } = serverStatesCache[uri]
+          if (blockbook == null || !blockbook.isConnected) continue
+          const known = await blockbook
+            .fetchTransaction(txid)
+            .then(() => true)
+            .catch(() => false)
+          if (known) return true
+        }
+
+        // Fall back to the NOWNode HTTP API when no blockbook is connected:
+        const { nowNodesApiKey } = initOptions
+        if (nowNodesApiKey == null) return false
+        const nowNodeUris = serverConfigs
+          .filter(config => config.type === 'blockbook-nownode')
+          .map(config => config.uris)
+          .flat(1)
+        for (const uri of nowNodeUris) {
+          const known = await io
+            .fetchCors(`${uri}/api/v2/tx/${txid}`, {
+              headers: {
+                'api-key': nowNodesApiKey
+              }
+            })
+            .then(async response => {
+              if (!response.ok) return false
+              const json = await response.json()
+              return asMaybe(asTxQueryResponse)(json)?.txid === txid
+            })
+            .catch(() => false)
+          if (known) return true
+        }
+        return false
+      }
+
       return await new Promise((resolve, reject) => {
         let resolved = false
         let bad = 0
+
+        // Reject with the given error only when the transaction is verifiably
+        // absent from the network; a transaction that reached the network
+        // despite the error is a successful broadcast.
+        const rejectUnlessTxKnown = (error?: Error): void => {
+          const fail = (): void => {
+            const msg = error != null ? `With error ${error.message}` : ''
+            log.error(
+              `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
+            )
+            reject(error)
+          }
+          isTxidKnown(transaction.txid)
+            .then(known => {
+              if (!known) return fail()
+              if (!resolved) {
+                resolved = true
+                log.warn(
+                  `broadcastTx errored, but txid ${transaction.txid} is known to the network; treating broadcast as a success`
+                )
+                resolve(transaction.txid)
+              }
+            })
+            .catch(fail)
+        }
 
         const wsUris = Object.keys(serverStatesCache).filter(
           uri => serverStatesCache[uri].blockbook != null
@@ -394,11 +461,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
               })
               .catch((e?: Error) => {
                 if (++bad === wsUris.length) {
-                  const msg = e != null ? `With error ${e.message}` : ''
-                  log.error(
-                    `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
-                  )
-                  reject(e)
+                  rejectUnlessTxKnown(e)
                 }
               })
           }
@@ -464,11 +527,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
               })
               .catch((e?: Error) => {
                 if (++bad === nowNodeUris.length) {
-                  const msg = e != null ? `With error ${e.message}` : ''
-                  log.error(
-                    `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
-                  )
-                  reject(e)
+                  rejectUnlessTxKnown(e)
                 }
               })
           }
@@ -670,3 +729,11 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
   return instance
 }
+
+/**
+ * Minimal shape of a Blockbook REST `/api/v2/tx/<txid>` response, used only
+ * to confirm that a transaction is known to the network.
+ */
+const asTxQueryResponse = asObject({
+  txid: asString
+})
