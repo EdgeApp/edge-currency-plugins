@@ -170,8 +170,12 @@ export function makeUtxoEngineProcessor(
     // Increment the processed count
     processedCount = processedCount + 1
 
-    // If we have no addresses, we should not have not yet began processing.
-    if (expectedProcessCount === 0) throw new Error('No addresses to process')
+    // With no subscribed addresses there is no denominator to compute a
+    // progress ratio from. This is a legitimate state when processing is
+    // driven by saveTx on a disconnected engine (no blockbook sockets, so
+    // nothing is subscribed), so skip the progress update rather than fail
+    // the caller's data write.
+    if (expectedProcessCount === 0) return
 
     const percent = processedCount / expectedProcessCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
