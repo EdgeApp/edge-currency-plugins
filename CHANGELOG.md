@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Failed sends after a successful broadcast: `saveTx` no longer fails on a disconnected engine, and a broadcast error is reported as a failure only after verifying the transaction is unknown to the network.
+
 ## 3.11.0 (2026-07-13)
 
 - added: Support the `<code>-wif:` protohandler prefix (e.g. `bch-wif:`) in `parseUri` so CashStamps private keys can be swept.

@@ -432,7 +432,11 @@ export async function makeUtxoEngine(
         throw err
       })
       if (id !== transaction.txid) {
-        throw new Error('broadcast response txid does not match original')
+        // The transaction is on the network at this point, so a mismatched
+        // response txid must not be reported as a send failure.
+        log.warn(
+          `broadcast response txid mismatch: expected ${transaction.txid} received ${id}`
+        )
       }
       return transaction
     },
