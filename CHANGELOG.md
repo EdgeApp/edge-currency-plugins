@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.12.0 (2026-08-05)
+
 - added: `signatureFormat` option on `signMessage`, accepting `electrum` (the default) or `bip137`. Existing callers keep the legacy Electrum header byte; BIP137 is opt-in.
 - changed: `signMessage` throws a named `AddressNotOwnedError` when the wallet cannot sign for the requested address, so callers no longer match on error message text.
 - fixed: Correct the `messagePrefix` magic strings for 14 coins so signed messages verify against each chain's own node. Affects dash, pivx, qtum, ravencoin, smartcash, uniformfiscalobject, ecash, zcoin, litecoin, dogecoin, digibyte, feathercoin, bitcoingold and bitcoingoldtestnet.
