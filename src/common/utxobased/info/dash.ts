@@ -99,7 +99,8 @@ export const coinInfo: CoinInfo = {
   segwit: false,
   coinType: 5,
   prefixes: {
-    messagePrefix: ['unused'],
+    // Dash kept its pre-rebrand DarkCoin magic; not a typo.
+    messagePrefix: ['\x19DarkCoin Signed Message:\n'],
     wif: [0xcc],
     legacyXPriv: [0x02fe52f8],
     legacyXPub: [0x02fe52cc],

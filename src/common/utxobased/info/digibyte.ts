@@ -79,7 +79,7 @@ export const coinInfo: CoinInfo = {
   segwit: true,
   coinType: 20,
   prefixes: {
-    messagePrefix: ['\x18Digibyte Signed Message:\n'],
+    messagePrefix: ['\x19DigiByte Signed Message:\n'],
     wif: [0x80, 0x9e],
     legacyXPriv: [0x0488ade4],
     legacyXPub: [0x0488b21e],

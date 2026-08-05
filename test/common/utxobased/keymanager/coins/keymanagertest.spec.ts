@@ -130,12 +130,22 @@ describe('altcoin test fixtures', () => {
     }
     if (f.signMessageTests != null) {
       f.signMessageTests.forEach(j => {
-        it(`${f.name} sign message test`, () => {
+        const formatName = j.signatureFormat ?? 'default'
+        it(`${f.name} sign message test (${j.format}, ${formatName})`, () => {
           const privateKey = ECPair.fromWIF(j.wif).privateKey?.toString('hex')
           if (privateKey == null) {
             throw new Error('private key cannot be null')
           }
-          const signature = signMessageBase64(j.message, privateKey)
+          const signature =
+            j.signatureFormat == null
+              ? signMessageBase64(j.message, privateKey, j.format, f.name)
+              : signMessageBase64(
+                  j.message,
+                  privateKey,
+                  j.format,
+                  f.name,
+                  j.signatureFormat
+                )
           expect(signature).to.eqls(j.signature)
         })
       })

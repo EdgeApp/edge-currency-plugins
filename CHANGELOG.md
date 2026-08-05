@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- added: `signatureFormat` option on `signMessage`, accepting `electrum` (the default) or `bip137`. Existing callers keep the legacy Electrum header byte; BIP137 is opt-in.
+- changed: `signMessage` throws a named `AddressNotOwnedError` when the wallet cannot sign for the requested address, so callers no longer match on error message text.
+- fixed: Correct the `messagePrefix` magic strings for 14 coins so signed messages verify against each chain's own node. Affects dash, pivx, qtum, ravencoin, smartcash, uniformfiscalobject, ecash, zcoin, litecoin, dogecoin, digibyte, feathercoin, bitcoingold and bitcoingoldtestnet.
+- fixed: Encode BIP137 message signatures with the correct header byte for SegWit addresses (bip49 nested SegWit and bip84 native SegWit) and with each coin's own message prefix, so signatures verify on BIP137-compliant platforms across all UTXO currencies.
+
 ## 3.11.0 (2026-07-13)
 
 - added: Support the `<code>-wif:` protohandler prefix (e.g. `bch-wif:`) in `parseUri` so CashStamps private keys can be swept.

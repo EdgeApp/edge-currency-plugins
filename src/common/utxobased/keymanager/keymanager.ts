@@ -18,7 +18,13 @@ import { EdgeLog, EdgeMemo } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
 import { undefinedIfEmptyString } from '../../../util/undefinedIfEmptyString'
-import { ChangePath, CoinInfo, CoinPrefixes, FeeInfo } from '../../plugin/types'
+import {
+  ChangePath,
+  CoinInfo,
+  CoinPrefixes,
+  CurrencyFormat,
+  FeeInfo
+} from '../../plugin/types'
 import { UtxoData } from '../db/types'
 import { ScriptTemplate, ScriptTemplates } from '../info/scriptTemplates/types'
 import { sortInputs, sortOutputs } from './bip69'
@@ -28,7 +34,7 @@ import {
   hashToCashAddress
 } from './bitcoincashUtils/cashAddress'
 import { getCoinFromString } from './coinmapper'
-import { InsufficientFundsErrorPlus } from './types'
+import { InsufficientFundsErrorPlus, UtxoSignatureFormat } from './types'
 import * as utxopicker from './utxopicker'
 import * as pickerUtils from './utxopicker/utils'
 
@@ -938,14 +944,62 @@ export function privateKeyEncodingToPubkey(
   }).publicKey.toString('hex')
 }
 
-export function signMessageBase64(message: string, privateKey: string): string {
+/**
+ * The `segwitType` to hand `bitcoinjs-message`, or `undefined` to leave the
+ * header byte in the legacy Electrum range. Only the BIP137 encoding cares
+ * about the derivation purpose, so only it resolves one.
+ */
+function getBip137SegwitType(
+  signatureFormat: UtxoSignatureFormat,
+  format: CurrencyFormat
+): 'p2wpkh' | 'p2sh(p2wpkh)' | undefined {
+  if (signatureFormat !== 'bip137') return undefined
+  const purposeType = bip43PurposeNumberToTypeEnum(
+    parseInt(format.replace('bip', ''))
+  )
+  switch (purposeType) {
+    case BIP43PurposeTypeEnum.Segwit:
+      return 'p2wpkh'
+    case BIP43PurposeTypeEnum.WrappedSegwit:
+      return 'p2sh(p2wpkh)'
+    default:
+      return undefined
+  }
+}
+
+export function signMessageBase64(
+  message: string,
+  privateKey: string,
+  format: CurrencyFormat,
+  coin: string,
+  signatureFormat: UtxoSignatureFormat = 'electrum'
+): string {
   const ECPair = getECPair()
   const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'))
   if (keyPair.privateKey == null) {
     throw new Error('Address could not sign message')
   }
+  // BIP137 encodes the address type in the signature's header byte. Native
+  // SegWit (bip84 / P2WPKH) and nested SegWit (bip49 / P2SH-P2WPKH) each have
+  // their own header range; verifiers such as Bringin reject a SegWit address
+  // whose message was signed with a legacy (bip44) header byte. The derivation
+  // path is what tells us the script type, so no caller has to infer it from
+  // the address string. Callers opt in, since emitting a BIP137 header to a
+  // verifier that expects the legacy Electrum encoding is just as broken.
+  // The purpose lookup stays inside the BIP137 branch on purpose:
+  // `bip43PurposeNumberToTypeEnum` throws on a purpose it does not map, so
+  // computing it unconditionally would let a future `CurrencyFormat` (bip86
+  // Taproot being the obvious candidate) break the default Electrum path,
+  // which never needs it.
+  const segwitType = getBip137SegwitType(signatureFormat, format)
+  // Magic-hash the message with the coin's own prefix (e.g. "Litecoin Signed
+  // Message:\n") so the signature verifies against that coin's addresses.
+  // Every UTXO coin routes through here, not just Bitcoin.
+  const messagePrefix = getCoinFromString(coin).prefixes.messagePrefix[0]
   return bitcoinMessage
-    .sign(message, keyPair.privateKey, keyPair.compressed)
+    .sign(message, keyPair.privateKey, keyPair.compressed, messagePrefix, {
+      segwitType
+    })
     .toString('base64')
 }
 

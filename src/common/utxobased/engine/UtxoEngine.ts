@@ -45,7 +45,10 @@ import {
   scriptPubkeyToAddress,
   signTx
 } from '../keymanager/keymanager'
-import { asMaybeInsufficientFundsErrorPlus } from '../keymanager/types'
+import {
+  AddressNotOwnedError,
+  asMaybeInsufficientFundsErrorPlus
+} from '../keymanager/types'
 import { transactionSizeFromHex } from '../keymanager/utxopicker/utils'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import {
@@ -797,11 +800,20 @@ export async function makeUtxoEngine(
       opts: EdgeSignMessageOptions
     ): Promise<string> {
       const otherParams = asUtxoSignMessageOtherParams(opts.otherParams)
-      const { publicAddress } = otherParams
-      const scriptPubkey = walletTools.addressToScriptPubkey(publicAddress)
+      const { publicAddress, signatureFormat } = otherParams
+      // An address the wallet cannot sign for reaches us two ways: it parses
+      // but is not ours, or it is not an address of this chain at all and
+      // `addressToScriptPubkey` throws. Both are the same thing to a caller,
+      // so give them one named error rather than assorted parser prose.
+      let scriptPubkey: string
+      try {
+        scriptPubkey = walletTools.addressToScriptPubkey(publicAddress)
+      } catch {
+        throw new AddressNotOwnedError()
+      }
       const addressData = await dataLayer.fetchAddress(scriptPubkey)
       if (addressData?.path == null) {
-        throw new Error('Missing data-layer address to sign with')
+        throw new AddressNotOwnedError()
       }
       const privateKey = asMaybeCurrencyPrivateKey(privateKeys)
 
@@ -818,7 +830,8 @@ export async function makeUtxoEngine(
       const signature = await walletTools.signMessageBase64({
         path: addressData?.path,
         message,
-        xprivKeys
+        xprivKeys,
+        signatureFormat
       })
       return signature
     },
