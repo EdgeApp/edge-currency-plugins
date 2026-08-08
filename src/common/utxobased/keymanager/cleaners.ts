@@ -121,6 +121,8 @@ export const inferPrivateKeyFormat = (
     if (xpub != null) supportedFormats.push(format as CurrencyFormat)
   }
   if (supportedFormats.includes('bip49')) return 'bip49'
+  // A lone zpub is still a bip49-family wallet (bip84 is paired with bip49).
+  if (supportedFormats.includes('bip84')) return 'bip49'
   if (supportedFormats.includes('bip44')) return 'bip44'
   if (supportedFormats.includes('bip32')) return 'bip32'
   return 'bip32'

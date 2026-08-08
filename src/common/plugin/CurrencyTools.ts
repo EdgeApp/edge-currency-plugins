@@ -238,11 +238,25 @@ export function makeCurrencyTools(
     },
 
     getSplittableTypes(walletInfo: EdgeWalletInfo): string[] {
-      const { keys: { format = 'bip32' } = {} } = walletInfo
+      const { keys = {} } = walletInfo
+      let format = keys.format
+      if (typeof format !== 'string') {
+        // Full keys already match PublicKey, or view-only shares nest it under
+        // keys.publicKeys (derivePublicKey / wallet-share payload shape).
+        const publicKey =
+          asMaybe(asPublicKey)(keys) ?? asMaybe(asPublicKey)(keys.publicKeys)
+        if (publicKey != null) {
+          format = inferPrivateKeyFormat(publicKey)
+        } else {
+          format = 'bip32'
+        }
+      }
       const forks = engineInfo.forks ?? []
 
       return forks
-        .filter(network => getFormatsForNetwork(network).includes(format))
+        .filter(network =>
+          getFormatsForNetwork(network).includes(format as string)
+        )
         .map(network => `wallet:${network}`)
     }
   }
