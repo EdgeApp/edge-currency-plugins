@@ -475,8 +475,9 @@ export function makeUtxoEngineProcessor(
     },
 
     async broadcastTx(transaction: EdgeTransaction): Promise<string> {
-      await serverStates.broadcastTx(transaction)
-      return transaction.txid
+      // Return the txid the network actually answered with, so the caller
+      // can detect a server accepting the transaction under a different id.
+      return await serverStates.broadcastTx(transaction)
     },
     refillServers(): void {
       serverStates.refillServers()
