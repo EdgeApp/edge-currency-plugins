@@ -433,10 +433,13 @@ export async function makeUtxoEngine(
       })
       if (id !== transaction.txid) {
         // The transaction is on the network at this point, so a mismatched
-        // response txid must not be reported as a send failure.
+        // response txid must not be reported as a send failure. Track the
+        // txid the network actually accepted, or the wallet would watch a
+        // transaction that never confirms.
         log.warn(
           `broadcast response txid mismatch: expected ${transaction.txid} received ${id}`
         )
+        return { ...transaction, txid: id }
       }
       return transaction
     },
