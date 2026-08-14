@@ -22,7 +22,8 @@ import { SocketEmitter, SocketEvent } from '../network/SocketEmitter'
 import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
 import {
   BroadcastAmbiguityError,
-  classifyBroadcastFailure
+  classifyBroadcastFailure,
+  isAlreadyKnownRejection
 } from './broadcastError'
 import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
 import { UtxoInitOptions } from './types'
@@ -382,6 +383,19 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         // have relayed the transaction before failing to answer.
         const broadcastErrors: unknown[] = []
         const rejectClassified = (error?: Error): void => {
+          // A server refusing because it already has the transaction is
+          // confirmation the transaction reached the network (from this
+          // attempt or an earlier one with the same signed bytes): success.
+          if (broadcastErrors.some(isAlreadyKnownRejection)) {
+            if (!resolved) {
+              resolved = true
+              log.warn(
+                `broadcastTx: server already has txid ${transaction.txid}; treating broadcast as a success`
+              )
+              resolve(transaction.txid)
+            }
+            return
+          }
           const msg = error != null ? `With error ${error.message}` : ''
           log.error(`broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`)
           if (classifyBroadcastFailure(broadcastErrors) === 'ambiguous') {

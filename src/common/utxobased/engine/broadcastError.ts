@@ -35,6 +35,18 @@ export const isExplicitBroadcastRejection = (error: unknown): boolean =>
   )
 
 /**
+ * A rejection that means the server ALREADY HAS the transaction
+ * ("transaction already in block chain", "txn-already-in-mempool",
+ * "txn-already-known"). This is a confirmation the transaction reached the
+ * network, from this attempt or an earlier one with the same signed bytes,
+ * so the broadcast must be treated as a success: presenting it as a
+ * failure invites the duplicate-payment retry this work exists to stop.
+ */
+export const isAlreadyKnownRejection = (error: unknown): boolean =>
+  isExplicitBroadcastRejection(error) &&
+  /alread/i.test(String(error instanceof Error ? error.message : error))
+
+/**
  * A failure from a server that provably never accepted the payload, so it
  * cannot have relayed the transaction: the Electrum stub refuses
  * broadcastTx synchronously. Such failures say nothing about relay and are

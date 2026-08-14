@@ -4,6 +4,7 @@ import { describe, it } from 'mocha'
 import {
   BroadcastAmbiguityError,
   classifyBroadcastFailure,
+  isAlreadyKnownRejection,
   isExplicitBroadcastRejection,
   isNonRelayFailure
 } from '../../../../src/common/utxobased/engine/broadcastError'
@@ -76,6 +77,27 @@ describe('broadcast failure classification', function () {
     )
     assert.isFalse(isExplicitBroadcastRejection(new Error('socket closed')))
     assert.isFalse(isExplicitBroadcastRejection(undefined))
+  })
+
+  it('recognizes already-known rejections as network confirmation', function () {
+    assert.isTrue(
+      isAlreadyKnownRejection(
+        new Error('Blockbook Error: -27: transaction already in block chain')
+      )
+    )
+    assert.isTrue(
+      isAlreadyKnownRejection(
+        new Error('Blockbook Error: txn-already-in-mempool')
+      )
+    )
+    assert.isTrue(
+      isAlreadyKnownRejection(new Error('Blockbook Error: txn-already-known'))
+    )
+    assert.isFalse(
+      isAlreadyKnownRejection(new Error('Blockbook Error: -26: dust'))
+    )
+    // "already" in a transport error is not a Blockbook rejection.
+    assert.isFalse(isAlreadyKnownRejection(new Error('socket already closed')))
   })
 
   it('keeps a bridge-stable name and carries its causes', function () {
