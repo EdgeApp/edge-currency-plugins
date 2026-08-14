@@ -4,7 +4,8 @@ import { describe, it } from 'mocha'
 import {
   BroadcastAmbiguityError,
   classifyBroadcastFailure,
-  isExplicitBroadcastRejection
+  isExplicitBroadcastRejection,
+  isNonRelayFailure
 } from '../../../../src/common/utxobased/engine/broadcastError'
 
 describe('broadcast failure classification', function () {
@@ -41,6 +42,32 @@ describe('broadcast failure classification', function () {
   it('treats missing or empty error information as ambiguous', function () {
     assert.equal(classifyBroadcastFailure([]), 'ambiguous')
     assert.equal(classifyBroadcastFailure([undefined]), 'ambiguous')
+  })
+
+  it('excludes non-relay failures from the ambiguity determination', function () {
+    const electrumStub = new Error(
+      'broadcastTx not supported for Electrum connections'
+    )
+    assert.isTrue(isNonRelayFailure(electrumStub))
+    // An Electrum stub alongside explicit rejections must not turn a
+    // definitively failed broadcast into an ambiguous one.
+    assert.equal(
+      classifyBroadcastFailure([
+        electrumStub,
+        new Error('Blockbook Error: -26: dust')
+      ]),
+      'rejected'
+    )
+    // All-stub sets never sent anything anywhere: definitively failed.
+    assert.equal(classifyBroadcastFailure([electrumStub]), 'rejected')
+    // A transport failure still dominates.
+    assert.equal(
+      classifyBroadcastFailure([
+        electrumStub,
+        new Error('Timeout for request 42')
+      ]),
+      'ambiguous'
+    )
   })
 
   it('recognizes explicit rejections by the Blockbook error marker', function () {

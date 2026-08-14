@@ -34,9 +34,25 @@ export const isExplicitBroadcastRejection = (error: unknown): boolean =>
     'Blockbook Error: '
   )
 
+/**
+ * A failure from a server that provably never accepted the payload, so it
+ * cannot have relayed the transaction: the Electrum stub refuses
+ * broadcastTx synchronously. Such failures say nothing about relay and are
+ * excluded from the ambiguity determination. (A not-yet-connected blockbook
+ * is NOT in this class: its queued request can still send once the
+ * connection completes, so its timeout stays ambiguous.)
+ */
+export const isNonRelayFailure = (error: unknown): boolean =>
+  String(error instanceof Error ? error.message : error).includes(
+    'not supported for Electrum connections'
+  )
+
 export const classifyBroadcastFailure = (
   errors: unknown[]
-): 'rejected' | 'ambiguous' =>
-  errors.length > 0 && errors.every(isExplicitBroadcastRejection)
+): 'rejected' | 'ambiguous' => {
+  if (errors.length === 0) return 'ambiguous'
+  const relayCapable = errors.filter(error => !isNonRelayFailure(error))
+  return relayCapable.every(isExplicitBroadcastRejection)
     ? 'rejected'
     : 'ambiguous'
+}
