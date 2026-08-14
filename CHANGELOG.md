@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- fixed: Failed sends after a successful broadcast: `saveTx` no longer fails on a disconnected engine, and a broadcast error is reported as a failure only after verifying the transaction is unknown to the network.
+- fixed: Failed sends after a successful broadcast: `saveTx` no longer fails when the engine is not running, and an exhausted broadcast now distinguishes explicit server rejections (definitively failed, safe to retry) from transport failures where the transaction may have reached the network (`BroadcastAmbiguityError`).
 
 ## 3.11.0 (2026-07-13)
 
