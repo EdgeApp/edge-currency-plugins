@@ -376,6 +376,13 @@ export function makeUtxoEngineProcessor(
       serverStates.stop()
       clearTaskCache()
       clearPendingTimeouts()
+      // The progress counters describe the sync round that just ended.
+      // Clearing the cache without them would let leftover counts combine
+      // with a smaller refilled cache (saveTx-driven setLookAhead, or
+      // addGapLimitAddresses) into a bogus completed-sync emission and a
+      // seen-tx checkpoint advance on an engine that is not syncing.
+      processedCount = 0
+      processedPercent = 0
       running = false
     },
 
