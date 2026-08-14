@@ -167,15 +167,16 @@ export function makeUtxoEngineProcessor(
     const expectedProcessCount =
       Object.keys(taskCache.addressSubscribeCache).length * processesPerAddress
 
+    // With no subscribed addresses there is no denominator to compute a
+    // progress ratio from. The cache is empty when the engine is not running
+    // (never started, or stopped and its task cache cleared) while saveTx
+    // still drives UTXO processing. Skip the progress update, without
+    // counting the call as progress, rather than fail the caller's data
+    // write.
+    if (expectedProcessCount === 0) return
+
     // Increment the processed count
     processedCount = processedCount + 1
-
-    // With no subscribed addresses there is no denominator to compute a
-    // progress ratio from. This is a legitimate state when processing is
-    // driven by saveTx on a disconnected engine (no blockbook sockets, so
-    // nothing is subscribed), so skip the progress update rather than fail
-    // the caller's data write.
-    if (expectedProcessCount === 0) return
 
     const percent = processedCount / expectedProcessCount
     if (percent - processedPercent > CACHE_THROTTLE || percent === 1) {
