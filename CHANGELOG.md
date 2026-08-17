@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: `ecashcom` plugin for eCash (ECX), the ecash.com hard fork of Bitcoin, including opt-in `nLockTime` replay protection and Bitcoin wallet splitting.
+
 ## 3.12.0 (2026-08-05)
 
 - added: `signatureFormat` option on `signMessage`, accepting `electrum` (the default) or `bip137`. Existing callers keep the legacy Electrum header byte; BIP137 is opt-in.

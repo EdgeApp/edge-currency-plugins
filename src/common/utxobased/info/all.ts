@@ -12,6 +12,7 @@ import { info as digibyte } from './digibyte'
 import { info as dogecoin } from './dogecoin'
 import { info as eboost } from './eboost'
 import { info as ecash } from './ecash'
+import { info as ecashcom } from './ecashcom'
 import { info as feathercoin } from './feathercoin'
 import { info as groestlcoin } from './groestlcoin'
 import { info as litecoin } from './litecoin'
@@ -37,6 +38,7 @@ export { info as digibyte } from './digibyte'
 export { info as dogecoin } from './dogecoin'
 export { info as eboost } from './eboost'
 export { info as ecash } from './ecash'
+export { info as ecashcom } from './ecashcom'
 export { info as feathercoin } from './feathercoin'
 export { info as groestlcoin } from './groestlcoin'
 export { info as litecoin } from './litecoin'
@@ -63,6 +65,7 @@ export const all = [
   dogecoin,
   eboost,
   ecash,
+  ecashcom,
   feathercoin,
   groestlcoin,
   litecoin,
