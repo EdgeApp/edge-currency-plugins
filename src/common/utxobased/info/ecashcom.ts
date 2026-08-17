@@ -33,7 +33,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
     blockbookServers: [],
-    enableCustomServers: true
+    enableCustomServers: false
   },
   displayName: 'eCash',
   metaTokens: []
