@@ -9,24 +9,22 @@ import {
 } from './commonInfo'
 
 const currencyInfo: EdgeCurrencyInfo = {
-  assetDisplayName: 'Bitcoin',
+  assetDisplayName: 'eCash',
   canReplaceByFee: true,
-  chainDisplayName: 'Bitcoin',
-  currencyCode: 'BTC',
+  chainDisplayName: 'eCash',
+  currencyCode: 'ECX',
   customFeeTemplate: utxoCustomFeeTemplate,
   memoOptions: utxoMemoOptions,
-  pluginId: 'bitcoin',
-  walletType: 'wallet:bitcoin',
+  pluginId: 'ecashcom',
+  walletType: 'wallet:ecashcom',
 
   // Explorers:
-  blockExplorer: 'https://blockchair.com/bitcoin/block/%s',
-  addressExplorer: 'https://blockchair.com/bitcoin/address/%s',
-  transactionExplorer: 'https://blockchair.com/bitcoin/transaction/%s',
+  blockExplorer: 'https://explorer.ecash.com/block/%s',
+  addressExplorer: 'https://explorer.ecash.com/address/%s',
+  transactionExplorer: 'https://explorer.ecash.com/tx/%s',
 
   denominations: [
-    { name: 'BTC', multiplier: '100000000', symbol: '₿' },
-    { name: 'mBTC', multiplier: '100000', symbol: 'm₿' },
-    { name: 'bits', multiplier: '100', symbol: 'ƀ' },
+    { name: 'ECX', multiplier: '100000000', symbol: 'e' },
     { name: 'sats', multiplier: '1', symbol: 's' }
   ],
 
@@ -34,38 +32,17 @@ const currencyInfo: EdgeCurrencyInfo = {
   ...legacyMemoInfo,
   defaultSettings: {
     customFeeSettings: ['satPerByte'],
-    blockbookServers: [
-      'wss://btc-wusa1.edge.app',
-      'wss://btc-eu1.edge.app',
-      'wss://btc1.trezor.io',
-      'wss://btc2.trezor.io',
-      'wss://btc3.trezor.io',
-      'wss://btc4.trezor.io',
-      'wss://btc5.trezor.io',
-      'wss://btcbook.nownodes.io/wss/%{nowNodesApiKey}'
-    ],
-    enableCustomServers: false
+    blockbookServers: [],
+    enableCustomServers: true
   },
-  displayName: 'Bitcoin',
+  displayName: 'eCash',
   metaTokens: []
 }
 
 const engineInfo: EngineInfo = {
-  serverConfigs: [
-    {
-      type: 'blockbook-nownode',
-      uris: ['https://btc-wusa1.edge.app', 'https://btc-eu1.edge.app']
-    },
-    {
-      type: 'blockbook-nownode',
-      uris: ['https://btcbook.nownodes.io']
-    }
-  ],
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
-  forks: ['bitcoincash', 'bitcoingold', 'ecashcom'],
   gapLimit: 25,
   feeUpdateInterval: 60000,
-  mempoolSpaceFeeInfoServer: 'https://mempool.space/api/v1/fees/recommended',
   defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,
@@ -78,14 +55,17 @@ const engineInfo: EngineInfo = {
     standardFeeHigh: '100',
     standardFeeLowAmount: '173200',
     standardFeeHighAmount: '8670000',
-    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 27460.65)
+    maximumFeeRate: maximumFeeRateCalculator(currencyInfo, 1)
   }
 }
 
 export const coinInfo: CoinInfo = {
-  name: 'bitcoin',
+  name: 'ecashcom',
   segwit: true,
   coinType: 0,
+
+  // Official pre-launch/drynet4 replay-protection params must be reverified before go-live.
+  replayProtectionLocktime: 499999999,
 
   prefixes: {
     messagePrefix: ['\x18Bitcoin Signed Message:\n'],

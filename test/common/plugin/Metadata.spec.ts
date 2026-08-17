@@ -9,6 +9,7 @@ import {
   EngineEvent
 } from '../../../src/common/plugin/EngineEmitter'
 import { makeMetadata, Metadata } from '../../../src/common/plugin/Metadata'
+import { all } from '../../../src/common/utxobased/info/all'
 import { makeFakeLog } from '../../utils'
 
 chai.should()
@@ -47,5 +48,33 @@ describe('makeMetadata', () => {
       await wait(1)
       metadata.state.lastSeenBlockHeight.should.eql(10)
     })
+  })
+})
+
+describe('currency metadata', () => {
+  it('keeps ECX distinct from XEC', () => {
+    const ecash = all.find(info => info.currencyInfo.pluginId === 'ecash')
+    const ecashcom = all.find(info => info.currencyInfo.pluginId === 'ecashcom')
+
+    if (ecash == null || ecashcom == null) {
+      throw new Error('Missing eCash plugin metadata')
+    }
+
+    ecash.currencyInfo.walletType.should.equal('wallet:ecash')
+    ecash.currencyInfo.currencyCode.should.equal('XEC')
+    ecashcom.currencyInfo.walletType.should.equal('wallet:ecashcom')
+    ecashcom.currencyInfo.currencyCode.should.equal('ECX')
+    ecashcom.coinInfo.coinType.should.equal(0)
+    ecashcom.coinInfo.prefixes.pubkeyHash.should.deep.equal([0x00])
+    ecashcom.coinInfo.prefixes.scriptHash.should.deep.equal([0x05])
+    ecashcom.coinInfo.prefixes.bech32?.should.deep.equal(['bc'])
+  })
+
+  it('has unique plugin IDs and wallet types', () => {
+    const pluginIds = all.map(info => info.currencyInfo.pluginId)
+    const walletTypes = all.map(info => info.currencyInfo.walletType)
+
+    new Set(pluginIds).size.should.equal(pluginIds.length)
+    new Set(walletTypes).size.should.equal(walletTypes.length)
   })
 })

@@ -1,8 +1,10 @@
+import { Transaction } from 'altcoin-js'
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
 import { UtxoData } from '../../../../../src/common/utxobased/db/types'
 import { info as bitcoin } from '../../../../../src/common/utxobased/info/bitcoin'
+import { info as ecashcom } from '../../../../../src/common/utxobased/info/ecashcom'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -205,6 +207,54 @@ describe('bitcoin transaction creation and signing test', function () {
         'fda5ec16b261ec1056f455ffffffff0180380100000000001976a914ca0d36044e0dc' +
         '08a22724efa6f6a07b0ec4c79aa88ac00000000'
     )
+  })
+
+  it('Create ECX transaction with replay-protection locktime', async () => {
+    const { psbtBase64 } = makeTx({
+      forceUseUtxo: [],
+      coin: 'ecashcom',
+      currencyCode: 'ECX',
+      enableRbf: false,
+      freshChangeAddress: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
+      feeRate: 0,
+      subtractFee: false,
+      utxos: [
+        {
+          id: '0',
+          scriptType: ScriptTypeEnum.p2pkh,
+          txid:
+            '7d067b4a697a09d2c3cff7d4d9506c9955e93bff41bf82d439da7d030382bc3e',
+          scriptPubkey,
+          value: '80000',
+          blockHeight: 0,
+          spent: false,
+          script:
+            '0200000001f9f34e95b9d5c8abcd20fc5bd4a825d1517be62f0f775e5f36da944d9' +
+            '452e550000000006b483045022100c86e9a111afc90f64b4904bd609e9eaed80d48' +
+            'ca17c162b1aca0a788ac3526f002207bb79b60d4fc6526329bf18a77135dc566020' +
+            '9e761da46e1c2f1152ec013215801210211755115eabf846720f5cb18f248666fec' +
+            '631e5e1e66009ce3710ceea5b1ad13ffffffff01' +
+            '905f010000000000' +
+            '19' +
+            scriptPubkey +
+            '00000000',
+          vout: 0
+        }
+      ],
+      targets: [],
+      memos: [],
+      outputSort: 'bip69'
+    })
+    const signedTx = await signTx({
+      coin: 'ecashcom',
+      feeInfo: ecashcom.engineInfo.defaultFeeInfo,
+      privateKeyEncodings: [privateKeyEncoding],
+      psbtBase64
+    })
+    const tx = Transaction.fromHex(signedTx.hex)
+
+    expect(tx.locktime).to.equal(499999999)
+    expect(tx.ins[0].sequence).to.equal(0xfffffffe)
   })
 
   it('Create transaction three outputs using bip69 outputSort', async () => {
