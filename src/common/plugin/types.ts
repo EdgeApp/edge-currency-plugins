@@ -205,6 +205,16 @@ export interface CoinInfo {
   sighash?: number
 
   /**
+   * Transaction locktime for chains that use nLockTime as an opt-in replay
+   * protection marker (eCash.com/ECX uses `499999999`). When this is set,
+   * `makeTx` writes the locktime into every transaction and keeps input
+   * sequence numbers below `0xffffffff`, which is what makes the locktime
+   * enforceable and therefore the transaction unreplayable on the parent
+   * chain.
+   */
+  replayProtectionLocktime?: number
+
+  /**
    * A function to be passed to AltcoinJS `signInput` method. This is used to
    * get the input hash for the signature algorithm before signing the input.
    *
