@@ -297,9 +297,9 @@ export const bitcoin: FixtureType = {
     ]
   },
   getSplittableTypes: {
-    bip32: ['wallet:bitcoincash', 'wallet:bitcoingold', 'wallet:ecashcom'],
-    bip44: ['wallet:bitcoincash', 'wallet:bitcoingold', 'wallet:ecashcom'],
-    bip49: ['wallet:bitcoingold', 'wallet:ecashcom'],
-    bip84: ['wallet:bitcoingold', 'wallet:ecashcom']
+    bip32: ['wallet:bitcoincash', 'wallet:bitcoingold', 'wallet:bitcoinecash'],
+    bip44: ['wallet:bitcoincash', 'wallet:bitcoingold', 'wallet:bitcoinecash'],
+    bip49: ['wallet:bitcoingold', 'wallet:bitcoinecash'],
+    bip84: ['wallet:bitcoingold', 'wallet:bitcoinecash']
   }
 }

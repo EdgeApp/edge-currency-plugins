@@ -4,7 +4,7 @@ import { describe, it } from 'mocha'
 
 import { UtxoData } from '../../../../../src/common/utxobased/db/types'
 import { info as bitcoin } from '../../../../../src/common/utxobased/info/bitcoin'
-import { info as ecashcom } from '../../../../../src/common/utxobased/info/ecashcom'
+import { info as bitcoinecash } from '../../../../../src/common/utxobased/info/bitcoinecash'
 import {
   addressToScriptPubkey,
   AddressTypeEnum,
@@ -212,7 +212,7 @@ describe('bitcoin transaction creation and signing test', function () {
   it('Create ECX transaction with replay-protection locktime', async () => {
     const { psbtBase64 } = makeTx({
       forceUseUtxo: [],
-      coin: 'ecashcom',
+      coin: 'bitcoinecash',
       currencyCode: 'ECX',
       enableRbf: false,
       freshChangeAddress: '1KRMKfeZcmosxALVYESdPNez1AP1mEtywp',
@@ -246,8 +246,8 @@ describe('bitcoin transaction creation and signing test', function () {
       outputSort: 'bip69'
     })
     const signedTx = await signTx({
-      coin: 'ecashcom',
-      feeInfo: ecashcom.engineInfo.defaultFeeInfo,
+      coin: 'bitcoinecash',
+      feeInfo: bitcoinecash.engineInfo.defaultFeeInfo,
       privateKeyEncodings: [privateKeyEncoding],
       psbtBase64
     })

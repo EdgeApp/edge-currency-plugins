@@ -15,8 +15,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ECX',
   customFeeTemplate: utxoCustomFeeTemplate,
   memoOptions: utxoMemoOptions,
-  pluginId: 'ecashcom',
-  walletType: 'wallet:ecashcom',
+  pluginId: 'bitcoinecash',
+  walletType: 'wallet:bitcoinecash',
 
   // Explorers:
   blockExplorer: 'https://explorer.ecash.com/block/%s',
@@ -60,7 +60,7 @@ const engineInfo: EngineInfo = {
 }
 
 export const coinInfo: CoinInfo = {
-  name: 'ecashcom',
+  name: 'bitcoinecash',
   segwit: true,
   coinType: 0,
 

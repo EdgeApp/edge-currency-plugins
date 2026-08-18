@@ -1,8 +1,8 @@
 import { FixtureType, key, mnemonics } from '../common'
 
-export const ecashcom: FixtureType = {
-  pluginId: 'ecashcom',
-  WALLET_TYPE: 'wallet:ecashcom',
+export const bitcoinecash: FixtureType = {
+  pluginId: 'bitcoinecash',
+  WALLET_TYPE: 'wallet:bitcoinecash',
   WALLET_FORMAT: 'bip32',
   'Test Currency code': 'ECX',
   key,
@@ -10,13 +10,13 @@ export const ecashcom: FixtureType = {
     'xpub69FqMgncSEcrs989ejBWTBBcDNFDqkwEd7y53pVeXm8368TNfb9jCd2ne3ccpx9vvgBdpv79Edc69i2Q69kXtrdmLcQM8seffnCXzwzvWa6',
   'invalid key name': {
     id: 'unknown',
-    type: 'wallet:ecashcom',
-    keys: { ecashcomKeyz: '12345678abcd' }
+    type: 'wallet:bitcoinecash',
+    keys: { bitcoinecashKeyz: '12345678abcd' }
   },
   'invalid wallet type': {
     id: 'unknown',
     type: 'shitcoin',
-    keys: { ecashcomKeyz: '12345678abcd' }
+    keys: { bitcoinecashKeyz: '12345678abcd' }
   },
   importKey: {
     validKeys: [...mnemonics],
@@ -42,7 +42,7 @@ export const ecashcom: FixtureType = {
       }
     ],
     'uri address with amount': [
-      'ecashcom:1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX?amount=1.23',
+      'bitcoinecash:1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX?amount=1.23',
       {
         publicAddress: '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX',
         metadata: {},
@@ -64,7 +64,7 @@ export const ecashcom: FixtureType = {
         publicAddress: '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX',
         nativeAmount: '123000000'
       },
-      'ecashcom:1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX?amount=1.23'
+      'bitcoinecash:1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX?amount=1.23'
     ],
     'invalid currencyCode': [
       {

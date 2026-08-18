@@ -54,20 +54,22 @@ describe('makeMetadata', () => {
 describe('currency metadata', () => {
   it('keeps ECX distinct from XEC', () => {
     const ecash = all.find(info => info.currencyInfo.pluginId === 'ecash')
-    const ecashcom = all.find(info => info.currencyInfo.pluginId === 'ecashcom')
+    const bitcoinecash = all.find(
+      info => info.currencyInfo.pluginId === 'bitcoinecash'
+    )
 
-    if (ecash == null || ecashcom == null) {
+    if (ecash == null || bitcoinecash == null) {
       throw new Error('Missing eCash plugin metadata')
     }
 
     ecash.currencyInfo.walletType.should.equal('wallet:ecash')
     ecash.currencyInfo.currencyCode.should.equal('XEC')
-    ecashcom.currencyInfo.walletType.should.equal('wallet:ecashcom')
-    ecashcom.currencyInfo.currencyCode.should.equal('ECX')
-    ecashcom.coinInfo.coinType.should.equal(0)
-    ecashcom.coinInfo.prefixes.pubkeyHash.should.deep.equal([0x00])
-    ecashcom.coinInfo.prefixes.scriptHash.should.deep.equal([0x05])
-    ecashcom.coinInfo.prefixes.bech32?.should.deep.equal(['bc'])
+    bitcoinecash.currencyInfo.walletType.should.equal('wallet:bitcoinecash')
+    bitcoinecash.currencyInfo.currencyCode.should.equal('ECX')
+    bitcoinecash.coinInfo.coinType.should.equal(0)
+    bitcoinecash.coinInfo.prefixes.pubkeyHash.should.deep.equal([0x00])
+    bitcoinecash.coinInfo.prefixes.scriptHash.should.deep.equal([0x05])
+    bitcoinecash.coinInfo.prefixes.bech32?.should.deep.equal(['bc'])
   })
 
   it('has unique plugin IDs and wallet types', () => {
