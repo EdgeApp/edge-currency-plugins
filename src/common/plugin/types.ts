@@ -1,5 +1,3 @@
-import { Base58DecodeFunc, Base58EncodeFunc, HashFunction } from 'altcoin-js'
-import * as bip32 from 'bip32'
 import {
   asArray,
   asBoolean,
@@ -20,7 +18,6 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import * as wif from 'wif'
 
 import { asUtxoData, TransactionData, UtxoData } from '../utxobased/db/types'
 import { UtxoInitOptions } from '../utxobased/engine/types'
@@ -205,57 +202,6 @@ export interface CoinInfo {
   sighash?: number
 
   /**
-   * A function to be passed to AltcoinJS `signInput` method. This is used to
-   * get the input hash for the signature algorithm before signing the input.
-   *
-   * This is used if the currency has a custom signature hash function that
-   * deviates from the default `bcrypto.hash256` function used for Bitcoin.
-   */
-  sighashFunction?: HashFunction
-
-  /**
-   * A function to be passed to AltcoinJS `getId` method. This is used to get
-   * the transaction hash (txid) for a transaction.
-   *
-   * This is used if the currency has a custom signature hash function that
-   * deviates from the default `bcrypto.hash256` function used for Bitcoin.
-   */
-  txHashFunction?: HashFunction
-
-  /**
-   * A optional custom decode function passed to AltcoinJS `PaymentCreator`
-   * function. This is used to decode the base58 address encoding.
-   */
-  bs58DecodeFunc?: Base58DecodeFunc
-
-  /**
-   * A optional custom encode function passed to AltcoinJS `PaymentCreator`
-   * function. This is used to encode the address to a base58 encoding.
-   */
-  bs58EncodeFunc?: Base58EncodeFunc
-
-  /**
-   * A optional custom WIF encoding function passed to AltcoinJS `toWIF` method.
-   * This is used to encode the private key into a WIF.
-   */
-  wifEncodeFunc?: typeof wif.encode
-
-  /**
-   * A optional custom extended public/private key encoding function.
-   * This is used when converting a public or private key to an xpub/xpriv.
-   */
-  bip32FromBase58Func?: (
-    xKey: string,
-    network: BitcoinJSNetwork
-  ) => bip32.BIP32Interface
-
-  /**
-   * A optional custom seed encoding function.
-   * This is used when converting a seed to root private key.
-   */
-  bip32FromSeedFunc?: (seed: Buffer) => bip32.BIP32Interface
-
-  /**
    * A optional custom UTXO picker function for currencies that may require
    * different UTXO selection algorithms.
    */
@@ -289,20 +235,6 @@ export interface CoinPrefixes {
   scriptHash: number[]
   bech32?: string[]
   cashaddr?: string[]
-}
-
-interface BitcoinJSNetwork {
-  wif: number
-  bip32: Bip32
-  messagePrefix: string
-  bech32: string
-  pubKeyHash: number
-  scriptHash: number
-}
-
-interface Bip32 {
-  public: number
-  private: number
 }
 
 export interface ExtendedParseUri extends EdgeParsedUri {

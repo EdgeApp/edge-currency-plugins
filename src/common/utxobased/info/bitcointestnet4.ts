@@ -45,7 +45,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
 export const engineInfo: EngineInfo = {
   formats: ['bip49', 'bip84', 'bip44', 'bip32'],
-  forks: ['bitcoincash', 'bitcoingold'],
+  forks: ['bitcoincash'],
   gapLimit: 25,
   feeUpdateInterval: 60000,
   mempoolSpaceFeeInfoServer:

@@ -170,10 +170,6 @@ describe('currencyPlugins.spec', () => {
       })
 
       Object.entries(fixture.parseUri).forEach(([test, [input, output]]) => {
-        if (fixture.pendingParseUri?.includes(test) ?? false) {
-          it.skip(test, () => {})
-          return
-        }
         if (output != null) {
           it(test, async function () {
             const parsedUri = await tools.parseUri(input)

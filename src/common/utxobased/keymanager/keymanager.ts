@@ -407,8 +407,7 @@ export function seedOrMnemonicToXPriv(args: SeedOrMnemonicToXPrivArgs): string {
   const purpose = bip43PurposeTypeEnumToNumber(args.type)
   const coinType = args.coinType ?? coin.coinType
   const account = args.account ?? 0
-  const bip32FromSeedFunc = coin.bip32FromSeedFunc ?? getBip32().fromSeed
-  const root: bip32.BIP32Interface = bip32FromSeedFunc(seed)
+  const root: bip32.BIP32Interface = getBip32().fromSeed(seed)
   root.network = network
   // treat a detected seed as an airbitz seed
   return purpose === 32 || !isMnemonic
@@ -428,9 +427,7 @@ const xprivToXPubInternal = (
     sigType: args.type,
     prefixIndex
   })
-  const coin = getCoinFromString(args.coin)
-  const bip32FromBase58Func = coin.bip32FromBase58Func ?? getBip32().fromBase58
-  return bip32FromBase58Func(args.xpriv, network).neutered().toBase58()
+  return getBip32().fromBase58(args.xpriv, network).neutered().toBase58()
 }
 
 export const xprivToXPub = (args: XPrivToXPubArgs): string => {
@@ -468,14 +465,12 @@ const xpubToPubkeyInternal = (
   prefixIndex: number,
   args: XPubToPubkeyArgs
 ): string => {
-  const coin = getCoinFromString(args.coin)
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
     coinString: args.coin,
     sigType: args.type,
     prefixIndex
   })
-  const bip32FromBase58Func = coin.bip32FromBase58Func ?? getBip32().fromBase58
-  const node: bip32.BIP32Interface = bip32FromBase58Func(args.xpub, network)
+  const node: bip32.BIP32Interface = getBip32().fromBase58(args.xpub, network)
   return toHex(
     node.derive(args.bip44ChangeIndex).derive(args.bip44AddressIndex).publicKey
   )
@@ -576,9 +571,7 @@ const addressToScriptPubkeyInternal = (
   try {
     scriptPubkey = payment({
       address: args.address,
-      network,
-      bs58DecodeFunc: coin.bs58DecodeFunc,
-      bs58EncodeFunc: coin.bs58EncodeFunc
+      network
     }).output
   } catch (error) {
     console.trace(error)
@@ -701,18 +694,14 @@ export function scriptPubkeyToAddress(
       address ??
       payment({
         output: Buffer.from(args.scriptPubkey, 'hex'),
-        network,
-        bs58DecodeFunc: coinClass.bs58DecodeFunc,
-        bs58EncodeFunc: coinClass.bs58EncodeFunc
+        network
       }).address
 
     legacyAddress =
       legacyAddress ??
       payment({
         output: Buffer.from(args.scriptPubkey, 'hex'),
-        network: legacyNetwork,
-        bs58DecodeFunc: coinClass.bs58DecodeFunc,
-        bs58EncodeFunc: coinClass.bs58EncodeFunc
+        network: legacyNetwork
       }).address
   } catch (error) {
     console.trace(error)
@@ -884,14 +873,12 @@ const xprivToPrivateKeyInternal = (
   prefixIndex: number,
   args: XPrivToPrivateKeyArgs
 ): string | undefined => {
-  const coin = getCoinFromString(args.coin)
   const network: BitcoinJSNetwork = bip32NetworkFromCoin({
     coinString: args.coin,
     sigType: args.type,
     prefixIndex
   })
-  const bip32FromBase58Func = coin.bip32FromBase58Func ?? getBip32().fromBase58
-  const node: bip32.BIP32Interface = bip32FromBase58Func(args.xpriv, network)
+  const node: bip32.BIP32Interface = getBip32().fromBase58(args.xpriv, network)
   const privateKey = node
     .derive(args.bip44ChangeIndex)
     .derive(args.bip44AddressIndex).privateKey
@@ -917,9 +904,6 @@ export function privateKeyToWIF(args: PrivateKeyToWIFArgs): string {
     prefixIndex: 0
   })
   const ECPair = getECPair()
-  // Groestlcoin encodes WIF with its own checksum, via `CoinInfo.wifEncodeFunc`.
-  // Stock ecpair takes no such argument, so that coin is unsupported here until
-  // its own migration phase supplies the encoder.
   return ECPair.fromPrivateKey(Buffer.from(args.privateKey, 'hex'), {
     network
   }).toWIF()
@@ -935,8 +919,6 @@ const wifToPrivateKeyEncodingInternal = (
     prefixIndex
   })
   const ECPair = getECPair()
-  // As in privateKeyToWIF: Groestlcoin's `bs58DecodeFunc` has no home in stock
-  // ecpair's signature, so that coin waits for its own phase.
   const ecPair = ECPair.fromWIF(args.wifKey, network)
   if (ecPair.privateKey == null) return
   return {
@@ -1222,7 +1204,6 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
   const opts =
     maximumFeeRate != null ? { maximumFeeRate: parseInt(maximumFeeRate) } : {}
   const psbt = Psbt.fromBase64(args.psbtBase64, opts)
-  const coin = getCoinFromString(args.coin)
   const ECPair = getECPair()
 
   const validator = (
@@ -1239,15 +1220,14 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
     psbt.signInput(
       i,
       ECPair.fromPrivateKey(Buffer.from(hex, 'hex'), { compressed }),
-      Psbt.DEFAULT_SIGHASHES,
-      coin.sighashFunction
+      Psbt.DEFAULT_SIGHASHES
     )
     psbt.validateSignaturesOfInput(i, validator)
     psbt.finalizeInput(i)
   }
   const tx = psbt.extractTransaction()
   return {
-    id: tx.getId(coin.txHashFunction),
+    id: tx.getId(),
     hex: tx.toHex()
   }
 }
@@ -1400,18 +1380,14 @@ const guessAddressTypeFromAddress = (
   try {
     payments.p2pkh({
       address,
-      network,
-      bs58DecodeFunc: coinClass.bs58DecodeFunc,
-      bs58EncodeFunc: coinClass.bs58EncodeFunc
+      network
     })
     return AddressTypeEnum.p2pkh
   } catch (_) {}
   try {
     payments.p2sh({
       address,
-      network,
-      bs58DecodeFunc: coinClass.bs58DecodeFunc,
-      bs58EncodeFunc: coinClass.bs58EncodeFunc
+      network
     })
     return AddressTypeEnum.p2sh
   } catch (_) {}

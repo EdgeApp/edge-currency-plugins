@@ -19,13 +19,6 @@ export interface FixtureType {
     invalidKeys: string[]
     unsupportedKeys: string[]
   }
-  /**
-   * Names of `parseUri` cases to report as pending rather than run.
-   *
-   * Used for Groestlcoin, whose WIF parsing needs the base58 codec that stock
-   * ecpair cannot take; that coin's dependency chain is migrated last.
-   */
-  pendingParseUri?: string[]
   parseUri: {
     [testName: string]: [string, ExtendedParseUri] | [string]
   }

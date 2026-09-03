@@ -21,14 +21,6 @@ import { fixtures } from './altcointestfixtures'
 initEccLib(tinysecp)
 const ECPair: ECPairAPI = ECPairFactory(tinysecp)
 
-/**
- * Groestlcoin's WIF and address encodings use its own base58 checksum, supplied
- * through `CoinInfo`'s injection hooks. Stock ecpair takes no such argument, so
- * these cases are pending until Groestlcoin's dependency chain is migrated —
- * that coin is deliberately sequenced last.
- */
-const DEFERRED_COIN = 'groestlcoin'
-
 describe('altcoin test fixtures', () => {
   fixtures.coins.forEach(f => {
     // test deriving a xpriv from a seed for each coin
@@ -86,8 +78,7 @@ describe('altcoin test fixtures', () => {
     // convert from WIF to raw private key and back for each coin
     if (typeof f.wifToPrivateKeyTests !== 'undefined') {
       f.wifToPrivateKeyTests.forEach(j => {
-        const wifTest = f.name === DEFERRED_COIN ? it.skip : it
-        wifTest(`${f.name} WIF to private key to WIF`, () => {
+        it(`${f.name} WIF to private key to WIF`, () => {
           const privateKeyEncoding = wifToPrivateKeyEncoding({
             wifKey: j.wifKey,
             coin: f.name
@@ -121,8 +112,7 @@ describe('altcoin test fixtures', () => {
     // convert an xpriv to a WIF private key for each coin
     if (typeof f.xprivToWifTests !== 'undefined') {
       f.xprivToWifTests.forEach(j => {
-        const wifTest = f.name === DEFERRED_COIN ? it.skip : it
-        wifTest(`${f.name} xpriv to wif`, () => {
+        it(`${f.name} xpriv to wif`, () => {
           const derivedPrivateKey = xprivToPrivateKey({
             xpriv: j.xpriv,
             type: j.type,
