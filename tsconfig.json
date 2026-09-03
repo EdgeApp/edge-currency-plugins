@@ -9,7 +9,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "target": "es2017",
+    "target": "es2020",
 
     "strict": true
   },

@@ -98,7 +98,9 @@ export function makeBlockbookElectrum(
       address,
       coin: pluginInfo.coinInfo.name
     })
-    const scriptHashBuffer = crypto.sha256(Buffer.from(scriptPubkey, 'hex'))
+    const scriptHashBuffer = Buffer.from(
+      crypto.sha256(Buffer.from(scriptPubkey, 'hex'))
+    )
     const scriptHash = scriptHashBuffer.reverse().toString('hex')
     return scriptHash
   }

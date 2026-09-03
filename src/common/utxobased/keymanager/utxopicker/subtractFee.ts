@@ -10,13 +10,14 @@ export function subtractFee(args: UtxoPickerArgs): UtxoPickerResult {
     scriptPubkey: Buffer.from(target.script, 'hex')
   }))
 
-  const fee = Math.ceil(feeRate * utils.transactionBytes(utxos, outputs))
+  const fee = utils.feeToBigInt(
+    feeRate * utils.transactionBytes(utxos, outputs)
+  )
   targets[0].value -= fee
   outputs[0].value -= fee
 
-  const targetValue = utils.sumOrNaN(targets)
-  if (isNaN(targetValue) || fee > targetValue)
-    return { inputs: utxos, fee, changeUsed: false }
+  const targetValue = utils.sumValues(targets)
+  if (fee > targetValue) return { inputs: utxos, fee, changeUsed: false }
 
   return { inputs: utxos, outputs, fee, changeUsed: false }
 }

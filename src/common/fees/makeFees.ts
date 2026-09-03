@@ -150,7 +150,7 @@ const fetchFees = async <T>(args: FetchFeesArgs<T>): Promise<T | null> => {
     const fees = await response.json()
     return cleaner(fees)
   } catch (err) {
-    log(err.message)
+    log(String(err))
     return null
   }
 }

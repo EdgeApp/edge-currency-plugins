@@ -82,8 +82,12 @@ export const coinInfo: CoinInfo = {
   bs58DecodeFunc: base58grs.decode,
   bs58EncodeFunc: base58grs.encode,
   wifEncodeFunc: wifgrs.encode,
-  bip32FromBase58Func: bip32grs.fromBase58,
-  bip32FromSeedFunc: bip32grs.fromSeed,
+  // bip32grs is still on the Buffer-era bip32 v4 line, whose `network`
+  // parameter is optional where `CoinInfo` requires it. Groestlcoin's
+  // dependency chain is migrated as its own phase, after every other coin; the
+  // cast keeps the shapes aligned until then.
+  bip32FromBase58Func: (bip32grs.fromBase58 as unknown) as CoinInfo['bip32FromBase58Func'],
+  bip32FromSeedFunc: (bip32grs.fromSeed as unknown) as CoinInfo['bip32FromSeedFunc'],
   prefixes: {
     messagePrefix: ['\x1cGroestlCoin Signed Message:\n'],
     wif: [0x80],

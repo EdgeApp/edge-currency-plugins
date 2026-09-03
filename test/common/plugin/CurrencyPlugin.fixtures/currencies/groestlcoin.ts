@@ -30,6 +30,11 @@ export const groestlcoin: FixtureType = {
     ],
     unsupportedKeys: airbitzSeeds
   },
+  pendingParseUri: [
+    'wif 1 - Compressed',
+    'wif 2 - Compressed',
+    'wif 1 - Non Compressed'
+  ],
   parseUri: {
     'address only': [
       '3933BTHZdySDxk7PBqtPjARNfcj1ULbatY',

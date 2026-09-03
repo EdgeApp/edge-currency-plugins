@@ -1,4 +1,4 @@
-import { BaseConverter } from 'base-x'
+import { Base58DecodeFunc, Base58EncodeFunc, HashFunction } from 'altcoin-js'
 import * as bip32 from 'bip32'
 import {
   asArray,
@@ -211,7 +211,7 @@ export interface CoinInfo {
    * This is used if the currency has a custom signature hash function that
    * deviates from the default `bcrypto.hash256` function used for Bitcoin.
    */
-  sighashFunction?: (Hash: Buffer) => Buffer
+  sighashFunction?: HashFunction
 
   /**
    * A function to be passed to AltcoinJS `getId` method. This is used to get
@@ -220,19 +220,19 @@ export interface CoinInfo {
    * This is used if the currency has a custom signature hash function that
    * deviates from the default `bcrypto.hash256` function used for Bitcoin.
    */
-  txHashFunction?: (Hash: Buffer) => Buffer
+  txHashFunction?: HashFunction
 
   /**
    * A optional custom decode function passed to AltcoinJS `PaymentCreator`
    * function. This is used to decode the base58 address encoding.
    */
-  bs58DecodeFunc?: BaseConverter['decode']
+  bs58DecodeFunc?: Base58DecodeFunc
 
   /**
    * A optional custom encode function passed to AltcoinJS `PaymentCreator`
    * function. This is used to encode the address to a base58 encoding.
    */
-  bs58EncodeFunc?: BaseConverter['encode']
+  bs58EncodeFunc?: Base58EncodeFunc
 
   /**
    * A optional custom WIF encoding function passed to AltcoinJS `toWIF` method.

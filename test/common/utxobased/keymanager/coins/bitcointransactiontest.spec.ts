@@ -252,9 +252,9 @@ describe('bitcoin transaction creation and signing test', function () {
         }
       ],
       targets: [
-        { address: segwitAddress, value: 300 },
-        { address: segwitAddress, value: 200 },
-        { address: segwitAddress, value: 100 }
+        { address: segwitAddress, value: 300n },
+        { address: segwitAddress, value: 200n },
+        { address: segwitAddress, value: 100n }
       ],
       memos: [],
       outputSort: 'bip69'
@@ -315,9 +315,9 @@ describe('bitcoin transaction creation and signing test', function () {
         }
       ],
       targets: [
-        { address: segwitAddress, value: 300 },
-        { address: segwitAddress, value: 200 },
-        { address: segwitAddress, value: 100 }
+        { address: segwitAddress, value: 300n },
+        { address: segwitAddress, value: 200n },
+        { address: segwitAddress, value: 100n }
       ],
       memos: [],
       outputSort: 'targets'
@@ -371,8 +371,8 @@ describe('bitcoin transaction creation and signing test', function () {
         }
       ],
       targets: [
-        { address: segwitAddress, value: 200 },
-        { address: segwitAddress, value: 200 }
+        { address: segwitAddress, value: 200n },
+        { address: segwitAddress, value: 200n }
       ],
       memos: [],
       outputSort: 'bip69'
@@ -476,11 +476,11 @@ describe('bitcoin transaction creation and signing test', function () {
       vout: 2
     }
 
-    const targetSegwit: MakeTxTarget = { address: segwitAddress, value: 200 }
+    const targetSegwit: MakeTxTarget = { address: segwitAddress, value: 200n }
 
     const targetWrappedSegwit: MakeTxTarget = {
       address: wrappedSegwitAddress,
-      value: 200
+      value: 200n
     }
 
     const { psbtBase64 } = makeTx({
@@ -539,7 +539,7 @@ describe('bitcoin transaction creation and signing test', function () {
       vout: 0
     }
 
-    const target: MakeTxTarget = { address, value: 200 }
+    const target: MakeTxTarget = { address, value: 200n }
 
     const { psbtBase64 } = makeTx({
       forceUseUtxo: [],

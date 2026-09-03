@@ -209,7 +209,7 @@ export async function makeDataLayer(
         // 2. Use the map to remove utxoIds from the utxoIdsByScriptPubkey table
         const utxos = (await tables.utxoById.query('', utxoIds)).filter(
           utxo => utxo != null
-        ) as UtxoData[]
+        )
         const utxoIdsMap: { [scriptPubkey: string]: string[] } = {}
         for (const utxo of utxos) {
           utxoIdsMap[utxo.scriptPubkey] = [

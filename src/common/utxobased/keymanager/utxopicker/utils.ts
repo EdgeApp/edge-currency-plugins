@@ -115,6 +115,10 @@ export const transactionSizeFromHex = (hex: string): number => {
   return transaction.virtualSize()
 }
 
+/**
+ * Validates a fee *rate*, which stays a `number` — it is satoshis per vByte,
+ * always small, and never an amount.
+ */
 export function uintOrNaN(v: number): number {
   if (!isFinite(v)) return NaN
   if (Math.floor(v) !== v) return NaN
@@ -122,12 +126,27 @@ export function uintOrNaN(v: number): number {
   return v
 }
 
-export function sumForgiving(range: Array<{ value: number }>): number {
-  return range.reduce((a, x) => a + (isFinite(x.value) ? x.value : 0), 0)
+/**
+ * Sums amounts exactly.
+ *
+ * There is no NaN to fall back on in the `bigint` domain, and none is needed:
+ * amounts are validated where the decimal string is parsed, by
+ * `biggystringToBigInt`, so anything reaching here is already a non-negative
+ * integer.
+ */
+export function sumValues(range: Array<{ value: bigint }>): bigint {
+  return range.reduce((a, x) => a + x.value, 0n)
 }
 
-export function sumOrNaN(range: Array<{ value: number }>): number {
-  return range.reduce((a, x) => a + uintOrNaN(x.value), 0)
+/**
+ * Converts a byte-count-times-fee-rate product into an amount.
+ *
+ * Fee rates are integers, so the rounding never fires in practice; it is here
+ * so a fractional rate degrades the way the surrounding fee math already does
+ * rather than throwing inside `BigInt()`.
+ */
+export function feeToBigInt(fee: number): bigint {
+  return BigInt(Math.ceil(fee))
 }
 
 export function finalize(
@@ -136,10 +155,10 @@ export function finalize(
   feeRate: number,
   changeScript: string
 ): UtxoPickerResult {
-  const inValue = sumOrNaN(inputs)
-  const outValue = sumOrNaN(outputs)
+  const inValue = sumValues(inputs)
+  const outValue = sumValues(outputs)
   let txSize = transactionBytes(inputs, outputs)
-  let fee = Math.ceil(feeRate * txSize)
+  let fee = feeToBigInt(feeRate * txSize)
 
   const changeValue = inValue - (outValue + fee)
   const changeOutput: Output = {
@@ -149,10 +168,10 @@ export function finalize(
   }
   const changeOutputSize = outputBytes(changeOutput)
   txSize += changeOutputSize
-  const changeFee = feeRate * changeOutputSize
+  const changeFee = feeToBigInt(feeRate * changeOutputSize)
   changeOutput.value -= changeFee
   let changeUsed = false
-  if (changeOutput.value > dustThreshold(changeOutput, feeRate)) {
+  if (changeOutput.value > feeToBigInt(dustThreshold(changeOutput, feeRate))) {
     outputs.push(changeOutput)
     fee += changeFee
     changeUsed = true

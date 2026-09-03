@@ -27,5 +27,9 @@ export const sortInputs = (inputs: Input[]): Input[] =>
  */
 export const sortOutputs = (outputs: Output[]): Output[] =>
   [...outputs].sort((a, b) =>
-    a.value === b.value ? a.script.compare(b.script) : a.value - b.value
+    a.value === b.value
+      ? a.script.compare(b.script)
+      : a.value < b.value
+      ? -1
+      : 1
   )

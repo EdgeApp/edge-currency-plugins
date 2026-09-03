@@ -6,4 +6,6 @@ export const indexAtProtected = <T extends any[] | undefined>(
   array: T,
   index: number
 ): T extends Array<infer U> ? U : undefined =>
-  array != null ? array[Math.min(index, array.length - 1)] : undefined
+  (array != null
+    ? array[Math.min(index, array.length - 1)]
+    : undefined) as T extends Array<infer U> ? U : undefined

@@ -49,6 +49,7 @@ import {
   AddressNotOwnedError,
   asMaybeInsufficientFundsErrorPlus
 } from '../keymanager/types'
+import { biggystringToBigInt } from '../keymanager/utxopicker/bigMath'
 import { transactionSizeFromHex } from '../keymanager/utxopicker/utils'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import {
@@ -222,7 +223,7 @@ export async function makeUtxoEngine(
         if (ourAddress == null) {
           targets.push({
             scriptPubkey: output.scriptPubkey,
-            value: parseInt(output.amount)
+            value: biggystringToBigInt(output.amount)
           })
           continue
         }
@@ -254,7 +255,7 @@ export async function makeUtxoEngine(
           // The transaction must have been a spend-to-self.
           targets.push({
             scriptPubkey: output.scriptPubkey,
-            value: parseInt(output.amount)
+            value: biggystringToBigInt(output.amount)
           })
         }
       }
@@ -301,14 +302,14 @@ export async function makeUtxoEngine(
         } catch (error) {
           const cleanError = asMaybeInsufficientFundsErrorPlus(error)
           if (cleanError?.networkFeeShortage != null) {
-            let feeDelta = parseInt(cleanError.networkFeeShortage)
+            let feeDelta = biggystringToBigInt(cleanError.networkFeeShortage)
             // Adjust target values until we diminish the fee delta completely
             for (const target of targets) {
               if (target.value == null) continue
               // The term is how much value to subtract from the target's value.
               // The term's maximum value is the target's value.
               // The term's minimum value is the fee delta.
-              const term = Math.min(target.value, feeDelta)
+              const term = target.value < feeDelta ? target.value : feeDelta
               target.value -= term // Either decrement or zero out
               feeDelta -= term // Ether decrement or zero out
             }
@@ -599,7 +600,7 @@ export async function makeUtxoEngine(
               value:
                 target.nativeAmount == null
                   ? undefined
-                  : parseInt(target.nativeAmount)
+                  : biggystringToBigInt(target.nativeAmount)
             })
           }
         } else {
@@ -616,7 +617,7 @@ export async function makeUtxoEngine(
             value:
               target.nativeAmount == null
                 ? undefined
-                : parseInt(target.nativeAmount)
+                : biggystringToBigInt(target.nativeAmount)
           })
         }
       }

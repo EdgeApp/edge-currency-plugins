@@ -18,10 +18,10 @@ export function forceUseUtxo(args: UtxoPickerArgs): UtxoPickerResult {
   }))
 
   const inputs: UTXO[] = useUtxos ?? []
-  let inValue = inputs.reduce((n, { value }) => n + value, 0)
-  const targetValue = utils.sumOrNaN(targets)
+  let inValue = inputs.reduce((n, { value }) => n + value, 0n)
+  const targetValue = utils.sumValues(targets)
   const bytes = utils.transactionBytes(inputs, outputs)
-  const fee = bytes * feeRate
+  const fee = utils.feeToBigInt(bytes * feeRate)
   // if the new feeRate is already covered by lowering the change amount, return
   if (inValue >= targetValue + fee) {
     return utils.finalize(inputs, outputs, feeRate, changeScript)
@@ -31,7 +31,7 @@ export function forceUseUtxo(args: UtxoPickerArgs): UtxoPickerResult {
     const utxo = utxos[i]
 
     // skip detrimental input
-    const utxoFee = feeRate * utils.inputBytes(utxo)
+    const utxoFee = utils.feeToBigInt(feeRate * utils.inputBytes(utxo))
     if (utxoFee > utxo.value) {
       if (i === utxos.length - 1) {
         break
@@ -44,7 +44,7 @@ export function forceUseUtxo(args: UtxoPickerArgs): UtxoPickerResult {
     inValue += utxo.value
 
     const bytes = utils.transactionBytes(inputs, outputs)
-    const fee = bytes * feeRate
+    const fee = utils.feeToBigInt(bytes * feeRate)
 
     // go again?
     if (inValue < targetValue + fee) continue
@@ -54,7 +54,7 @@ export function forceUseUtxo(args: UtxoPickerArgs): UtxoPickerResult {
 
   return {
     changeUsed: false,
-    fee: Math.ceil(feeRate * utils.transactionBytes(inputs, outputs)),
+    fee: utils.feeToBigInt(feeRate * utils.transactionBytes(inputs, outputs)),
     inputs
   }
 }

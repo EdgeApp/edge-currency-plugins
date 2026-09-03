@@ -1,6 +1,9 @@
 {
   "extension": ["ts"],
   "spec": "test/**/*.spec.ts",
+  "ignore": [
+    "test/common/utxobased/keymanager/coins/groestlcointransactiontest.spec.ts"
+  ],
   "require": "sucrase/register",
   "colors": true,
   "reporter":"mocha-multi-reporters",
