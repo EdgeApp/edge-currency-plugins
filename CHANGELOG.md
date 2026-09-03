@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- removed: SmartCash (`smartcash`) support, along with its `wif-smart` and `bs58smartcheck` dependencies.
+
 ## 3.12.0 (2026-08-05)
 
 - added: `signatureFormat` option on `signMessage`, accepting `electrum` (the default) or `bip137`. Existing callers keep the legacy Electrum header byte; BIP137 is opt-in.

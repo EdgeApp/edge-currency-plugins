@@ -72,50 +72,6 @@ interface Fixture {
 export const fixtures: Fixture = {
   coins: [
     {
-      name: 'smartcash',
-      mnemonic:
-        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-      seedToXPrivTests: [
-        {
-          xpriv:
-            'xprv9yWirNER4qGZHR9cLGqJi8Z23wy2M9JmbCA7zkCunzneLv84Gxj4DmZkdjjkqotSverQ7pWsHnkPdFH2RqfkmSizzR6rZFHQ9cHSqjCKs3b',
-          type: BIP43PurposeTypeEnum.Legacy
-        }
-      ],
-      xprivToXPubTests: [
-        {
-          xpriv:
-            'xprv9yWirNER4qGZHR9cLGqJi8Z23wy2M9JmbCA7zkCunzneLv84Gxj4DmZkdjjkqotSverQ7pWsHnkPdFH2RqfkmSizzR6rZFHQ9cHSqjCKs3b',
-          type: BIP43PurposeTypeEnum.Legacy,
-          xpub:
-            'xpub6CW5FsmJuCprVuE5SJNK5GVkbyoWkc2cxR5io8cXMLKdDiTCpW3JmZtEUzKML8iYKp5Fs7iGSLnW4EjGZFaRtmVo9RPW36CY2w4imVdUNjK'
-        }
-      ],
-      xpubToPubkeyTests: [
-        {
-          xpub:
-            'xpub6CW5FsmJuCprVuE5SJNK5GVkbyoWkc2cxR5io8cXMLKdDiTCpW3JmZtEUzKML8iYKp5Fs7iGSLnW4EjGZFaRtmVo9RPW36CY2w4imVdUNjK',
-          type: BIP43PurposeTypeEnum.Legacy,
-          bip44ChangeIndex: 0,
-          bip44AddressIndex: 0,
-          scriptType: ScriptTypeEnum.p2pkh,
-          addressType: AddressTypeEnum.p2pkh,
-          address: 'SkYmjrcQQgc9XWFAfBRG61YEYRWUqGEZnG'
-        }
-      ],
-      wifToPrivateKeyTests: [
-        {
-          wifKey: 'VLqHRdvdNPgspEjPM6ee5CcLKc4CFBvafN183pevjxXKX1uZGe1m'
-        }
-      ],
-      addressToScriptPubkeyTests: [
-        {
-          address: 'ScZ5enspA3DpbSkX1SYxkCLyu8gh4qzTWH',
-          scriptPubkey: '76a914a763fb8d08fdd6b5f6e3e3bf41ab33901b86e72088ac'
-        }
-      ]
-    },
-    {
       name: 'ravencoin',
       mnemonic:
         'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
