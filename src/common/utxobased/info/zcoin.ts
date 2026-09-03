@@ -45,7 +45,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 export const engineInfo: EngineInfo = {
   serverConfigs: [
     {
-      type: 'blockbook-nownode',
+      type: 'blockbook',
       uris: ['https://firo-eusa1.edge.app']
     },
     {

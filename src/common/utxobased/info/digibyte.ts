@@ -46,7 +46,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 const engineInfo: EngineInfo = {
   serverConfigs: [
     {
-      type: 'blockbook-nownode',
+      type: 'blockbook',
       uris: ['https://dgb-eu1.edge.app']
     },
     {

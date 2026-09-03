@@ -414,13 +414,40 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           // ])
 
           const { nowNodesApiKey } = initOptions
-          const nowNodeUris = serverConfigs
-            .filter(config => config.type === 'blockbook-nownode')
-            .map(config => config.uris)
-            .flat(1)
 
-          // If there are no HTTP servers, reject the promise
-          if (nowNodeUris.length < 1) {
+          // Build the HTTP targets, attaching the NOWNodes key ONLY to
+          // NOWNodes servers. Edge's own Blockbook servers answer /api/v2
+          // unauthenticated and must not be sent the key.
+          const httpTargets: Array<{
+            uri: string
+            headers: { [key: string]: string }
+          }> = []
+          for (const config of serverConfigs) {
+            if (config.type === 'blockbook-nownode') {
+              // NOWNodes answers 401 without a key, so skip those servers
+              // rather than failing a broadcast the public servers could
+              // still carry.
+              if (nowNodesApiKey == null) {
+                log.warn(
+                  'broadcastTx: skipping NOWNodes HTTP servers (no nowNodesApiKey)'
+                )
+                continue
+              }
+              for (const uri of config.uris) {
+                httpTargets.push({
+                  uri,
+                  headers: { 'api-key': nowNodesApiKey }
+                })
+              }
+            } else {
+              for (const uri of config.uris) {
+                httpTargets.push({ uri, headers: {} })
+              }
+            }
+          }
+
+          // If there are no usable HTTP servers, reject the promise
+          if (httpTargets.length < 1) {
             // If no HTTP servers are available, and we had no connected blockbook
             // instances, reject the promise with a message indicating no
             // available connections.
@@ -430,21 +457,13 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
             return
           }
 
-          // If there is no key for the NowNode servers:
-          if (nowNodesApiKey == null) {
-            reject(new Error('Missing connection key for fallback servers.'))
-            return
-          }
-
-          for (const uri of nowNodeUris) {
-            log.warn('Falling back to NOWNode server broadcast over HTTP:', uri)
+          for (const { uri, headers } of httpTargets) {
+            log.warn('Falling back to server broadcast over HTTP:', uri)
 
             // HTTP Fallback
             io.fetchCors(`${uri}/api/v2/sendtx/`, {
               method: 'POST',
-              headers: {
-                'api-key': nowNodesApiKey
-              },
+              headers,
               body: transaction.signedTx
             })
               .then(async response => {
@@ -463,7 +482,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
                 }
               })
               .catch((e?: Error) => {
-                if (++bad === nowNodeUris.length) {
+                if (++bad === httpTargets.length) {
                   const msg = e != null ? `With error ${e.message}` : ''
                   log.error(
                     `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`

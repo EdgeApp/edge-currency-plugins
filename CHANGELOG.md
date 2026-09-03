@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Stop sending the NOWNodes API key to Edge's own Blockbook HTTP servers. They are now configured as plain `blockbook` servers, which are also used when no NOWNodes key is configured.
+
 ## 3.12.0 (2026-08-05)
 
 - added: `signatureFormat` option on `signMessage`, accepting `electrum` (the default) or `bip137`. Existing callers keep the legacy Electrum header byte; BIP137 is opt-in.

@@ -50,7 +50,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 export const engineInfo: EngineInfo = {
   serverConfigs: [
     {
-      type: 'blockbook-nownode',
+      type: 'blockbook',
       uris: ['https://ltc-wusa1.edge.app']
     },
     {
