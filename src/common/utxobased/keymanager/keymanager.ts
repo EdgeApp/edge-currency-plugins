@@ -34,6 +34,7 @@ import {
   hashToCashAddress
 } from './bitcoincashUtils/cashAddress'
 import { getCoinFromString } from './coinmapper'
+import { installTrailerPolicy } from './trailerPolicy'
 import { InsufficientFundsErrorPlus, UtxoSignatureFormat } from './types'
 import * as utxopicker from './utxopicker'
 import { biggystringToBigInt } from './utxopicker/bigMath'
@@ -47,6 +48,10 @@ import * as pickerUtils from './utxopicker/utils'
  */
 const toBuffer = (bytes: Uint8Array): Buffer => Buffer.from(bytes)
 const toHex = (bytes: Uint8Array): string => toBuffer(bytes).toString('hex')
+
+// Transactions are parsed from several modules and from inside Psbt, so the
+// policy is installed once here rather than at each call site.
+installTrailerPolicy()
 
 let ECPairCache: ECPairAPI
 const getECPair = (): ECPairAPI => {
