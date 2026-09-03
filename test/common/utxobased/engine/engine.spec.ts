@@ -437,9 +437,20 @@ describe('engine.spec', function () {
           return await engine
             .makeSpend(templateSpend)
             .then(async a => {
+              // `otherParams` is a JsonObject that crosses the edge-core-js
+              // bridge, so nothing on the transaction may be a bigint —
+              // JSON.stringify throws outright on one. Amounts are carried as
+              // bigint internally, so this proves the conversion to the
+              // serializable DTO actually happened.
+              //
+              // Called bare rather than through assert.doesNotThrow: chai reads
+              // that helper's second argument as an error-message matcher, so a
+              // TypeError with a different message would slip through.
+              JSON.stringify(a)
               return await engine.signTx(a, keys)
             })
             .then(a => {
+              JSON.stringify(a)
               fakeLogger.info('sign', a)
             })
         })

@@ -12,7 +12,7 @@ import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { asTxOptions } from '../../plugin/types'
 import { asUtxoSignatureFormat } from '../keymanager/types'
-import { Input, Output } from '../keymanager/utxopicker/types'
+import { PsbtInputJson, PsbtOutputJson } from '../keymanager/utxopicker/types'
 
 export interface UtxoInitOptions {
   nowNodesApiKey?: string
@@ -31,8 +31,12 @@ export interface UtxoTxOtherParams {
   unsignedTx: string // hex
   psbt?: {
     base64: string
-    inputs: Input[]
-    outputs: Output[]
+    // Amounts are decimal strings here, not bigint. This object is published
+    // on `EdgeTransaction.otherParams`, which is a `JsonObject` and crosses the
+    // edge-core-js bridge in both directions; neither JSON nor the bridge can
+    // carry a bigint.
+    inputs: PsbtInputJson[]
+    outputs: PsbtOutputJson[]
   }
   edgeSpendInfo?: EdgeSpendInfo
   ourScriptPubkeys: string[]

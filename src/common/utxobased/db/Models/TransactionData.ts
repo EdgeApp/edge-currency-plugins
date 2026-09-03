@@ -20,7 +20,7 @@ export const fromEdgeTransaction = (tx: EdgeTransaction): TransactionData => {
    * after through passing the bridge.
    */
   const inputs = otherParams.psbt.inputs.map((input, n) => ({
-    amount: input.value.toString(),
+    amount: input.value,
     scriptPubkey: Buffer.from(input.scriptPubkey).toString('hex'), // [1]
     sequence: input.sequence,
     n,
@@ -28,7 +28,7 @@ export const fromEdgeTransaction = (tx: EdgeTransaction): TransactionData => {
     outputIndex: input.index
   }))
   const outputs = otherParams.psbt.outputs.map((output, n) => ({
-    amount: output.value.toString(),
+    amount: output.value,
     scriptPubkey: Buffer.from(output.scriptPubkey).toString('hex'), // [1]
     n
   }))

@@ -50,6 +50,10 @@ import {
   asMaybeInsufficientFundsErrorPlus
 } from '../keymanager/types'
 import { biggystringToBigInt } from '../keymanager/utxopicker/bigMath'
+import {
+  toPsbtInputJson,
+  toPsbtOutputJson
+} from '../keymanager/utxopicker/types'
 import { transactionSizeFromHex } from '../keymanager/utxopicker/utils'
 import { createPayment, getPaymentDetails, sendPayment } from './paymentRequest'
 import {
@@ -350,8 +354,8 @@ export async function makeUtxoEngine(
         unsignedTx: newTx.hex,
         psbt: {
           base64: newTx.psbtBase64,
-          inputs: newTx.inputs,
-          outputs: newTx.outputs
+          inputs: newTx.inputs.map(toPsbtInputJson),
+          outputs: newTx.outputs.map(toPsbtOutputJson)
         },
         ourScriptPubkeys: newOurScriptPubkeys,
         replacedTxid: replacedTxid
@@ -704,8 +708,8 @@ export async function makeUtxoEngine(
         unsignedTx: tx.hex,
         psbt: {
           base64: tx.psbtBase64,
-          inputs: tx.inputs,
-          outputs: tx.outputs
+          inputs: tx.inputs.map(toPsbtInputJson),
+          outputs: tx.outputs.map(toPsbtOutputJson)
         },
         edgeSpendInfo,
         ourScriptPubkeys
