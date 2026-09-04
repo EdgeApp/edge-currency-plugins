@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "^1.2.0",
-    "altcoin-js": "file:../altcoin-js-7.0.0-alpha.0.tgz",
+    "altcoin-js": "^7.0.0-alpha.0",
     "async-mutex": "^0.2.6",
     "baselet": "^0.3.0",
     "biggystring": "^4.2.3",
