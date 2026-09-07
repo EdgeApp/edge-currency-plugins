@@ -177,8 +177,16 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
         false,
         T
       > {
-        const value = yield { ...message }
-        deferred.resolve(value)
+        try {
+          const value = yield { ...message }
+          deferred.resolve(value)
+        } catch (error: unknown) {
+          // The socket reports a failed request (an error response, the
+          // request timeout, the socket closing) by throwing into this
+          // generator. Without this catch the deferred stays pending forever
+          // and the caller hangs instead of seeing the failure.
+          deferred.reject(error)
+        }
         return false
       }
       const generator = taskGeneratorFn()
