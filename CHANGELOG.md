@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Honor fractional custom fee rates. A 1.8 sat/vB custom fee was truncated to 1 sat/vB in `makeSpend`, so any digits after the decimal point were silently dropped. The UTXO picker now carries the fractional rate through and rounds each satoshi amount it derives up to a whole satoshi.
+
 ## 3.13.0 (2026-09-14)
 
 - changed: BTC and LTC explorer links now point to mempool.space and litecoinspace.org instead of Blockchair

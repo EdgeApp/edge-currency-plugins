@@ -160,4 +160,31 @@ describe(`Mining Fees`, function () {
     )
     assert.equal(result, '15')
   })
+  it('calcMinerFeePerByte custom preserves a fractional rate', function () {
+    const nativeAmount = '150000'
+    const feeOption = 'custom'
+    const bitcoinFees = {
+      lowFeeFudgeFactor: undefined,
+      standardFeeLowFudgeFactor: undefined,
+      standardFeeHighFudgeFactor: undefined,
+      highFeeFudgeFactor: undefined,
+
+      lowFee: '10',
+      standardFeeLow: '50',
+      standardFeeHigh: '100',
+      highFee: '350',
+      standardFeeLowAmount: '100000',
+      standardFeeHighAmount: '200000',
+      timestamp: 0
+    }
+    for (const customFee of ['1.8', '0.5', '12.345']) {
+      const result = calcMinerFeePerByte(
+        nativeAmount,
+        bitcoinFees,
+        feeOption,
+        customFee
+      )
+      assert.equal(result, customFee)
+    }
+  })
 })
