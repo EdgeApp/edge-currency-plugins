@@ -1,6 +1,7 @@
 import { FixtureType } from './common'
 import { bitcoin } from './currencies/bitcoin'
 import { bitcoincash } from './currencies/bitcoincash'
+import { bitcoinecash } from './currencies/bitcoinecash'
 import { bitcoinsv } from './currencies/bitcoinsv'
 import { digibyte } from './currencies/digibyte'
 import { ecash } from './currencies/ecash'
@@ -13,6 +14,7 @@ import { zcoin } from './currencies/zcoin'
 export const fixtures: FixtureType[] = [
   bitcoin,
   bitcoincash,
+  bitcoinecash,
   bitcoinsv,
   digibyte,
   ecash,

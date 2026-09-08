@@ -2,6 +2,7 @@ import { info as badcoin } from './badcoin'
 import { info as bitcoin } from './bitcoin'
 import { info as bitcoincash } from './bitcoincash'
 import { info as bitcoincashtestnet } from './bitcoincashtestnet'
+import { info as bitcoinecash } from './bitcoinecash'
 import { info as bitcoingold } from './bitcoingold'
 import { info as bitcoingoldtestnet } from './bitcoingoldtestnet'
 import { info as bitcoinsv } from './bitcoinsv'
@@ -27,6 +28,7 @@ export { info as badcoin } from './badcoin'
 export { info as bitcoin } from './bitcoin'
 export { info as bitcoincash } from './bitcoincash'
 export { info as bitcoincashtestnet } from './bitcoincashtestnet'
+export { info as bitcoinecash } from './bitcoinecash'
 export { info as bitcoingold } from './bitcoingold'
 export { info as bitcoingoldtestnet } from './bitcoingoldtestnet'
 export { info as bitcoinsv } from './bitcoinsv'
@@ -53,6 +55,7 @@ export const all = [
   bitcoin,
   bitcoincash,
   bitcoincashtestnet,
+  bitcoinecash,
   bitcoingold,
   bitcoingoldtestnet,
   bitcoinsv,
