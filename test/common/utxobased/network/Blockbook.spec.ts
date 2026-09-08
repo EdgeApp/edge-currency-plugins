@@ -94,6 +94,27 @@ describe('Blockbook notifications tests with dummy server', function () {
     websocketServer.close()
   })
 
+  it('rejects a pending request when the server answers with an error', async () => {
+    websocketClient.onmessage = event => {
+      const data = JSON.parse(event.data)
+      if (data.method === 'getInfo') {
+        websocketClient.send(
+          JSON.stringify({ id: data.id, error: { message: 'boom' } })
+        )
+      }
+    }
+
+    let error: unknown
+    try {
+      await blockbook.fetchInfo()
+    } catch (e) {
+      error = e
+    }
+
+    expect(error).to.be.instanceOf(Error)
+    expect((error as Error).message).to.equal('boom')
+  })
+
   it('Test Blockbook watch address and watch block events', async () => {
     let test = false
     test.should.be.false

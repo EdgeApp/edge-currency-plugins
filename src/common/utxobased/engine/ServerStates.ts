@@ -39,6 +39,11 @@ interface ServerStateConfig {
   pluginInfo: PluginInfo
   pluginState: PluginState
   walletInfo: SafeWalletInfo
+  /**
+   * Upper bound on any single broadcast attempt. Defaults to the same 30
+   * seconds the socket layer uses for a request. Exposed for tests.
+   */
+  broadcastTimeoutMs?: number
 }
 
 export interface ServerStates {
@@ -92,6 +97,42 @@ interface ServerStatesCache {
   [uri: string]: ServerState
 }
 
+/**
+ * How long broadcastTx gives the first wave (our sockets and Edge's own HTTP
+ * servers) before it also sends the transaction to the NOWNodes HTTP servers.
+ * NOWNodes is a third party, so it should only see a transaction when our own
+ * infrastructure has not already carried it. A first wave that fails outright
+ * does not wait this long; the second wave fires as soon as it has all failed.
+ */
+export const NOWNODES_BROADCAST_DELAY_MS = 2000
+
+/**
+ * Every broadcast attempt is counted toward "all attempts failed", so every
+ * attempt must settle. Sockets already expire a request after 30 seconds
+ * (Socket.ts); HTTP has no such bound of its own, and a server that accepts
+ * the connection and never answers would otherwise hold the whole broadcast
+ * open. This mirrors the socket figure.
+ */
+export const BROADCAST_ATTEMPT_TIMEOUT_MS = 30000
+
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string
+): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(message))
+    }, ms)
+  })
+  try {
+    return await Promise.race([promise, timeout])
+  } finally {
+    if (timer != null) clearTimeout(timer)
+  }
+}
+
 export function makeServerStates(config: ServerStateConfig): ServerStates {
   const {
     engineEmitter,
@@ -103,6 +144,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     walletInfo
   } = config
   const { serverConfigs = [] } = pluginInfo.engineInfo
+  const { broadcastTimeoutMs = BROADCAST_ATTEMPT_TIMEOUT_MS } = config
   log('Making server states')
 
   const serverStatesCache: ServerStatesCache = {}
@@ -366,112 +408,171 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   }
 
   const instance: ServerStates = {
+    /**
+     * Broadcast in two waves:
+     *
+     * 1. Immediately: every blockbook in the connection cache (whether or not
+     *    its socket has finished connecting; a queued request transmits as
+     *    soon as the socket opens, and times out otherwise) and every
+     *    `blockbook` HTTP server, which are Edge's own.
+     * 2. After NOWNODES_BROADCAST_DELAY_MS, or as soon as every first-wave
+     *    attempt has failed, whichever comes first: the `blockbook-nownode`
+     *    HTTP servers. These are a third party and only see the transaction
+     *    when our own infrastructure has not already carried it.
+     *
+     * The first success wins. The promise rejects only after every attempt
+     * has failed. Earlier versions only used HTTP when no socket was
+     * connected, so a single socket that looked connected but never answered
+     * could fail the whole broadcast without any HTTP attempt.
+     */
     async broadcastTx(transaction: EdgeTransaction): Promise<string> {
       return await new Promise((resolve, reject) => {
-        let resolved = false
-        let bad = 0
+        interface Attempt {
+          uri: string
+          run: () => Promise<string>
+        }
 
-        const wsUris = Object.keys(serverStatesCache).filter(
-          uri => serverStatesCache[uri].blockbook != null
-        )
+        const httpAttempt = (
+          uri: string,
+          headers: { [key: string]: string }
+        ): Attempt => ({
+          uri,
+          run: async () => {
+            const response = await io.fetchCors(`${uri}/api/v2/sendtx/`, {
+              method: 'POST',
+              headers,
+              body: transaction.signedTx
+            })
+            if (!response.ok) {
+              throw new Error(
+                `Failed to broadcast transaction via Blockbook: HTTP ${response.status}`
+              )
+            }
+            const json = await response.json()
+            return asBlockbookResponse(asBroadcastTxResponse)(json).result
+          }
+        })
 
-        // Determine if there are any connected blockbook instances
-        const isAnyBlockbookConnected = wsUris.some(
-          uri => serverStatesCache[uri].blockbook.isConnected
-        )
+        //
+        // Build both waves up front, so `attempts` is the full count and an
+        // all-fail first wave cannot reject before the second has run.
+        //
+        const firstWave: Attempt[] = []
+        const secondWave: Attempt[] = []
 
-        if (isAnyBlockbookConnected) {
-          for (const uri of wsUris) {
-            const { blockbook } = serverStatesCache[uri]
-            if (blockbook == null) continue
-            blockbook
-              .broadcastTx(transaction)
-              .then(response => {
-                if (!resolved) {
-                  resolved = true
-                  resolve(response.result)
-                }
-              })
-              .catch((e?: Error) => {
-                if (++bad === wsUris.length) {
-                  const msg = e != null ? `With error ${e.message}` : ''
-                  log.error(
-                    `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
-                  )
-                  reject(e)
-                }
-              })
+        for (const uri of Object.keys(serverStatesCache)) {
+          const { blockbook } = serverStatesCache[uri]
+          if (blockbook == null) continue
+          firstWave.push({
+            uri,
+            run: async () => (await blockbook.broadcastTx(transaction)).result
+          })
+        }
+
+        // This is for the future when we want to get HTTP servers from the user
+        // settings:
+        // const httpUris = pluginState.getLocalServers(Infinity, [
+        //   /^http(?:s)?:/i
+        // ])
+        const { nowNodesApiKey } = initOptions
+        for (const config of serverConfigs) {
+          if (config.type === 'blockbook-nownode') {
+            // NOWNodes requires the key, and the key must not go anywhere else:
+            if (nowNodesApiKey == null) {
+              log.warn(
+                'broadcastTx: skipping NOWNodes HTTP servers (no nowNodesApiKey)'
+              )
+              continue
+            }
+            for (const uri of config.uris) {
+              secondWave.push(httpAttempt(uri, { 'api-key': nowNodesApiKey }))
+            }
+          } else {
+            for (const uri of config.uris) {
+              firstWave.push(httpAttempt(uri, {}))
+            }
           }
         }
 
-        // Broadcast through any HTTP URI that may be configured, only if no
-        // blockbook instances are connected.
-        if (!isAnyBlockbookConnected) {
-          // This is for the future when we want to get HTTP servers from the user
-          // settings:
-          // const httpUris = pluginState.getLocalServers(Infinity, [
-          //   /^http(?:s)?:/i
-          // ])
+        const attempts = firstWave.length + secondWave.length
+        if (attempts === 0) {
+          reject(
+            new Error('No available connections. Check your internet signal.')
+          )
+          return
+        }
 
-          const { nowNodesApiKey } = initOptions
-          const nowNodeUris = serverConfigs
-            .filter(config => config.type === 'blockbook-nownode')
-            .map(config => config.uris)
-            .flat(1)
+        let resolved = false
+        let failures = 0
+        const failureMessages: string[] = []
+        let secondWaveFired = false
+        let secondWaveTimer: ReturnType<typeof setTimeout> | undefined
 
-          // If there are no HTTP servers, reject the promise
-          if (nowNodeUris.length < 1) {
-            // If no HTTP servers are available, and we had no connected blockbook
-            // instances, reject the promise with a message indicating no
-            // available connections.
+        const onSuccess = (uri: string, txid: string): void => {
+          if (resolved) return
+          resolved = true
+          if (secondWaveTimer != null) clearTimeout(secondWaveTimer)
+          log(`broadcastTx succeeded via ${uri}: ${txid}`)
+          resolve(txid)
+        }
+        const onFailure = (uri: string, error: unknown): void => {
+          const message = error instanceof Error ? error.message : String(error)
+          failureMessages.push(`${uri}: ${message}`)
+          log.warn(`broadcastTx attempt failed for ${uri}: ${message}`)
+          failures++
+          if (resolved) return
+          if (failures === attempts) {
+            log.error(
+              `broadcastTx fail: ${JSON.stringify(
+                transaction
+              )}\n${failureMessages.join('\n')}`
+            )
             reject(
-              new Error('No available connections. Check your internet signal.')
+              error instanceof Error
+                ? error
+                : new Error(`Broadcast failed: ${failureMessages.join('; ')}`)
             )
             return
           }
-
-          // If there is no key for the NowNode servers:
-          if (nowNodesApiKey == null) {
-            reject(new Error('Missing connection key for fallback servers.'))
-            return
+          // Every first-wave attempt has failed, so there is nothing left to
+          // wait for. Fire the second wave now rather than sit out the delay.
+          if (!secondWaveFired && failures >= firstWave.length) {
+            fireSecondWave()
           }
-
-          for (const uri of nowNodeUris) {
-            log.warn('Falling back to NOWNode server broadcast over HTTP:', uri)
-
-            // HTTP Fallback
-            io.fetchCors(`${uri}/api/v2/sendtx/`, {
-              method: 'POST',
-              headers: {
-                'api-key': nowNodesApiKey
-              },
-              body: transaction.signedTx
+        }
+        const fire = (attempt: Attempt): void => {
+          withTimeout(
+            attempt.run(),
+            broadcastTimeoutMs,
+            `Timeout for broadcast to ${attempt.uri}`
+          )
+            .then(txid => {
+              onSuccess(attempt.uri, txid)
             })
-              .then(async response => {
-                if (!response.ok) {
-                  throw new Error(
-                    `Failed to broadcast transaction via Blockbook: HTTP ${response.status}`
-                  )
-                }
-                const json = await response.json()
-                return asBlockbookResponse(asBroadcastTxResponse)(json)
-              })
-              .then(response => {
-                if (!resolved) {
-                  resolved = true
-                  resolve(response.result)
-                }
-              })
-              .catch((e?: Error) => {
-                if (++bad === nowNodeUris.length) {
-                  const msg = e != null ? `With error ${e.message}` : ''
-                  log.error(
-                    `broadcastTx fail: ${JSON.stringify(transaction)}\n${msg}`
-                  )
-                  reject(e)
-                }
-              })
-          }
+            .catch((error: unknown) => {
+              onFailure(attempt.uri, error)
+            })
+        }
+        const fireSecondWave = (): void => {
+          if (secondWaveFired) return
+          secondWaveFired = true
+          if (secondWaveTimer != null) clearTimeout(secondWaveTimer)
+          if (secondWave.length === 0) return
+          log.warn(
+            'broadcastTx: first wave has not resolved, trying NOWNodes servers'
+          )
+          for (const attempt of secondWave) fire(attempt)
+        }
+
+        for (const attempt of firstWave) fire(attempt)
+        if (firstWave.length === 0) {
+          // Nothing of our own to try first:
+          fireSecondWave()
+        } else if (secondWave.length > 0) {
+          secondWaveTimer = setTimeout(
+            fireSecondWave,
+            NOWNODES_BROADCAST_DELAY_MS
+          )
         }
       })
     },

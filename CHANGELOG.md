@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: `broadcastTx` now sends to every cached Blockbook socket and every Edge Blockbook HTTP server at once, then to the NOWNodes HTTP servers two seconds later or as soon as that first wave has failed, resolving on the first success and rejecting only when all attempts fail or time out (30 seconds per attempt, matching the socket layer). Previously the HTTP fallback ran only when no socket reported itself connected, so one unresponsive socket could fail the whole broadcast without any HTTP attempt.
+- fixed: Stop sending the NOWNodes API key to Edge's own Blockbook HTTP servers. They are now configured as plain `blockbook` servers, which are also used when no NOWNodes key is configured.
+
 ## 3.12.0 (2026-08-05)
 
 - added: `signatureFormat` option on `signMessage`, accepting `electrum` (the default) or `bip137`. Existing callers keep the legacy Electrum header byte; BIP137 is opt-in.

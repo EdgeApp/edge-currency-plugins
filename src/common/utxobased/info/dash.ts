@@ -52,7 +52,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 const engineInfo: EngineInfo = {
   serverConfigs: [
     {
-      type: 'blockbook-nownode',
+      type: 'blockbook',
       uris: ['https://dash-wusa1.edge.app']
     },
     {

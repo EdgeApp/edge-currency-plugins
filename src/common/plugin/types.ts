@@ -158,7 +158,13 @@ export interface EngineInfo {
 }
 
 export interface ServerConfig {
-  type: 'blockbook-nownode'
+  /**
+   * - `blockbook`: a public Blockbook HTTP server. No credentials are sent.
+   * - `blockbook-nownode`: a NOWNodes Blockbook HTTP server. Requests carry
+   *   the `nowNodesApiKey` init option as the `api-key` header, and the
+   *   server is skipped when no key is configured.
+   */
+  type: 'blockbook' | 'blockbook-nownode'
   uris: string[]
 }
 
