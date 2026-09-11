@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: Fetch Bitcoin fee rates from mempool.space's `/fees/precise` endpoint and keep the fractional rates it returns. The fee presets previously rounded to a whole sat/vB and were raised to a hardcoded floor of 2 sat/vB, which is 20x Bitcoin Core's current `minrelaytxfee` default of 0.1 sat/vB. `calcMinerFeePerByte` also rounded every preset to an integer, which turned a sub-1 rate into `0` and failed the send outright.
 - fixed: Honor fractional custom fee rates. A 1.8 sat/vB custom fee was truncated to 1 sat/vB in `makeSpend`, so any digits after the decimal point were silently dropped. The UTXO picker now carries the fractional rate through and rounds each satoshi amount it derives up to a whole satoshi.
 
 ## 3.13.0 (2026-09-14)
