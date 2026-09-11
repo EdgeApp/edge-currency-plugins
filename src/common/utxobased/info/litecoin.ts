@@ -20,8 +20,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/litecoin/block/%s',
-  addressExplorer: 'https://blockchair.com/litecoin/address/%s',
-  transactionExplorer: 'https://blockchair.com/litecoin/transaction/%s',
+  addressExplorer: 'https://litecoinspace.org/address/%s',
+  transactionExplorer: 'https://litecoinspace.org/tx/%s',
 
   denominations: [
     { name: 'LTC', multiplier: '100000000', symbol: 'Ł' },

@@ -20,8 +20,8 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Explorers:
   blockExplorer: 'https://blockchair.com/bitcoin/block/%s',
-  addressExplorer: 'https://blockchair.com/bitcoin/address/%s',
-  transactionExplorer: 'https://blockchair.com/bitcoin/transaction/%s',
+  addressExplorer: 'https://mempool.space/address/%s',
+  transactionExplorer: 'https://mempool.space/tx/%s',
 
   denominations: [
     { name: 'BTC', multiplier: '100000000', symbol: '₿' },
