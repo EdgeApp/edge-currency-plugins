@@ -20,6 +20,7 @@ import {
 
 import { filterUndefined } from '../../../util/filterUndefined'
 import { unixTime } from '../../../util/unixTime'
+import { calcReplacementFeeRate } from '../../fees/calcReplacementFeeRate'
 import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
 import { makeMetadata } from '../../plugin/Metadata'
@@ -187,9 +188,12 @@ export async function makeUtxoEngine(
       // Must not be confirmed or dropped.
       if (replacedTx.blockHeight !== 0) return null
 
-      // Double the fee used for the RBF transaction:
+      // Double the fee rate used by the replaced transaction:
       const vBytes = transactionSizeFromHex(replacedTx.hex)
-      const newFeeRate = Math.round((parseInt(replacedTx.fees) / vBytes) * 2)
+      const newFeeRate = calcReplacementFeeRate(
+        parseInt(replacedTx.fees),
+        vBytes
+      )
 
       const replacedTxInputs = replacedTx.inputs
       // Recreate UTXOs from DataLayer transaction and mark them as unspent:
