@@ -1,17 +1,23 @@
 import { add } from 'biggystring'
-import { Disklet } from 'disklet'
-import { EdgeLog } from 'edge-core-js/types'
-import { makeMemlet } from 'memlet'
+import { EdgeLog, EdgeTxDatabase } from 'edge-core-js/types'
 
+import { dataLayerTables, WALLET_META_KEY } from '../utxobased/db/DataLayer'
 import AwaitLock from '../utxobased/engine/await-lock'
 import { EngineEmitter, EngineEvent } from './EngineEmitter'
 import { asLocalWalletMetadata, LocalWalletMetadata } from './types'
 import { removeItem } from './utils'
 
-const metadataPath = `metadata.json`
-
 interface MetadataConfig {
-  disklet: Disklet
+  /**
+   * The wallet's own storage.
+   *
+   * This used to be a JSON file in `walletLocalDisklet`, which is the last
+   * thing the engine kept there. It is still one document, and still rewritten
+   * whole on every address balance change -- splitting `addressBalances` into
+   * rows is a behavioural change, not a storage one, and belongs in its own
+   * commit.
+   */
+  txDatabase: EdgeTxDatabase
   emitter: EngineEmitter
   log: EdgeLog
 }
@@ -24,8 +30,8 @@ export interface Metadata {
 export const makeMetadata = async (
   config: MetadataConfig
 ): Promise<Metadata> => {
-  const { disklet, emitter, log } = config
-  const memlet = makeMemlet(disklet)
+  const { txDatabase: db, emitter, log } = config
+  await db.defineTables(dataLayerTables)
   const lock = new AwaitLock()
 
   const instance: Metadata = {
@@ -33,7 +39,7 @@ export const makeMetadata = async (
       return cache
     },
     clear: async () => {
-      await memlet.delete(metadataPath)
+      await db.removeRows([{ table: 'meta', keys: [WALLET_META_KEY] }])
       const cleanCache = await resetMetadata()
       Object.assign(cache, cleanCache)
     }
@@ -90,8 +96,11 @@ export const makeMetadata = async (
 
   const fetchMetadata = async (): Promise<LocalWalletMetadata> => {
     try {
-      const metadata = await memlet.getJson(metadataPath)
-      return asLocalWalletMetadata(metadata)
+      const [result] = await db.getRows([
+        { table: 'meta', keys: [WALLET_META_KEY] }
+      ])
+      if (result.rows[0] == null) return await resetMetadata()
+      return asLocalWalletMetadata(result.rows[0])
     } catch (err) {
       log.error(err)
       return await resetMetadata()
@@ -104,12 +113,14 @@ export const makeMetadata = async (
       addressBalances: {},
       lastSeenBlockHeight: 0
     }
-    await memlet.setJson(metadataPath, data)
+    await setMetadata(data)
     return data
   }
 
   const setMetadata = async (data: LocalWalletMetadata): Promise<void> => {
-    await memlet.setJson(metadataPath, data)
+    await db.putRows([
+      { table: 'meta', rows: [{ ...data, id: WALLET_META_KEY }] }
+    ])
   }
 
   const cache = await fetchMetadata()

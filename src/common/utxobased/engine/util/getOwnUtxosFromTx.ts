@@ -23,8 +23,8 @@ export const getOwnUtxosFromTx = async (
   })
   for (const utxo of inputUtxos) {
     if (utxo == null) continue
-    // Must create a new UtxoData object when mutating DataLayer objects because
-    // memlet may keep a reference in memory.
+    // A new object rather than a mutation: what comes back from the database
+    // is the caller's to keep, and the stored row should not change under it.
     ownUtxos.push({ ...utxo, spent: true })
   }
 

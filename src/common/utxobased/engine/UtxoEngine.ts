@@ -79,12 +79,9 @@ export async function makeUtxoEngine(
     io,
     pluginState
   } = config
-  const {
-    log,
-    txDatabase,
-    walletLocalDisklet,
-    walletLocalEncryptedDisklet
-  } = engineOptions
+  // `walletLocalDisklet` is gone from this list: the engine's storage is the
+  // transaction database now. The encrypted one survives, for private keys.
+  const { log, txDatabase, walletLocalEncryptedDisklet } = engineOptions
   const { currencyInfo, engineInfo, coinInfo } = pluginInfo
   const userSettings = asUtxoUserSettings(engineOptions.userSettings)
 
@@ -124,18 +121,14 @@ export async function makeUtxoEngine(
     log: config.engineOptions.log
   })
 
-  const metadata = await makeMetadata({
-    disklet: walletLocalDisklet,
-    emitter,
-    log
-  })
-
   if (txDatabase == null) {
     throw new Error(
       'This wallet needs a transaction database. Turn on ' +
         '`EdgeContextOptions.transactionDatabase`, on a platform that has one.'
     )
   }
+  const metadata = await makeMetadata({ txDatabase, emitter, log })
+
   const dataLayer = await makeDataLayer({
     txDatabase,
     walletId: walletInfo.id,
@@ -1016,16 +1009,6 @@ export async function makeUtxoEngine(
       const privateKeys = spendInfo.privateKeys ?? []
       if (privateKeys.length < 1) throw new Error('No private keys given')
 
-      // Make temporary wallet disklet
-      const tmpDisklet = makeMemoryDisklet()
-      const tmpEncryptedDisklet = makeMemoryDisklet()
-      const tmpEmitter = new EngineEmitter()
-      const tmpConfig = {
-        disklet: tmpDisklet,
-        emitter: tmpEmitter,
-        log
-      }
-      const tmpMetadata = await makeMetadata(tmpConfig)
       // A throwaway wallet, on throwaway storage. It cannot share the real
       // wallet's database: the imported key's transactions would land in the
       // user's own history.
@@ -1034,6 +1017,15 @@ export async function makeUtxoEngine(
       }
       const tmpTxDatabase = await txDatabase.makeScratch()
       scratchDatabases.push(tmpTxDatabase)
+
+      const tmpDisklet = makeMemoryDisklet()
+      const tmpEncryptedDisklet = makeMemoryDisklet()
+      const tmpEmitter = new EngineEmitter()
+      const tmpMetadata = await makeMetadata({
+        txDatabase: tmpTxDatabase,
+        emitter: tmpEmitter,
+        log
+      })
       const tmpDataLayer = await makeDataLayer({
         txDatabase: tmpTxDatabase,
         walletId: tmpWalletInfo.id,
@@ -1090,6 +1082,8 @@ export async function makeUtxoEngine(
         emitter: tmpEmitter,
         engineOptions: {
           ...config.engineOptions,
+          // Required by the type, and unused: the throwaway engine stores
+          // everything in the scratch database above.
           walletLocalDisklet: tmpDisklet,
           walletLocalEncryptedDisklet: tmpEncryptedDisklet
         },
