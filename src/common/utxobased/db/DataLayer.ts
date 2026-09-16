@@ -66,8 +66,17 @@ interface DumpDataReturn {
  * inverted tables that a half-finished write could leave inconsistent.
  */
 export const dataLayerTables: EdgeTableSpec = {
-  version: 1,
+  version: 2,
   tables: {
+    /*
+     * The wallet's own state: its balance and the last block height it saw.
+     *
+     * Declared here rather than wherever it is used, because a wallet has one
+     * table declaration -- a second `defineTables` with a different set would
+     * drop the tables this one made.
+     */
+    meta: { key: ['id'] },
+
     address: {
       key: ['scriptPubkey'],
       indexes: {
@@ -97,6 +106,9 @@ export const dataLayerTables: EdgeTableSpec = {
     txDetail: { key: ['txid'] }
   }
 }
+
+/** The single row `meta` holds. */
+export const WALLET_META_KEY = 'wallet'
 
 /**
  * The UTXO-specific half of a transaction.
