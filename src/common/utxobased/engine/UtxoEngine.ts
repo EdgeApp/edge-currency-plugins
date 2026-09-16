@@ -273,10 +273,19 @@ export async function makeUtxoEngine(
       const targets: MakeTxTarget[] = []
       const newOurReceiveAddresses: string[] = []
       let foundChangeAddress: string | undefined
-      for (const output of replacedTx.outputs) {
-        const scriptPubkey = replacedTxOuts[output.n].script.toString('hex')
-        // Fetch address by output's scriptPubkey to determine output ownership
-        const ourAddress = await dataLayer.fetchAddress(scriptPubkey)
+
+      // Ownership for every output in one call. Each lookup is a bridge round
+      // trip, so asking per output made the cost of accelerating a
+      // transaction scale with how many outputs it had.
+      const outputScripts = replacedTx.outputs.map(output =>
+        replacedTxOuts[output.n].script.toString('hex')
+      )
+      const outputAddresses = await dataLayer.fetchAddresses(outputScripts)
+
+      for (let i = 0; i < replacedTx.outputs.length; ++i) {
+        const output = replacedTx.outputs[i]
+        const scriptPubkey = outputScripts[i]
+        const ourAddress = outputAddresses[i]
 
         // This isn't our output, so include it as a target
         if (ourAddress == null) {
