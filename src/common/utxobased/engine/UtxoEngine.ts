@@ -26,7 +26,6 @@ import { makeMetadata } from '../../plugin/Metadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
 import { upgradeMemos } from '../../upgradeMemos'
 import { DataLayer, makeDataLayer } from '../db/DataLayer'
-import { makeDiskletDataLayer } from '../db/DiskletDataLayer'
 import {
   fromEdgeTransaction,
   toEdgeTransaction
@@ -144,6 +143,10 @@ export async function makeUtxoEngine(
   // This is a temporary data layer used only once (i.e. nonce) for sweeping
   // private keys.
   let nonceDataLayer: DataLayer | undefined
+
+  // Scratch databases opened for sweeps, closed when the engine stops. A
+  // sweep that throws must not leave its file behind.
+  const scratchDatabases: Array<{ close: () => Promise<void> }> = []
 
   /**
    * This is a stateful function, which means it is both a setter and a getter.
@@ -415,6 +418,13 @@ export async function makeUtxoEngine(
       await engineProcessor.stop()
       fees.stop()
       pluginState.removeEngine(engineProcessor)
+
+      // A sweep's scratch database is deleted with it. Leaving one behind
+      // would leave an imported key's transaction history on the device.
+      while (scratchDatabases.length > 0) {
+        const scratch = scratchDatabases.pop()
+        await scratch?.close().catch(error => log.error(error))
+      }
     },
 
     getBalance(_opts: EdgeTokenIdOptions): string {
@@ -1006,7 +1016,16 @@ export async function makeUtxoEngine(
       // A throwaway wallet, on throwaway storage. It cannot share the real
       // wallet's database: the imported key's transactions would land in the
       // user's own history.
-      const tmpDataLayer = await makeDiskletDataLayer(tmpConfig)
+      if (txDatabase.makeScratch == null) {
+        throw new Error('This platform cannot sweep a private key')
+      }
+      const tmpTxDatabase = await txDatabase.makeScratch()
+      scratchDatabases.push(tmpTxDatabase)
+      const tmpDataLayer = await makeDataLayer({
+        txDatabase: tmpTxDatabase,
+        walletId: tmpWalletInfo.id,
+        pluginId: pluginInfo.currencyInfo.pluginId
+      })
       const tmpWalletTools = makeUtxoWalletTools({
         pluginInfo,
         publicKey: tmpWalletInfo.keys.publicKey
