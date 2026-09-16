@@ -125,6 +125,9 @@ interface DiskletDataLayer {
   // get the last used address index for a specific format
   lastUsedIndexByFormatPath: (path: ChangePath) => Promise<number>
   fetchAddress: (args: AddressPath | string) => Promise<AddressData | undefined>
+  fetchAddresses: (
+    scriptPubkeys: string[]
+  ) => Promise<Array<AddressData | undefined>>
 }
 
 export async function makeDiskletDataLayer(
@@ -604,6 +607,16 @@ export async function makeDiskletDataLayer(
 
         return address
       })
+    },
+
+    async fetchAddresses(
+      scriptPubkeys: string[]
+    ): Promise<Array<AddressData | undefined>> {
+      if (scriptPubkeys.length === 0) return []
+      return await baselets.address(
+        async tables =>
+          await tables.addressByScriptPubkey.query('', scriptPubkeys)
+      )
     }
   }
   return dataLayer

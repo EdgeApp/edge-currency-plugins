@@ -32,9 +32,16 @@ export const getOwnUtxosFromTx = async (
   // Unspent UTXOs (Outputs)
   //
 
-  for (const output of tx.outputs) {
+  // One call for every output, rather than one call per output: each is a
+  // bridge round trip, and a transaction can have hundreds.
+  const outputAddresses = await dataLayer.fetchAddresses(
+    tx.outputs.map(output => output.scriptPubkey)
+  )
+
+  for (let i = 0; i < tx.outputs.length; ++i) {
+    const output = tx.outputs[i]
     const scriptPubkey = output.scriptPubkey
-    const address = await dataLayer.fetchAddress(scriptPubkey)
+    const address = outputAddresses[i]
     if (address != null) {
       const id = `${tx.txid}_${output.n}`
       const path = address.path
