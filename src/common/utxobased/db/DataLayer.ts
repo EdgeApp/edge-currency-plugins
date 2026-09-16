@@ -151,6 +151,16 @@ export interface DataLayer {
   // get the last used address index for a specific format
   lastUsedIndexByFormatPath: (path: ChangePath) => Promise<number>
   fetchAddress: (args: AddressPath | string) => Promise<AddressData | undefined>
+  /**
+   * Several addresses at once, aligned to the script pubkeys that asked for
+   * them, with `undefined` where one is not ours.
+   *
+   * Every call is a bridge round trip, so a caller walking a transaction's
+   * outputs should pay for one crossing rather than one per output.
+   */
+  fetchAddresses: (
+    scriptPubkeys: string[]
+  ) => Promise<Array<AddressData | undefined>>
 }
 
 export async function makeDataLayer(
@@ -537,6 +547,16 @@ export async function makeDataLayer(
         }
       })) as AddressData[]
       return address
+    },
+
+    async fetchAddresses(
+      scriptPubkeys: string[]
+    ): Promise<Array<AddressData | undefined>> {
+      if (scriptPubkeys.length === 0) return []
+      const [result] = await db.getRows([
+        { table: 'address', keys: scriptPubkeys }
+      ])
+      return result.rows as Array<AddressData | undefined>
     }
   }
   return dataLayer
