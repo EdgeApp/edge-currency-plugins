@@ -8,7 +8,6 @@ import {
 
 import { unixTime } from '../../../util/unixTime'
 import { AddressPath, ChangePath } from '../../plugin/types'
-import { addressPathToPrefix } from './Models/baselet'
 import {
   AddressData,
   TransactionData,
@@ -119,6 +118,10 @@ interface TxDetail {
 
 /** The chain's own asset, which `EdgeTokenId` spells `null`. */
 const CHAIN = null
+
+/** Identifies a change path, for the counters the engine reads. */
+export const addressPathToPrefix = (path: ChangePath): string =>
+  `${path.format}_${path.changeIndex}`
 
 /**
  * The Data Access Layer for the UTXO-based wallet engine.
