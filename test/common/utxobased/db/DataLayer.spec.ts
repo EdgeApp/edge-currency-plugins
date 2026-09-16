@@ -829,3 +829,110 @@ describe('DataLayer transactions tests', () => {
     expect(txsByBlockHeight3[0]?.blockHeight).to.be.equals(10)
   })
 })
+
+describe('DataLayer atomic writes', () => {
+  const input1: TransactionDataInput = {
+    txId: 'random',
+    outputIndex: 0,
+    scriptPubkey: 'pubkeyin1',
+    sequence: 0xfffffffe,
+    n: 0,
+    amount: '1'
+  }
+  const output1: TransactionDataOutput = {
+    amount: '1',
+    n: 0,
+    scriptPubkey: 'pubkeyout1'
+  }
+  const makeTx = (txid: string): TransactionData => ({
+    txid,
+    hex: '',
+    blockHeight: 1,
+    date: unixTime(new Date(10_000).getTime()),
+    fees: '1',
+    inputs: [input1],
+    outputs: [output1],
+    ourIns: [],
+    ourOuts: [],
+    ourAmount: '0'
+  })
+  const makeUtxo = (id: string): UtxoData => ({
+    id,
+    txid: 'tx1',
+    vout: 0,
+    value: '1',
+    scriptPubkey: 'pubkeyout1',
+    script: '',
+    scriptType: ScriptTypeEnum.p2pkh,
+    blockHeight: 1,
+    spent: false
+  })
+
+  it('saves a transaction and its coins together', async () => {
+    const dataLayer = await makeFreshDataLayer()
+
+    await dataLayer.saveTransactionWithUtxos({
+      tx: makeTx('tx1'),
+      utxos: [makeUtxo('tx1_0')]
+    })
+
+    const [tx] = await dataLayer.fetchTransactions({ txId: 'tx1' })
+    expect(tx?.txid).eql('tx1')
+    expect((await dataLayer.fetchUtxos({})).length).eql(1)
+  })
+
+  it('saves neither when the write fails', async () => {
+    const dataLayer = await makeFreshDataLayer()
+
+    // A UTXO with no key cannot be written, and the transaction beside it
+    // must not survive: that window is where a send loses its own change.
+    let failed = false
+    try {
+      await dataLayer.saveTransactionWithUtxos({
+        tx: makeTx('tx1'),
+        utxos: [{ ...makeUtxo('tx1_0'), id: undefined } as any]
+      })
+    } catch (error) {
+      failed = true
+    }
+    expect(failed).eql(true)
+
+    const [tx] = await dataLayer.fetchTransactions({ txId: 'tx1' })
+    expect(tx).eql(undefined)
+    expect((await dataLayer.fetchUtxos({})).length).eql(0)
+  })
+
+  it('removes and writes UTXOs together', async () => {
+    const dataLayer = await makeFreshDataLayer()
+    await dataLayer.saveUtxo(makeUtxo('old'))
+
+    await dataLayer.updateUtxos({
+      remove: ['old'],
+      save: [makeUtxo('new')]
+    })
+
+    const ids = (await dataLayer.fetchUtxos({})).map(utxo => utxo?.id)
+    expect(ids).eql(['new'])
+  })
+
+  it('keeps the removals when the writes fail', async () => {
+    const dataLayer = await makeFreshDataLayer()
+    await dataLayer.saveUtxo(makeUtxo('old'))
+
+    // The window an RBF replacement used to fall into: the coins it spends
+    // are gone and nothing accounts for them.
+    let failed = false
+    try {
+      await dataLayer.updateUtxos({
+        remove: ['old'],
+        save: [{ ...makeUtxo('new'), id: undefined } as any]
+      })
+    } catch (error) {
+      failed = true
+    }
+    expect(failed).eql(true)
+
+    const ids = (await dataLayer.fetchUtxos({})).map(utxo => utxo?.id)
+    expect(ids).eql(['old'])
+  })
+})

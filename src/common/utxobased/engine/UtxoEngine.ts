@@ -817,15 +817,27 @@ export async function makeUtxoEngine(
       }
 
       const tx = fromEdgeTransaction(edgeTx)
-      await dataLayer.saveTransaction({
-        tx,
-        scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys
-      })
 
       /*
-      Get the wallet's UTXOs from the new transaction and save them to the processsor.
+      The transaction and the coins it creates land together.
+
+      Saving the transaction first and deriving its UTXOs afterwards -- which
+      is what this did -- leaves a window where the send is recorded and its
+      own change output is not. The balance understates by the change, and
+      those coins are unspendable until a resync.
+
+      Deriving the UTXOs before the write is what makes that possible: the
+      lookup reads the transaction's outputs, not the stored transaction.
       */
       const ownUtxos = await getOwnUtxosFromTx(engineInfo, dataLayer, tx)
+      await dataLayer.saveTransactionWithUtxos({
+        tx,
+        scriptPubkeys: edgeTx.otherParams?.ourScriptPubkeys,
+        utxos: ownUtxos
+      })
+
+      // Reconcile the wider UTXO set and emit the balance change. Idempotent,
+      // and no longer the only thing standing between a send and its coins.
       await engineProcessor.processUtxos(ownUtxos)
     },
 

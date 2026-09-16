@@ -1609,9 +1609,6 @@ const processDataLayerUtxos = async (
     }
   }
 
-  // Remove any spent UTXOs that have confirmations
-  await common.dataLayer.removeUtxos(utxoIdsToRemove)
-
   //
   // Save updated UTXO set
   //
@@ -1622,9 +1619,20 @@ const processDataLayerUtxos = async (
       // Accumulate over the new address balance
       newBalance = add(utxo.value, newBalance)
     }
-    // Save new UTXOs
-    await common.dataLayer.saveUtxo(utxo)
   }
+
+  /*
+  The removals and the writes land together.
+
+  Removing first and saving second -- which is what this did, under a mutex
+  that covered neither against the other -- leaves a window where the coins a
+  replacement spends are gone and nothing accounts for them. An RBF
+  replacement interrupted there loses UTXOs outright.
+  */
+  await common.dataLayer.updateUtxos({
+    remove: utxoIdsToRemove,
+    save: Object.values(updatedUtxos)
+  })
 
   //
   // Balance update
