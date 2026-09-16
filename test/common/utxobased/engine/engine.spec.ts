@@ -13,12 +13,14 @@ import {
   EdgeFetchFunction,
   EdgeSpendInfo,
   JsonObject,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import EventEmitter from 'events'
 import fetch from 'node-fetch'
 import request from 'request'
 
+import { makeDataLayer } from '../../../../src/common/utxobased/db/DataLayer'
 import edgeCorePlugins from '../../../../src/index'
 import { objectKeys } from '../../../util/objectKeys'
 import { noOp, testLog } from '../../../util/testLog'
@@ -41,6 +43,9 @@ describe('engine.spec', function () {
 
     let engine: EdgeCurrencyEngine
     let keys: JsonObject = {}
+
+    /** A real wallet id is base64, and the table prefix is derived from it. */
+    const WALLET_ID = Buffer.alloc(32, 0x11).toString('base64')
 
     const fakeIo = makeFakeIo()
     const fixtureDisklet = makeNodeDisklet(tests.dummyDataPath)
@@ -88,6 +93,8 @@ describe('engine.spec', function () {
       },
       onNewTokens() {},
       onSeenTxCheckpoint() {},
+      onSubscribeAddresses() {},
+      onSyncStatusChanged() {},
       onStakingStatusChanged() {},
       onTokenBalanceChanged() {},
       onTransactions(transactionEvents) {
@@ -111,8 +118,19 @@ describe('engine.spec', function () {
       walletLocalEncryptedDisklet: walletLocalDisklet,
       customTokens: {},
       enabledTokenIds: [],
-      userSettings: tests.ChangeSettings
+      userSettings: tests.ChangeSettings,
+      walletSettings: {}
     }
+
+    // The engine stores everything here now, so a test without one is
+    // testing nothing. Filled in before the engine is made, since building
+    // one is asynchronous.
+    before('Transaction database', async function () {
+      engineOpts.txDatabase = await makeMemoryTxDatabase({
+        walletId: WALLET_ID,
+        pluginId: tests.pluginId
+      })
+    })
 
     describe(`Engine Creation Errors for Wallet type ${WALLET_TYPE}`, function () {
       before('Plugin', async function () {
@@ -176,21 +194,45 @@ describe('engine.spec', function () {
       })
     })
     describe(`Start Engine for Wallet type ${WALLET_TYPE}`, function () {
+      /*
+       * The recorded cache is a directory of baselet files, and the engine
+       * now reads SQL. Rather than re-record it, the fixture is replayed
+       * through the DataLayer -- which is also a decent check that the two
+       * storage layers agree about what a wallet's cache contains.
+       *
+       * Users need no such migration: the database is a cache, and a wallet
+       * on the new storage simply resyncs.
+       */
       before('Create local cache', async function () {
-        const migrate = async (dir: string): Promise<void> => {
-          const files = await fixtureDisklet.list(dir)
-          await Promise.all(
-            Object.entries(files).map(async ([path, type]) => {
-              if (type === 'folder') await migrate(path)
-              if (type === 'file')
-                await fixtureDisklet
-                  .getText(path)
-                  .then(async data => await fakeIoDisklet.setText(path, data))
-            })
-          )
+        const { txDatabase } = engineOpts
+        if (txDatabase == null) throw new Error('No transaction database')
+        const dataLayer = await makeDataLayer({
+          txDatabase,
+          walletId: WALLET_ID,
+          pluginId: tests.pluginId
+        })
+
+        const readTable = async (name: string): Promise<any[]> => {
+          const files = await fixtureDisklet.list(`tables/${name}`)
+          const out: any[] = []
+          for (const [path, type] of Object.entries(files)) {
+            if (type !== 'file') continue
+            if (path.endsWith('config.json')) continue
+            const records = JSON.parse(await fixtureDisklet.getText(path))
+            out.push(...Object.values(records))
+          }
+          return out
         }
 
-        await migrate('tables')
+        for (const address of await readTable('addressByScriptPubkey')) {
+          await dataLayer.saveAddress(address)
+        }
+        for (const utxo of await readTable('utxoById')) {
+          await dataLayer.saveUtxo(utxo)
+        }
+        for (const tx of await readTable('txById')) {
+          await dataLayer.saveTransaction({ tx })
+        }
       })
 
       it('Make Engine', async function () {

@@ -26,6 +26,7 @@ import { makeMetadata } from '../../plugin/Metadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
 import { upgradeMemos } from '../../upgradeMemos'
 import { DataLayer, makeDataLayer } from '../db/DataLayer'
+import { makeDiskletDataLayer } from '../db/DiskletDataLayer'
 import {
   fromEdgeTransaction,
   toEdgeTransaction
@@ -78,7 +79,12 @@ export async function makeUtxoEngine(
     io,
     pluginState
   } = config
-  const { walletLocalDisklet, walletLocalEncryptedDisklet, log } = engineOptions
+  const {
+    log,
+    txDatabase,
+    walletLocalDisklet,
+    walletLocalEncryptedDisklet
+  } = engineOptions
   const { currencyInfo, engineInfo, coinInfo } = pluginInfo
   const userSettings = asUtxoUserSettings(engineOptions.userSettings)
 
@@ -124,8 +130,16 @@ export async function makeUtxoEngine(
     log
   })
 
+  if (txDatabase == null) {
+    throw new Error(
+      'This wallet needs a transaction database. Turn on ' +
+        '`EdgeContextOptions.transactionDatabase`, on a platform that has one.'
+    )
+  }
   const dataLayer = await makeDataLayer({
-    disklet: walletLocalDisklet
+    txDatabase,
+    walletId: walletInfo.id,
+    pluginId: pluginInfo.currencyInfo.pluginId
   })
   // This is a temporary data layer used only once (i.e. nonce) for sweeping
   // private keys.
@@ -969,7 +983,10 @@ export async function makeUtxoEngine(
         log
       }
       const tmpMetadata = await makeMetadata(tmpConfig)
-      const tmpDataLayer = await makeDataLayer(tmpConfig)
+      // A throwaway wallet, on throwaway storage. It cannot share the real
+      // wallet's database: the imported key's transactions would land in the
+      // user's own history.
+      const tmpDataLayer = await makeDiskletDataLayer(tmpConfig)
       const tmpWalletTools = makeUtxoWalletTools({
         pluginInfo,
         publicKey: tmpWalletInfo.keys.publicKey
