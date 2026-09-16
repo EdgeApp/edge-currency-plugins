@@ -102,6 +102,10 @@ interface DiskletDataLayer {
   heights, and detecting used script pubkeys */
 
   saveTransaction: (args: SaveTransactionArgs) => Promise<TransactionData>
+  saveTransactionWithUtxos: (
+    args: SaveTransactionArgs & { utxos: UtxoData[] }
+  ) => Promise<TransactionData>
+  updateUtxos: (args: { remove: string[]; save: UtxoData[] }) => Promise<void>
   numTransactions: () => number
   removeTransaction: (txId: string) => Promise<void>
   fetchTransactions: (
@@ -349,6 +353,23 @@ export async function makeDiskletDataLayer(
 
         return transaction
       })
+    },
+
+    /*
+     * Not atomic, and cannot be: these baselets have no transaction of their
+     * own, which is the reason this whole layer is being replaced. The sweep
+     * path is the only caller left, and it operates on a throwaway wallet
+     * whose storage is discarded either way.
+     */
+    async saveTransactionWithUtxos({ tx, scriptPubkeys, utxos }) {
+      const saved = await dataLayer.saveTransaction({ tx, scriptPubkeys })
+      for (const utxo of utxos) await dataLayer.saveUtxo(utxo)
+      return saved
+    },
+
+    async updateUtxos({ remove, save }) {
+      await dataLayer.removeUtxos(remove)
+      for (const utxo of save) await dataLayer.saveUtxo(utxo)
     },
 
     numTransactions(): number {

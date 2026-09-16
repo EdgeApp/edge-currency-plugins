@@ -139,6 +139,25 @@ export interface DataLayer {
   fetchUtxos: (args: FetchUtxosArgs) => Promise<Array<UtxoData | undefined>>
 
   saveTransaction: (args: SaveTransactionArgs) => Promise<TransactionData>
+
+  /**
+   * A transaction and the UTXOs it creates, written together or not at all.
+   *
+   * Saving them separately is a window in which the transaction is recorded
+   * and its own change output is not -- the balance understates, and those
+   * coins are unspendable until a resync.
+   */
+  saveTransactionWithUtxos: (
+    args: SaveTransactionArgs & { utxos: UtxoData[] }
+  ) => Promise<TransactionData>
+
+  /**
+   * UTXO removals and writes, applied together or not at all.
+   *
+   * Removing first and writing second is a window in which the coins a
+   * replacement spends are gone and nothing accounts for them.
+   */
+  updateUtxos: (args: { remove: string[]; save: UtxoData[] }) => Promise<void>
   numTransactions: () => number
   removeTransaction: (txId: string) => Promise<void>
   fetchTransactions: (
@@ -289,6 +308,41 @@ export async function makeDataLayer(
     addressCounts.set(key, (addressCounts.get(key) ?? 0) + 1)
   }
 
+  /**
+   * Merges an incoming transaction over whatever is stored.
+   *
+   * Shared by both save paths, so the atomic one cannot drift from the
+   * ordinary one in how it accumulates `ourIns` and `ourOuts`.
+   */
+  const prepareTransaction = async (
+    tx: TransactionData,
+    scriptPubkeys: string[]
+  ): Promise<{ tx: TransactionData; isNew: boolean }> => {
+    const existing = await fetchOneTransaction(tx.txid)
+    const transaction = existing ?? tx
+
+    for (const scriptPubkey of scriptPubkeys) {
+      for (const input of transaction.inputs) {
+        if (input.scriptPubkey === scriptPubkey) {
+          if (!transaction.ourIns.includes(input.n.toString())) {
+            transaction.ourIns.push(input.n.toString())
+          }
+        }
+      }
+      for (const output of transaction.outputs) {
+        if (output.scriptPubkey === scriptPubkey) {
+          if (!transaction.ourOuts.includes(output.n.toString())) {
+            transaction.ourOuts.push(output.n.toString())
+          }
+        }
+      }
+      transaction.ourAmount = calculateTxAmount(transaction)
+    }
+
+    transaction.blockHeight = tx.blockHeight
+    return { tx: transaction, isNew: existing == null }
+  }
+
   const dataLayer: DataLayer = {
     async clearAll(): Promise<void> {
       // `runSql` is what makes this possible at all: the row API removes rows
@@ -351,43 +405,45 @@ export async function makeDataLayer(
     async saveTransaction(args: SaveTransactionArgs): Promise<TransactionData> {
       const { scriptPubkeys = [], tx } = args
 
-      // Use the stored transaction if there is one, so `ourIns` and `ourOuts`
-      // accumulate across the calls that discover them.
-      const existing = await fetchOneTransaction(tx.txid)
-      const transaction = existing ?? tx
-      const isNew = existing == null
+      // The stored transaction wins if there is one, so `ourIns` and
+      // `ourOuts` accumulate across the calls that discover them.
+      const transaction = await prepareTransaction(tx, scriptPubkeys)
 
-      for (const scriptPubkey of scriptPubkeys) {
-        for (const input of transaction.inputs) {
-          if (input.scriptPubkey === scriptPubkey) {
-            if (!transaction.ourIns.includes(input.n.toString())) {
-              transaction.ourIns.push(input.n.toString())
-            }
-          }
-        }
-        for (const output of transaction.outputs) {
-          if (output.scriptPubkey === scriptPubkey) {
-            if (!transaction.ourOuts.includes(output.n.toString())) {
-              transaction.ourOuts.push(output.n.toString())
-            }
-          }
-        }
-        transaction.ourAmount = calculateTxAmount(transaction)
-      }
-
-      transaction.blockHeight = tx.blockHeight
-
-      // The two halves land together, which is what the height and date index
+      // Both halves land together, which is what the height and date index
       // baselets could not promise: they were separate writes under a lock
       // that did not span them.
-      const { edgeTx, detail } = splitTransaction(transaction)
+      const { edgeTx, detail } = splitTransaction(transaction.tx)
       await db.batchWrite({
         saveTxs: [edgeTx],
         putRows: [{ table: 'txDetail', rows: [detail] }]
       })
 
-      if (isNew) ++numTransactions
-      return transaction
+      if (transaction.isNew) ++numTransactions
+      return transaction.tx
+    },
+
+    async saveTransactionWithUtxos({ tx, scriptPubkeys, utxos }) {
+      const transaction = await prepareTransaction(tx, scriptPubkeys ?? [])
+      const { edgeTx, detail } = splitTransaction(transaction.tx)
+
+      await db.batchWrite({
+        saveTxs: [edgeTx],
+        putRows: [
+          { table: 'txDetail', rows: [detail] },
+          { table: 'utxo', rows: utxos }
+        ]
+      })
+
+      if (transaction.isNew) ++numTransactions
+      return transaction.tx
+    },
+
+    async updateUtxos({ remove, save }) {
+      if (remove.length === 0 && save.length === 0) return
+      await db.batchWrite({
+        removeRows: remove.length > 0 ? [{ table: 'utxo', keys: remove }] : [],
+        putRows: save.length > 0 ? [{ table: 'utxo', rows: save }] : []
+      })
     },
 
     numTransactions(): number {
