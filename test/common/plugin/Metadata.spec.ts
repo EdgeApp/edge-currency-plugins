@@ -1,7 +1,6 @@
 import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { Disklet, makeMemoryDisklet } from 'disklet'
-import { MemoryStorage } from 'disklet/lib/src/backends/memory'
+import { makeMemoryTxDatabase } from 'edge-core-js'
 import { EdgeLog } from 'edge-core-js/types'
 
 import {
@@ -18,16 +17,16 @@ const wait = async (seconds: number): Promise<void> =>
   await new Promise(resolve => setTimeout(resolve, seconds * 1000))
 
 describe('makeMetadata', () => {
-  const memory: MemoryStorage = {}
-  let disklet: Disklet
   let metadata: Metadata
   const log: EdgeLog = makeFakeLog()
   const emitter = new EngineEmitter()
 
   before(async () => {
-    disklet = makeMemoryDisklet(memory)
     metadata = await makeMetadata({
-      disklet,
+      txDatabase: await makeMemoryTxDatabase({
+        walletId: Buffer.alloc(32, 0x11).toString('base64'),
+        pluginId: 'bitcoin'
+      }),
       emitter,
       log
     })
