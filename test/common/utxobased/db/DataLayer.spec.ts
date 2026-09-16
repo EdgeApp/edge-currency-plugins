@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import * as chai from 'chai'
 import { expect } from 'chai'
-import { makeMemoryDisklet } from 'disklet'
+import { makeMemoryTxDatabase } from 'edge-core-js'
 
 import {
   DataLayer,
@@ -27,10 +27,18 @@ interface Fixtures {
   dataLayer: DataLayer
 }
 
+/** A DataLayer over its own empty in-memory database. */
+const makeFreshDataLayer = async (): Promise<DataLayer> => {
+  const walletId = Buffer.alloc(32, 0x11).toString('base64')
+  const txDatabase = await makeMemoryTxDatabase({
+    walletId,
+    pluginId: 'bitcoin'
+  })
+  return await makeDataLayer({ txDatabase, walletId, pluginId: 'bitcoin' })
+}
+
 const makeFixtures = async (): Promise<Fixtures> => {
-  const storage = {}
-  const disklet = makeMemoryDisklet(storage)
-  const dataLayer = await makeDataLayer({ disklet })
+  const dataLayer = await makeFreshDataLayer()
 
   return {
     assertNumAddressesWithPaths: expectedNum => {
@@ -509,17 +517,12 @@ describe('DataLayer transactions tests', () => {
   }
 
   it('empty transaction baselets', async () => {
-    const storage = {}
-    const disklet = makeMemoryDisklet(storage)
-
-    const dataLayer = await makeDataLayer({ disklet })
+    const dataLayer = await makeFreshDataLayer()
     assertNumTransactions(0, dataLayer)
   })
 
   it('insert a transaction to transaction baselets', async () => {
-    const storage = {}
-    const disklet = makeMemoryDisklet(storage)
-    const dataLayer = await makeDataLayer({ disklet })
+    const dataLayer = await makeFreshDataLayer()
 
     const input1: TransactionDataInput = {
       txId: 'random',
@@ -615,9 +618,7 @@ describe('DataLayer transactions tests', () => {
   })
 
   it('insert multiple transactions to baselets', async () => {
-    const storage = {}
-    const disklet = makeMemoryDisklet(storage)
-    const dataLayer = await makeDataLayer({ disklet })
+    const dataLayer = await makeFreshDataLayer()
 
     const input1: TransactionDataInput = {
       txId: 'random',
@@ -729,9 +730,7 @@ describe('DataLayer transactions tests', () => {
   })
 
   it('update transaction blockheight in transaction baselets', async () => {
-    const storage = {}
-    const disklet = makeMemoryDisklet(storage)
-    const dataLayer = await makeDataLayer({ disklet })
+    const dataLayer = await makeFreshDataLayer()
 
     const input1: TransactionDataInput = {
       txId: 'random',
