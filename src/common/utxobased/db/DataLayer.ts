@@ -1,13 +1,14 @@
-import { clearMemletCache } from 'baselet'
 import * as bs from 'biggystring'
-import { Disklet, navigateDisklet } from 'disklet'
-import { EdgeGetTransactionsOptions } from 'edge-core-js/types'
-import { makeMemlet } from 'memlet'
+import {
+  EdgeGetTransactionsOptions,
+  EdgeTableSpec,
+  EdgeTx,
+  EdgeTxDatabase
+} from 'edge-core-js/types'
 
 import { unixTime } from '../../../util/unixTime'
 import { AddressPath, ChangePath } from '../../plugin/types'
-import { makeBaselets } from './Baselets'
-import { addressPathToPrefix, TxIdByDate } from './Models/baselet'
+import { addressPathToPrefix } from './Models/baselet'
 import {
   AddressData,
   TransactionData,
@@ -16,10 +17,11 @@ import {
   UtxoData
 } from './types'
 
-const BASELET_DIR = 'tables'
-
 interface DataLayerConfig {
-  disklet: Disklet
+  /** This wallet's storage, from `EdgeCurrencyEngineOptions`. */
+  txDatabase: EdgeTxDatabase
+  walletId: string
+  pluginId: string
 }
 
 /* Transaction table interfaces */
@@ -52,6 +54,73 @@ interface DumpDataReturn {
 }
 
 /**
+ * The tables this engine owns.
+ *
+ * Three replace eight baselets. Two hold what the plugin owns outright --
+ * addresses and UTXOs -- and the third holds the part of a transaction the
+ * core has no concept of.
+ *
+ * The five index baselets disappear. `txIdsByBlockHeight` and `txIdsByDate`
+ * become predicates on the core's own index; `lastUsedByFormatPath` becomes
+ * an ordered read of `byUsed`; and `utxoIdsByScriptPubkey` and
+ * `scriptPubkeyByPath` become declared indexes rather than hand-maintained
+ * inverted tables that a half-finished write could leave inconsistent.
+ */
+export const dataLayerTables: EdgeTableSpec = {
+  version: 1,
+  tables: {
+    address: {
+      key: ['scriptPubkey'],
+      indexes: {
+        // Two addresses at one derivation path is the corruption
+        // `saveAddress` used to check for by hand. Here the database refuses
+        // it.
+        byPath: {
+          paths: ['$.path.format', '$.path.changeIndex', '$.path.addressIndex'],
+          unique: true
+        },
+        // The highest used index for a change path, read in order rather than
+        // kept as a running maximum some other write has to remember.
+        byUsed: {
+          paths: [
+            '$.path.format',
+            '$.path.changeIndex',
+            '$.used',
+            '$.path.addressIndex'
+          ]
+        }
+      }
+    },
+    utxo: {
+      key: ['id'],
+      indexes: { byScriptPubkey: { paths: ['$.scriptPubkey'] } }
+    },
+    txDetail: { key: ['txid'] }
+  }
+}
+
+/**
+ * The UTXO-specific half of a transaction.
+ *
+ * `EdgeTx` is the transaction as every consumer sees it: date, height,
+ * amounts, fees. The inputs, the outputs and which of them are ours are chain
+ * detail the core deliberately does not model, so they live here under the
+ * same txid. Reading a transaction joins the two back together.
+ */
+interface TxDetail {
+  txid: string
+  hex: string
+  fees: string
+  inputs: TransactionDataInput[]
+  outputs: TransactionDataOutput[]
+  ourIns: string[]
+  ourOuts: string[]
+}
+
+/** The chain's own asset, which `EdgeTokenId` spells `null`. */
+const CHAIN = null
+
+/**
  * The Data Access Layer for the UTXO-based wallet engine.
  *
  * It provides all the methods necessary to interact with underlying
@@ -61,15 +130,6 @@ export interface DataLayer {
   clearAll: () => Promise<void>
   dumpData: () => Promise<DumpDataReturn[]>
 
-  /* UTXO processing
-  **********************
-  Uses the following tables:
-  ==========================
-  utxoById: main table
-  -------------------------------
-  Used to store UTXOs. Needs to be able to track UTXOs that are already used in
-  a transaction, but not confirmed yet */
-
   saveUtxo: (utxo: UtxoData) => Promise<void>
   // remove either all UTXOs if the array is empty, or as selected from an array
   // of UTXO ids
@@ -78,38 +138,12 @@ export interface DataLayer {
   // of UTXO ids
   fetchUtxos: (args: FetchUtxosArgs) => Promise<Array<UtxoData | undefined>>
 
-  /* Transaction processing
-  **********************
-  Uses the following tables:
-  ==========================
-  txById: main table
-  txsByScriptPubkey: index from script pubkey to txids, used to keep track of
-  and discover used addresses
-  txIdsByBlockHeight: index from block height to txid, used to change
-  confirmation height for unconfirmed transactions
-  txIdsByDate: index from date to txid, used for EdgeGetTransactionsOptions
-  querying
-  -------------------------------
-  Used to store transactions. Needs to be updated for confirmation
-  heights, and detecting used script pubkeys */
-
   saveTransaction: (args: SaveTransactionArgs) => Promise<TransactionData>
   numTransactions: () => number
   removeTransaction: (txId: string) => Promise<void>
   fetchTransactions: (
     args: FetchTransactionArgs
   ) => Promise<Array<TransactionData | undefined>>
-
-  /* Address processing
-  *********************
-  Uses the following tables:
-  ===============================
-  addressByScriptPubkey: main table
-  scriptPubkeyByPath: index from path to script pubkey
-  lastUsedByFormatPath: index from path to last used address derivation index
-  -------------------------------
-  Used to store script pubkeys / addresses. Needs to be updated for 'used' flag
-  and path */
 
   saveAddress: (args: AddressData) => Promise<void>
   // used to calculate total number of addresses
@@ -122,17 +156,13 @@ export interface DataLayer {
 export async function makeDataLayer(
   config: DataLayerConfig
 ): Promise<DataLayer> {
-  const disklet = navigateDisklet(config.disklet, BASELET_DIR)
-  let memlet = makeMemlet(disklet)
-  let baselets = await makeBaselets({ storage: memlet }).catch(async error => {
-    await memlet.delete('.')
-    throw error
-  })
+  const { txDatabase: db, walletId, pluginId } = config
+  await db.defineTables(dataLayerTables)
 
   /**
-   * Calculates the transaction value supplied (negative) or received (positive). In order to calculate
-   * a value, the `ourIns` and `ourOuts` of the object must be populated with indices.
-   * @param tx {TransactionData} A transaction object with `ourIns` and `ourOuts` populated
+   * Calculates the transaction value supplied (negative) or received
+   * (positive). In order to calculate a value, the `ourIns` and `ourOuts` of
+   * the object must be populated with indices.
    */
   const calculateTxAmount = (tx: TransactionData): string => {
     interface TxIndexMap {
@@ -158,190 +188,200 @@ export async function makeDataLayer(
     return ourAmount
   }
 
+  const splitTransaction = (
+    tx: TransactionData
+  ): { edgeTx: EdgeTx; detail: TxDetail } => ({
+    edgeTx: {
+      walletId,
+      txid: tx.txid,
+      pluginId,
+      date: new Date(tx.date * 1000).toISOString(),
+      blockHeight: tx.blockHeight,
+      isSend: bs.lt(tx.ourAmount, '0'),
+      nativeAmounts: new Map([[CHAIN, tx.ourAmount]]),
+      networkFees: new Map([[CHAIN, tx.fees]]),
+      ourReceiveAddresses: [],
+      memos: [],
+      tokenData: new Map(),
+      signedTx: tx.hex
+    },
+    detail: {
+      txid: tx.txid,
+      hex: tx.hex,
+      fees: tx.fees,
+      inputs: tx.inputs,
+      outputs: tx.outputs,
+      ourIns: tx.ourIns,
+      ourOuts: tx.ourOuts
+    }
+  })
+
+  const joinTransaction = (tx: EdgeTx, detail: TxDetail): TransactionData => ({
+    txid: tx.txid,
+    hex: detail.hex,
+    blockHeight: tx.blockHeight,
+    // `EdgeConfirmationState` also carries 'failed' and 'syncing', which this
+    // type predates. Neither is a UTXO chain's answer, so they read as
+    // unconfirmed rather than widening a type the engine switches on.
+    confirmations:
+      tx.confirmations === 'failed' || tx.confirmations === 'syncing'
+        ? 'unconfirmed'
+        : tx.confirmations,
+    date: Math.round(new Date(tx.date).valueOf() / 1000),
+    fees: detail.fees,
+    inputs: detail.inputs,
+    outputs: detail.outputs,
+    ourIns: detail.ourIns,
+    ourOuts: detail.ourOuts,
+    ourAmount: tx.nativeAmounts.get(CHAIN) ?? '0'
+  })
+
+  /**
+   * Puts both halves of a page of transactions back together.
+   *
+   * One `getRows` for the whole page rather than one per transaction, because
+   * every call is a bridge round trip.
+   */
+  const joinTransactions = async (
+    txs: EdgeTx[]
+  ): Promise<TransactionData[]> => {
+    if (txs.length === 0) return []
+    const [result] = await db.getRows([
+      { table: 'txDetail', keys: txs.map(tx => tx.txid) }
+    ])
+    const out: TransactionData[] = []
+    txs.forEach((tx, i) => {
+      const detail = result.rows[i] as TxDetail | undefined
+      if (detail != null) out.push(joinTransaction(tx, detail))
+    })
+    return out
+  }
+
+  const fetchOneTransaction = async (
+    txId: string
+  ): Promise<TransactionData | undefined> => {
+    const txs = await db.getTxs({ txids: [txId] })
+    const [out] = await joinTransactions(txs)
+    return out
+  }
+
+  /*
+   * `numTransactions` and `numAddressesByFormatPath` are synchronous in this
+   * interface and called from synchronous engine code, so they cannot become
+   * queries. They are seeded once here and maintained on write, which is what
+   * the baselets did too.
+   */
+  let numTransactions = await countTransactions(db)
+  const addressCounts = await countAddresses(db)
+
+  const bumpAddressCount = (path: AddressPath): void => {
+    const key = addressPathToPrefix(path)
+    addressCounts.set(key, (addressCounts.get(key) ?? 0) + 1)
+  }
+
   const dataLayer: DataLayer = {
     async clearAll(): Promise<void> {
-      await memlet.onFlush.next().value
-      await clearMemletCache()
-      await disklet.delete('.')
-      memlet = makeMemlet(disklet)
-      baselets = await makeBaselets({ storage: memlet })
+      // `runSql` is what makes this possible at all: the row API removes rows
+      // by key, and there is no key list for "everything".
+      await db.runSql`DELETE FROM ${db.address}`
+      await db.runSql`DELETE FROM ${db.utxo}`
+      await db.runSql`DELETE FROM ${db.txDetail}`
+      // Through the scoped view, so this can only ever reach this wallet:
+      await db.runSql`DELETE FROM ${db.tx_chain}`
+
+      numTransactions = 0
+      addressCounts.clear()
     },
 
     async dumpData(): Promise<DumpDataReturn[]> {
-      type AllBases = typeof baselets.all
-      const allBases: Array<AllBases[keyof AllBases]> = Object.values(
-        baselets.all
-      )
-      return await Promise.all(
-        allBases.map(async base => {
-          return {
-            databaseName: base.databaseName,
-            data: (await base.dumpData()) as unknown
-          }
-        })
-      )
+      const dump = async (table: string): Promise<DumpDataReturn> => ({
+        databaseName: table,
+        data: await db.findRows(table, {})
+      })
+      return [
+        await dump('address'),
+        await dump('utxo'),
+        await dump('txDetail'),
+        { databaseName: 'tx_chain', data: await db.getTxs({ limit: 500 }) }
+      ]
     },
 
     async saveUtxo(utxo: UtxoData): Promise<void> {
-      return await baselets.utxo(async tables => {
-        const [utxoIds = []] = await tables.utxoIdsByScriptPubkey.query('', [
-          utxo.scriptPubkey
-        ])
-        if (!utxoIds.includes(utxo.id)) {
-          utxoIds.push(utxo.id)
-          await tables.utxoIdsByScriptPubkey.insert(
-            '',
-            utxo.scriptPubkey,
-            utxoIds
-          )
-        }
-
-        await tables.utxoById.insert('', utxo.id, utxo)
-      })
+      // One row. The `utxoIdsByScriptPubkey` inverted table it replaces had to
+      // be read, mutated and written back, and could disagree with the UTXOs
+      // it indexed if a write stopped half way.
+      await db.putRows([{ table: 'utxo', rows: [utxo] }])
     },
 
     async removeUtxos(utxoIds: string[]): Promise<void> {
-      return await baselets.utxo(async tables => {
-        if (utxoIds.length === 0) return
-
-        // To remove utxo from utxoIdsByScriptPubkey table:
-        // 1. Create a map of scriptPubkeys to utxoIds
-        // 2. Use the map to remove utxoIds from the utxoIdsByScriptPubkey table
-        const utxos = (await tables.utxoById.query('', utxoIds)).filter(
-          utxo => utxo != null
-        ) as UtxoData[]
-        const utxoIdsMap: { [scriptPubkey: string]: string[] } = {}
-        for (const utxo of utxos) {
-          utxoIdsMap[utxo.scriptPubkey] = [
-            ...(utxoIdsMap[utxo.scriptPubkey] ?? []),
-            utxo.id
-          ]
-        }
-        for (const scriptPubkey of Object.keys(utxoIdsMap)) {
-          const utxoIdsToRemove = utxoIdsMap[scriptPubkey]
-          const [utxoIds = []] = await tables.utxoIdsByScriptPubkey.query('', [
-            scriptPubkey
-          ])
-
-          for (const utxoIdToRemove of utxoIdsToRemove) {
-            utxoIds.splice(utxoIds.indexOf(utxoIdToRemove), 1)
-          }
-
-          // Update utxoIds for entry in table, otherwise delete entry
-          if (utxoIds.length > 0) {
-            await tables.utxoIdsByScriptPubkey.insert('', scriptPubkey, utxoIds)
-          } else {
-            await tables.utxoIdsByScriptPubkey.delete('', [scriptPubkey])
-          }
-        }
-
-        // Remove utxo utxoById table
-        await tables.utxoById.delete('', utxoIds)
-      })
+      if (utxoIds.length === 0) return
+      await db.removeRows([{ table: 'utxo', keys: utxoIds }])
     },
 
     async fetchUtxos(args): Promise<Array<UtxoData | undefined>> {
       const { scriptPubkey, utxoIds = [] } = args
-      return await baselets.utxo(async tables => {
-        if (scriptPubkey != null) {
-          const [
-            utxoIdsByScriptPubkey
-          ] = await tables.utxoIdsByScriptPubkey.query('', [scriptPubkey])
 
-          if (utxoIdsByScriptPubkey != null)
-            utxoIds.push(...utxoIdsByScriptPubkey)
+      if (scriptPubkey != null) {
+        const byScript = (await db.findRows('utxo', {
+          equals: { '$.scriptPubkey': scriptPubkey }
+        })) as UtxoData[]
+        if (utxoIds.length === 0) return byScript
+        const wanted = new Set(utxoIds)
+        return byScript.filter(utxo => wanted.has(utxo.id))
+      }
 
-          // Exit early if no utxoIds are found by scriptPubkey
-          if (utxoIds.length === 0) {
-            return []
-          }
-        }
+      if (utxoIds.length === 0) {
+        return (await db.findRows('utxo', {})) as UtxoData[]
+      }
 
-        // Return all UTXOs if no UTXO ids are specified
-        if (utxoIds.length === 0) {
-          const { data } = await tables.utxoById.dumpData('')
-          return Object.values(data[''] ?? {})
-        }
-
-        return await tables.utxoById.query('', utxoIds)
-      })
+      const [result] = await db.getRows([{ table: 'utxo', keys: utxoIds }])
+      return result.rows as Array<UtxoData | undefined>
     },
 
     async saveTransaction(args: SaveTransactionArgs): Promise<TransactionData> {
       const { scriptPubkeys = [], tx } = args
-      return await baselets.tx(async tables => {
-        // Check if the transaction already exists
-        const transactionData = await tables.txById
-          .query('', [tx.txid])
-          .then(transactions => transactions[0])
-          .catch(_ => undefined)
 
-        // Use the existing transaction if it does exist.
-        const transaction = transactionData ?? tx
+      // Use the stored transaction if there is one, so `ourIns` and `ourOuts`
+      // accumulate across the calls that discover them.
+      const existing = await fetchOneTransaction(tx.txid)
+      const transaction = existing ?? tx
+      const isNew = existing == null
 
-        // Mark the used inputs with the provided script pubkey
-        for (const scriptPubkey of scriptPubkeys) {
-          for (const input of transaction.inputs) {
-            if (input.scriptPubkey === scriptPubkey) {
-              if (!transaction.ourIns.includes(input.n.toString())) {
-                transaction.ourIns.push(input.n.toString())
-              }
+      for (const scriptPubkey of scriptPubkeys) {
+        for (const input of transaction.inputs) {
+          if (input.scriptPubkey === scriptPubkey) {
+            if (!transaction.ourIns.includes(input.n.toString())) {
+              transaction.ourIns.push(input.n.toString())
             }
           }
-          for (const output of transaction.outputs) {
-            if (output.scriptPubkey === scriptPubkey) {
-              if (!transaction.ourOuts.includes(output.n.toString())) {
-                transaction.ourOuts.push(output.n.toString())
-              }
+        }
+        for (const output of transaction.outputs) {
+          if (output.scriptPubkey === scriptPubkey) {
+            if (!transaction.ourOuts.includes(output.n.toString())) {
+              transaction.ourOuts.push(output.n.toString())
             }
           }
-          transaction.ourAmount = calculateTxAmount(transaction)
         }
+        transaction.ourAmount = calculateTxAmount(transaction)
+      }
 
-        if (transaction.blockHeight !== tx.blockHeight) {
-          // the transaction already exists, so delete it and re-insert at a different blockHeight
-          await tables.txIdsByBlockHeight.delete(
-            '',
-            transaction.blockHeight,
-            transaction.txid
-          )
-          transaction.blockHeight = tx.blockHeight
-          await tables.txIdsByBlockHeight.insert('', {
-            txid: transaction.txid,
-            blockHeight: transaction.blockHeight
-          })
-        } else {
-          // Save tx by blockheight
-          const txIdsByTransactionBlockHeight = await (
-            await tables.txIdsByBlockHeight.query('', transaction.blockHeight)
-          )
-            .reverse()
-            .map(({ txid: id }) => id)
-          if (!txIdsByTransactionBlockHeight.includes(transaction.txid)) {
-            await tables.txIdsByBlockHeight.insert('', {
-              txid: transaction.txid,
-              blockHeight: transaction.blockHeight
-            })
-          }
-        }
+      transaction.blockHeight = tx.blockHeight
 
-        // Save transaction
-        await tables.txById.insert('', transaction.txid, transaction)
-
-        // Save index entry only for first transaction insert
-        if (transactionData == null) {
-          await tables.txIdsByDate.insert('', {
-            txid: tx.txid,
-            date: tx.date
-          })
-        }
-
-        return transaction
+      // The two halves land together, which is what the height and date index
+      // baselets could not promise: they were separate writes under a lock
+      // that did not span them.
+      const { edgeTx, detail } = splitTransaction(transaction)
+      await db.batchWrite({
+        saveTxs: [edgeTx],
+        putRows: [{ table: 'txDetail', rows: [detail] }]
       })
+
+      if (isNew) ++numTransactions
+      return transaction
     },
 
     numTransactions(): number {
-      return baselets.all.txIdsByDate.size('')
+      return numTransactions
     },
 
     async removeTransaction(_txId: string): Promise<void> {
@@ -353,250 +393,177 @@ export async function makeDataLayer(
     ): Promise<Array<TransactionData | undefined>> {
       const { blockHeightMax, txId, options } = args
       let { blockHeight } = args
-      const txs: Array<TransactionData | undefined> = []
-      await baselets.tx(async tables => {
-        // Fetch transactions by id
-        if (txId != null) {
-          const txById = await tables.txById.query('', [txId])
-          txs.push(...txById)
-        }
-        // Fetch transactions by min block height
-        if (blockHeightMax != null && blockHeight == null) blockHeight = 0
-        if (blockHeight != null) {
-          const txIdsByMinBlockHeight = await (
-            await tables.txIdsByBlockHeight.query(
-              '',
-              blockHeight,
-              blockHeightMax
-            )
-          )
-            .reverse()
-            .map(({ txid: id }) => id)
+      const out: Array<TransactionData | undefined> = []
 
-          const txsById = await tables.txById.query('', txIdsByMinBlockHeight)
-          txs.push(...txsById)
-        }
-        if (options != null) {
-          const {
-            startEntries,
-            startIndex,
-            startDate = new Date(0),
-            endDate = new Date()
-          } = options
+      if (txId != null) {
+        out.push(await fetchOneTransaction(txId))
+      }
 
-          // Fetch transaction IDs ordered by date
-          let txData: TxIdByDate[]
-          if (startEntries != null && startIndex != null) {
-            txData = await tables.txIdsByDate.queryByCount(
-              '',
-              startEntries,
-              startIndex
-            )
-          } else {
-            txData = await tables.txIdsByDate.query(
-              '',
-              unixTime(startDate.getTime()),
-              unixTime(endDate.getTime())
-            )
-          }
-          const txIdsByOptions = await txData
-            .reverse()
-            .map(({ txid: id }) => id)
+      if (blockHeightMax != null && blockHeight == null) blockHeight = 0
+      if (blockHeight != null) {
+        // A `blockHeight` with no maximum means that height exactly, which is
+        // what the range index this replaces meant by a one-ended query.
+        const txs = await db.getTxs({
+          minBlockHeight: blockHeight,
+          maxBlockHeight: blockHeightMax ?? blockHeight,
+          sort: { field: 'blockHeight', direction: 'desc' },
+          limit: 500
+        })
+        out.push(...(await joinTransactions(txs)))
+      }
 
-          const txsByOptions = await tables.txById.query('', txIdsByOptions)
-          // Make sure only existing transactions are included
-          txs.push(...txsByOptions.filter(tx => tx != null))
-        }
-      })
-      return txs
+      if (options != null) {
+        const {
+          startEntries,
+          startIndex,
+          startDate = new Date(0),
+          endDate = new Date()
+        } = options
+
+        const txs = await db.getTxs({
+          afterDate: new Date(unixTime(startDate.getTime()) * 1000),
+          beforeDate: new Date(unixTime(endDate.getTime()) * 1000),
+          offset: startIndex,
+          limit: startEntries ?? 500
+        })
+        out.push(...(await joinTransactions(txs)))
+      }
+
+      return out
     },
 
     async saveAddress(address: AddressData): Promise<void> {
-      await baselets.address(async tables => {
-        // This variable is used to update the scriptPubkeyByPath table.
-        // The path table must be written after the address table because the
-        // path table is an index of the address table.
-        // This variable acts as a catch for that update to be done after the
-        // address table is written.
-        let indexTableUpdate:
-          | { path: AddressPath; scriptPubkey: string }
-          | undefined
+      const [result] = await db.getRows([
+        { table: 'address', keys: [address.scriptPubkey] }
+      ])
+      const existingAddress = result.rows[0] as AddressData | undefined
 
-        const [existingAddress] = await tables.addressByScriptPubkey.query('', [
-          address.scriptPubkey
-        ])
-
-        // save to the path index if available
+      // Insert routine:
+      if (existingAddress == null) {
         if (address.path != null) {
-          // check if the path already exists with a different script pubkey
-          const [scriptPubkey] = await tables.scriptPubkeyByPath.query(
-            addressPathToPrefix(address.path),
-            address.path.addressIndex
-          )
-          if (scriptPubkey != null && scriptPubkey !== address.scriptPubkey)
+          const [clash] = (await db.findRows('address', {
+            equals: {
+              '$.path.format': address.path.format,
+              '$.path.changeIndex': address.path.changeIndex,
+              '$.path.addressIndex': address.path.addressIndex
+            }
+          })) as AddressData[]
+          if (clash != null && clash.scriptPubkey !== address.scriptPubkey) {
             throw new Error(
               'Attempted to save address with an existing path, but different script pubkey'
             )
-
-          indexTableUpdate = {
-            path: address.path,
-            scriptPubkey: address.scriptPubkey
           }
-
-          // check if this address is used and if so, whether it has a higher
-          // last used index
-          if (address.used || existingAddress?.used === true) {
-            let [lastUsed] = await tables.lastUsedByFormatPath.query('', [
-              addressPathToPrefix(address.path)
-            ])
-            if (lastUsed == null) lastUsed = -1
-
-            if (lastUsed < address.path.addressIndex) {
-              await tables.lastUsedByFormatPath.insert(
-                '',
-                addressPathToPrefix(address.path),
-                address.path.addressIndex
-              )
-            }
-          }
+          bumpAddressCount(address.path)
         }
+        await db.putRows([{ table: 'address', rows: [address] }])
+        return
+      }
 
-        // Update routine:
-        if (existingAddress != null) {
-          // Only update the lastQueriedBlockHeight on the address if one was given and is greater than the existing value
-          if (
-            address.lastQueriedBlockHeight >
-            existingAddress.lastQueriedBlockHeight
-          ) {
-            existingAddress.lastQueriedBlockHeight =
-              address.lastQueriedBlockHeight
-          }
+      // Update routine. Every field here only ever moves forwards, which is
+      // why this is a merge rather than a replace.
+      if (
+        address.lastQueriedBlockHeight > existingAddress.lastQueriedBlockHeight
+      ) {
+        existingAddress.lastQueriedBlockHeight = address.lastQueriedBlockHeight
+      }
+      if (address.lastQuery > existingAddress.lastQuery) {
+        existingAddress.lastQuery = address.lastQuery
+      }
+      if (address.lastTouched > existingAddress.lastTouched) {
+        existingAddress.lastTouched = address.lastTouched
+      }
+      if (address.balance != null) {
+        existingAddress.balance = address.balance
+      }
 
-          // Only update the lastQuery value if one was given and is greater than the existing value
-          if (address.lastQuery > existingAddress.lastQuery) {
-            existingAddress.lastQuery = address.lastQuery
-          }
+      /*
+      Only update the path field if one was given and the existing address
+      currently does not have one. We never update paths for addresses, only
+      insert paths when they're not present.
 
-          // Only update the lastTouched value if one was given and is greater than the existing value
-          if (address.lastTouched > existingAddress.lastTouched) {
-            existingAddress.lastTouched = address.lastTouched
-          }
+      NOTE: Addresses can be stored in the db without a path due to the
+      `EdgeCurrencyEngine.addGapLimitAddresses` function. Once an address
+      path is known, it should never be updated
+      */
+      if (address.path != null && existingAddress.path == null) {
+        existingAddress.path = address.path
+        bumpAddressCount(address.path)
+      }
 
-          // Only update the balance field if we have a value here
-          if (address.balance != null) {
-            existingAddress.balance = address.balance
-          }
+      if (address.used && !existingAddress.used) {
+        existingAddress.used = true
+      }
 
-          /*
-          Only update the path field if one was given and the existing address
-          currently does not have one. We never update paths for addresses, only
-          insert paths when they're not present.
-
-          NOTE: Addresses can be stored in the db without a path due to the
-          `EdgeCurrencyEngine.addGapLimitAddresses` function. Once an address
-          path is known, it should never be updated
-          */
-          if (address.path != null && existingAddress.path == null) {
-            existingAddress.path = address.path
-            indexTableUpdate = {
-              path: existingAddress.path,
-              scriptPubkey: existingAddress.scriptPubkey
-            }
-          }
-
-          // Only update the used flag if one was given and is true
-          if (address.used && !existingAddress.used) {
-            existingAddress.used = true
-          }
-
-          // check if the lastUsed changed by the update
-          if (existingAddress.path != null && existingAddress.used) {
-            let [lastUsed] = await tables.lastUsedByFormatPath.query('', [
-              addressPathToPrefix(existingAddress.path)
-            ])
-            if (lastUsed == null) lastUsed = -1
-
-            if (lastUsed < existingAddress.path.addressIndex) {
-              await tables.lastUsedByFormatPath.insert(
-                '',
-                addressPathToPrefix(existingAddress.path),
-                existingAddress.path.addressIndex
-              )
-            }
-          }
-
-          // Update the address table:
-          await tables.addressByScriptPubkey.insert(
-            '',
-            existingAddress.scriptPubkey,
-            existingAddress
-          )
-        }
-
-        // Insert routine:
-        if (existingAddress == null) {
-          await tables.addressByScriptPubkey.insert(
-            '',
-            address.scriptPubkey,
-            address
-          )
-        }
-
-        // Insert the path into the index table:
-        if (indexTableUpdate != null) {
-          await tables.scriptPubkeyByPath.insert(
-            addressPathToPrefix(indexTableUpdate.path),
-            indexTableUpdate.path.addressIndex,
-            indexTableUpdate.scriptPubkey
-          )
-        }
-      })
+      await db.putRows([{ table: 'address', rows: [existingAddress] }])
     },
 
     numAddressesByFormatPath(path: ChangePath): number {
-      return baselets.all.scriptPubkeyByPath.length(addressPathToPrefix(path))
+      return addressCounts.get(addressPathToPrefix(path)) ?? 0
     },
 
     async lastUsedIndexByFormatPath(path: ChangePath): Promise<number> {
-      const [addressIndex] = await baselets.address(async tables => {
-        return await tables.lastUsedByFormatPath.query('', [
-          addressPathToPrefix(path)
-        ])
-      })
-      return addressIndex ?? -1
+      // The `lastUsedByFormatPath` baselet was a running maximum, written by
+      // whichever code path happened to notice. This reads the index instead,
+      // so it cannot be stale.
+      const [address] = (await db.findRows('address', {
+        equals: {
+          '$.path.format': path.format,
+          '$.path.changeIndex': path.changeIndex,
+          '$.used': true
+        },
+        orderBy: [{ path: '$.path.addressIndex', direction: 'desc' }],
+        limit: 1
+      })) as AddressData[]
+
+      return address?.path?.addressIndex ?? -1
     },
 
     async fetchAddress(
       fetchAddressArg: AddressPath | string
     ): Promise<AddressData | undefined> {
-      return await baselets.address(async tables => {
-        if (typeof fetchAddressArg === 'string') {
-          // if it is a string, it is a scriptPubkey
-          const scriptPubkey = fetchAddressArg
-          const [address] = await tables.addressByScriptPubkey.query('', [
-            scriptPubkey
-          ])
-          return address
-        }
-
-        // since it is not a string, it has to be an AddressPath
-        const path = fetchAddressArg
-        // fetch addresses by provided path
-        const [scriptPubkeyFromPath] = await tables.scriptPubkeyByPath.query(
-          addressPathToPrefix(path),
-          path.addressIndex
-        )
-
-        // return if the address by path was not found
-        if (scriptPubkeyFromPath == null) return
-
-        const [address] = await tables.addressByScriptPubkey.query('', [
-          scriptPubkeyFromPath
+      if (typeof fetchAddressArg === 'string') {
+        const [result] = await db.getRows([
+          { table: 'address', keys: [fetchAddressArg] }
         ])
+        return result.rows[0] as AddressData | undefined
+      }
 
-        return address
-      })
+      const path = fetchAddressArg
+      const [address] = (await db.findRows('address', {
+        equals: {
+          '$.path.format': path.format,
+          '$.path.changeIndex': path.changeIndex,
+          '$.path.addressIndex': path.addressIndex
+        }
+      })) as AddressData[]
+      return address
     }
   }
   return dataLayer
+}
+
+async function countTransactions(db: EdgeTxDatabase): Promise<number> {
+  const rows = await db.runSql<{ n: number }>`
+    SELECT count(*) AS n FROM ${db.tx_chain}`
+  return rows[0]?.n ?? 0
+}
+
+async function countAddresses(
+  db: EdgeTxDatabase
+): Promise<Map<string, number>> {
+  const rows = await db.runSql<{
+    format: string
+    change: number
+    n: number
+  }>`
+    SELECT doc ->> '$.path.format'      AS format,
+           doc ->> '$.path.changeIndex' AS change,
+           count(*)                     AS n
+      FROM ${db.address}
+     WHERE doc ->> '$.path.format' IS NOT NULL
+     GROUP BY format, change`
+
+  const out = new Map<string, number>()
+  for (const row of rows) out.set(`${row.format}_${row.change}`, row.n)
+  return out
 }
