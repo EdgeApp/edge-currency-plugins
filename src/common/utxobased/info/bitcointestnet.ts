@@ -45,7 +45,7 @@ export const engineInfo: EngineInfo = {
   forks: ['bitcoincash', 'bitcoingold'],
   gapLimit: 25,
   feeUpdateInterval: 60000,
-  mempoolSpaceFeeInfoServer: 'https://mempool.space/api/v1/fees/recommended',
+  mempoolSpaceFeeInfoServer: 'https://mempool.space/api/v1/fees/precise',
   defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,

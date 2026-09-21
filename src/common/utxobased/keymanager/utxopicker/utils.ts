@@ -73,7 +73,7 @@ export function outputBytes(output: Output): number {
 }
 
 export function dustThreshold(output: Output, feeRate: number): number {
-  return outputBytes(output) * feeRate
+  return feeForBytes(feeRate, outputBytes(output))
 }
 
 function witnessCount(inputs: UTXO[]): number {
@@ -122,6 +122,30 @@ export function uintOrNaN(v: number): number {
   return v
 }
 
+/**
+ * Validates a fee rate in satoshis per byte. Fee rates may be fractional,
+ * unlike the satoshi values they produce: a rate is always multiplied by a
+ * byte count and rounded up before it becomes a satoshi amount.
+ */
+export function feeRateOrNaN(v: number): number {
+  if (!isFinite(v)) return NaN
+  if (v < 0) return NaN
+  return v
+}
+
+/**
+ * Returns the whole number of satoshis required to pay for `bytes` at
+ * `feeRate` satoshis per byte. Always rounds up, so a fractional rate can
+ * never produce a fractional satoshi amount and can never underpay.
+ */
+export function feeForBytes(feeRate: number, bytes: number): number {
+  // Multiplying a fractional rate carries floating point noise: `1.1 * 10` is
+  // 11.000000000000002, which would round an exact satoshi amount up to the
+  // next satoshi. Snap the product back to 12 significant digits first, which
+  // is far more precision than any real fee needs, but well short of the noise.
+  return Math.ceil(parseFloat((feeRate * bytes).toPrecision(12)))
+}
+
 export function sumForgiving(range: Array<{ value: number }>): number {
   return range.reduce((a, x) => a + (isFinite(x.value) ? x.value : 0), 0)
 }
@@ -139,7 +163,7 @@ export function finalize(
   const inValue = sumOrNaN(inputs)
   const outValue = sumOrNaN(outputs)
   let txSize = transactionBytes(inputs, outputs)
-  let fee = Math.ceil(feeRate * txSize)
+  let fee = feeForBytes(feeRate, txSize)
 
   const changeValue = inValue - (outValue + fee)
   const changeOutput: Output = {
@@ -149,7 +173,7 @@ export function finalize(
   }
   const changeOutputSize = outputBytes(changeOutput)
   txSize += changeOutputSize
-  const changeFee = feeRate * changeOutputSize
+  const changeFee = feeForBytes(feeRate, changeOutputSize)
   changeOutput.value -= changeFee
   let changeUsed = false
   if (changeOutput.value > dustThreshold(changeOutput, feeRate)) {

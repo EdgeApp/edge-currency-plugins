@@ -10,7 +10,7 @@ export function subtractFee(args: UtxoPickerArgs): UtxoPickerResult {
     scriptPubkey: Buffer.from(target.script, 'hex')
   }))
 
-  const fee = Math.ceil(feeRate * utils.transactionBytes(utxos, outputs))
+  const fee = utils.feeForBytes(feeRate, utils.transactionBytes(utxos, outputs))
   targets[0].value -= fee
   outputs[0].value -= fee
 

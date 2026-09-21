@@ -20,6 +20,7 @@ import {
 
 import { filterUndefined } from '../../../util/filterUndefined'
 import { unixTime } from '../../../util/unixTime'
+import { calcReplacementFeeRate } from '../../fees/calcReplacementFeeRate'
 import { makeFees } from '../../fees/makeFees'
 import { EngineEmitter, EngineEvent } from '../../plugin/EngineEmitter'
 import { makeMetadata } from '../../plugin/Metadata'
@@ -187,9 +188,12 @@ export async function makeUtxoEngine(
       // Must not be confirmed or dropped.
       if (replacedTx.blockHeight !== 0) return null
 
-      // Double the fee used for the RBF transaction:
+      // Double the fee rate used by the replaced transaction:
       const vBytes = transactionSizeFromHex(replacedTx.hex)
-      const newFeeRate = Math.round((parseInt(replacedTx.fees) / vBytes) * 2)
+      const newFeeRate = calcReplacementFeeRate(
+        parseInt(replacedTx.fees),
+        vBytes
+      )
 
       const replacedTxInputs = replacedTx.inputs
       // Recreate UTXOs from DataLayer transaction and mark them as unspent:
@@ -631,7 +635,16 @@ export async function makeUtxoEngine(
         freshAddress.segwitAddress ??
         freshAddress.publicAddress
 
-      const feeRate = parseInt(await fees.getRate(edgeSpendInfo))
+      // Fee rates may be fractional (e.g. a 1.8 sat/vB custom fee), so this
+      // must not be truncated to an integer. The picker rounds the satoshi
+      // amounts it derives from this rate up to whole satoshis. Number rejects
+      // any string that is not entirely a number, where parseFloat would read a
+      // comma-decimal '1,8' as 1 and charge the wrong rate without an error.
+      const feeRateString = await fees.getRate(edgeSpendInfo)
+      const feeRate = Number(feeRateString)
+      if (!isFinite(feeRate) || feeRate <= 0) {
+        throw new Error(`Invalid fee rate: ${feeRateString}`)
+      }
 
       let maxUtxo: undefined | UtxoData
       if (txOptions.CPFP != null) {

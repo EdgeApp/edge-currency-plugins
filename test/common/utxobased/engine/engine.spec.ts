@@ -19,6 +19,8 @@ import EventEmitter from 'events'
 import fetch from 'node-fetch'
 import request from 'request'
 
+import { UtxoTxOtherParams } from '../../../../src/common/utxobased/engine/types'
+import { transactionSizeFromHex } from '../../../../src/common/utxobased/keymanager/utxopicker/utils'
 import edgeCorePlugins from '../../../../src/index'
 import { objectKeys } from '../../../util/objectKeys'
 import { noOp, testLog } from '../../../util/testLog'
@@ -452,6 +454,125 @@ describe('engine.spec', function () {
             .makeSpend(templateSpend)
             .catch(e => assert.isOk(asMaybeInsufficientFundsError(e)))
         })
+      })
+    })
+
+    describe(`Fractional custom fee for Wallet type ${WALLET_TYPE}`, function () {
+      const targetAddress = '2MutAAY6tW2HEyrhSadT1aQhP4KdCAKkC74'
+      const targetAmount = '210000'
+
+      const spendAtRate = (satPerByte: string): EdgeSpendInfo => ({
+        tokenId: null,
+        networkFeeOption: 'custom',
+        customNetworkFee: { satPerByte },
+        spendTargets: [
+          { publicAddress: targetAddress, nativeAmount: targetAmount }
+        ]
+      })
+
+      const sumValues = (items: Array<{ value: number }>): number =>
+        items.reduce((total, item) => total + item.value, 0)
+
+      it('Should keep the decimal in feeRateUsed', async function () {
+        this.timeout(5000)
+        const tx = await engine.makeSpend(spendAtRate('1.8'))
+        assert.equal(tx.feeRateUsed?.satPerVByte, 1.8)
+      })
+
+      it('Should charge more than 1 sat/vB and less than 2 sat/vB', async function () {
+        this.timeout(5000)
+        const atOne = await engine.makeSpend(spendAtRate('1'))
+        const atFractional = await engine.makeSpend(spendAtRate('1.8'))
+        const atTwo = await engine.makeSpend(spendAtRate('2'))
+
+        assert.isAbove(
+          Number(atFractional.networkFee),
+          Number(atOne.networkFee),
+          'fractional fee should exceed the 1 sat/vB fee'
+        )
+        assert.isBelow(
+          Number(atFractional.networkFee),
+          Number(atTwo.networkFee),
+          'fractional fee should be under the 2 sat/vB fee'
+        )
+      })
+
+      it('Should report a whole satoshi network fee', async function () {
+        this.timeout(5000)
+        for (const rate of ['0.5', '1.1', '1.8', '2.25']) {
+          const tx = await engine.makeSpend(spendAtRate(rate))
+          assert.notInclude(tx.networkFee, '.', `rate ${rate}`)
+          assert.equal(
+            Number.isInteger(Number(tx.networkFee)),
+            true,
+            `rate ${rate}`
+          )
+        }
+      })
+
+      it('Should spend every selected input, conserving value into outputs plus fee', async function () {
+        this.timeout(5000)
+        for (const rate of ['0.5', '1.1', '1.8', '2.25']) {
+          const tx = await engine.makeSpend(spendAtRate(rate))
+          const otherParams = tx.otherParams as UtxoTxOtherParams
+          const psbt = otherParams?.psbt
+          assert.isOk(psbt, `psbt missing at rate ${rate}`)
+          if (psbt == null) continue
+
+          const inputTotal = sumValues(psbt.inputs)
+          const outputTotal = sumValues(psbt.outputs)
+          assert.equal(
+            inputTotal - outputTotal,
+            Number(tx.networkFee),
+            `inputs minus outputs should equal the fee at rate ${rate}`
+          )
+          assert.isAbove(psbt.inputs.length, 0, `no inputs at rate ${rate}`)
+        }
+      })
+
+      it('Should pay the target the exact requested amount', async function () {
+        this.timeout(5000)
+        const tx = await engine.makeSpend(spendAtRate('1.8'))
+        const otherParams = tx.otherParams as UtxoTxOtherParams
+        const psbt = otherParams?.psbt
+        assert.isOk(psbt)
+        if (psbt == null) return
+
+        const paid = psbt.outputs.filter(
+          output => output.value === Number(targetAmount)
+        )
+        assert.equal(paid.length, 1, 'exactly one output for the target amount')
+      })
+
+      it('Should sign, and pay close to the requested rate on the signed transaction', async function () {
+        this.timeout(10000)
+        for (const rate of ['1.1', '1.8', '2.25']) {
+          const tx = await engine.makeSpend(spendAtRate(rate))
+          const signed = await engine.signTx(tx, keys)
+          assert.isString(signed.signedTx)
+          assert.isAbove(signed.signedTx.length, 0)
+
+          const vsize = transactionSizeFromHex(signed.signedTx)
+          const accuracy = Number(tx.networkFee) / vsize / Number(rate)
+          // The picker sizes the transaction before signatures exist, so the
+          // realized rate is off by well under a percent. A truncated 1.8
+          // would land near 0.55 here.
+          assert.isAbove(accuracy, 0.98, `rate ${rate} accuracy ${accuracy}`)
+          assert.isBelow(accuracy, 1.02, `rate ${rate} accuracy ${accuracy}`)
+        }
+      })
+
+      it('Should reject an unparseable custom fee', async function () {
+        this.timeout(5000)
+        // '1,8' is 1.8 typed with a comma decimal separator. It must fail
+        // rather than be read as 1, which would repeat the truncation bug.
+        for (const rate of ['not a number', '1,8', '1.8 sat/vB']) {
+          let threw = false
+          await engine.makeSpend(spendAtRate(rate)).catch(() => {
+            threw = true
+          })
+          assert.equal(threw, true, `rate ${rate}`)
+        }
       })
     })
 

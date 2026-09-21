@@ -49,7 +49,7 @@ export const engineInfo: EngineInfo = {
   gapLimit: 25,
   feeUpdateInterval: 60000,
   mempoolSpaceFeeInfoServer:
-    'https://mempool.space/testnet4/api/v1/fees/recommended',
+    'https://mempool.space/testnet4/api/v1/fees/precise',
   defaultFeeInfo: {
     lowFeeFudgeFactor: undefined,
     standardFeeLowFudgeFactor: undefined,
