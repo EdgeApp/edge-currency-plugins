@@ -1,7 +1,17 @@
-import { asBoolean, asNumber, asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asBoolean,
+  asEither,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  asValue,
+  Cleaner
+} from 'cleaners'
 
 import { SoftPick } from '../../../util/typeUtil'
-import { AddressPath } from '../../plugin/types'
+import { AddressPath, asCurrencyFormat } from '../../plugin/types'
 import { asScriptTypeEnum, ScriptTypeEnum } from '../keymanager/keymanager'
 
 export interface AddressData {
@@ -14,6 +24,26 @@ export interface AddressData {
   used: boolean
   balance?: string
 }
+
+export const asAddressData = asObject<AddressData>({
+  scriptPubkey: asString,
+  redeemScript: asOptional(asString),
+  lastQueriedBlockHeight: asNumber,
+  path: asOptional(
+    // Built on use: `plugin/types.ts` imports this module, so
+    // `asCurrencyFormat` is not defined yet when this one loads.
+    (raw: unknown): AddressPath =>
+      asObject({
+        format: asCurrencyFormat,
+        changeIndex: asNumber,
+        addressIndex: asNumber
+      })(raw)
+  ),
+  lastQuery: asNumber,
+  lastTouched: asNumber,
+  used: asBoolean,
+  balance: asOptional(asString)
+})
 
 export const makeAddressData = (
   addressFields: SoftPick<AddressData, 'scriptPubkey'>
@@ -83,3 +113,38 @@ export interface TransactionDataInput {
   sequence: number
   txId: string
 }
+
+export const asTransactionDataOutput = asObject<TransactionDataOutput>({
+  amount: asString,
+  n: asNumber,
+  scriptPubkey: asString
+})
+
+/**
+ * Lenient where older records are: inputs saved before the engine recorded
+ * `sequence` have none, and are kept as they were stored.
+ */
+export const asTransactionDataInput = asObject({
+  amount: asString,
+  n: asNumber,
+  outputIndex: asNumber,
+  scriptPubkey: asString,
+  sequence: asOptional(asNumber),
+  txId: asString
+}) as Cleaner<TransactionDataInput>
+
+export const asTransactionData = asObject<TransactionData>({
+  txid: asString,
+  hex: asString,
+  blockHeight: asNumber,
+  confirmations: asOptional(
+    asEither(asValue('confirmed', 'unconfirmed', 'dropped'), asNumber)
+  ),
+  date: asNumber,
+  fees: asString,
+  inputs: asArray(asTransactionDataInput),
+  outputs: asArray(asTransactionDataOutput),
+  ourIns: asArray(asString),
+  ourOuts: asArray(asString),
+  ourAmount: asString
+})

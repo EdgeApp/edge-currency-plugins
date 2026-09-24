@@ -27,6 +27,8 @@ import { makeMetadata } from '../../plugin/Metadata'
 import { EngineConfig, TxOptions } from '../../plugin/types'
 import { upgradeMemos } from '../../upgradeMemos'
 import { DataLayer, makeDataLayer } from '../db/DataLayer'
+import { fetchOrDeriveXprivFromKeys } from '../db/keyStore'
+import { deleteBaselets, migrateBaselets } from '../db/migrateBaselets'
 import {
   fromEdgeTransaction,
   toEdgeTransaction
@@ -60,7 +62,6 @@ import {
 } from './types'
 import { getOwnUtxosFromTx } from './util/getOwnUtxosFromTx'
 import {
-  fetchOrDeriveXprivFromKeys,
   getAddressTypeFromPurposeType,
   pathToPurposeType,
   sumUtxos
@@ -73,15 +74,16 @@ export async function makeUtxoEngine(
 ): Promise<EdgeCurrencyEngine> {
   const {
     pluginInfo,
-    pluginDisklet,
+    pluginStore,
     emitter,
     engineOptions,
     io,
     pluginState
   } = config
-  // `walletLocalDisklet` is gone from this list: the engine's storage is the
-  // transaction database now. The encrypted one survives, for private keys.
-  const { log, txDatabase, walletLocalEncryptedDisklet } = engineOptions
+  // The engine's storage is the transaction database. `legacyDisklet` is
+  // read-only, and reaches exactly two places: the one-shot baselet import,
+  // and the resync that deletes what it imported from.
+  const { legacyDisklet, log, txDatabase } = engineOptions
   const { currencyInfo, engineInfo, coinInfo } = pluginInfo
   const userSettings = asUtxoUserSettings(engineOptions.userSettings)
 
@@ -115,7 +117,7 @@ export async function makeUtxoEngine(
   })
 
   const fees = await makeFees({
-    disklet: pluginDisklet,
+    pluginStore,
     pluginInfo,
     io,
     log: config.engineOptions.log
@@ -123,10 +125,19 @@ export async function makeUtxoEngine(
 
   if (txDatabase == null) {
     throw new Error(
-      'This wallet needs a transaction database. Turn on ' +
-        '`EdgeContextOptions.transactionDatabase`, on a platform that has one.'
+      'This wallet needs a transaction database, and the core gave it none.'
     )
   }
+
+  // Before the metadata, which writes a zero balance on a miss and reads its
+  // row only once: the imported balance has to be the row it finds.
+  await migrateBaselets({
+    txDatabase,
+    legacyDisklet,
+    log,
+    walletId: walletInfo.id,
+    pluginId: pluginInfo.currencyInfo.pluginId
+  })
   const metadata = await makeMetadata({ txDatabase, emitter, log })
 
   const dataLayer = await makeDataLayer({
@@ -785,6 +796,11 @@ export async function makeUtxoEngine(
       await pluginState.clearCache()
       await metadata.clear()
       await fees.clearCache()
+      // The legacy files would otherwise be read straight back in, should
+      // the import marker ever be lost:
+      await deleteBaselets(legacyDisklet).catch(error => {
+        log.warn(`Failed to delete the legacy baselets: ${String(error)}`)
+      })
 
       // Refresh the servers for the engine
       await pluginState.refreshServers()
@@ -873,7 +889,7 @@ export async function makeUtxoEngine(
       // Derive the xprivs on the fly, since we do not persist them
       const xprivKeys = await fetchOrDeriveXprivFromKeys({
         privateKey,
-        walletLocalEncryptedDisklet,
+        txDatabase,
         coin: coinInfo.name
       })
 
@@ -904,7 +920,7 @@ export async function makeUtxoEngine(
       // Derive the xprivs on the fly, since we do not persist them
       const xprivKeys = await fetchOrDeriveXprivFromKeys({
         privateKey,
-        walletLocalEncryptedDisklet,
+        txDatabase,
         coin: coinInfo.name
       })
 
@@ -1084,7 +1100,7 @@ export async function makeUtxoEngine(
           ...config.engineOptions,
           // Required by the type, and unused: the throwaway engine stores
           // everything in the scratch database above.
-          walletLocalDisklet: tmpDisklet,
+          legacyDisklet: tmpDisklet,
           walletLocalEncryptedDisklet: tmpEncryptedDisklet
         },
         pluginInfo: {
