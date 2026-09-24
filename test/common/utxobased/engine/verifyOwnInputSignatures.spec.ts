@@ -1,8 +1,8 @@
 import secp256k1 from '@bitcoinerlab/secp256k1'
 import { payments, script as bitcoinScript, Transaction } from 'altcoin-js'
 import { expect } from 'chai'
-import { makeMemoryDisklet } from 'disklet'
 import { ECPairFactory } from 'ecpair'
+import { makeMemoryTxDatabase } from 'edge-core-js'
 import { EdgeTransaction } from 'edge-core-js/types'
 import { describe, it } from 'mocha'
 
@@ -80,7 +80,12 @@ const makeFixtures = async (): Promise<Fixtures> => {
     pluginInfo: bitcoin,
     publicKey: { publicKeys }
   })
-  const dataLayer = await makeDataLayer({ disklet: makeMemoryDisklet() })
+  const walletId = Buffer.alloc(32, 0x55).toString('base64')
+  const dataLayer = await makeDataLayer({
+    txDatabase: await makeMemoryTxDatabase({ walletId, pluginId: 'bitcoin' }),
+    walletId,
+    pluginId: 'bitcoin'
+  })
   // The wallet knows its first receive address of each format:
   for (const format of Object.keys(formats) as Array<keyof typeof formats>) {
     const path: AddressPath = { format, changeIndex: 0, addressIndex: 0 }

@@ -1,28 +1,30 @@
 import { expect } from 'chai'
-import { Disklet, makeMemoryDisklet } from 'disklet'
+import { makeMemoryDisklet } from 'disklet'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyPlugin,
-  JsonObject
-} from 'edge-core-js/types'
+  EdgeTxDatabase,
+  JsonObject,
+  makeMemoryTxDatabase
+} from 'edge-core-js'
 
+import { dataLayerTables } from '../../../../src/common/utxobased/db/DataLayer'
+import { AddressData } from '../../../../src/common/utxobased/db/types'
 import edgeCorePlugins from '../../../../src/index'
 import { noOp, testLog } from '../../../util/testLog'
-import { makeFakeIo, makeFakeNativeIo } from '../../../utils'
+import {
+  makeFakeIo,
+  makeFakeNativeIo,
+  makeMemoryPluginStore,
+  makeReadOnlyDisklet
+} from '../../../utils'
 
 const WALLET_TYPE = 'wallet:litecoin'
 
-// Litecoin's default wallet format is bip49, so every receive address is a
-// pay-to-script-hash script and lands in this one address bucket:
-const ADDRESS_BUCKET = 'tables/addressByScriptPubkey/a914.json'
-const PATH_BUCKET = 'tables/scriptPubkeyByPath/bip49_0/0.json'
-
-// The DataLayer writes through a cache that flushes to disk on a timer:
-const FLUSH_WAIT_MS = 500
-
-const snooze = async (ms: number): Promise<void> =>
-  await new Promise(resolve => setTimeout(resolve, ms))
+// Litecoin's default wallet format is bip49, so every receive address sits
+// on this branch:
+const FIRST_PATH = { format: 'bip49', changeIndex: 0, addressIndex: 0 }
 
 const callbacks: EdgeCurrencyEngineCallbacks = {
   onAddressChanged: noOp,
@@ -32,6 +34,8 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
   onNewTokens: noOp,
   onSeenTxCheckpoint: noOp,
   onStakingStatusChanged: noOp,
+  onSubscribeAddresses: noOp,
+  onSyncStatusChanged: noOp,
   onTokenBalanceChanged: noOp,
   onTransactions: noOp,
   onTransactionsChanged: noOp,
@@ -57,6 +61,7 @@ describe('UtxoEngineProcessor address repair', function () {
       log: testLog,
       infoPayload: {},
       nativeIo: makeFakeNativeIo(),
+      pluginDatabase: makeMemoryPluginStore(),
       pluginDisklet: makeMemoryDisklet()
     })
     // The plugin factory returns the generic core plugin type:
@@ -72,61 +77,89 @@ describe('UtxoEngineProcessor address repair', function () {
   })
 
   const makeEngine = async (
-    walletLocalDisklet: Disklet
+    txDatabase: EdgeTxDatabase
   ): Promise<EdgeCurrencyEngine> =>
     await plugin.makeCurrencyEngine(
       { type: WALLET_TYPE, keys, id: '!' },
       {
         callbacks,
         log: testLog,
-        walletLocalDisklet,
-        walletLocalEncryptedDisklet: walletLocalDisklet,
+        legacyDisklet: makeReadOnlyDisklet(makeMemoryDisklet()),
+        walletLocalEncryptedDisklet: makeReadOnlyDisklet(makeMemoryDisklet()),
         customTokens: {},
         enabledTokenIds: [],
-        userSettings: {}
+        txDatabase,
+        userSettings: {},
+        walletSettings: {}
       }
     )
 
   // Runs the same initialization the core triggers when it loads a wallet:
   const initialize = async (engine: EdgeCurrencyEngine): Promise<void> => {
     await engine.addGapLimitAddresses([])
-    await snooze(FLUSH_WAIT_MS)
   }
 
-  // Creates a wallet, lets it derive its first addresses, and returns its disk:
-  const makeSyncedDisklet = async (): Promise<Disklet> => {
-    const disklet = makeMemoryDisklet()
-    await initialize(await makeEngine(disklet))
-    return disklet
-  }
-
-  for (const bucket of [ADDRESS_BUCKET, PATH_BUCKET]) {
-    it(`restores addresses after ${bucket} is cut short`, async function () {
-      const disklet = await makeSyncedDisklet()
-      const original = JSON.parse(await disklet.getText(bucket))
-      expect(Object.keys(original)).length.greaterThan(0)
-
-      // A process that dies in the middle of a write leaves an empty file:
-      await disklet.setText(bucket, '')
-
-      // The next launch finds the address count intact but no rows to match:
-      await initialize(await makeEngine(disklet))
-
-      const restored = JSON.parse(await disklet.getText(bucket))
-      expect(restored).deep.equals(original)
+  // Creates a wallet, lets it derive its first addresses, and returns its
+  // database, opened on the engine's own tables:
+  const makeSyncedDatabase = async (): Promise<EdgeTxDatabase> => {
+    const db = await makeMemoryTxDatabase({
+      walletId: Buffer.alloc(32, 0x33).toString('base64'),
+      pluginId: 'litecoin'
     })
+    await initialize(await makeEngine(db))
+    await db.defineTables(dataLayerTables)
+    return db
   }
+
+  const readAddresses = async (db: EdgeTxDatabase): Promise<AddressData[]> =>
+    (await db.findRows('address', {})) as AddressData[]
+
+  const findFirstAddress = async (db: EdgeTxDatabase): Promise<AddressData> => {
+    const [address] = (await db.findRows('address', {
+      equals: {
+        '$.path.format': FIRST_PATH.format,
+        '$.path.changeIndex': FIRST_PATH.changeIndex,
+        '$.path.addressIndex': FIRST_PATH.addressIndex
+      }
+    })) as AddressData[]
+    expect(address).not.equals(undefined)
+    return address
+  }
+
+  it('restores an address whose row is missing', async function () {
+    const db = await makeSyncedDatabase()
+    const original = await readAddresses(db)
+    const first = await findFirstAddress(db)
+
+    // The rows past it still count, so the next launch walks over the gap:
+    await db.removeRows([{ table: 'address', keys: [first.scriptPubkey] }])
+
+    await initialize(await makeEngine(db))
+
+    const restored = await findFirstAddress(db)
+    expect(restored.scriptPubkey).equals(first.scriptPubkey)
+    expect(restored.redeemScript).equals(first.redeemScript)
+    const byScript = (rows: AddressData[]): string[] =>
+      rows.map(row => row.scriptPubkey)
+    expect(byScript(await readAddresses(db))).to.include.members(
+      byScript(original)
+    )
+  })
 
   it('retries initialization after it fails', async function () {
-    const disklet = await makeSyncedDisklet()
+    const db = await makeSyncedDatabase()
 
-    // Point the first path at a script the wallet cannot derive and has no
-    // address row for, which the repair refuses to overwrite:
-    const pathBucket: string[] = JSON.parse(await disklet.getText(PATH_BUCKET))
-    pathBucket[0] = `a914${'ff'.repeat(20)}87`
-    await disklet.setText(PATH_BUCKET, JSON.stringify(pathBucket))
+    // Move the first address's script to another path. The repair derives
+    // that script for the empty path, finds it taken, and refuses to move it:
+    const first = await findFirstAddress(db)
+    await db.putRows([
+      {
+        table: 'address',
+        rows: [{ ...first, path: { ...FIRST_PATH, addressIndex: 999 } }]
+      }
+    ])
 
-    const engine = await makeEngine(disklet)
+    const engine = await makeEngine(db)
     const outcomes: string[] = []
     for (let attempt = 0; attempt < 2; attempt++) {
       await engine.addGapLimitAddresses([]).then(

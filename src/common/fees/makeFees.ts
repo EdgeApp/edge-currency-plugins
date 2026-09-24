@@ -1,22 +1,21 @@
 import * as bs from 'biggystring'
 import { asMaybe, Cleaner } from 'cleaners'
-import { Disklet } from 'disklet'
 import {
   EdgeIo,
   EdgeLog,
   EdgeSpendInfo,
   EdgeSpendTarget
 } from 'edge-core-js/types'
-import { makeMemlet, Memlet } from 'memlet'
 
 import { removeUndefined } from '../../util/filterUndefined'
-import { FEES_PATH, INFO_SERVER_URI } from '../constants'
+import { INFO_SERVER_URI } from '../constants'
+import { PluginStore } from '../plugin/pluginStore'
 import { asFeeInfo, FeeInfo, PluginInfo } from '../plugin/types'
 import { calcMinerFeePerByte } from './calcMinerFeePerByte'
 import { processMempoolSpaceFees } from './processMempoolSpaceFees'
 
 interface MakeFeesConfig extends Common {
-  disklet: Disklet
+  pluginStore: PluginStore
   pluginInfo: PluginInfo
 }
 
@@ -34,14 +33,15 @@ export interface Fees {
 }
 
 export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
-  const { disklet, pluginInfo, ...common } = config
+  const { pluginStore, pluginInfo, ...common } = config
   const { currencyInfo, engineInfo } = pluginInfo
 
-  const memlet = makeMemlet(disklet)
-  const feeInfo: FeeInfo = await fetchCachedFees(
-    memlet,
-    engineInfo.defaultFeeInfo
-  )
+  const feeInfo: FeeInfo = await pluginStore
+    .loadFees(engineInfo.defaultFeeInfo)
+    .catch(error => {
+      common.log.warn(`Failed to load cached fees: ${String(error)}`)
+      return engineInfo.defaultFeeInfo
+    })
   // The last time the fees were updated
   let timestamp = 0
   let vendorIntervalId: NodeJS.Timeout
@@ -57,7 +57,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
     Object.assign(feeInfo, cleanedVendorFees)
     timestamp = Date.now()
 
-    await cacheFees(memlet, feeInfo)
+    await pluginStore.saveFees(feeInfo)
   }
 
   return {
@@ -81,7 +81,7 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
     },
 
     async clearCache(): Promise<void> {
-      await memlet.delete(FEES_PATH)
+      await pluginStore.clearFees()
     },
 
     async getRate(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
@@ -116,18 +116,6 @@ export const makeFees = async (config: MakeFeesConfig): Promise<Fees> => {
     }
   }
 }
-
-const fetchCachedFees = async (
-  memlet: Memlet,
-  fallback: FeeInfo
-): Promise<FeeInfo> => {
-  const data = await memlet.getJson(FEES_PATH).catch(() => undefined)
-  const feeSettings = asMaybe(asFeeInfo(fallback), fallback)(data)
-  return feeSettings
-}
-
-const cacheFees = async (memlet: Memlet, feeInfo: FeeInfo): Promise<void> =>
-  await memlet.setJson(FEES_PATH, feeInfo)
 
 const sumSpendTargets = (spendTargets: EdgeSpendTarget[]): string =>
   spendTargets.reduce((amount, { nativeAmount }) => {

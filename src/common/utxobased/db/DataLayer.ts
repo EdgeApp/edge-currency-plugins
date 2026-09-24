@@ -66,7 +66,7 @@ interface DumpDataReturn {
  * inverted tables that a half-finished write could leave inconsistent.
  */
 export const dataLayerTables: EdgeTableSpec = {
-  version: 2,
+  version: 3,
   tables: {
     /*
      * The wallet's own state: its balance and the last block height it saw.
@@ -103,7 +103,10 @@ export const dataLayerTables: EdgeTableSpec = {
       key: ['id'],
       indexes: { byScriptPubkey: { paths: ['$.scriptPubkey'] } }
     },
-    txDetail: { key: ['txid'] }
+    txDetail: { key: ['txid'] },
+
+    // The wallet's extended private keys, one row per format (`keyStore.ts`):
+    keys: { key: ['format'] }
   }
 }
 
@@ -118,7 +121,7 @@ export const WALLET_META_KEY = 'wallet'
  * detail the core deliberately does not model, so they live here under the
  * same txid. Reading a transaction joins the two back together.
  */
-interface TxDetail {
+export interface TxDetail {
   txid: string
   hex: string
   fees: string
@@ -130,6 +133,40 @@ interface TxDetail {
 
 /** The chain's own asset, which `EdgeTokenId` spells `null`. */
 const CHAIN = null
+
+/**
+ * The two halves a transaction is stored as: the `EdgeTx` the core keeps, and
+ * the chain detail this plugin keeps beside it.
+ */
+export const splitTransactionRows = (
+  tx: TransactionData,
+  walletId: string,
+  pluginId: string
+): { edgeTx: EdgeTx; detail: TxDetail } => ({
+  edgeTx: {
+    walletId,
+    txid: tx.txid,
+    pluginId,
+    date: new Date(tx.date * 1000).toISOString(),
+    blockHeight: tx.blockHeight,
+    isSend: bs.lt(tx.ourAmount, '0'),
+    nativeAmounts: new Map([[CHAIN, tx.ourAmount]]),
+    networkFees: new Map([[CHAIN, tx.fees]]),
+    ourReceiveAddresses: [],
+    memos: [],
+    tokenData: new Map(),
+    signedTx: tx.hex
+  },
+  detail: {
+    txid: tx.txid,
+    hex: tx.hex,
+    fees: tx.fees,
+    inputs: tx.inputs,
+    outputs: tx.outputs,
+    ourIns: tx.ourIns,
+    ourOuts: tx.ourOuts
+  }
+})
 
 /** Identifies a change path, for the counters the engine reads. */
 export const addressPathToPrefix = (path: ChangePath): string =>
@@ -234,31 +271,8 @@ export async function makeDataLayer(
 
   const splitTransaction = (
     tx: TransactionData
-  ): { edgeTx: EdgeTx; detail: TxDetail } => ({
-    edgeTx: {
-      walletId,
-      txid: tx.txid,
-      pluginId,
-      date: new Date(tx.date * 1000).toISOString(),
-      blockHeight: tx.blockHeight,
-      isSend: bs.lt(tx.ourAmount, '0'),
-      nativeAmounts: new Map([[CHAIN, tx.ourAmount]]),
-      networkFees: new Map([[CHAIN, tx.fees]]),
-      ourReceiveAddresses: [],
-      memos: [],
-      tokenData: new Map(),
-      signedTx: tx.hex
-    },
-    detail: {
-      txid: tx.txid,
-      hex: tx.hex,
-      fees: tx.fees,
-      inputs: tx.inputs,
-      outputs: tx.outputs,
-      ourIns: tx.ourIns,
-      ourOuts: tx.ourOuts
-    }
-  })
+  ): { edgeTx: EdgeTx; detail: TxDetail } =>
+    splitTransactionRows(tx, walletId, pluginId)
 
   const joinTransaction = (tx: EdgeTx, detail: TxDetail): TransactionData => ({
     txid: tx.txid,

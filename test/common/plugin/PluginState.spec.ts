@@ -1,12 +1,12 @@
 import { expect } from 'chai'
-import { makeMemoryDisklet } from 'disklet'
 import { makeFakeIo } from 'edge-core-js'
 
 import {
   makePluginState,
   PluginState
 } from '../../../src/common/plugin/PluginState'
-import { makeFakeLog } from '../../utils'
+import { makePluginStore } from '../../../src/common/plugin/pluginStore'
+import { makeFakeLog, makeMemoryPluginStore } from '../../utils'
 
 const SERVERS = ['wss://a.test', 'wss://b.test', 'wss://c.test']
 
@@ -23,8 +23,8 @@ describe('PluginState server quarantine', function () {
       infoPayload: undefined,
       io: makeFakeIo(),
       log: makeFakeLog(),
-      pluginDisklet: makeMemoryDisklet(),
-      pluginId: 'bitcoin'
+      pluginId: 'bitcoin',
+      pluginStore: makePluginStore(makeMemoryPluginStore())
     })
     await pluginState.load()
   })

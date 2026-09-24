@@ -1,14 +1,16 @@
 import secp256k1 from '@bitcoinerlab/secp256k1'
 import { payments, script as bitcoinScript, Transaction } from 'altcoin-js'
 import { expect } from 'chai'
-import { Disklet, makeMemoryDisklet } from 'disklet'
+import { makeMemoryDisklet } from 'disklet'
 import { ECPairFactory } from 'ecpair'
+import { makeMemoryTxDatabase } from 'edge-core-js'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyPlugin,
   EdgeLog,
   EdgeTransaction,
+  EdgeTxDatabase,
   JsonObject
 } from 'edge-core-js/types'
 
@@ -37,12 +39,19 @@ import {
 } from '../../../../src/common/utxobased/keymanager/keymanager'
 import edgeCorePlugins from '../../../../src/index'
 import { noOp, testLog } from '../../../util/testLog'
-import { makeFakeIo, makeFakeNativeIo } from '../../../utils'
+import {
+  makeFakeIo,
+  makeFakeNativeIo,
+  makeMemoryPluginStore,
+  makeReadOnlyDisklet
+} from '../../../utils'
 
 const ECPair = ECPairFactory(secp256k1)
 
 const WALLET_TYPE = 'wallet:bitcoin'
 const WALLET_ID = '!'
+// The id the wallet's in-memory database is opened under:
+const WALLET_DATABASE_ID = Buffer.alloc(32, 0x44).toString('base64')
 
 // An address this wallet does not control; the recipient of the spends below.
 const RECIPIENT_ADDRESS = 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
@@ -72,12 +81,6 @@ const CHANGE_PATH: AddressPath = {
   addressIndex: 0
 }
 
-// The DataLayer writes through a cache that flushes to disk on a timer:
-const FLUSH_WAIT_MS = 500
-
-const snooze = async (ms: number): Promise<void> =>
-  await new Promise(resolve => setTimeout(resolve, ms))
-
 const callbacks: EdgeCurrencyEngineCallbacks = {
   onAddressChanged: noOp,
   onAddressesChecked: noOp,
@@ -86,6 +89,8 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
   onNewTokens: noOp,
   onSeenTxCheckpoint: noOp,
   onStakingStatusChanged: noOp,
+  onSubscribeAddresses: noOp,
+  onSyncStatusChanged: noOp,
   onTokenBalanceChanged: noOp,
   onTransactions: noOp,
   onTransactionsChanged: noOp,
@@ -166,6 +171,7 @@ describe('own-spend guards in the engine', function () {
       log: testLog,
       infoPayload: {},
       nativeIo: makeFakeNativeIo(),
+      pluginDatabase: makeMemoryPluginStore(),
       pluginDisklet: makeMemoryDisklet()
     })
     // The plugin factory returns the generic core plugin type:
@@ -212,7 +218,7 @@ describe('own-spend guards in the engine', function () {
   })
 
   const makeEngine = async (
-    walletLocalDisklet: Disklet,
+    txDatabase: EdgeTxDatabase,
     log: EdgeLog = testLog
   ): Promise<EdgeCurrencyEngine> =>
     await plugin.makeCurrencyEngine(
@@ -220,23 +226,37 @@ describe('own-spend guards in the engine', function () {
       {
         callbacks,
         log,
-        walletLocalDisklet,
-        walletLocalEncryptedDisklet: walletLocalDisklet,
+        legacyDisklet: makeReadOnlyDisklet(makeMemoryDisklet()),
+        walletLocalEncryptedDisklet: makeReadOnlyDisklet(makeMemoryDisklet()),
         customTokens: {},
         enabledTokenIds: [],
-        userSettings: {}
+        txDatabase,
+        userSettings: {},
+        walletSettings: {}
       }
     )
 
-  /** A wallet disk whose engine has derived its first addresses */
-  const makeWalletDisklet = async (): Promise<Disklet> => {
-    const disklet = makeMemoryDisklet()
-    const engine = await makeEngine(disklet)
+  /** A wallet database whose engine has derived its first addresses */
+  const makeWalletDatabase = async (): Promise<EdgeTxDatabase> => {
+    const txDatabase = await makeMemoryTxDatabase({
+      walletId: WALLET_DATABASE_ID,
+      pluginId: 'bitcoin'
+    })
+    const engine = await makeEngine(txDatabase)
     // The same initialization the core triggers when it loads a wallet:
     await engine.addGapLimitAddresses([])
-    await snooze(FLUSH_WAIT_MS)
-    return disklet
+    return txDatabase
   }
+
+  /** The wallet's rows, as a second DataLayer over the engine's database */
+  const openDataLayer = async (
+    txDatabase: EdgeTxDatabase
+  ): Promise<DataLayer> =>
+    await makeDataLayer({
+      txDatabase,
+      walletId: WALLET_DATABASE_ID,
+      pluginId: 'bitcoin'
+    })
 
   /** The UTXO the wallet holds on its first receive address */
   const ownUtxo = (): UtxoData => ({
@@ -381,14 +401,13 @@ describe('own-spend guards in the engine', function () {
       record: TransactionData,
       utxos: UtxoData[] = [ownUtxo()]
     ): Promise<{ replacement: EdgeTransaction | null; warnings: string[] }> => {
-      const disklet = await makeWalletDisklet()
-      const dataLayer = await makeDataLayer({ disklet })
+      const txDatabase = await makeWalletDatabase()
+      const dataLayer = await openDataLayer(txDatabase)
       for (const utxo of utxos) await dataLayer.saveUtxo(utxo)
       await dataLayer.saveTransaction({
         tx: record,
         scriptPubkeys: [receiveScript]
       })
-      await snooze(FLUSH_WAIT_MS)
 
       const warnings: string[] = []
       const log: EdgeLog = Object.assign(noOp, {
@@ -399,7 +418,7 @@ describe('own-spend guards in the engine', function () {
           warnings.push(message)
         }
       })
-      const engine = await makeEngine(disklet, log)
+      const engine = await makeEngine(txDatabase, log)
       if (engine.accelerate == null) throw new Error('accelerate is missing')
       const replacement = await engine.accelerate(edgeTxFor(record))
       return { replacement, warnings }
@@ -534,8 +553,8 @@ describe('own-spend guards in the engine', function () {
     const syncAddress = async (
       reports: JsonObject[]
     ): Promise<{ dataLayer: DataLayer; warnings: string[] }> => {
-      const disklet = await makeWalletDisklet()
-      const dataLayer = await makeDataLayer({ disklet })
+      const txDatabase = await makeWalletDatabase()
+      const dataLayer = await openDataLayer(txDatabase)
       await dataLayer.saveUtxo(ownUtxo())
 
       const warnings: string[] = []
