@@ -1,5 +1,4 @@
 import * as bs from 'biggystring'
-import { Disklet } from 'disklet'
 import { EdgeParsedUri } from 'edge-core-js/types'
 
 import { ChangePath, CurrencyFormat, EngineInfo } from '../../plugin/types'
@@ -150,26 +149,6 @@ export const currencyFormatToPurposeType = (
 
 export type CurrencyFormatKeys = {
   [format in CurrencyFormat]?: string
-}
-
-export const fetchOrDeriveXprivFromKeys = async (args: {
-  privateKey: PrivateKey
-  walletLocalEncryptedDisklet: Disklet
-  coin: string
-}): Promise<CurrencyFormatKeys> => {
-  const filename = 'walletKeys.json'
-  let keys: CurrencyFormatKeys
-  try {
-    const data = await args.walletLocalEncryptedDisklet.getText(filename)
-    keys = JSON.parse(data)
-  } catch (e) {
-    keys = deriveXprivFromKeys(args)
-    await args.walletLocalEncryptedDisklet.setText(
-      filename,
-      JSON.stringify(keys)
-    )
-  }
-  return keys
 }
 
 export const deriveXprivFromKeys = (args: {

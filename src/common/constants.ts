@@ -1,7 +1,6 @@
 export const INFO_SERVER_URI = 'https://info1.edge.app'
 
 // Fees
-export const FEES_PATH = 'fees.json'
 export const MAX_FEE = 999999999.0
 // Fee rates are sat/vB and may be fractional. Three decimal places matches the
 // precision of the mempool.space `/fees/precise` endpoint, which is the most

@@ -10,7 +10,7 @@ import { before, describe, it } from 'mocha'
 
 import edgeCorePlugins from '../../../src/index'
 import { testLog } from '../../util/testLog'
-import { makeFakeNativeIo } from '../../utils'
+import { makeFakeNativeIo, makeMemoryPluginStore } from '../../utils'
 import { fixtures } from './CurrencyPlugin.fixtures/index'
 
 describe('currencyPlugins.spec', () => {
@@ -32,6 +32,7 @@ describe('currencyPlugins.spec', () => {
       },
       log: testLog,
       nativeIo,
+      pluginDatabase: makeMemoryPluginStore(),
       pluginDisklet: fakeIo.disklet
     }
     const factory = edgeCorePlugins[fixture.pluginId]
