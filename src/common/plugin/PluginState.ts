@@ -1,12 +1,10 @@
-import { Disklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js/types'
-import { makeMemlet } from 'memlet'
 
 import { ServerHealth } from '../utxobased/engine/ServerStates'
 import { UtxoUserSettings } from '../utxobased/engine/types'
 import { UtxoEngineProcessor } from '../utxobased/engine/UtxoEngineProcessor'
+import { PluginStore } from './pluginStore'
 import {
-  asServerCache,
   ServerCache,
   ServerInfo,
   ServerList,
@@ -52,10 +50,6 @@ export function makeShareServerProbe(): ShareServerProbe {
   }
 }
 
-// The filename for ServerInfoCache data (see ServerScores.ts)
-// Perhaps this should be in ServerScores.ts file, but that'll take some refactoring
-const SERVER_CACHE_FILE = 'serverCache.json'
-
 /** A JSON object (as opposed to an array or primitive). */
 interface JsonObject {
   [name: string]: unknown
@@ -71,8 +65,8 @@ export interface PluginStateSettings {
   infoPayload: InfoPayload | undefined
   io: EdgeIo
   log: EdgeLog
-  pluginDisklet: Disklet
   pluginId: string
+  pluginStore: PluginStore
 }
 
 export interface PluginState {
@@ -109,7 +103,7 @@ export interface PluginState {
 }
 
 export function makePluginState(settings: PluginStateSettings): PluginState {
-  const { defaultSettings, log, pluginDisklet, pluginId } = settings
+  const { defaultSettings, log, pluginId, pluginStore } = settings
 
   const sanitizeServerUri = (uri: string): string => {
     // `dumpData()` is often copied into support logs.
@@ -149,7 +143,6 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
   }
 
   let engines: UtxoEngineProcessor[] = []
-  const memlet = makeMemlet(pluginDisklet)
 
   // Server URI -> time (ms since epoch) at which the quarantine expires
   const quarantineExpiry = new Map<string, number>()
@@ -182,7 +175,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
   const saveServerCache = async (): Promise<void> => {
     serverScores.printServers(getSelectedServerList())
     if (serverCacheDirty) {
-      await memlet.setJson(SERVER_CACHE_FILE, serverCache).catch(e => {
+      await pluginStore.saveServerCache(serverCache).catch(e => {
         log(`${pluginId} - ${JSON.stringify(e.toString())}`)
       })
       serverCacheDirty = false
@@ -263,7 +256,8 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     async load(): Promise<PluginState> {
       try {
-        serverCache = asServerCache(await memlet.getJson(SERVER_CACHE_FILE))
+        const stored = await pluginStore.loadServerCache()
+        if (stored != null) serverCache = stored
       } catch (e) {
         log(`${pluginId}: Failed to load server cache: ${JSON.stringify(e)}`)
       }
@@ -296,7 +290,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
     async clearCache(): Promise<void> {
       serverScores.clearServerScoreTimes()
       serverCacheDirty = true
-      await memlet.delete(SERVER_CACHE_FILE)
+      await pluginStore.clearServerCache()
     },
 
     getLocalServers(

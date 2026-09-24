@@ -25,6 +25,7 @@
   "scripts": {
     "clean": "rimraf android/src/main/assets/edge-currency-plugins dist lib",
     "coverage": "nyc mocha && nyc report --reporter=cobertura --reporter=html",
+    "coverage:rows": "nyc --check-coverage --lines 90 --include 'src/common/utxobased/db/migrateBaselets.ts' --include 'src/common/utxobased/db/keyStore.ts' --include 'src/common/plugin/pluginStore.ts' mocha --exit",
     "fix": "eslint . --fix",
     "lib": "sucrase -q -t typescript,imports -d ./lib ./src",
     "lint": "eslint .",

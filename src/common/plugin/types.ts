@@ -11,7 +11,6 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import { Disklet } from 'disklet'
 import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
@@ -28,6 +27,7 @@ import { ScriptTemplates } from '../utxobased/info/scriptTemplates/types'
 import { UtxoPicker } from '../utxobased/keymanager/utxopicker'
 import { EngineEmitter } from './EngineEmitter'
 import { PluginState } from './PluginState'
+import { PluginStore } from './pluginStore'
 
 export type CurrencyFormat = ReturnType<typeof asCurrencyFormat>
 export const asCurrencyFormat = asValue('bip32', 'bip44', 'bip49', 'bip84')
@@ -368,7 +368,7 @@ export const asFeeInfo = (fallback?: FeeInfo): Cleaner<FeeInfo> =>
 export interface EngineConfig {
   walletInfo: EdgeWalletInfo
   pluginInfo: PluginInfo
-  pluginDisklet: Disklet
+  pluginStore: PluginStore
   currencyTools: EdgeCurrencyTools
   engineOptions: EdgeCurrencyEngineOptions
   emitter: EngineEmitter
