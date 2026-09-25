@@ -8,12 +8,13 @@ import {
   script as bitcoinScript,
   Transaction
 } from 'altcoin-js'
+import { witnessStackToScriptWitness } from 'altcoin-js/src/psbt/psbtutils'
 import { gt, lt } from 'biggystring'
 import * as bip32 from 'bip32'
 import * as bip39 from 'bip39'
 import bitcoinMessage from 'bitcoinjs-message'
 import { asValue } from 'cleaners'
-import { ECPairAPI, ECPairFactory } from 'ecpair'
+import { ECPairAPI, ECPairFactory, ECPairInterface } from 'ecpair'
 import { EdgeLog, EdgeMemo } from 'edge-core-js/types'
 
 import { indexAtProtected } from '../../../util/indexAtProtected'
@@ -967,6 +968,75 @@ function getBip137SegwitType(
   }
 }
 
+/**
+ * The BIP-322 message hash: a BIP-340 style tagged hash of the raw message
+ * bytes. Unlike the legacy format there is no coin-specific prefix.
+ */
+export function bip322MessageHash(message: string): Buffer {
+  const tagHash = crypto.sha256(Buffer.from('BIP0322-signed-message', 'utf8'))
+  return crypto.sha256(
+    Buffer.concat([tagHash, tagHash, Buffer.from(message, 'utf8')])
+  )
+}
+
+/**
+ * Signs `message` per BIP-322 and returns the witness stack that spends the
+ * virtual `to_spend` output locked to the key's address. Native SegWit
+ * (bip84) and nested SegWit (bip49) both spend through a P2WPKH witness; a
+ * nested address' redeem script is implied by the key, so verifiers rebuild
+ * the scriptSig from the witness. Returns `undefined` for legacy formats,
+ * which have no witness.
+ */
+function signBip322Witness(
+  message: string,
+  keyPair: ECPairInterface,
+  format: CurrencyFormat
+): Buffer[] | undefined {
+  if (format !== 'bip84' && format !== 'bip49') return undefined
+
+  const p2wpkh = payments.p2wpkh({ pubkey: keyPair.publicKey })
+  const scriptPubkey =
+    format === 'bip84'
+      ? p2wpkh.output
+      : payments.p2sh({ redeem: p2wpkh }).output
+  // BIP-143 signs a P2WPKH input against the P2PKH script of its key hash.
+  const scriptCode = payments.p2pkh({ hash: p2wpkh.hash }).output
+  if (scriptPubkey == null || scriptCode == null) {
+    throw new Error('Address could not sign message')
+  }
+
+  const toSpend = new Transaction()
+  toSpend.version = 0
+  toSpend.locktime = 0
+  toSpend.addInput(
+    Buffer.alloc(32),
+    0xffffffff,
+    0,
+    bitcoinScript.compile([opcodes.OP_0, bip322MessageHash(message)])
+  )
+  toSpend.addOutput(scriptPubkey, 0)
+
+  const toSign = new Transaction()
+  toSign.version = 0
+  toSign.locktime = 0
+  toSign.addInput(toSpend.getHash(), 0, 0)
+  toSign.addOutput(bitcoinScript.compile([opcodes.OP_RETURN]), 0)
+
+  const sighash = toSign.hashForWitnessV0(
+    0,
+    scriptCode,
+    0,
+    Transaction.SIGHASH_ALL
+  )
+  // Low-R grinding matches Bitcoin Core, so the output is byte-identical to
+  // the signatures its `signmessage` and the BIP-322 test vectors produce.
+  const signature = bitcoinScript.signature.encode(
+    keyPair.sign(sighash, true),
+    Transaction.SIGHASH_ALL
+  )
+  return [signature, keyPair.publicKey]
+}
+
 export function signMessageBase64(
   message: string,
   privateKey: string,
@@ -978,6 +1048,14 @@ export function signMessageBase64(
   const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'))
   if (keyPair.privateKey == null) {
     throw new Error('Address could not sign message')
+  }
+  if (signatureFormat === 'bip322') {
+    const witness = signBip322Witness(message, keyPair, format)
+    // Legacy P2PKH addresses have no witness to sign with. BIP-322 has them
+    // fall back to the legacy message format, which the Electrum encoding
+    // below produces.
+    if (witness != null)
+      return witnessStackToScriptWitness(witness).toString('base64')
   }
   // BIP137 encodes the address type in the signature's header byte. Native
   // SegWit (bip84 / P2WPKH) and nested SegWit (bip49 / P2SH-P2WPKH) each have
