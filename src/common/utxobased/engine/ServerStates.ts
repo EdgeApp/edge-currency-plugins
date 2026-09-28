@@ -248,6 +248,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       log.error(`${uri} disconnect failed: ${String(error)}`)
     })
     reconnect()
+    // Let the engine re-query anything this server answered:
+    engineEmitter.emit(EngineEvent.SERVER_DROPPED, uri)
   }
 
   const checkServerHealth = (uri: string): void => {

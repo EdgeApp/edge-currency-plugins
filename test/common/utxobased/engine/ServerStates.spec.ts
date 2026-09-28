@@ -7,7 +7,10 @@ import {
 } from 'edge-core-js/types'
 import WS from 'ws'
 
-import { EngineEmitter } from '../../../../src/common/plugin/EngineEmitter'
+import {
+  EngineEmitter,
+  EngineEvent
+} from '../../../../src/common/plugin/EngineEmitter'
 import { PluginState } from '../../../../src/common/plugin/PluginState'
 import { ServerConfig } from '../../../../src/common/plugin/types'
 import {
@@ -560,12 +563,13 @@ describe('ServerStates health probe', function () {
 
   const makeProbedServerStates = (
     probe: FakeProbe,
-    serverConfigs: ServerConfig[]
+    serverConfigs: ServerConfig[],
+    engineEmitter: EngineEmitter = new EngineEmitter()
   ): ServerStates => {
     const pluginInfo = makeFakePluginInfo()
     pluginInfo.engineInfo.serverConfigs = serverConfigs
     const states = makeServerStates({
-      engineEmitter: new EngineEmitter(),
+      engineEmitter,
       initOptions: {},
       io: { ...makeFakeIo(), fetchCors: probe.fetchCors },
       log: makeFakeLog(),
@@ -646,6 +650,25 @@ describe('ServerStates health probe', function () {
 
     expect(probe.calls).to.deep.equal([`${HTTP_TWIN}/api/`])
     expect(quarantined).to.deep.equal([WS_URI])
+  })
+
+  it('tells the engine which server it dropped', async () => {
+    const probe = makeFakeProbe('behind')
+    const engineEmitter = new EngineEmitter()
+    const dropped: string[] = []
+    engineEmitter.on(EngineEvent.SERVER_DROPPED, (uri: string) => {
+      dropped.push(uri)
+    })
+    serverStates = makeProbedServerStates(
+      probe,
+      [{ type: 'blockbook', uris: [HTTP_TWIN] }],
+      engineEmitter
+    )
+
+    await waitFor(() => dropped.length > 0)
+
+    expect(dropped).to.deep.equal([WS_URI])
+    expect(serverStates.getServerState(WS_URI)).to.equal(undefined)
   })
 
   it('does not reconnect to a quarantined server on refill', async () => {

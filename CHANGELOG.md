@@ -4,6 +4,7 @@
 
 - changed: Quarantine a server dropped for being out of sync for five minutes so the connection refill does not reconnect to it while its score is still high. The quarantine is shared by every wallet of the same currency and is listed in `dumpData`. While one is in force and a wallet is short of connections, the refill keeps retrying so the server is picked up again once the quarantine expires.
 - changed: Probe Edge Blockbook servers over REST for `inSync` once the socket connects and on every keepalive, and disconnect a server whose indexer reports it is behind its backend. Only Edge's own servers have an HTTP twin to probe; third-party sockets are never probed, and a probe that fails or times out is treated as unknown rather than unhealthy.
+- fixed: Re-query every subscribed address after a server is dropped for being out of sync. The surviving connection previously only received new pushes, so blocks the stale server had not indexed were never fetched and the balance stayed short.
 
 ## 3.14.0 (2026-10-01)
 

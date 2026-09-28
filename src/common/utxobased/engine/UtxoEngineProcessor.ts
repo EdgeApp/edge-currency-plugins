@@ -156,9 +156,25 @@ export function makeUtxoEngineProcessor(
    * 2. Address UTXO processing
    **/
   const processesPerAddress = 2
-  let processedCount = 0
+  // Which of the two processes have completed, per address (by scriptPubkey).
+  // Flags rather than a running count, so an address re-queued after a server
+  // drop is not counted twice and the ratio cannot pass 1 with work pending.
+  const progressByScriptPubkey = new Map<
+    string,
+    { txs: boolean; utxos: boolean }
+  >()
   let processedPercent = 0 // last sync ratio emitted
-  const updateProgressRatio = async (): Promise<void> => {
+  const updateProgressRatio = async (
+    scriptPubkey: string,
+    process: AddressProcess
+  ): Promise<void> => {
+    const progress = progressByScriptPubkey.get(scriptPubkey) ?? {
+      txs: false,
+      utxos: false
+    }
+    progress[process] = true
+    progressByScriptPubkey.set(scriptPubkey, progress)
+
     // Avoid re-sending sync ratios / sending ratios larger than 1
     if (processedPercent >= 1) return
 
@@ -167,8 +183,11 @@ export function makeUtxoEngineProcessor(
     const expectedProcessCount =
       Object.keys(taskCache.addressSubscribeCache).length * processesPerAddress
 
-    // Increment the processed count
-    processedCount = processedCount + 1
+    let processedCount = 0
+    for (const { txs, utxos } of progressByScriptPubkey.values()) {
+      if (txs) processedCount++
+      if (utxos) processedCount++
+    }
 
     // If we have no addresses, we should not have not yet began processing.
     if (expectedProcessCount === 0) throw new Error('No addresses to process')
@@ -265,6 +284,29 @@ export function makeUtxoEngineProcessor(
     }
   )
 
+  emitter.on(EngineEvent.SERVER_DROPPED, (uri: string): void => {
+    // Everything this server told us about may stop short of the chain tip.
+    // Re-open every address so the surviving connection re-queries it. Each
+    // query starts from the address's stored lastQueriedBlockHeight, which
+    // is the dropped server's height, so only the missing range is fetched.
+    let requeued = 0
+    for (const [address, cacheItem] of Object.entries(
+      taskCache.addressSubscribeCache
+    )) {
+      if (!cacheItem.processing) continue
+      cacheItem.processing = false
+      taskCache.addressForUtxosCache[address] = {
+        processing: false,
+        path: cacheItem.path
+      }
+      // The re-query has to complete again before the address counts as
+      // processed:
+      progressByScriptPubkey.delete(walletTools.addressToScriptPubkey(address))
+      requeued++
+    }
+    log(`${uri} dropped, re-queued ${requeued} addresses`)
+  })
+
   emitter.on(
     EngineEvent.NEW_ADDRESS_TRANSACTION,
     async (_uri: string, response: SubscribeAddressResponse): Promise<void> => {
@@ -360,7 +402,7 @@ export function makeUtxoEngineProcessor(
   return {
     processedPercent,
     async start(): Promise<void> {
-      processedCount = 0
+      progressByScriptPubkey.clear()
       processedPercent = 0
 
       await run()
@@ -642,7 +684,10 @@ interface CommonParams {
   emitter: EngineEmitter
   taskCache: TaskCache
   pendingTimeouts: Set<NodeJS.Timeout>
-  updateProgressRatio: () => void
+  updateProgressRatio: (
+    scriptPubkey: string,
+    process: AddressProcess
+  ) => Promise<void>
   updateSeenTxCheckpoint: () => void
   io: EdgeIo
   log: EdgeLog
@@ -674,6 +719,9 @@ interface AddressForTransactionsCache {
 interface AddressForUtxosCache {
   [key: string]: { processing: boolean; path: ChangePath }
 }
+/** The two per-address jobs that make up the sync progress ratio. */
+type AddressProcess = 'txs' | 'utxos'
+
 interface AddressSubscribeCache {
   [key: string]: { processing: boolean; path: ChangePath }
 }
@@ -1299,7 +1347,7 @@ async function* processAddressForTransactions(
     await common.dataLayer.saveAddress(addressData)
 
     // Update the progress now that the transactions for an address have processed
-    await common.updateProgressRatio()
+    await common.updateProgressRatio(scriptPubkey, 'txs')
 
     // Call setLookAhead to update the lookahead
     await setLookAhead(common)
@@ -1574,7 +1622,7 @@ const processDataLayerUtxos = async (
   }
 
   // Update the progress now that the UTXOs for an address have been processed
-  await common.updateProgressRatio()
+  await common.updateProgressRatio(scriptPubkey, 'utxos')
 
   await setLookAhead(common).catch(err => {
     common.log.error(err)
