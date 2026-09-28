@@ -13,6 +13,14 @@ import {
 } from './ServerScores'
 import { InfoPayload } from './types'
 
+/**
+ * How long a server dropped for being out of sync stays out of the pick
+ * order. Long enough for a lagging indexer to catch up, short enough that a
+ * recovered server is tried again without an app restart. After expiry the
+ * server is probed again on connect and dropped again if still behind.
+ */
+export const SERVER_QUARANTINE_MS = 5 * 60 * 1000
+
 // The filename for ServerInfoCache data (see ServerScores.ts)
 // Perhaps this should be in ServerScores.ts file, but that'll take some refactoring
 const SERVER_CACHE_FILE = 'serverCache.json'
@@ -45,6 +53,15 @@ export interface PluginState {
   load: () => Promise<PluginState>
   serverScoreDown: (uri: string) => void
   serverScoreUp: (uri: string, score: number) => void
+  /**
+   * Keeps a server out of getLocalServers for a while. Shared by every
+   * engine of this plugin, so one wallet's finding spares the others the
+   * same connect-probe-drop cycle. In memory only: it does not outlive the
+   * plugin, and a restart gives the server a fresh chance.
+   */
+  quarantineServer: (uri: string, durationMs?: number) => void
+  isServerQuarantined: (uri: string) => boolean
+  hasQuarantinedServers: () => boolean
   clearCache: () => Promise<void>
   getLocalServers: (
     numServersWanted: number,
@@ -96,6 +113,20 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
   let engines: UtxoEngineProcessor[] = []
   const memlet = makeMemlet(pluginDisklet)
+
+  // Server URI -> time (ms since epoch) at which the quarantine expires
+  const quarantineExpiry = new Map<string, number>()
+
+  const isServerQuarantined = (uri: string): boolean => {
+    const expiry = quarantineExpiry.get(uri)
+    if (expiry == null) return false
+    if (expiry > Date.now()) return true
+    quarantineExpiry.delete(uri)
+    return false
+  }
+
+  const hasQuarantinedServers = (): boolean =>
+    Array.from(quarantineExpiry.keys()).some(isServerQuarantined)
 
   let serverCache: ServerCache = {
     customServers: {},
@@ -182,6 +213,9 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
       return {
         'pluginState.servers_': sanitizeServerList(selectedServerList),
+        quarantinedServers: Array.from(quarantineExpiry.keys())
+          .filter(isServerQuarantined)
+          .map(sanitizeServerUri),
         infoServers,
         customServers: Object.keys(serverCache.customServers).map(
           sanitizeServerUri
@@ -213,6 +247,14 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       serverScores.serverScoreUp(getSelectedServerList(), uri, score)
     },
 
+    quarantineServer(uri: string, durationMs = SERVER_QUARANTINE_MS): void {
+      log.warn(`${pluginId} - quarantining ${uri} for ${durationMs}ms`)
+      quarantineExpiry.set(uri, Date.now() + durationMs)
+    },
+
+    isServerQuarantined,
+    hasQuarantinedServers,
+
     async clearCache(): Promise<void> {
       serverScores.clearServerScoreTimes()
       serverCacheDirty = true
@@ -223,11 +265,9 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
       numServersWanted: number,
       includePatterns: Array<string | RegExp> = []
     ): string[] {
-      return serverScores.getServers(
-        getSelectedServerList(),
-        numServersWanted,
-        includePatterns
-      )
+      return serverScores
+        .getServers(getSelectedServerList(), numServersWanted, includePatterns)
+        .filter(uri => !isServerQuarantined(uri))
     },
 
     async refreshServers(updatedCustomServers?: string[]): Promise<void> {
