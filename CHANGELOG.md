@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Probe Edge Blockbook servers over REST for `inSync` once the socket connects and on every keepalive, and disconnect a server whose indexer reports it is behind its backend. Only Edge's own servers have an HTTP twin to probe; third-party sockets are never probed, and a probe that fails or times out is treated as unknown rather than unhealthy.
+
 ## 3.14.0 (2026-10-01)
 
 - changed: Fetch Bitcoin fee rates from mempool.space's `/fees/precise` endpoint and keep the fractional rates it returns. The fee presets previously rounded to a whole sat/vB and were raised to a hardcoded floor of 2 sat/vB, which is 20x Bitcoin Core's current `minrelaytxfee` default of 0.1 sat/vB. `calcMinerFeePerByte` also rounded every preset to an integer, which turned a sub-1 rate into `0` and failed the send outright.
