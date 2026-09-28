@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Probe Edge Blockbook servers over REST for `inSync` once the socket connects and on every keepalive, and disconnect a server whose indexer reports it is behind its backend. Only Edge's own servers have an HTTP twin to probe; third-party sockets are never probed, and a probe that fails or times out is treated as unknown rather than unhealthy.
+
 ## 3.15.0 (2026-10-02)
 
 - added: `bip322` value for the `signMessage` `signatureFormat` option, producing BIP-322 simple signatures

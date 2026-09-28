@@ -1,3 +1,4 @@
+import { asBoolean, asObject } from 'cleaners'
 import { EdgeIo, EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 import { parse } from 'uri-js'
 
@@ -23,10 +24,23 @@ import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
 import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
 import { UtxoInitOptions } from './types'
 
+/**
+ * What the last REST health probe said about a connected server:
+ * - `pending`: the probe has not answered yet.
+ * - `healthy`: Blockbook reported `inSync: true`.
+ * - `unhealthy`: Blockbook reported `inSync: false`.
+ * - `unknown`: the server has no HTTP twin to probe, or the probe failed
+ *   (network error, non-200, unparseable body). Never treated as unhealthy.
+ */
+export type ServerHealth = 'pending' | 'healthy' | 'unhealthy' | 'unknown'
+
 export interface ServerState {
   blockbook: Blockbook
   blockSubscriptionStatus: 'unsubscribed' | 'subscribing' | 'subscribed'
   blockHeight: number
+  health: ServerHealth
+  /** When the last health probe was sent, ms since epoch. 0 if never. */
+  lastProbeTime: number
   txids: Set<string>
   addresses: Set<string>
 }
@@ -66,6 +80,7 @@ export interface ServerStates {
   ) => void
   watchBlocks: (uri: string) => void
   getBlockHeight: (uri: string) => number
+  getServerHealth: (uri: string) => ServerHealth | undefined
 
   //
   // Task Methods:
@@ -115,6 +130,32 @@ export const NOWNODES_BROADCAST_DELAY_MS = 2000
  */
 export const BROADCAST_ATTEMPT_TIMEOUT_MS = 30000
 
+/**
+ * Upper bound on a REST health probe. The probe runs off the socket keepalive
+ * and must never hold the connection's timer for long.
+ */
+export const HEALTH_PROBE_TIMEOUT_MS = 10000
+
+/**
+ * Probes closer together than this are skipped. The connect path and the
+ * first keepalive can land within milliseconds of each other, and one answer
+ * serves both.
+ */
+export const HEALTH_PROBE_MIN_INTERVAL_MS = 10000
+
+/**
+ * The part of Blockbook's REST `GET /api/` response the health probe reads.
+ * The WebSocket `getInfo` message does not carry `inSync`, so the probe has
+ * to go over HTTP. Blockbook itself masks the first five seconds of every
+ * resync, so a `false` here means the indexer has been behind its backend
+ * for longer than that, or the backend RPC is failing.
+ */
+const asBlockbookHealth = asObject({
+  blockbook: asObject({
+    inSync: asBoolean
+  })
+})
+
 const withTimeout = async <T>(
   promise: Promise<T>,
   ms: number,
@@ -148,6 +189,92 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   log('Making server states')
 
   const serverStatesCache: ServerStatesCache = {}
+
+  // Edge's own Blockbook servers expose both a socket and a REST endpoint on
+  // the same host. Index the REST URIs by host so a socket URI can find its
+  // twin for the health probe. Third-party sockets (Trezor, NOWNodes) have no
+  // twin here and are never probed.
+  const httpUriByHost: { [host: string]: string } = {}
+  for (const serverConfig of serverConfigs) {
+    if (serverConfig.type !== 'blockbook') continue
+    for (const httpUri of serverConfig.uris) {
+      const { host } = parse(httpUri)
+      if (host != null) httpUriByHost[host] = httpUri
+    }
+  }
+
+  const findHttpTwin = (uri: string): string | undefined => {
+    const { host } = parse(uri)
+    return host == null ? undefined : httpUriByHost[host]
+  }
+
+  const probeServerHealth = async (uri: string): Promise<ServerHealth> => {
+    const httpUri = findHttpTwin(uri)
+    if (httpUri == null) return 'unknown'
+    const probe = async (): Promise<ServerHealth> => {
+      const response = await io.fetchCors(`${httpUri}/api/`, { method: 'GET' })
+      if (!response.ok) {
+        log.warn(`${uri} health probe: HTTP ${response.status}`)
+        return 'unknown'
+      }
+      const { blockbook } = asBlockbookHealth(await response.json())
+      return blockbook.inSync ? 'healthy' : 'unhealthy'
+    }
+    try {
+      // The bound covers the body too; a server can send its headers and
+      // then stall:
+      return await withTimeout(
+        probe(),
+        HEALTH_PROBE_TIMEOUT_MS,
+        `Timeout for health probe to ${httpUri}`
+      )
+    } catch (error: unknown) {
+      log.warn(`${uri} health probe failed: ${String(error)}`)
+      return 'unknown'
+    }
+  }
+
+  /**
+   * Disconnects a server on purpose. On platforms that deliver a close event
+   * for a locally closed socket (the app's WebView does) the socket's close
+   * path also runs, scoring the server down and throwing its in-flight
+   * requests. The refill is scheduled here regardless, so replacing the
+   * connection never depends on that event arriving.
+   */
+  const dropServer = (uri: string, reason: string): void => {
+    const serverState = serverStatesCache[uri]
+    if (serverState == null) return
+    log.warn(`${uri} dropped: ${reason}`)
+    removeItem(serverStatesCache, uri)
+    serverState.blockbook.disconnect().catch((error: unknown) => {
+      log.error(`${uri} disconnect failed: ${String(error)}`)
+    })
+    reconnect()
+  }
+
+  const checkServerHealth = (uri: string): void => {
+    const serverState = serverStatesCache[uri]
+    if (serverState == null) return
+    const now = Date.now()
+    if (now - serverState.lastProbeTime < HEALTH_PROBE_MIN_INTERVAL_MS) return
+    serverState.lastProbeTime = now
+    probeServerHealth(uri)
+      .then(health => {
+        const serverState = serverStatesCache[uri]
+        // The connection may have gone away while the probe was in flight:
+        if (serverState == null) return
+        if (serverState.health !== health) {
+          log(`${uri} health: ${serverState.health} -> ${health}`)
+        }
+        serverState.health = health
+        if (health === 'unhealthy') {
+          dropServer(uri, 'Blockbook reports inSync: false')
+        }
+      })
+      .catch((error: unknown) => {
+        log.error(`${uri} health check failed: ${String(error)}`)
+      })
+  }
   let isEngineOn: boolean = true
   let serverList: string[] = []
   let reconnectCounter = 0
@@ -181,6 +308,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       const queryTime = Date.now() - queryDate
       log(`${uri} returned healthCheck in ${queryTime}ms`)
       pluginState.serverScoreUp(uri, queryTime)
+      // Periodic probe, once per keepalive:
+      checkServerHealth(uri)
     }
   )
   engineEmitter.on(
@@ -207,18 +336,27 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     uri: string
   ) => AsyncGenerator<WsTask<unknown> | boolean, boolean>
 
-  const makeServerStatesCacheEntry = (blockbook: Blockbook): ServerState => ({
+  const makeServerStatesCacheEntry = (
+    uri: string,
+    blockbook: Blockbook
+  ): ServerState => ({
     blockbook,
     blockSubscriptionStatus: 'unsubscribed',
     txids: new Set(),
     addresses: new Set(),
-    blockHeight: 0
+    blockHeight: 0,
+    health: findHttpTwin(uri) == null ? 'unknown' : 'pending',
+    lastProbeTime: 0
   })
 
   const reconnect = (): void => {
     if (isEngineOn) {
       log(`attempting server reconnect number ${reconnectCounter}`)
       const reconnectionDelay = Math.max(5, reconnectCounter++) * 1000
+      // One pending reconnect at a time. A drop and the close event it
+      // causes both land here, and a timer that was overwritten rather than
+      // cleared would outlive stop() and switch the engine back on.
+      clearTimeout(reconnectTimer)
       reconnectTimer = setTimeout(() => {
         clearTimeout(reconnectTimer)
         instance.refillServers()
@@ -336,7 +474,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       }
 
       // Make new ServerStates instance
-      serverStatesCache[uri] = makeServerStatesCacheEntry(blockbook)
+      serverStatesCache[uri] = makeServerStatesCacheEntry(uri, blockbook)
 
       // Initialize blockbook connection for server
       blockbook
@@ -356,6 +494,11 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           // Increment server score using response time
           const responseTime = Date.now() - startTime
           pluginState.serverScoreUp(uri, responseTime)
+
+          // On-connect probe. The keepalive may or may not have fired by
+          // now, depending on how fast the socket opened, so this is the
+          // one place that guarantees a probe before the server does work:
+          checkServerHealth(uri)
         })
         .catch(e => {
           log.error(`${JSON.stringify(e.message)}`)
@@ -579,6 +722,10 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
     getBlockHeight(uri: string): number {
       return serverStatesCache[uri].blockHeight
+    },
+
+    getServerHealth(uri: string): ServerHealth | undefined {
+      return serverStatesCache[uri]?.health
     },
 
     getServerList(): string[] {

@@ -518,3 +518,170 @@ describe('ServerStates.broadcastTx', function () {
     })
   })
 })
+
+describe('ServerStates health probe', function () {
+  this.timeout(15000)
+
+  const HTTP_TWIN = `http://localhost:${WS_PORT}`
+  let websocketServer: WS.Server
+  let serverStates: ServerStates
+
+  interface FakeProbe {
+    calls: string[]
+    fetchCors: (uri: string) => Promise<EdgeFetchResponse>
+  }
+
+  const makeFakeProbe = (
+    reply: 'in-sync' | 'behind' | 'error' | 'garbage'
+  ): FakeProbe => {
+    const calls: string[] = []
+    return {
+      calls,
+      async fetchCors(uri: string): Promise<EdgeFetchResponse> {
+        calls.push(uri)
+        if (reply === 'error') throw new Error('connection refused')
+        return ({
+          ok: true,
+          status: 200,
+          json: async () =>
+            reply === 'garbage'
+              ? { unexpected: true }
+              : { blockbook: { inSync: reply === 'in-sync' } }
+        } as unknown) as EdgeFetchResponse
+      }
+    }
+  }
+
+  const makeProbedServerStates = (
+    probe: FakeProbe,
+    serverConfigs: ServerConfig[]
+  ): ServerStates => {
+    const pluginInfo = makeFakePluginInfo()
+    pluginInfo.engineInfo.serverConfigs = serverConfigs
+    const states = makeServerStates({
+      engineEmitter: new EngineEmitter(),
+      initOptions: {},
+      io: { ...makeFakeIo(), fetchCors: probe.fetchCors },
+      log: makeFakeLog(),
+      pluginInfo,
+      pluginState: fakePluginState,
+      walletInfo: fakeWalletInfo
+    })
+    states.setPickNextTaskCB(async function* () {
+      return false
+    })
+    states.setServerList([WS_URI])
+    states.refillServers()
+    return states
+  }
+
+  beforeEach(async () => {
+    websocketServer = new WS.Server({ port: WS_PORT })
+    websocketServer.on('connection', (ws: WebSocket) => {
+      ws.onmessage = event => {
+        const data = JSON.parse(event.data)
+        if (data.method === 'ping') {
+          ws.send(JSON.stringify({ id: data.id, data: {} }))
+        }
+        if (data.method === 'getInfo') {
+          ws.send(
+            JSON.stringify({
+              id: data.id,
+              data: {
+                name: 'Bitcoin',
+                shortcut: 'BTC',
+                decimals: 8,
+                version: '0.0.0',
+                bestHeight: 1,
+                bestHash: '00',
+                block0Hash: '00',
+                testnet: false
+              }
+            })
+          )
+        }
+      }
+    })
+    await new Promise<void>(resolve =>
+      websocketServer.on('listening', () => {
+        resolve()
+      })
+    )
+  })
+
+  afterEach(async () => {
+    serverStates.stop()
+    await new Promise<void>(resolve => websocketServer.close(() => resolve()))
+  })
+
+  it('probes the HTTP twin on connect and keeps an in-sync server', async () => {
+    const probe = makeFakeProbe('in-sync')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(() => serverStates.getServerHealth(WS_URI) === 'healthy')
+
+    expect(probe.calls).to.deep.equal([`${HTTP_TWIN}/api/`])
+    expect(serverStates.getServerState(WS_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+  })
+
+  it('drops a server whose twin reports inSync false', async () => {
+    const probe = makeFakeProbe('behind')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(() => probe.calls.length > 0)
+    await waitFor(() => serverStates.getServerState(WS_URI) == null)
+
+    expect(probe.calls).to.deep.equal([`${HTTP_TWIN}/api/`])
+  })
+
+  it('treats a failed probe as unknown and keeps the server', async () => {
+    const probe = makeFakeProbe('error')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(() => serverStates.getServerHealth(WS_URI) === 'unknown')
+
+    expect(probe.calls).to.have.lengthOf(1)
+    expect(serverStates.getServerState(WS_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+  })
+
+  it('treats an unparseable probe body as unknown', async () => {
+    const probe = makeFakeProbe('garbage')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(() => probe.calls.length > 0)
+    await waitFor(() => serverStates.getServerHealth(WS_URI) === 'unknown')
+
+    expect(serverStates.getServerState(WS_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+  })
+
+  it('never probes a server without an HTTP twin', async () => {
+    const probe = makeFakeProbe('behind')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: ['https://elsewhere.test'] },
+      { type: 'blockbook-nownode', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(
+      () => serverStates.getServerState(WS_URI)?.blockbook.isConnected === true
+    )
+    // Give a probe every chance to fire before asserting it did not:
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    expect(serverStates.getServerHealth(WS_URI)).to.equal('unknown')
+    expect(probe.calls).to.have.lengthOf(0)
+  })
+})
