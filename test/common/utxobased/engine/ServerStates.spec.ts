@@ -68,10 +68,16 @@ const makeFakeHttp = (behaviors: { [uri: string]: HttpBehavior }): FakeHttp => {
   }
 }
 
+const quarantined: string[] = []
 const fakePluginState = ({
   serverScoreUp: () => {},
   serverScoreDown: () => {},
-  getLocalServers: () => []
+  getLocalServers: () => [],
+  quarantineServer: (uri: string) => {
+    quarantined.push(uri)
+  },
+  isServerQuarantined: (uri: string) => quarantined.includes(uri),
+  hasQuarantinedServers: () => quarantined.length > 0
 } as unknown) as PluginState
 
 const fakeWalletInfo = ({
@@ -576,6 +582,7 @@ describe('ServerStates health probe', function () {
   }
 
   beforeEach(async () => {
+    quarantined.length = 0
     websocketServer = new WS.Server({ port: WS_PORT })
     websocketServer.on('connection', (ws: WebSocket) => {
       ws.onmessage = event => {
@@ -638,6 +645,22 @@ describe('ServerStates health probe', function () {
     await waitFor(() => serverStates.getServerState(WS_URI) == null)
 
     expect(probe.calls).to.deep.equal([`${HTTP_TWIN}/api/`])
+    expect(quarantined).to.deep.equal([WS_URI])
+  })
+
+  it('does not reconnect to a quarantined server on refill', async () => {
+    const probe = makeFakeProbe('behind')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: [HTTP_TWIN] }
+    ])
+    await waitFor(() => serverStates.getServerState(WS_URI) == null)
+
+    serverStates.setServerList([WS_URI])
+    serverStates.refillServers()
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    expect(serverStates.getServerState(WS_URI)).to.equal(undefined)
+    expect(probe.calls).to.have.lengthOf(1)
   })
 
   it('treats a failed probe as unknown and keeps the server', async () => {

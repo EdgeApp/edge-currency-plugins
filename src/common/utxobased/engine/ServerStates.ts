@@ -245,6 +245,9 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     const serverState = serverStatesCache[uri]
     if (serverState == null) return
     log.warn(`${uri} dropped: ${reason}`)
+    // Keep the refill from picking it straight back; its score is still
+    // near the top since it answered every ping:
+    pluginState.quarantineServer(uri)
     removeItem(serverStatesCache, uri)
     serverState.blockbook.disconnect().catch((error: unknown) => {
       log.error(`${uri} disconnect failed: ${String(error)}`)
@@ -382,6 +385,9 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       // Skip reconnecting to an existing connection
       if (serverStatesCache[uri] != null) continue
 
+      // The list may predate a quarantine:
+      if (pluginState.isServerQuarantined(uri)) continue
+
       // Validate the URI of server to make sure it is valid
       const parsed = parse(uri)
       if (
@@ -392,7 +398,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         continue
       }
 
-      // Ranomize the URI picking
+      // Randomize the URI picking
       chanceToBePicked -= chanceToBePicked > 0.5 ? 0.25 : 0
       if (Math.random() > chanceToBePicked) {
         serverList.push(uri)
@@ -503,6 +509,19 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         .catch(e => {
           log.error(`${JSON.stringify(e.message)}`)
         })
+    }
+
+    // A quarantined server is withheld from the candidate list, so a wallet
+    // left short of connections would otherwise stay that way until an
+    // unrelated close event. Keep trying while a quarantine is in force; the
+    // server comes back into the list when it expires. The reconnect delay
+    // grows with each empty pass, so this does not spin.
+    if (
+      Object.keys(serverStatesCache).length < MAX_CONNECTIONS &&
+      serverList.length === 0 &&
+      pluginState.hasQuarantinedServers()
+    ) {
+      reconnect()
     }
   }
 
