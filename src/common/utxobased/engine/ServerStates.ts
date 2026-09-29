@@ -257,6 +257,44 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     engineEmitter.emit(EngineEvent.SERVER_DROPPED, uri)
   }
 
+  /**
+   * Whether some other connection could carry the wallet if `uri` went
+   * away: open, and not known to be out of sync. A peer whose probe has not
+   * answered yet does not count; it may be about to fail the same way.
+   */
+  const hasUsablePeer = (uri: string): boolean =>
+    Object.entries(serverStatesCache).some(
+      ([otherUri, state]) =>
+        otherUri !== uri &&
+        state.blockbook.isConnected &&
+        (state.health === 'healthy' || state.health === 'unknown')
+    )
+
+  /**
+   * Drops every server known to be out of sync, as long as the wallet keeps
+   * at least one usable connection. A stale server that is the only leg is
+   * kept: behind the chain beats no data at all. It is re-evaluated on every
+   * probe result, so it goes as soon as a usable peer shows up.
+   *
+   * Only one stale leg is kept. Two stale servers would otherwise keep each
+   * other, filling every connection slot so the refill never reaches a
+   * server that could replace them.
+   */
+  const dropUnhealthyServers = (): void => {
+    let isStaleLegKept = false
+    for (const [uri, state] of Object.entries(serverStatesCache)) {
+      if (state.health !== 'unhealthy') continue
+      if (!hasUsablePeer(uri) && !isStaleLegKept) {
+        log.warn(
+          `${uri} reports inSync: false but is the only usable connection`
+        )
+        isStaleLegKept = true
+        continue
+      }
+      dropServer(uri, 'Blockbook reports inSync: false')
+    }
+  }
+
   const checkServerHealth = (uri: string): void => {
     const serverState = serverStatesCache[uri]
     if (serverState == null) return
@@ -272,9 +310,9 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           log(`${uri} health: ${serverState.health} -> ${health}`)
         }
         serverState.health = health
-        if (health === 'unhealthy') {
-          dropServer(uri, 'Blockbook reports inSync: false')
-        }
+        // This result may make this server droppable, or make it the peer
+        // that lets a previously kept stale server go:
+        dropUnhealthyServers()
       })
       .catch((error: unknown) => {
         log.error(`${uri} health check failed: ${String(error)}`)
@@ -488,6 +526,12 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       blockbook
         .connect()
         .then(async () => {
+          // This connection is now open and counts as a usable peer, which
+          // may be what a stale server kept for lack of one was waiting on.
+          // Done here rather than on the socket's open event, which fires
+          // before the connect promise marks the blockbook connected:
+          dropUnhealthyServers()
+
           // Fetch block height from blockbook server
           const startTime = Date.now()
           const { bestHeight: blockHeight } = await blockbook.fetchInfo()
