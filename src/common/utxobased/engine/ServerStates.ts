@@ -360,7 +360,11 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     EngineEvent.BLOCK_HEIGHT_CHANGED,
     (uri: string, blockHeight: number) => {
       log(`${uri} block height changed to ${blockHeight}`)
-      serverStatesCache[uri].blockHeight = blockHeight
+      const serverState = serverStatesCache[uri]
+      // The connection may already be gone, as the sibling handler above
+      // allows for:
+      if (serverState == null) return
+      serverState.blockHeight = blockHeight
     }
   )
 
