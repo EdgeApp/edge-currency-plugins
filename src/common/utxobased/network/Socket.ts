@@ -72,6 +72,10 @@ interface SocketConfig {
   taskGeneratorFn: TaskGeneratorFn
   timeout?: number
   walletId: string
+  /** Keepalive interval override, for tests. Defaults to KEEP_ALIVE_MS. */
+  keepAliveMs?: number
+  /** Timer wake-up interval override, for tests. Defaults to WAKE_UP_MS. */
+  wakeUpMs?: number
 }
 
 interface WsRequest<T> {
@@ -134,6 +138,8 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   let connected = false
   let cancelConnect = false
   const timeout: number = 1000 * (config.timeout ?? 30)
+  const keepAliveMs = config.keepAliveMs ?? KEEP_ALIVE_MS
+  const wakeUpMs = config.wakeUpMs ?? WAKE_UP_MS
   let trackedError: unknown
   let timer: NodeJS.Timeout
 
@@ -264,7 +270,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
   const onTimer = (): void => {
     log(`socket timer with server ${uri} expired, check if healthCheck needed`)
     const now = Date.now() - TIMER_SLACK
-    if (lastKeepAlive + KEEP_ALIVE_MS < now) {
+    if (lastKeepAlive + keepAliveMs < now) {
       log(`submitting healthCheck to server ${uri}`)
       lastKeepAlive = now
       config
@@ -291,7 +297,7 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
   const setupTimer = (): void => {
     log(`setupTimer with server ${uri}`)
-    let nextWakeUp = lastWakeUp + WAKE_UP_MS
+    let nextWakeUp = lastWakeUp + wakeUpMs
     for (const request of Object.values(pendingRequests)) {
       const to = request.startTime + timeout
       if (to < nextWakeUp) nextWakeUp = to

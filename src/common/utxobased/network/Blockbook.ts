@@ -105,6 +105,9 @@ interface BlockbookConfig {
   ping?: () => Promise<void>
   socketEmitter: SocketEmitter
   walletId: string
+  /** Socket timing overrides, for tests. */
+  keepAliveMs?: number
+  wakeUpMs?: number
 }
 
 export function makeBlockbook(config: BlockbookConfig): Blockbook {
@@ -277,7 +280,9 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
     taskGeneratorFn,
     log,
     emitter: socketEmitter,
-    walletId
+    walletId,
+    keepAliveMs: config.keepAliveMs,
+    wakeUpMs: config.wakeUpMs
   })
 
   async function ping(): Promise<void> {
