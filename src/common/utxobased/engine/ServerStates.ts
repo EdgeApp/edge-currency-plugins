@@ -58,6 +58,14 @@ interface ServerStateConfig {
    * seconds the socket layer uses for a request. Exposed for tests.
    */
   broadcastTimeoutMs?: number
+  /**
+   * Timing overrides so tests can drive the keepalive probe cycle in
+   * milliseconds rather than minutes. Production uses the defaults.
+   */
+  healthProbeMinIntervalMs?: number
+  healthProbeTimeoutMs?: number
+  keepAliveMs?: number
+  wakeUpMs?: number
 }
 
 export interface ServerStates {
@@ -186,6 +194,12 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   } = config
   const { serverConfigs = [] } = pluginInfo.engineInfo
   const { broadcastTimeoutMs = BROADCAST_ATTEMPT_TIMEOUT_MS } = config
+  const {
+    healthProbeMinIntervalMs = HEALTH_PROBE_MIN_INTERVAL_MS,
+    healthProbeTimeoutMs = HEALTH_PROBE_TIMEOUT_MS,
+    keepAliveMs,
+    wakeUpMs
+  } = config
   log('Making server states')
 
   const serverStatesCache: ServerStatesCache = {}
@@ -225,7 +239,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       // then stall:
       return await withTimeout(
         probe(),
-        HEALTH_PROBE_TIMEOUT_MS,
+        healthProbeTimeoutMs,
         `Timeout for health probe to ${httpUri}`
       )
     } catch (error: unknown) {
@@ -299,7 +313,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     const serverState = serverStatesCache[uri]
     if (serverState == null) return
     const now = Date.now()
-    if (now - serverState.lastProbeTime < HEALTH_PROBE_MIN_INTERVAL_MS) return
+    if (now - serverState.lastProbeTime < healthProbeMinIntervalMs) return
     serverState.lastProbeTime = now
     probeServerHealth(uri)
       .then(health => {
@@ -519,7 +533,9 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           log,
           taskGeneratorFn,
           socketEmitter,
-          walletId: walletInfo.id
+          walletId: walletInfo.id,
+          keepAliveMs,
+          wakeUpMs
         })
       }
 

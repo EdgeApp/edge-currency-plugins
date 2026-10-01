@@ -843,3 +843,243 @@ describe('ServerStates health probe', function () {
     expect(probe.calls).to.have.lengthOf(0)
   })
 })
+
+describe('ServerStates health probe over time', function () {
+  this.timeout(15000)
+
+  // Separate ports from the block above so the two suites never collide.
+  const A_PORT = 8558
+  const B_PORT = 8559
+  const A_URI = `ws://localhost:${A_PORT}`
+  const B_URI = `ws://127.0.0.1:${B_PORT}`
+  const A_TWIN = `http://localhost:${A_PORT}`
+  const B_TWIN = `http://127.0.0.1:${B_PORT}`
+
+  type ProbeReply = 'in-sync' | 'behind' | 'stalled-body'
+
+  interface MutableProbe {
+    calls: string[]
+    replies: { [twin: string]: ProbeReply }
+    fetchCors: (uri: string) => Promise<EdgeFetchResponse>
+  }
+
+  const makeMutableProbe = (replies: {
+    [twin: string]: ProbeReply
+  }): MutableProbe => {
+    const calls: string[] = []
+    return {
+      calls,
+      replies,
+      async fetchCors(uri: string): Promise<EdgeFetchResponse> {
+        calls.push(uri)
+        const twin = Object.keys(replies).find(key => uri.startsWith(key))
+        const reply = twin != null ? replies[twin] : 'in-sync'
+        return ({
+          ok: true,
+          status: 200,
+          json: async () =>
+            reply === 'stalled-body'
+              ? await new Promise(() => {})
+              : { blockbook: { inSync: reply === 'in-sync' } }
+        } as unknown) as EdgeFetchResponse
+      }
+    }
+  }
+
+  const probesTo = (probe: MutableProbe, twin: string): number =>
+    probe.calls.filter(uri => uri.startsWith(twin)).length
+
+  const makeBlockbookServer = async (port: number): Promise<WS.Server> => {
+    const server = new WS.Server({ port })
+    server.on('connection', (ws: WebSocket) => {
+      ws.onmessage = event => {
+        const data = JSON.parse(event.data)
+        if (data.method === 'ping') {
+          ws.send(JSON.stringify({ id: data.id, data: {} }))
+        }
+        if (data.method === 'getInfo') {
+          ws.send(
+            JSON.stringify({
+              id: data.id,
+              data: {
+                name: 'Bitcoin',
+                shortcut: 'BTC',
+                decimals: 8,
+                version: '0.0.0',
+                bestHeight: 1,
+                bestHash: '00',
+                block0Hash: '00',
+                testnet: false
+              }
+            })
+          )
+        }
+      }
+    })
+    await new Promise<void>(resolve =>
+      server.on('listening', () => {
+        resolve()
+      })
+    )
+    return server
+  }
+
+  const makeTimedServerStates = (
+    probe: MutableProbe,
+    options: { healthProbeMinIntervalMs?: number } = {}
+  ): ServerStates => {
+    const pluginInfo = makeFakePluginInfo()
+    pluginInfo.engineInfo.serverConfigs = [
+      { type: 'blockbook', uris: [A_TWIN, B_TWIN] }
+    ]
+    const states = makeServerStates({
+      engineEmitter: new EngineEmitter(),
+      initOptions: {},
+      io: { ...makeFakeIo(), fetchCors: probe.fetchCors },
+      log: makeFakeLog(),
+      pluginInfo,
+      pluginState: fakePluginState,
+      walletInfo: fakeWalletInfo,
+      // A keepalive every 200ms, checked every 100ms, so the probe cycle
+      // runs several times within a test:
+      keepAliveMs: 200,
+      wakeUpMs: 100,
+      healthProbeTimeoutMs: 300,
+      healthProbeMinIntervalMs: options.healthProbeMinIntervalMs ?? 0
+    })
+    states.setPickNextTaskCB(async function* () {
+      return false
+    })
+    states.setServerList([A_URI, B_URI])
+    states.refillServers()
+    return states
+  }
+
+  let serverA: WS.Server
+  let serverB: WS.Server
+  let serverStates: ServerStates
+
+  beforeEach(async () => {
+    quarantined.length = 0
+    serverA = await makeBlockbookServer(A_PORT)
+    serverB = await makeBlockbookServer(B_PORT)
+  })
+
+  afterEach(async () => {
+    serverStates.stop()
+    await new Promise<void>(resolve => serverA.close(() => resolve()))
+    await new Promise<void>(resolve => serverB.close(() => resolve()))
+  })
+
+  it('re-probes on every keepalive', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe)
+
+    await waitFor(() => probesTo(probe, A_TWIN) >= 3)
+
+    expect(serverStates.getServerHealth(A_URI)).to.equal('healthy')
+    expect(serverStates.getServerHealth(B_URI)).to.equal('healthy')
+  })
+
+  it('times out a probe whose body never arrives', async () => {
+    const probe = makeMutableProbe({ [A_TWIN]: 'stalled-body' })
+    serverStates = makeTimedServerStates(probe)
+
+    await waitFor(() => serverStates.getServerHealth(A_URI) === 'unknown')
+
+    // The stalled probe must not block the next one:
+    probe.replies[A_TWIN] = 'in-sync'
+    await waitFor(() => serverStates.getServerHealth(A_URI) === 'healthy')
+  })
+
+  it('drops a server that falls out of sync after connecting', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe)
+    await waitFor(
+      () =>
+        serverStates.getServerHealth(A_URI) === 'healthy' &&
+        serverStates.getServerHealth(B_URI) === 'healthy'
+    )
+
+    probe.replies[A_TWIN] = 'behind'
+    await waitFor(() => serverStates.getServerState(A_URI) == null)
+
+    expect(quarantined).to.deep.equal([A_URI])
+    expect(serverStates.getServerHealth(B_URI)).to.equal('healthy')
+    expect(serverStates.getServerState(B_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+  })
+
+  it('keeps the last leg when every server falls out of sync', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe)
+    await waitFor(
+      () =>
+        serverStates.getServerHealth(A_URI) === 'healthy' &&
+        serverStates.getServerHealth(B_URI) === 'healthy'
+    )
+
+    // Probes answer one at a time, so whichever reports first is dropped
+    // while the other still looks usable. The second then has no peer left
+    // and must be kept, out of sync or not.
+    probe.replies[A_TWIN] = 'behind'
+    probe.replies[B_TWIN] = 'behind'
+    await waitFor(() => quarantined.length === 1)
+    const survivor = quarantined[0] === A_URI ? B_URI : A_URI
+    await waitFor(() => serverStates.getServerHealth(survivor) === 'unhealthy')
+    // Give an errant second drop time to happen before asserting it did not:
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    expect(serverStates.getServerState(survivor)).to.not.equal(undefined)
+    expect(quarantined).to.have.lengthOf(1)
+  })
+
+  it('keeps only one stale leg when both servers connect out of sync', async () => {
+    // Both probes are pending when the first answers, so neither server
+    // sees a usable peer. Keeping both would fill every slot with stale
+    // servers; one must go so the refill can look for a replacement.
+    const probe = makeMutableProbe({ [A_TWIN]: 'behind', [B_TWIN]: 'behind' })
+    serverStates = makeTimedServerStates(probe)
+
+    await waitFor(() => quarantined.length === 1)
+    const survivor = quarantined[0] === A_URI ? B_URI : A_URI
+    await waitFor(() => serverStates.getServerHealth(survivor) === 'unhealthy')
+    // Give an errant second drop time to happen before asserting it did not:
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    expect(serverStates.getServerState(survivor)).to.not.equal(undefined)
+    expect(quarantined).to.have.lengthOf(1)
+  })
+
+  it('skips probes closer together than the minimum interval', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe, {
+      healthProbeMinIntervalMs: 60000
+    })
+    await waitFor(() => serverStates.getServerHealth(A_URI) === 'healthy')
+    // Several keepalives go by:
+    await new Promise(resolve => setTimeout(resolve, 700))
+
+    expect(probesTo(probe, A_TWIN)).to.equal(1)
+  })
+
+  it('takes a dropped server back once it is in sync and out of quarantine', async () => {
+    const probe = makeMutableProbe({ [A_TWIN]: 'behind' })
+    serverStates = makeTimedServerStates(probe)
+    await waitFor(() => serverStates.getServerState(A_URI) == null)
+    expect(quarantined).to.deep.equal([A_URI])
+
+    // The server recovers and its quarantine expires:
+    probe.replies[A_TWIN] = 'in-sync'
+    quarantined.length = 0
+    serverStates.setServerList([A_URI])
+    serverStates.refillServers()
+
+    await waitFor(() => serverStates.getServerHealth(A_URI) === 'healthy')
+    expect(serverStates.getServerState(A_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+    expect(quarantined).to.deep.equal([])
+  })
+})
