@@ -39,6 +39,22 @@ export function makeCurrencyTools(
   const wasCurrencyPrivateKey = uncleaner(asCurrencyPrivateKey)
   const asCurrencySafeWalletInfo = asSafeWalletInfo(pluginInfo)
 
+  const getDisplayPublicKeys = (
+    publicWalletInfo: EdgeWalletInfo
+  ): { [key: string]: string } => {
+    const {
+      keys: {
+        publicKey: { publicKeys }
+      }
+    } = asCurrencySafeWalletInfo(publicWalletInfo)
+
+    return Object.fromEntries(
+      Object.entries(publicKeys).filter(
+        (entry): entry is [string, string] => entry[1] != null
+      )
+    )
+  }
+
   const fns: EdgeCurrencyTools = {
     async checkPublicKey(publicKeyData: JsonObject): Promise<boolean> {
       const publicKey = asMaybe(asPublicKey)(publicKeyData)
@@ -105,6 +121,14 @@ export function makeCurrencyTools(
       const safeWalletInfo = asCurrencySafeWalletInfo(unsafeWalletInfo)
       return safeWalletInfo.keys.publicKey
     },
+
+    async getDisplayPublicKey(
+      publicWalletInfo: EdgeWalletInfo
+    ): Promise<string> {
+      return Object.values(getDisplayPublicKeys(publicWalletInfo)).join('\n')
+    },
+
+    getDisplayPublicKeys,
 
     async parseUri(uri: string): Promise<ExtendedParseUri> {
       // CashStamps and similar paper-wallet tools prefix a WIF private key with

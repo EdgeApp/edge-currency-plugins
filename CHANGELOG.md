@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Expose each UTXO extended public key through `getDisplayPublicKeys`.
+
 ## 3.15.0 (2026-10-02)
 
 - added: `bip322` value for the `signMessage` `signatureFormat` option, producing BIP-322 simple signatures
