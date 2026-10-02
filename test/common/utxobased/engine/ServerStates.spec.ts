@@ -11,7 +11,10 @@ import {
   EngineEmitter,
   EngineEvent
 } from '../../../../src/common/plugin/EngineEmitter'
-import { PluginState } from '../../../../src/common/plugin/PluginState'
+import {
+  makeShareServerProbe,
+  PluginState
+} from '../../../../src/common/plugin/PluginState'
 import { ServerConfig } from '../../../../src/common/plugin/types'
 import {
   BROADCAST_ATTEMPT_TIMEOUT_MS,
@@ -80,8 +83,14 @@ const fakePluginState = ({
     quarantined.push(uri)
   },
   isServerQuarantined: (uri: string) => quarantined.includes(uri),
-  hasQuarantinedServers: () => quarantined.length > 0
+  hasQuarantinedServers: () => quarantined.length > 0,
+  shareServerProbe: makeShareServerProbe()
 } as unknown) as PluginState
+
+const resetFakePluginState = (): void => {
+  quarantined.length = 0
+  fakePluginState.shareServerProbe = makeShareServerProbe()
+}
 
 const fakeWalletInfo = ({
   id: 'fake-wallet-id',
@@ -594,7 +603,7 @@ describe('ServerStates health probe', function () {
   }
 
   beforeEach(async () => {
-    quarantined.length = 0
+    resetFakePluginState()
     websocketServer = new WS.Server({ port: WS_PORT })
     websocketServer.on('connection', (ws: WebSocket) => {
       ws.onmessage = event => {
@@ -923,7 +932,7 @@ describe('ServerStates health probe over time', function () {
 
   const makeTimedServerStates = (
     probe: MutableProbe,
-    options: { healthProbeMinIntervalMs?: number } = {}
+    options: { healthProbeMinIntervalMs?: number; walletId?: string } = {}
   ): ServerStates => {
     const pluginInfo = makeFakePluginInfo()
     pluginInfo.engineInfo.serverConfigs = [
@@ -936,7 +945,10 @@ describe('ServerStates health probe over time', function () {
       log: makeFakeLog(),
       pluginInfo,
       pluginState: fakePluginState,
-      walletInfo: fakeWalletInfo,
+      walletInfo: {
+        ...fakeWalletInfo,
+        id: options.walletId ?? fakeWalletInfo.id
+      },
       // A keepalive every 200ms, checked every 100ms, so the probe cycle
       // runs several times within a test:
       keepAliveMs: 200,
@@ -956,7 +968,7 @@ describe('ServerStates health probe over time', function () {
   let serverStates: ServerStates
 
   beforeEach(async () => {
-    quarantined.length = 0
+    resetFakePluginState()
     serverA = await makeBlockbookServer(A_PORT)
     serverB = await makeBlockbookServer(B_PORT)
   })
@@ -1030,6 +1042,31 @@ describe('ServerStates health probe over time', function () {
     await new Promise(resolve => setTimeout(resolve, 700))
 
     expect(probesTo(probe, A_TWIN)).to.equal(1)
+  })
+
+  it('shares one probe per server between wallets', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe, {
+      healthProbeMinIntervalMs: 60000
+    })
+    const otherWallet = makeTimedServerStates(probe, {
+      healthProbeMinIntervalMs: 60000,
+      walletId: 'other-wallet-id'
+    })
+    try {
+      await waitFor(
+        () =>
+          serverStates.getServerHealth(A_URI) === 'healthy' &&
+          otherWallet.getServerHealth(A_URI) === 'healthy'
+      )
+      // Several keepalives go by in both wallets:
+      await new Promise(resolve => setTimeout(resolve, 700))
+
+      expect(probesTo(probe, A_TWIN)).to.equal(1)
+      expect(otherWallet.getServerHealth(A_URI)).to.equal('healthy')
+    } finally {
+      otherWallet.stop()
+    }
   })
 
   it('takes a dropped server back once it is in sync and out of quarantine', async () => {
