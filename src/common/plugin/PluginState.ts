@@ -2,6 +2,7 @@ import { Disklet } from 'disklet'
 import { EdgeIo, EdgeLog } from 'edge-core-js/types'
 import { makeMemlet } from 'memlet'
 
+import { ServerHealth } from '../utxobased/engine/ServerStates'
 import { UtxoUserSettings } from '../utxobased/engine/types'
 import { UtxoEngineProcessor } from '../utxobased/engine/UtxoEngineProcessor'
 import {
@@ -20,6 +21,36 @@ import { InfoPayload } from './types'
  * server is probed again on connect and dropped again if still behind.
  */
 export const SERVER_QUARANTINE_MS = 5 * 60 * 1000
+
+/**
+ * Runs a server's health probe, or hands back the one started for the same
+ * URI less than `minIntervalMs` ago, whether it is still in flight or has
+ * already answered.
+ */
+export type ShareServerProbe = (
+  uri: string,
+  minIntervalMs: number,
+  probe: () => Promise<ServerHealth>
+) => Promise<ServerHealth>
+
+export function makeShareServerProbe(): ShareServerProbe {
+  // Server URI -> the latest probe and when it started (ms since epoch)
+  const latestProbes = new Map<
+    string,
+    { startTime: number; result: Promise<ServerHealth> }
+  >()
+
+  return async (uri, minIntervalMs, probe) => {
+    const now = Date.now()
+    const latest = latestProbes.get(uri)
+    if (latest != null && now - latest.startTime < minIntervalMs) {
+      return await latest.result
+    }
+    const result = probe()
+    latestProbes.set(uri, { startTime: now, result })
+    return await result
+  }
+}
 
 // The filename for ServerInfoCache data (see ServerScores.ts)
 // Perhaps this should be in ServerScores.ts file, but that'll take some refactoring
@@ -62,6 +93,12 @@ export interface PluginState {
   quarantineServer: (uri: string, durationMs?: number) => void
   isServerQuarantined: (uri: string) => boolean
   hasQuarantinedServers: () => boolean
+  /**
+   * Shares health probes between every engine of this plugin, so N wallets
+   * connected to the same server cost one REST request per interval rather
+   * than N. Each engine still applies the answer to its own connection.
+   */
+  shareServerProbe: ShareServerProbe
   clearCache: () => Promise<void>
   getLocalServers: (
     numServersWanted: number,
@@ -254,6 +291,7 @@ export function makePluginState(settings: PluginStateSettings): PluginState {
 
     isServerQuarantined,
     hasQuarantinedServers,
+    shareServerProbe: makeShareServerProbe(),
 
     async clearCache(): Promise<void> {
       serverScores.clearServerScoreTimes()

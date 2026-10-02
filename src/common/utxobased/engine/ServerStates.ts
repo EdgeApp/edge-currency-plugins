@@ -39,8 +39,6 @@ export interface ServerState {
   blockSubscriptionStatus: 'unsubscribed' | 'subscribing' | 'subscribed'
   blockHeight: number
   health: ServerHealth
-  /** When the last health probe was sent, ms since epoch. 0 if never. */
-  lastProbeTime: number
   txids: Set<string>
   addresses: Set<string>
 }
@@ -145,9 +143,10 @@ export const BROADCAST_ATTEMPT_TIMEOUT_MS = 30000
 export const HEALTH_PROBE_TIMEOUT_MS = 10000
 
 /**
- * Probes closer together than this are skipped. The connect path and the
- * first keepalive can land within milliseconds of each other, and one answer
- * serves both.
+ * Probes of one server closer together than this share a single request,
+ * across every wallet of the plugin. The connect path and the first
+ * keepalive can land within milliseconds of each other, and N wallets each
+ * run their own keepalive; one answer serves them all.
  */
 export const HEALTH_PROBE_MIN_INTERVAL_MS = 10000
 
@@ -312,10 +311,12 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   const checkServerHealth = (uri: string): void => {
     const serverState = serverStatesCache[uri]
     if (serverState == null) return
-    const now = Date.now()
-    if (now - serverState.lastProbeTime < healthProbeMinIntervalMs) return
-    serverState.lastProbeTime = now
-    probeServerHealth(uri)
+    pluginState
+      .shareServerProbe(
+        uri,
+        healthProbeMinIntervalMs,
+        async () => await probeServerHealth(uri)
+      )
       .then(health => {
         const serverState = serverStatesCache[uri]
         // The connection may have gone away while the probe was in flight:
@@ -406,8 +407,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     txids: new Set(),
     addresses: new Set(),
     blockHeight: 0,
-    health: findHttpTwin(uri) == null ? 'unknown' : 'pending',
-    lastProbeTime: 0
+    health: findHttpTwin(uri) == null ? 'unknown' : 'pending'
   })
 
   const reconnect = (): void => {
