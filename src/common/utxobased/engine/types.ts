@@ -45,9 +45,9 @@ export type UtxoSignMessageOtherParams = ReturnType<
 export const asUtxoSignMessageOtherParams = asObject({
   publicAddress: asString,
   // Defaults to the legacy Electrum encoding so existing callers keep the
-  // format they already produce. BIP-137 is opt-in, since emitting a BIP-137
-  // header to a verifier expecting the legacy one is just as broken as the
-  // reverse.
+  // format they already produce. BIP-137 and BIP-322 are opt-in, since
+  // emitting either to a verifier expecting the legacy encoding is just as
+  // broken as the reverse.
   signatureFormat: asMaybe(asUtxoSignatureFormat, 'electrum')
 })
 

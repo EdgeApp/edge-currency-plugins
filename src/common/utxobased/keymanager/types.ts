@@ -8,8 +8,12 @@ import { EdgeTokenId, InsufficientFundsError } from 'edge-core-js/types'
  *    about the script type.
  *  - `bip137`: additionally encodes the signing address' script type, which
  *    verifiers such as Bringin require for SegWit addresses.
+ *  - `bip322`: a BIP-322 "simple" signature (the consensus-encoded witness
+ *    of a virtual transaction spending from the address) for SegWit
+ *    addresses. Legacy P2PKH addresses have no simple form, so BIP-322 has
+ *    them sign in the legacy format, which is the `electrum` encoding.
  */
-export const asUtxoSignatureFormat = asValue('electrum', 'bip137')
+export const asUtxoSignatureFormat = asValue('electrum', 'bip137', 'bip322')
 export type UtxoSignatureFormat = ReturnType<typeof asUtxoSignatureFormat>
 
 interface InsufficientFundsErrorOptsPlus {
