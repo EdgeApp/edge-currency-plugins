@@ -211,6 +211,12 @@ export interface CoinInfo {
   sighash?: number
 
   /**
+   * Optional transaction locktime value for currencies that use nLockTime as
+   * an opt-in replay-protection mechanism.
+   */
+  replayProtectionLocktime?: number
+
+  /**
    * A function to be passed to AltcoinJS `signInput` method. This is used to
    * get the input hash for the signature algorithm before signing the input.
    *
