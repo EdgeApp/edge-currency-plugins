@@ -1,7 +1,11 @@
 import { Transaction } from 'altcoin-js'
 import { lt } from 'biggystring'
 import BN from 'bn.js'
-import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
+import {
+  EdgeConfirmationState,
+  EdgeTransaction,
+  JsonObject
+} from 'edge-core-js/types'
 
 import { PluginInfo } from '../../../plugin/types'
 import { UtxoTxOtherParams } from '../../engine/types'
@@ -91,9 +95,16 @@ export const toEdgeTransaction = async (
     }
   } catch (e) {}
 
+  // Calculate confirmations: for UTXO chains with requiredConfirmations = 1 (default),
+  // any transaction in a block is immediately confirmed
+  let confirmations: EdgeConfirmationState = tx.confirmations ?? 'unconfirmed'
+  if (confirmations === 'unconfirmed' || confirmations === undefined) {
+    confirmations = tx.blockHeight > 0 ? 'confirmed' : 'unconfirmed'
+  }
+
   return {
     blockHeight: tx.blockHeight,
-    confirmations: tx.confirmations,
+    confirmations,
     currencyCode: currencyInfo.currencyCode,
     date: tx.date,
     feeRateUsed,
