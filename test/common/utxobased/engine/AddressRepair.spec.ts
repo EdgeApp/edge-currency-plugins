@@ -116,4 +116,24 @@ describe('UtxoEngineProcessor address repair', function () {
       expect(restored).deep.equals(original)
     })
   }
+
+  it('retries initialization after it fails', async function () {
+    const disklet = await makeSyncedDisklet()
+
+    // Point the first path at a script the wallet cannot derive and has no
+    // address row for, which the repair refuses to overwrite:
+    const pathBucket: string[] = JSON.parse(await disklet.getText(PATH_BUCKET))
+    pathBucket[0] = `a914${'ff'.repeat(20)}87`
+    await disklet.setText(PATH_BUCKET, JSON.stringify(pathBucket))
+
+    const engine = await makeEngine(disklet)
+    const outcomes: string[] = []
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await engine.addGapLimitAddresses([]).then(
+        () => outcomes.push('initialized'),
+        () => outcomes.push('failed')
+      )
+    }
+    expect(outcomes).deep.equals(['failed', 'failed'])
+  })
 })

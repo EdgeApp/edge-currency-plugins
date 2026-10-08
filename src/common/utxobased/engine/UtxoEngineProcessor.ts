@@ -263,8 +263,14 @@ export function makeUtxoEngineProcessor(
     if (running) return
     running = true
 
-    await initializeAddressSubscriptions()
-    await setLookAhead(common)
+    try {
+      await initializeAddressSubscriptions()
+      await setLookAhead(common)
+    } catch (error: unknown) {
+      // Let the next call try again instead of skipping the initialization:
+      running = false
+      throw error
+    }
   }
 
   emitter.on(
