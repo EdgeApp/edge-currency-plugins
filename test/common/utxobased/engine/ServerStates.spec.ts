@@ -7,8 +7,14 @@ import {
 } from 'edge-core-js/types'
 import WS from 'ws'
 
-import { EngineEmitter } from '../../../../src/common/plugin/EngineEmitter'
-import { PluginState } from '../../../../src/common/plugin/PluginState'
+import {
+  EngineEmitter,
+  EngineEvent
+} from '../../../../src/common/plugin/EngineEmitter'
+import {
+  makeShareServerProbe,
+  PluginState
+} from '../../../../src/common/plugin/PluginState'
 import { ServerConfig } from '../../../../src/common/plugin/types'
 import {
   BROADCAST_ATTEMPT_TIMEOUT_MS,
@@ -68,11 +74,23 @@ const makeFakeHttp = (behaviors: { [uri: string]: HttpBehavior }): FakeHttp => {
   }
 }
 
+const quarantined: string[] = []
 const fakePluginState = ({
   serverScoreUp: () => {},
   serverScoreDown: () => {},
-  getLocalServers: () => []
+  getLocalServers: () => [],
+  quarantineServer: (uri: string) => {
+    quarantined.push(uri)
+  },
+  isServerQuarantined: (uri: string) => quarantined.includes(uri),
+  hasQuarantinedServers: () => quarantined.length > 0,
+  shareServerProbe: makeShareServerProbe()
 } as unknown) as PluginState
+
+const resetFakePluginState = (): void => {
+  quarantined.length = 0
+  fakePluginState.shareServerProbe = makeShareServerProbe()
+}
 
 const fakeWalletInfo = ({
   id: 'fake-wallet-id',
@@ -516,5 +534,589 @@ describe('ServerStates.broadcastTx', function () {
         'https://nownodes.test/api/v2/sendtx/'
       ])
     })
+  })
+})
+
+describe('ServerStates health probe', function () {
+  this.timeout(15000)
+
+  const HTTP_TWIN = `http://localhost:${WS_PORT}`
+  let websocketServer: WS.Server
+  let serverStates: ServerStates
+
+  interface FakeProbe {
+    calls: string[]
+    fetchCors: (uri: string) => Promise<EdgeFetchResponse>
+  }
+
+  type ProbeReply = 'in-sync' | 'behind' | 'error' | 'garbage'
+
+  const makeFakeProbe = (
+    defaultReply: ProbeReply,
+    repliesByPrefix: { [prefix: string]: ProbeReply } = {}
+  ): FakeProbe => {
+    const calls: string[] = []
+    return {
+      calls,
+      async fetchCors(uri: string): Promise<EdgeFetchResponse> {
+        calls.push(uri)
+        const prefix = Object.keys(repliesByPrefix).find(key =>
+          uri.startsWith(key)
+        )
+        const reply = prefix != null ? repliesByPrefix[prefix] : defaultReply
+        if (reply === 'error') throw new Error('connection refused')
+        return ({
+          ok: true,
+          status: 200,
+          json: async () =>
+            reply === 'garbage'
+              ? { unexpected: true }
+              : { blockbook: { inSync: reply === 'in-sync' } }
+        } as unknown) as EdgeFetchResponse
+      }
+    }
+  }
+
+  const makeProbedServerStates = (
+    probe: FakeProbe,
+    serverConfigs: ServerConfig[],
+    engineEmitter: EngineEmitter = new EngineEmitter(),
+    serverList: string[] = [WS_URI]
+  ): ServerStates => {
+    const pluginInfo = makeFakePluginInfo()
+    pluginInfo.engineInfo.serverConfigs = serverConfigs
+    const states = makeServerStates({
+      engineEmitter,
+      initOptions: {},
+      io: { ...makeFakeIo(), fetchCors: probe.fetchCors },
+      log: makeFakeLog(),
+      pluginInfo,
+      pluginState: fakePluginState,
+      walletInfo: fakeWalletInfo
+    })
+    states.setPickNextTaskCB(async function* () {
+      return false
+    })
+    states.setServerList(serverList)
+    states.refillServers()
+    return states
+  }
+
+  beforeEach(async () => {
+    resetFakePluginState()
+    websocketServer = new WS.Server({ port: WS_PORT })
+    websocketServer.on('connection', (ws: WebSocket) => {
+      ws.onmessage = event => {
+        const data = JSON.parse(event.data)
+        if (data.method === 'ping') {
+          ws.send(JSON.stringify({ id: data.id, data: {} }))
+        }
+        if (data.method === 'getInfo') {
+          ws.send(
+            JSON.stringify({
+              id: data.id,
+              data: {
+                name: 'Bitcoin',
+                shortcut: 'BTC',
+                decimals: 8,
+                version: '0.0.0',
+                bestHeight: 1,
+                bestHash: '00',
+                block0Hash: '00',
+                testnet: false
+              }
+            })
+          )
+        }
+      }
+    })
+    await new Promise<void>(resolve =>
+      websocketServer.on('listening', () => {
+        resolve()
+      })
+    )
+  })
+
+  afterEach(async () => {
+    serverStates.stop()
+    await new Promise<void>(resolve => websocketServer.close(() => resolve()))
+  })
+
+  it('probes the HTTP twin on connect and keeps an in-sync server', async () => {
+    const probe = makeFakeProbe('in-sync')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(() => serverStates.getServerHealth(WS_URI) === 'healthy')
+
+    expect(probe.calls).to.deep.equal([`${HTTP_TWIN}/api/`])
+    expect(serverStates.getServerState(WS_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+  })
+
+  it('treats a failed probe as unknown and keeps the server', async () => {
+    const probe = makeFakeProbe('error')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(() => serverStates.getServerHealth(WS_URI) === 'unknown')
+
+    expect(probe.calls).to.have.lengthOf(1)
+    expect(serverStates.getServerState(WS_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+  })
+
+  it('treats an unparseable probe body as unknown', async () => {
+    const probe = makeFakeProbe('garbage')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(() => probe.calls.length > 0)
+    await waitFor(() => serverStates.getServerHealth(WS_URI) === 'unknown')
+
+    expect(serverStates.getServerState(WS_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+  })
+
+  it('keeps an out-of-sync server when it is the only connection', async () => {
+    const probe = makeFakeProbe('behind')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(() => serverStates.getServerHealth(WS_URI) === 'unhealthy')
+    // Give an errant drop time to happen before asserting it did not:
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    expect(serverStates.getServerState(WS_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+    expect(quarantined).to.deep.equal([])
+  })
+
+  describe('with a second server', () => {
+    // A different host string so it maps to its own HTTP twin:
+    const PEER_PORT = WS_PORT + 1
+    const PEER_URI = `ws://127.0.0.1:${PEER_PORT}`
+    const PEER_TWIN = `http://127.0.0.1:${PEER_PORT}`
+    let peerServer: WS.Server
+
+    beforeEach(async () => {
+      peerServer = new WS.Server({ port: PEER_PORT })
+      peerServer.on('connection', (ws: WebSocket) => {
+        ws.onmessage = event => {
+          const data = JSON.parse(event.data)
+          if (data.method === 'ping') {
+            ws.send(JSON.stringify({ id: data.id, data: {} }))
+          }
+          if (data.method === 'getInfo') {
+            ws.send(
+              JSON.stringify({
+                id: data.id,
+                data: {
+                  name: 'Bitcoin',
+                  shortcut: 'BTC',
+                  decimals: 8,
+                  version: '0.0.0',
+                  bestHeight: 1,
+                  bestHash: '00',
+                  block0Hash: '00',
+                  testnet: false
+                }
+              })
+            )
+          }
+        }
+      })
+      await new Promise<void>(resolve =>
+        peerServer.on('listening', () => {
+          resolve()
+        })
+      )
+    })
+
+    afterEach(async () => {
+      await new Promise<void>(resolve => peerServer.close(() => resolve()))
+    })
+
+    it('drops a server whose twin reports inSync false', async () => {
+      const probe = makeFakeProbe('in-sync', { [HTTP_TWIN]: 'behind' })
+      serverStates = makeProbedServerStates(
+        probe,
+        [{ type: 'blockbook', uris: [HTTP_TWIN, PEER_TWIN] }],
+        new EngineEmitter(),
+        [WS_URI, PEER_URI]
+      )
+
+      await waitFor(() => serverStates.getServerState(WS_URI) == null)
+
+      expect(probe.calls).to.include(`${HTTP_TWIN}/api/`)
+      expect(quarantined).to.deep.equal([WS_URI])
+    })
+
+    it('tells the engine which server it dropped', async () => {
+      const probe = makeFakeProbe('in-sync', { [HTTP_TWIN]: 'behind' })
+      const engineEmitter = new EngineEmitter()
+      const dropped: string[] = []
+      engineEmitter.on(EngineEvent.SERVER_DROPPED, (uri: string) => {
+        dropped.push(uri)
+      })
+      serverStates = makeProbedServerStates(
+        probe,
+        [{ type: 'blockbook', uris: [HTTP_TWIN, PEER_TWIN] }],
+        engineEmitter,
+        [WS_URI, PEER_URI]
+      )
+
+      await waitFor(() => dropped.length > 0)
+
+      expect(dropped).to.deep.equal([WS_URI])
+      expect(serverStates.getServerState(WS_URI)).to.equal(undefined)
+    })
+
+    it('does not reconnect to a quarantined server on refill', async () => {
+      const probe = makeFakeProbe('in-sync', { [HTTP_TWIN]: 'behind' })
+      serverStates = makeProbedServerStates(
+        probe,
+        [{ type: 'blockbook', uris: [HTTP_TWIN, PEER_TWIN] }],
+        new EngineEmitter(),
+        [WS_URI, PEER_URI]
+      )
+      await waitFor(() => serverStates.getServerState(WS_URI) == null)
+      const probesBefore = probe.calls.filter(uri => uri.startsWith(HTTP_TWIN))
+
+      serverStates.setServerList([WS_URI])
+      serverStates.refillServers()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(serverStates.getServerState(WS_URI)).to.equal(undefined)
+      expect(
+        probe.calls.filter(uri => uri.startsWith(HTTP_TWIN))
+      ).to.deep.equal(probesBefore)
+    })
+
+    it('drops the out-of-sync server once an in-sync peer is connected', async () => {
+      const probe = makeFakeProbe('in-sync', { [HTTP_TWIN]: 'behind' })
+      serverStates = makeProbedServerStates(
+        probe,
+        [{ type: 'blockbook', uris: [HTTP_TWIN, PEER_TWIN] }],
+        new EngineEmitter(),
+        [WS_URI, PEER_URI]
+      )
+
+      await waitFor(() => serverStates.getServerState(WS_URI) == null)
+
+      expect(quarantined).to.deep.equal([WS_URI])
+      expect(serverStates.getServerHealth(PEER_URI)).to.equal('healthy')
+      expect(
+        serverStates.getServerState(PEER_URI)?.blockbook.isConnected
+      ).to.equal(true)
+    })
+
+    it('counts an unprobed third-party peer as usable', async () => {
+      const probe = makeFakeProbe('behind')
+      serverStates = makeProbedServerStates(
+        probe,
+        [{ type: 'blockbook', uris: [HTTP_TWIN] }],
+        new EngineEmitter(),
+        [WS_URI, PEER_URI]
+      )
+
+      await waitFor(() => serverStates.getServerState(WS_URI) == null)
+
+      expect(quarantined).to.deep.equal([WS_URI])
+      expect(serverStates.getServerHealth(PEER_URI)).to.equal('unknown')
+    })
+  })
+
+  it('never probes a server without an HTTP twin', async () => {
+    const probe = makeFakeProbe('behind')
+    serverStates = makeProbedServerStates(probe, [
+      { type: 'blockbook', uris: ['https://elsewhere.test'] },
+      { type: 'blockbook-nownode', uris: [HTTP_TWIN] }
+    ])
+
+    await waitFor(
+      () => serverStates.getServerState(WS_URI)?.blockbook.isConnected === true
+    )
+    // Give a probe every chance to fire before asserting it did not:
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    expect(serverStates.getServerHealth(WS_URI)).to.equal('unknown')
+    expect(probe.calls).to.have.lengthOf(0)
+  })
+})
+
+describe('ServerStates health probe over time', function () {
+  this.timeout(15000)
+
+  // Separate ports from the block above so the two suites never collide.
+  const A_PORT = 8558
+  const B_PORT = 8559
+  const A_URI = `ws://localhost:${A_PORT}`
+  const B_URI = `ws://127.0.0.1:${B_PORT}`
+  const A_TWIN = `http://localhost:${A_PORT}`
+  const B_TWIN = `http://127.0.0.1:${B_PORT}`
+
+  type ProbeReply = 'in-sync' | 'behind' | 'stalled-body'
+
+  interface MutableProbe {
+    calls: string[]
+    replies: { [twin: string]: ProbeReply }
+    fetchCors: (uri: string) => Promise<EdgeFetchResponse>
+  }
+
+  const makeMutableProbe = (replies: {
+    [twin: string]: ProbeReply
+  }): MutableProbe => {
+    const calls: string[] = []
+    return {
+      calls,
+      replies,
+      async fetchCors(uri: string): Promise<EdgeFetchResponse> {
+        calls.push(uri)
+        const twin = Object.keys(replies).find(key => uri.startsWith(key))
+        const reply = twin != null ? replies[twin] : 'in-sync'
+        return ({
+          ok: true,
+          status: 200,
+          json: async () =>
+            reply === 'stalled-body'
+              ? await new Promise(() => {})
+              : { blockbook: { inSync: reply === 'in-sync' } }
+        } as unknown) as EdgeFetchResponse
+      }
+    }
+  }
+
+  const probesTo = (probe: MutableProbe, twin: string): number =>
+    probe.calls.filter(uri => uri.startsWith(twin)).length
+
+  const makeBlockbookServer = async (port: number): Promise<WS.Server> => {
+    const server = new WS.Server({ port })
+    server.on('connection', (ws: WebSocket) => {
+      ws.onmessage = event => {
+        const data = JSON.parse(event.data)
+        if (data.method === 'ping') {
+          ws.send(JSON.stringify({ id: data.id, data: {} }))
+        }
+        if (data.method === 'getInfo') {
+          ws.send(
+            JSON.stringify({
+              id: data.id,
+              data: {
+                name: 'Bitcoin',
+                shortcut: 'BTC',
+                decimals: 8,
+                version: '0.0.0',
+                bestHeight: 1,
+                bestHash: '00',
+                block0Hash: '00',
+                testnet: false
+              }
+            })
+          )
+        }
+      }
+    })
+    await new Promise<void>(resolve =>
+      server.on('listening', () => {
+        resolve()
+      })
+    )
+    return server
+  }
+
+  const makeTimedServerStates = (
+    probe: MutableProbe,
+    options: { healthProbeMinIntervalMs?: number; walletId?: string } = {}
+  ): ServerStates => {
+    const pluginInfo = makeFakePluginInfo()
+    pluginInfo.engineInfo.serverConfigs = [
+      { type: 'blockbook', uris: [A_TWIN, B_TWIN] }
+    ]
+    const states = makeServerStates({
+      engineEmitter: new EngineEmitter(),
+      initOptions: {},
+      io: { ...makeFakeIo(), fetchCors: probe.fetchCors },
+      log: makeFakeLog(),
+      pluginInfo,
+      pluginState: fakePluginState,
+      walletInfo: {
+        ...fakeWalletInfo,
+        id: options.walletId ?? fakeWalletInfo.id
+      },
+      // A keepalive every 200ms, checked every 100ms, so the probe cycle
+      // runs several times within a test:
+      keepAliveMs: 200,
+      wakeUpMs: 100,
+      healthProbeTimeoutMs: 300,
+      healthProbeMinIntervalMs: options.healthProbeMinIntervalMs ?? 0
+    })
+    states.setPickNextTaskCB(async function* () {
+      return false
+    })
+    states.setServerList([A_URI, B_URI])
+    states.refillServers()
+    return states
+  }
+
+  let serverA: WS.Server
+  let serverB: WS.Server
+  let serverStates: ServerStates
+
+  beforeEach(async () => {
+    resetFakePluginState()
+    serverA = await makeBlockbookServer(A_PORT)
+    serverB = await makeBlockbookServer(B_PORT)
+  })
+
+  afterEach(async () => {
+    serverStates.stop()
+    await new Promise<void>(resolve => serverA.close(() => resolve()))
+    await new Promise<void>(resolve => serverB.close(() => resolve()))
+  })
+
+  it('re-probes on every keepalive', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe)
+
+    await waitFor(() => probesTo(probe, A_TWIN) >= 3)
+
+    expect(serverStates.getServerHealth(A_URI)).to.equal('healthy')
+    expect(serverStates.getServerHealth(B_URI)).to.equal('healthy')
+  })
+
+  it('times out a probe whose body never arrives', async () => {
+    const probe = makeMutableProbe({ [A_TWIN]: 'stalled-body' })
+    serverStates = makeTimedServerStates(probe)
+
+    await waitFor(() => serverStates.getServerHealth(A_URI) === 'unknown')
+
+    // The stalled probe must not block the next one:
+    probe.replies[A_TWIN] = 'in-sync'
+    await waitFor(() => serverStates.getServerHealth(A_URI) === 'healthy')
+  })
+
+  it('drops a server that falls out of sync after connecting', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe)
+    await waitFor(
+      () =>
+        serverStates.getServerHealth(A_URI) === 'healthy' &&
+        serverStates.getServerHealth(B_URI) === 'healthy'
+    )
+
+    probe.replies[A_TWIN] = 'behind'
+    await waitFor(() => serverStates.getServerState(A_URI) == null)
+
+    expect(quarantined).to.deep.equal([A_URI])
+    expect(serverStates.getServerHealth(B_URI)).to.equal('healthy')
+    expect(serverStates.getServerState(B_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+  })
+
+  it('keeps the last leg when every server falls out of sync', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe)
+    await waitFor(
+      () =>
+        serverStates.getServerHealth(A_URI) === 'healthy' &&
+        serverStates.getServerHealth(B_URI) === 'healthy'
+    )
+
+    // Probes answer one at a time, so whichever reports first is dropped
+    // while the other still looks usable. The second then has no peer left
+    // and must be kept, out of sync or not.
+    probe.replies[A_TWIN] = 'behind'
+    probe.replies[B_TWIN] = 'behind'
+    await waitFor(() => quarantined.length === 1)
+    const survivor = quarantined[0] === A_URI ? B_URI : A_URI
+    await waitFor(() => serverStates.getServerHealth(survivor) === 'unhealthy')
+    // Give an errant second drop time to happen before asserting it did not:
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    expect(serverStates.getServerState(survivor)).to.not.equal(undefined)
+    expect(quarantined).to.have.lengthOf(1)
+  })
+
+  it('keeps only one stale leg when both servers connect out of sync', async () => {
+    // Both probes are pending when the first answers, so neither server
+    // sees a usable peer. Keeping both would fill every slot with stale
+    // servers; one must go so the refill can look for a replacement.
+    const probe = makeMutableProbe({ [A_TWIN]: 'behind', [B_TWIN]: 'behind' })
+    serverStates = makeTimedServerStates(probe)
+
+    await waitFor(() => quarantined.length === 1)
+    const survivor = quarantined[0] === A_URI ? B_URI : A_URI
+    await waitFor(() => serverStates.getServerHealth(survivor) === 'unhealthy')
+    // Give an errant second drop time to happen before asserting it did not:
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    expect(serverStates.getServerState(survivor)).to.not.equal(undefined)
+    expect(quarantined).to.have.lengthOf(1)
+  })
+
+  it('skips probes closer together than the minimum interval', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe, {
+      healthProbeMinIntervalMs: 60000
+    })
+    await waitFor(() => serverStates.getServerHealth(A_URI) === 'healthy')
+    // Several keepalives go by:
+    await new Promise(resolve => setTimeout(resolve, 700))
+
+    expect(probesTo(probe, A_TWIN)).to.equal(1)
+  })
+
+  it('shares one probe per server between wallets', async () => {
+    const probe = makeMutableProbe({})
+    serverStates = makeTimedServerStates(probe, {
+      healthProbeMinIntervalMs: 60000
+    })
+    const otherWallet = makeTimedServerStates(probe, {
+      healthProbeMinIntervalMs: 60000,
+      walletId: 'other-wallet-id'
+    })
+    try {
+      await waitFor(
+        () =>
+          serverStates.getServerHealth(A_URI) === 'healthy' &&
+          otherWallet.getServerHealth(A_URI) === 'healthy'
+      )
+      // Several keepalives go by in both wallets:
+      await new Promise(resolve => setTimeout(resolve, 700))
+
+      expect(probesTo(probe, A_TWIN)).to.equal(1)
+      expect(otherWallet.getServerHealth(A_URI)).to.equal('healthy')
+    } finally {
+      otherWallet.stop()
+    }
+  })
+
+  it('takes a dropped server back once it is in sync and out of quarantine', async () => {
+    const probe = makeMutableProbe({ [A_TWIN]: 'behind' })
+    serverStates = makeTimedServerStates(probe)
+    await waitFor(() => serverStates.getServerState(A_URI) == null)
+    expect(quarantined).to.deep.equal([A_URI])
+
+    // The server recovers and its quarantine expires:
+    probe.replies[A_TWIN] = 'in-sync'
+    quarantined.length = 0
+    serverStates.setServerList([A_URI])
+    serverStates.refillServers()
+
+    await waitFor(() => serverStates.getServerHealth(A_URI) === 'healthy')
+    expect(serverStates.getServerState(A_URI)?.blockbook.isConnected).to.equal(
+      true
+    )
+    expect(quarantined).to.deep.equal([])
   })
 })

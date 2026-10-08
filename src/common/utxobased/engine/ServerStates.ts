@@ -1,3 +1,4 @@
+import { asBoolean, asObject } from 'cleaners'
 import { EdgeIo, EdgeLog, EdgeTransaction } from 'edge-core-js/types'
 import { parse } from 'uri-js'
 
@@ -23,10 +24,21 @@ import { pushUpdate, removeIdFromQueue } from '../network/socketQueue'
 import { MAX_CONNECTIONS, NEW_CONNECTIONS } from './constants'
 import { UtxoInitOptions } from './types'
 
+/**
+ * What the last REST health probe said about a connected server:
+ * - `pending`: the probe has not answered yet.
+ * - `healthy`: Blockbook reported `inSync: true`.
+ * - `unhealthy`: Blockbook reported `inSync: false`.
+ * - `unknown`: the server has no HTTP twin to probe, or the probe failed
+ *   (network error, non-200, unparseable body). Never treated as unhealthy.
+ */
+export type ServerHealth = 'pending' | 'healthy' | 'unhealthy' | 'unknown'
+
 export interface ServerState {
   blockbook: Blockbook
   blockSubscriptionStatus: 'unsubscribed' | 'subscribing' | 'subscribed'
   blockHeight: number
+  health: ServerHealth
   txids: Set<string>
   addresses: Set<string>
 }
@@ -44,6 +56,14 @@ interface ServerStateConfig {
    * seconds the socket layer uses for a request. Exposed for tests.
    */
   broadcastTimeoutMs?: number
+  /**
+   * Timing overrides so tests can drive the keepalive probe cycle in
+   * milliseconds rather than minutes. Production uses the defaults.
+   */
+  healthProbeMinIntervalMs?: number
+  healthProbeTimeoutMs?: number
+  keepAliveMs?: number
+  wakeUpMs?: number
 }
 
 export interface ServerStates {
@@ -66,6 +86,7 @@ export interface ServerStates {
   ) => void
   watchBlocks: (uri: string) => void
   getBlockHeight: (uri: string) => number
+  getServerHealth: (uri: string) => ServerHealth | undefined
 
   //
   // Task Methods:
@@ -115,6 +136,33 @@ export const NOWNODES_BROADCAST_DELAY_MS = 2000
  */
 export const BROADCAST_ATTEMPT_TIMEOUT_MS = 30000
 
+/**
+ * Upper bound on a REST health probe. The probe runs off the socket keepalive
+ * and must never hold the connection's timer for long.
+ */
+export const HEALTH_PROBE_TIMEOUT_MS = 10000
+
+/**
+ * Probes of one server closer together than this share a single request,
+ * across every wallet of the plugin. The connect path and the first
+ * keepalive can land within milliseconds of each other, and N wallets each
+ * run their own keepalive; one answer serves them all.
+ */
+export const HEALTH_PROBE_MIN_INTERVAL_MS = 10000
+
+/**
+ * The part of Blockbook's REST `GET /api/` response the health probe reads.
+ * The WebSocket `getInfo` message does not carry `inSync`, so the probe has
+ * to go over HTTP. Blockbook itself masks the first five seconds of every
+ * resync, so a `false` here means the indexer has been behind its backend
+ * for longer than that, or the backend RPC is failing.
+ */
+const asBlockbookHealth = asObject({
+  blockbook: asObject({
+    inSync: asBoolean
+  })
+})
+
 const withTimeout = async <T>(
   promise: Promise<T>,
   ms: number,
@@ -145,9 +193,146 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
   } = config
   const { serverConfigs = [] } = pluginInfo.engineInfo
   const { broadcastTimeoutMs = BROADCAST_ATTEMPT_TIMEOUT_MS } = config
+  const {
+    healthProbeMinIntervalMs = HEALTH_PROBE_MIN_INTERVAL_MS,
+    healthProbeTimeoutMs = HEALTH_PROBE_TIMEOUT_MS,
+    keepAliveMs,
+    wakeUpMs
+  } = config
   log('Making server states')
 
   const serverStatesCache: ServerStatesCache = {}
+
+  // Edge's own Blockbook servers expose both a socket and a REST endpoint on
+  // the same host. Index the REST URIs by host so a socket URI can find its
+  // twin for the health probe. Third-party sockets (Trezor, NOWNodes) have no
+  // twin here and are never probed.
+  const httpUriByHost: { [host: string]: string } = {}
+  for (const serverConfig of serverConfigs) {
+    if (serverConfig.type !== 'blockbook') continue
+    for (const httpUri of serverConfig.uris) {
+      const { host } = parse(httpUri)
+      if (host != null) httpUriByHost[host] = httpUri
+    }
+  }
+
+  const findHttpTwin = (uri: string): string | undefined => {
+    const { host } = parse(uri)
+    return host == null ? undefined : httpUriByHost[host]
+  }
+
+  const probeServerHealth = async (uri: string): Promise<ServerHealth> => {
+    const httpUri = findHttpTwin(uri)
+    if (httpUri == null) return 'unknown'
+    const probe = async (): Promise<ServerHealth> => {
+      const response = await io.fetchCors(`${httpUri}/api/`, { method: 'GET' })
+      if (!response.ok) {
+        log.warn(`${uri} health probe: HTTP ${response.status}`)
+        return 'unknown'
+      }
+      const { blockbook } = asBlockbookHealth(await response.json())
+      return blockbook.inSync ? 'healthy' : 'unhealthy'
+    }
+    try {
+      // The bound covers the body too; a server can send its headers and
+      // then stall:
+      return await withTimeout(
+        probe(),
+        healthProbeTimeoutMs,
+        `Timeout for health probe to ${httpUri}`
+      )
+    } catch (error: unknown) {
+      log.warn(`${uri} health probe failed: ${String(error)}`)
+      return 'unknown'
+    }
+  }
+
+  /**
+   * Disconnects a server on purpose. On platforms that deliver a close event
+   * for a locally closed socket (the app's WebView does) the socket's close
+   * path also runs, scoring the server down and throwing its in-flight
+   * requests. The refill is scheduled here regardless, so replacing the
+   * connection never depends on that event arriving.
+   */
+  const dropServer = (uri: string, reason: string): void => {
+    const serverState = serverStatesCache[uri]
+    if (serverState == null) return
+    log.warn(`${uri} dropped: ${reason}`)
+    // Keep the refill from picking it straight back; its score is still
+    // near the top since it answered every ping:
+    pluginState.quarantineServer(uri)
+    removeItem(serverStatesCache, uri)
+    serverState.blockbook.disconnect().catch((error: unknown) => {
+      log.error(`${uri} disconnect failed: ${String(error)}`)
+    })
+    reconnect()
+    // Let the engine re-query anything this server answered:
+    engineEmitter.emit(EngineEvent.SERVER_DROPPED, uri)
+  }
+
+  /**
+   * Whether some other connection could carry the wallet if `uri` went
+   * away: open, and not known to be out of sync. A peer whose probe has not
+   * answered yet does not count; it may be about to fail the same way.
+   */
+  const hasUsablePeer = (uri: string): boolean =>
+    Object.entries(serverStatesCache).some(
+      ([otherUri, state]) =>
+        otherUri !== uri &&
+        state.blockbook.isConnected &&
+        (state.health === 'healthy' || state.health === 'unknown')
+    )
+
+  /**
+   * Drops every server known to be out of sync, as long as the wallet keeps
+   * at least one usable connection. A stale server that is the only leg is
+   * kept: behind the chain beats no data at all. It is re-evaluated on every
+   * probe result, so it goes as soon as a usable peer shows up.
+   *
+   * Only one stale leg is kept. Two stale servers would otherwise keep each
+   * other, filling every connection slot so the refill never reaches a
+   * server that could replace them.
+   */
+  const dropUnhealthyServers = (): void => {
+    let isStaleLegKept = false
+    for (const [uri, state] of Object.entries(serverStatesCache)) {
+      if (state.health !== 'unhealthy') continue
+      if (!hasUsablePeer(uri) && !isStaleLegKept) {
+        log.warn(
+          `${uri} reports inSync: false but is the only usable connection`
+        )
+        isStaleLegKept = true
+        continue
+      }
+      dropServer(uri, 'Blockbook reports inSync: false')
+    }
+  }
+
+  const checkServerHealth = (uri: string): void => {
+    const serverState = serverStatesCache[uri]
+    if (serverState == null) return
+    pluginState
+      .shareServerProbe(
+        uri,
+        healthProbeMinIntervalMs,
+        async () => await probeServerHealth(uri)
+      )
+      .then(health => {
+        const serverState = serverStatesCache[uri]
+        // The connection may have gone away while the probe was in flight:
+        if (serverState == null) return
+        if (serverState.health !== health) {
+          log(`${uri} health: ${serverState.health} -> ${health}`)
+        }
+        serverState.health = health
+        // This result may make this server droppable, or make it the peer
+        // that lets a previously kept stale server go:
+        dropUnhealthyServers()
+      })
+      .catch((error: unknown) => {
+        log.error(`${uri} health check failed: ${String(error)}`)
+      })
+  }
   let isEngineOn: boolean = true
   let serverList: string[] = []
   let reconnectCounter = 0
@@ -181,6 +366,8 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       const queryTime = Date.now() - queryDate
       log(`${uri} returned healthCheck in ${queryTime}ms`)
       pluginState.serverScoreUp(uri, queryTime)
+      // Periodic probe, once per keepalive:
+      checkServerHealth(uri)
     }
   )
   engineEmitter.on(
@@ -199,7 +386,11 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     EngineEvent.BLOCK_HEIGHT_CHANGED,
     (uri: string, blockHeight: number) => {
       log(`${uri} block height changed to ${blockHeight}`)
-      serverStatesCache[uri].blockHeight = blockHeight
+      const serverState = serverStatesCache[uri]
+      // The connection may already be gone, as the sibling handler above
+      // allows for:
+      if (serverState == null) return
+      serverState.blockHeight = blockHeight
     }
   )
 
@@ -207,18 +398,26 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
     uri: string
   ) => AsyncGenerator<WsTask<unknown> | boolean, boolean>
 
-  const makeServerStatesCacheEntry = (blockbook: Blockbook): ServerState => ({
+  const makeServerStatesCacheEntry = (
+    uri: string,
+    blockbook: Blockbook
+  ): ServerState => ({
     blockbook,
     blockSubscriptionStatus: 'unsubscribed',
     txids: new Set(),
     addresses: new Set(),
-    blockHeight: 0
+    blockHeight: 0,
+    health: findHttpTwin(uri) == null ? 'unknown' : 'pending'
   })
 
   const reconnect = (): void => {
     if (isEngineOn) {
       log(`attempting server reconnect number ${reconnectCounter}`)
       const reconnectionDelay = Math.max(5, reconnectCounter++) * 1000
+      // One pending reconnect at a time. A drop and the close event it
+      // causes both land here, and a timer that was overwritten rather than
+      // cleared would outlive stop() and switch the engine back on.
+      clearTimeout(reconnectTimer)
       reconnectTimer = setTimeout(() => {
         clearTimeout(reconnectTimer)
         instance.refillServers()
@@ -244,6 +443,9 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       // Skip reconnecting to an existing connection
       if (serverStatesCache[uri] != null) continue
 
+      // The list may predate a quarantine:
+      if (pluginState.isServerQuarantined(uri)) continue
+
       // Validate the URI of server to make sure it is valid
       const parsed = parse(uri)
       if (
@@ -254,7 +456,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         continue
       }
 
-      // Ranomize the URI picking
+      // Randomize the URI picking
       chanceToBePicked -= chanceToBePicked > 0.5 ? 0.25 : 0
       if (Math.random() > chanceToBePicked) {
         serverList.push(uri)
@@ -331,17 +533,25 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           log,
           taskGeneratorFn,
           socketEmitter,
-          walletId: walletInfo.id
+          walletId: walletInfo.id,
+          keepAliveMs,
+          wakeUpMs
         })
       }
 
       // Make new ServerStates instance
-      serverStatesCache[uri] = makeServerStatesCacheEntry(blockbook)
+      serverStatesCache[uri] = makeServerStatesCacheEntry(uri, blockbook)
 
       // Initialize blockbook connection for server
       blockbook
         .connect()
         .then(async () => {
+          // This connection is now open and counts as a usable peer, which
+          // may be what a stale server kept for lack of one was waiting on.
+          // Done here rather than on the socket's open event, which fires
+          // before the connect promise marks the blockbook connected:
+          dropUnhealthyServers()
+
           // Fetch block height from blockbook server
           const startTime = Date.now()
           const { bestHeight: blockHeight } = await blockbook.fetchInfo()
@@ -356,10 +566,28 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
           // Increment server score using response time
           const responseTime = Date.now() - startTime
           pluginState.serverScoreUp(uri, responseTime)
+
+          // On-connect probe. The keepalive may or may not have fired by
+          // now, depending on how fast the socket opened, so this is the
+          // one place that guarantees a probe before the server does work:
+          checkServerHealth(uri)
         })
         .catch(e => {
           log.error(`${JSON.stringify(e.message)}`)
         })
+    }
+
+    // A quarantined server is withheld from the candidate list, so a wallet
+    // left short of connections would otherwise stay that way until an
+    // unrelated close event. Keep trying while a quarantine is in force; the
+    // server comes back into the list when it expires. The reconnect delay
+    // grows with each empty pass, so this does not spin.
+    if (
+      Object.keys(serverStatesCache).length < MAX_CONNECTIONS &&
+      serverList.length === 0 &&
+      pluginState.hasQuarantinedServers()
+    ) {
+      reconnect()
     }
   }
 
@@ -579,6 +807,10 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
 
     getBlockHeight(uri: string): number {
       return serverStatesCache[uri].blockHeight
+    },
+
+    getServerHealth(uri: string): ServerHealth | undefined {
+      return serverStatesCache[uri]?.health
     },
 
     getServerList(): string[] {

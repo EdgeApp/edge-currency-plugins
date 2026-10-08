@@ -42,7 +42,8 @@ export declare interface EngineEmitter {
       newTx: SubscribeAddressResponse
     ) => boolean) &
     ((event: EngineEvent.ADDRESSES_CHECKED, progressRatio: number) => boolean) &
-    ((event: EngineEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => boolean)
+    ((event: EngineEvent.TXIDS_CHANGED, txids: EdgeTxidMap) => boolean) &
+    ((event: EngineEvent.SERVER_DROPPED, uri: string) => boolean)
 
   on: ((
     event: EngineEvent.SEEN_TX_CHECKPOINT,
@@ -90,6 +91,10 @@ export declare interface EngineEmitter {
     ((
       event: EngineEvent.TXIDS_CHANGED,
       listener: (txids: EdgeTxidMap) => Promise<void> | void
+    ) => this) &
+    ((
+      event: EngineEvent.SERVER_DROPPED,
+      listener: (uri: string) => Promise<void> | void
     ) => this)
 }
 export class EngineEmitter extends EventEmitter {}
@@ -105,6 +110,11 @@ export enum EngineEvent {
   NEW_ADDRESS_TRANSACTION = 'address:transaction:changed',
   ADDRESSES_CHECKED = 'addresses:checked',
   TXIDS_CHANGED = 'txids:changed',
+  /**
+   * The engine disconnected a server on purpose because it was found to be
+   * out of sync. Data fetched through it may be behind the chain.
+   */
+  SERVER_DROPPED = 'server:dropped',
   CONNECTION_OPEN = 'connection:open',
   CONNECTION_CLOSE = 'connection:close',
   CONNECTION_TIMER = 'connection:timer'
