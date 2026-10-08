@@ -167,7 +167,12 @@ describe('Blockbook notifications tests with dummy server', function () {
   })
 })
 
-describe('Blockbook', function () {
+// These tests talk to a live Blockbook server, so they only run on request:
+// LIVE_NETWORK_TESTS=1 npm test
+const describeLive =
+  process.env.LIVE_NETWORK_TESTS == null ? describe.skip : describe
+
+describeLive('Blockbook', function () {
   this.timeout(10000)
 
   const satoshiAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
