@@ -333,6 +333,30 @@ export function makeUtxoEngineProcessor(
     }
   )
 
+  // The DataLayer can count an address that it can no longer read, such as
+  // when a write to disk was cut short. Every address derives from the wallet
+  // keys and its path, so rebuild the missing row instead of failing the
+  // engine. The rebuilt row has no sync state, so the address syncs again.
+  const repairAddress = async (path: AddressPath): Promise<AddressData> => {
+    const { format, changeIndex, addressIndex } = path
+    const pathName = `${format}/${changeIndex}/${addressIndex}`
+    log.warn(`Repairing missing data-layer address with '${pathName}' path`)
+
+    const { scriptPubkey, redeemScript } = walletTools.getScriptPubkey(path)
+    await dataLayer.saveAddress(
+      makeAddressData({ scriptPubkey, redeemScript, path })
+    )
+
+    // Read the row back, since the save keeps any state that survived:
+    const addressData = await dataLayer.fetchAddress(path)
+    if (addressData == null) {
+      throw new Error(
+        `Missing data-layer address with '${pathName}' path during initialization`
+      )
+    }
+    return addressData
+  }
+
   // Initialize the addressSubscribeCache with the existing addresses already
   // processed by the DataLayer. This happens only once before any call to
   // setLookAhead.
@@ -361,16 +385,13 @@ export function makeUtxoEngineProcessor(
           addressIndex < branchAddressCount;
           addressIndex++
         ) {
-          const addressData = await dataLayer.fetchAddress({
+          const path: AddressPath = {
             format,
             changeIndex: branch,
             addressIndex
-          })
-          if (addressData == null) {
-            throw new Error(
-              `Missing data-layer address with '${format}/${branch}/${addressIndex}' path during initialization`
-            )
           }
+          const addressData =
+            (await dataLayer.fetchAddress(path)) ?? (await repairAddress(path))
           const { address } = walletTools.scriptPubkeyToAddress({
             changePath,
             scriptPubkey: addressData.scriptPubkey
