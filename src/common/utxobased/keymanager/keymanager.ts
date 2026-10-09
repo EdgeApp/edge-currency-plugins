@@ -1083,14 +1083,17 @@ export function signMessageBase64(
 
 export function makeTx(args: MakeTxArgs): MakeTxReturn {
   const { log, outputSort, memos, memoIndex } = args
+  const coin = getCoinFromString(args.coin)
+  const replayProtectionLocktime = coin.replayProtectionLocktime
   let sequence = 0xffffffff
   if (args.enableRbf) {
     sequence -= 2
+  } else if (replayProtectionLocktime != null) {
+    sequence = 0xfffffffe
   }
 
   // get coin specific replay protection sighhash bits
   let sighashType = Transaction.SIGHASH_ALL
-  const coin = getCoinFromString(args.coin)
   if (coin.sighash != null) {
     sighashType = coin.sighash
   }
@@ -1247,6 +1250,9 @@ export function makeTx(args: MakeTxArgs): MakeTxReturn {
 
   const psbt = new Psbt()
   try {
+    if (replayProtectionLocktime != null) {
+      psbt.setLocktime(replayProtectionLocktime)
+    }
     psbt.addInputs(sortedInputs)
     psbt.addOutputs(sortedOutputs)
   } catch (error) {
