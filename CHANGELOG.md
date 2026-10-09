@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.16.0 (2026-10-09)
+
 - changed: Share each server's health probe between every wallet of the same currency. Probes of one server less than ten seconds apart now share a single REST request, so N wallets connected to the same Edge Blockbook cost one probe per keepalive interval rather than N.
 - changed: Keep an out-of-sync server connected while it is the wallet's only usable connection, and drop it as soon as another server is connected and not known to be behind.
 - changed: Quarantine a server dropped for being out of sync for five minutes so the connection refill does not reconnect to it while its score is still high. The quarantine is shared by every wallet of the same currency and is listed in `dumpData`. While one is in force and a wallet is short of connections, the refill keeps retrying so the server is picked up again once the quarantine expires.
