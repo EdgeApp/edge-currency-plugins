@@ -21,8 +21,19 @@ import {
   inferPrivateKeyFormat,
   PrivateKey
 } from '../utxobased/keymanager/cleaners'
-import { EncodeUriMetadata, ExtendedParseUri, PluginInfo } from './types'
+import {
+  CurrencyFormat,
+  EncodeUriMetadata,
+  ExtendedParseUri,
+  PluginInfo
+} from './types'
 import { getFormatsForNetwork } from './utils'
+
+/**
+ * The order the GUI lists a wallet's display public keys,
+ * newest address format first.
+ */
+const displayFormats: CurrencyFormat[] = ['bip84', 'bip49', 'bip44', 'bip32']
 
 /**
  * The core currency plugin.
@@ -104,6 +115,20 @@ export function makeCurrencyTools(
       // unsafeWalletInfo which contains the private key.
       const safeWalletInfo = asCurrencySafeWalletInfo(unsafeWalletInfo)
       return safeWalletInfo.keys.publicKey
+    },
+
+    getDisplayPublicKeys(
+      publicWalletInfo: EdgeWalletInfo
+    ): {
+      [format: string]: string
+    } {
+      const { publicKeys } = asPublicKey(publicWalletInfo.keys)
+      const out: { [format: string]: string } = {}
+      for (const format of displayFormats) {
+        const xpub = publicKeys[format]
+        if (xpub != null) out[format] = xpub
+      }
+      return out
     },
 
     async parseUri(uri: string): Promise<ExtendedParseUri> {

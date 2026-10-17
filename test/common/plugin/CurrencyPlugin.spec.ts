@@ -162,6 +162,55 @@ describe('currencyPlugins.spec', () => {
       })
     })
 
+    describe(`getDisplayPublicKeys for Wallet type ${WALLET_TYPE}`, function () {
+      this.timeout(10000)
+      before('Plugin', async function () {
+        if (tools == null) {
+          tools = await plugin.makeCurrencyTools()
+        }
+      })
+
+      it('Lists each xpub under its format', async function () {
+        if (tools.getDisplayPublicKeys == null) {
+          throw new Error('No getDisplayPublicKeys')
+        }
+        const keys = await tools.createPrivateKey(WALLET_TYPE)
+        const publicKeys = await tools.derivePublicKey({
+          type: WALLET_TYPE,
+          keys: { [keyName]: keys[keyName], format: WALLET_FORMAT },
+          id: '!'
+        })
+        const displayKeys = tools.getDisplayPublicKeys({
+          type: WALLET_TYPE,
+          keys: publicKeys,
+          id: '!'
+        })
+        assert.equal(displayKeys[WALLET_FORMAT], fixture.xpub)
+        assert.deepEqual(
+          Object.values(displayKeys).sort((a, b) => a.localeCompare(b)),
+          Object.values<string | undefined>(publicKeys.publicKeys)
+            .filter((xpub): xpub is string => xpub != null)
+            .sort((a, b) => a.localeCompare(b))
+        )
+      })
+
+      it('Lists the newest format first', function () {
+        if (tools.getDisplayPublicKeys == null) {
+          throw new Error('No getDisplayPublicKeys')
+        }
+        const displayKeys = tools.getDisplayPublicKeys({
+          type: WALLET_TYPE,
+          keys: { publicKeys: { bip44: 'xpub', bip49: 'ypub', bip84: 'zpub' } },
+          id: '!'
+        })
+        assert.deepEqual(Object.entries(displayKeys), [
+          ['bip84', 'zpub'],
+          ['bip49', 'ypub'],
+          ['bip44', 'xpub']
+        ])
+      })
+    })
+
     describe(`parseUri for Wallet type ${WALLET_TYPE}`, function () {
       before('Plugin', async function () {
         if (tools == null) {
