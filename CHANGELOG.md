@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: `getDisplayPublicKeys` tools method, listing each xpub by address format.
+
 ## 3.16.0 (2026-10-09)
 
 - changed: Share each server's health probe between every wallet of the same currency. Probes of one server less than ten seconds apart now share a single REST request, so N wallets connected to the same Edge Blockbook cost one probe per keepalive interval rather than N.
