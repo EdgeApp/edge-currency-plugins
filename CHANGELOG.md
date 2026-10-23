@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- added: Broadcast transactions through Electrum (`electrumws(s):`) servers with `blockchain.transaction.broadcast`, alongside the Blockbook servers that already receive them.
+- added: Track the block height through Electrum servers with `blockchain.headers.subscribe`, and confirm unconfirmed transactions on each new block from the history of a script they pay.
+- added: Fetch transactions through Electrum servers with `blockchain.transaction.get`, so legacy (bip44 and bip32) wallets can sync their UTXOs.
+- added: eCash (ECX) mainnet and betanet plugins, which set the network's magic nLockTime on every transaction as replay protection against Bitcoin.
+- added: Bitcoin wallets can be split into eCash (ECX) wallets.
+- fixed: Electrum connections closing after every `server.ping`, because Fulcrum rejects the object the params were sent as.
+- fixed: Electrum request failures stalling the wallet sync. A failed request now reaches the task that made it, which retries, and a task Electrum cannot answer fails instead of receiving the previous task's response.
+- fixed: Missing transaction history in wallets that also connect to an Electrum server, which only reports how many transactions an address has. Address histories now come from a connected Blockbook server whenever there is one.
+- fixed: Requests a sync task made after a failed or timed-out request never being sent, which left the rest of that task's work, such as other transactions' confirmation checks, undone until the next block.
+
 ## 3.16.0 (2026-10-09)
 
 - changed: Share each server's health probe between every wallet of the same currency. Probes of one server less than ten seconds apart now share a single REST request, so N wallets connected to the same Edge Blockbook cost one probe per keepalive interval rather than N.
