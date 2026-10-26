@@ -19,6 +19,7 @@ import { AddressResponse, BlockbookAccountUtxo } from './blockbookApi'
 import {
   addressTransactionsMessage,
   AddressTransactionsResponse,
+  broadcastTransactionMessage,
   listUnspentMessage,
   ListUnspentResponse,
   pingMessage
@@ -191,8 +192,12 @@ export function makeBlockbookElectrum(
     walletId
   })
 
-  instance.broadcastTx = async () => {
-    throw new Error('broadcastTx not supported for Electrum connections')
+  instance.broadcastTx = async transaction => {
+    const txid = await instance.promisifyWsMessage(
+      broadcastTransactionMessage(transaction.signedTx)
+    )
+    // Blockbook reports the broadcast txid as `result`:
+    return { result: txid }
   }
   instance.fetchAddress = async () => {
     throw new Error('fetchAddress not supported for Electrum connections')

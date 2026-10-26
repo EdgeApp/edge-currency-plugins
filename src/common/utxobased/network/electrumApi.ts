@@ -201,3 +201,19 @@ export const transactionMessage = (
 })
 export type TransactionResponse = ElectrumTransaction
 export const asTransactionResponse = asElectrumTransaction
+
+/**
+ * Broadcast Transaction
+ */
+export const broadcastTransactionMessage = (
+  rawTx: string
+): ElectrumTask<BroadcastTransactionResponse> => ({
+  method: 'blockchain.transaction.broadcast',
+  params: [rawTx],
+  cleaner: asElectrumResponse(asBroadcastTransactionResponse)
+})
+export type BroadcastTransactionResponse = ReturnType<
+  typeof asBroadcastTransactionResponse
+>
+// The server answers with the transaction's txid:
+export const asBroadcastTransactionResponse = asString
