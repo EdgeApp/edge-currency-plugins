@@ -16,7 +16,10 @@ import {
   BlockbookTransaction,
   SubscribeAddressResponse
 } from '../network/blockbookApi'
-import { makeBlockbookElectrum } from '../network/BlockbookElectrum'
+import {
+  isElectrumUri,
+  makeBlockbookElectrum
+} from '../network/BlockbookElectrum'
 import Deferred from '../network/Deferred'
 import { WsTask, WsTaskGenerator } from '../network/Socket'
 import { SocketEmitter, SocketEvent } from '../network/SocketEmitter'
@@ -73,6 +76,7 @@ export interface ServerStates {
   stop: () => void
   serverCanGetTx: (uri: string, txid: string) => boolean
   serverCanGetAddress: (uri: string, address: string) => boolean
+  serverCanGetAddressHistory: (uri: string, address: string) => boolean
   serverIsAwareOfAddress: (uri: string, address: string) => boolean
   getServerState: (uri: string) => ServerState | undefined
   refillServers: () => void
@@ -510,7 +514,7 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
       }
 
       // Create a new blockbook instance based on the URI scheme
-      if (['electrumwss', 'electrumws'].includes(parsed.scheme)) {
+      if (isElectrumUri(uri)) {
         // Electrum wrapper
         blockbook = makeBlockbookElectrum({
           asAddress: pluginInfo.engineInfo.asBlockbookAddress,
@@ -860,6 +864,18 @@ export function makeServerStates(config: ServerStateConfig): ServerStates {
         if (state.addresses.has(address)) return false
       }
       return true
+    },
+
+    serverCanGetAddressHistory(uri: string, address: string): boolean {
+      // Electrum only reports how many transactions an address has, so the
+      // history goes to a connected Blockbook server whenever there is one.
+      // Without one, the counts still let the wallet finish syncing:
+      const hasBlockbook = Object.entries(serverStatesCache).some(
+        ([otherUri, state]) =>
+          !isElectrumUri(otherUri) && state.blockbook.isConnected
+      )
+      if (isElectrumUri(uri) && hasBlockbook) return false
+      return instance.serverCanGetAddress(uri, address)
     },
 
     serverIsAwareOfAddress(uri: string, address: string): boolean {

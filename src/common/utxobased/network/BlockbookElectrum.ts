@@ -371,6 +371,10 @@ export function makeBlockbookElectrum(
   return instance
 }
 
+/** True for the URIs of Electrum servers, as opposed to Blockbook servers. */
+export const isElectrumUri = (uri: string): boolean =>
+  /^electrumwss?:/.test(uri)
+
 // Electrum indexes scripts by their SHA-256, in reverse byte order:
 const toElectrumScriptHash = (scriptPubkey: Buffer): string =>
   crypto.sha256(scriptPubkey).reverse().toString('hex')

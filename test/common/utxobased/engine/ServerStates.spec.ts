@@ -537,6 +537,116 @@ describe('ServerStates.broadcastTx', function () {
   })
 })
 
+describe('ServerStates.serverCanGetAddressHistory', function () {
+  this.timeout(10000)
+
+  const ADDRESS = 'bc1qtest'
+  const ELECTRUM_PORT = WS_PORT + 2
+  const ELECTRUM_URI = `electrumws://localhost:${ELECTRUM_PORT}`
+  let blockbookServer: WS.Server
+  let electrumServer: WS.Server
+  let serverStates: ServerStates
+
+  const listen = async (server: WS.Server): Promise<void> =>
+    await new Promise<void>(resolve =>
+      server.on('listening', () => {
+        resolve()
+      })
+    )
+
+  const connect = async (uri: string): Promise<void> => {
+    serverStates.setServerList([uri])
+    serverStates.refillServers()
+    await waitFor(
+      () => serverStates.getServerState(uri)?.blockbook.isConnected === true
+    )
+  }
+
+  beforeEach(async () => {
+    blockbookServer = new WS.Server({ port: WS_PORT })
+    blockbookServer.on('connection', (ws: WebSocket) => {
+      ws.onmessage = event => {
+        const data = JSON.parse(event.data)
+        if (data.method === 'ping') {
+          ws.send(JSON.stringify({ id: data.id, data: {} }))
+        }
+        if (data.method === 'getInfo') {
+          ws.send(
+            JSON.stringify({
+              id: data.id,
+              data: {
+                name: 'Bitcoin',
+                shortcut: 'BTC',
+                decimals: 8,
+                version: '0.0.0',
+                bestHeight: 1,
+                bestHash: '00',
+                block0Hash: '00',
+                testnet: false
+              }
+            })
+          )
+        }
+      }
+    })
+    electrumServer = new WS.Server({ port: ELECTRUM_PORT })
+    electrumServer.on('connection', (ws: WebSocket) => {
+      ws.onmessage = event => {
+        const data = JSON.parse(event.data)
+        const result =
+          data.method === 'blockchain.headers.subscribe'
+            ? { height: 1, hex: '00'.repeat(80) }
+            : null
+        ws.send(JSON.stringify({ jsonrpc: '2.0', id: data.id, result }))
+      }
+    })
+    await Promise.all([listen(blockbookServer), listen(electrumServer)])
+    serverStates = makeTestServerStates(makeFakeHttp({}), [])
+  })
+
+  afterEach(async () => {
+    serverStates.stop()
+    await Promise.all(
+      [blockbookServer, electrumServer].map(
+        async server =>
+          await new Promise<void>(resolve => server.close(() => resolve()))
+      )
+    )
+  })
+
+  it('lets Electrum answer address histories when it is the only server', async () => {
+    await connect(ELECTRUM_URI)
+    expect(
+      serverStates.serverCanGetAddressHistory(ELECTRUM_URI, ADDRESS)
+    ).to.equal(true)
+  })
+
+  it('leaves address histories to a connected Blockbook server', async () => {
+    await connect(ELECTRUM_URI)
+    await connect(WS_URI)
+    expect(
+      serverStates.serverCanGetAddressHistory(ELECTRUM_URI, ADDRESS)
+    ).to.equal(false)
+    expect(serverStates.serverCanGetAddressHistory(WS_URI, ADDRESS)).to.equal(
+      true
+    )
+    // Electrum still serves the address's UTXOs:
+    expect(serverStates.serverCanGetAddress(ELECTRUM_URI, ADDRESS)).to.equal(
+      true
+    )
+  })
+
+  it('hands address histories back to Electrum once Blockbook disconnects', async () => {
+    await connect(ELECTRUM_URI)
+    await connect(WS_URI)
+    for (const client of blockbookServer.clients) client.terminate()
+    await waitFor(() => serverStates.getServerState(WS_URI) == null)
+    expect(
+      serverStates.serverCanGetAddressHistory(ELECTRUM_URI, ADDRESS)
+    ).to.equal(true)
+  })
+})
+
 describe('ServerStates health probe', function () {
   this.timeout(15000)
 

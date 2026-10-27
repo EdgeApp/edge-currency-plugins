@@ -38,6 +38,7 @@ import {
   SubscribeAddressResponse,
   TransactionResponse
 } from '../network/blockbookApi'
+import { isElectrumUri } from '../network/BlockbookElectrum'
 import { WsTask, WsTaskAsyncGenerator } from '../network/Socket'
 import AwaitLock from './await-lock'
 import { CACHE_THROTTLE } from './constants'
@@ -126,6 +127,11 @@ export function makeUtxoEngineProcessor(
     pendingTimeouts.clear()
   }
 
+  // Addresses whose history an Electrum server answered. Electrum only
+  // reports how many transactions an address has, so a Blockbook server
+  // queries these again once one is picking tasks:
+  const electrumHistoryAddresses = new Set<string>()
+
   const clearTaskCache = (): void => {
     for (const key of Object.keys(taskCache.addressForTransactionsCache)) {
       removeItem(taskCache.addressForTransactionsCache, key)
@@ -148,6 +154,7 @@ export function makeUtxoEngineProcessor(
     for (const key of Object.keys(taskCache.transactionUpdateCache)) {
       removeItem(taskCache.transactionUpdateCache, key)
     }
+    electrumHistoryAddresses.clear()
   }
 
   /**
@@ -224,6 +231,28 @@ export function makeUtxoEngineProcessor(
     }
   }
 
+  /**
+   * Queues already-processed addresses to be queried again. Each query starts
+   * from the address's stored lastQueriedBlockHeight, and the address only
+   * counts as processed once the new queries complete. Returns how many
+   * addresses were re-queued.
+   */
+  const reopenAddresses = (addresses: Iterable<string>): number => {
+    let reopened = 0
+    for (const address of addresses) {
+      const cacheItem = taskCache.addressSubscribeCache[address]
+      if (cacheItem == null || !cacheItem.processing) continue
+      cacheItem.processing = false
+      taskCache.addressForUtxosCache[address] = {
+        processing: false,
+        path: cacheItem.path
+      }
+      progressByScriptPubkey.delete(walletTools.addressToScriptPubkey(address))
+      reopened++
+    }
+    return reopened
+  }
+
   const lock = new AwaitLock()
 
   const serverStates = makeServerStates({
@@ -243,6 +272,8 @@ export function makeUtxoEngineProcessor(
     emitter,
     taskCache,
     pendingTimeouts,
+    electrumHistoryAddresses,
+    reopenAddresses,
     updateProgressRatio,
     updateSeenTxCheckpoint,
     io,
@@ -296,21 +327,9 @@ export function makeUtxoEngineProcessor(
     // query starts from the address's stored lastQueriedBlockHeight, which is
     // never above the height of the server that answered it, so the range
     // the dropped server missed is fetched again.
-    let requeued = 0
-    for (const [address, cacheItem] of Object.entries(
-      taskCache.addressSubscribeCache
-    )) {
-      if (!cacheItem.processing) continue
-      cacheItem.processing = false
-      taskCache.addressForUtxosCache[address] = {
-        processing: false,
-        path: cacheItem.path
-      }
-      // The re-query has to complete again before the address counts as
-      // processed:
-      progressByScriptPubkey.delete(walletTools.addressToScriptPubkey(address))
-      requeued++
-    }
+    const requeued = reopenAddresses(
+      Object.keys(taskCache.addressSubscribeCache)
+    )
     log(`${uri} dropped, re-queued ${requeued} addresses`)
   })
 
@@ -712,6 +731,8 @@ interface CommonParams {
   emitter: EngineEmitter
   taskCache: TaskCache
   pendingTimeouts: Set<NodeJS.Timeout>
+  electrumHistoryAddresses: Set<string>
+  reopenAddresses: (addresses: Iterable<string>) => number
   updateProgressRatio: (
     scriptPubkey: string,
     process: AddressProcess
@@ -926,6 +947,15 @@ export async function* pickNextTask(
   const serverState = common.serverStates.getServerState(serverUri)
   if (serverState == null) return false
 
+  // Re-query the addresses whose history came from Electrum, now that a
+  // Blockbook server can answer with their transactions:
+  const { electrumHistoryAddresses } = common
+  if (!isElectrumUri(serverUri) && electrumHistoryAddresses.size > 0) {
+    const reopened = common.reopenAddresses(electrumHistoryAddresses)
+    electrumHistoryAddresses.clear()
+    common.log(`${serverUri} re-queued ${reopened} addresses Electrum answered`)
+  }
+
   // subscribe all servers to new blocks
   if (serverState.blockSubscriptionStatus === 'unsubscribed') {
     common.serverStates.watchBlocks(serverUri)
@@ -1096,7 +1126,7 @@ export async function* pickNextTask(
   )) {
     if (
       !cacheItem.processing &&
-      common.serverStates.serverCanGetAddress(serverUri, address)
+      common.serverStates.serverCanGetAddressHistory(serverUri, address)
     ) {
       cacheItem.processing = true
 
@@ -1289,9 +1319,10 @@ async function* processAddressForTransactions(
   // answering server has indexed, so a lagging server cannot move
   // lastQueriedBlockHeight past blocks it never saw. A height of 0 means this
   // server has not reported one yet, so nothing it answers can be trusted to
-  // move the cursor; the next query covers the range again.
+  // move the cursor; the next query covers the range again. Electrum answers
+  // carry no transactions, so they never move it either:
   const queriedHeight =
-    serverState.blockHeight > 0
+    serverState.blockHeight > 0 && !isElectrumUri(serverUri)
       ? Math.min(blockHeight, serverState.blockHeight)
       : addressData.lastQueriedBlockHeight
 
@@ -1385,6 +1416,10 @@ async function* processAddressForTransactions(
 
     // Save/update the fully-processed address
     await common.dataLayer.saveAddress(addressData)
+
+    // Electrum saved no transactions, so a Blockbook server queries this
+    // address again once one is picking tasks:
+    if (isElectrumUri(serverUri)) common.electrumHistoryAddresses.add(address)
 
     // Extend the lookahead before counting progress, so any addresses it adds
     // are in the total before this address's flag can bring the ratio to 1:
