@@ -154,6 +154,23 @@ export type PingResponse = ReturnType<typeof asPingResponse>
 export const asPingResponse = asMaybe(asUndefined)
 
 /**
+ * Subscribe to Headers (Get Block Height)
+ */
+export const headersSubscribeMessage = (): ElectrumTask<HeadersSubscribeResponse> => ({
+  method: 'blockchain.headers.subscribe',
+  params: [],
+  cleaner: asElectrumResponse(asHeadersSubscribeResponse)
+})
+export type HeadersSubscribeResponse = ReturnType<
+  typeof asHeadersSubscribeResponse
+>
+// The chain tip's header, which the server also sends for each new tip:
+export const asHeadersSubscribeResponse = asObject({
+  height: asNumber,
+  hex: asString
+})
+
+/**
  * List Unspent (Get UTXOs)
  */
 export const listUnspentMessage = (

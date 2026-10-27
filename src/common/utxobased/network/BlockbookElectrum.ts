@@ -1,5 +1,6 @@
 import { crypto } from 'altcoin-js'
 import {
+  asArray,
   asEither,
   asJSON,
   asObject,
@@ -15,11 +16,17 @@ import { PluginInfo } from '../../plugin/types'
 import { UtxoInitOptions } from '../engine/types'
 import { addressToScriptPubkey } from '../keymanager/keymanager'
 import { Blockbook, makeBlockbook } from './Blockbook'
-import { AddressResponse, BlockbookAccountUtxo } from './blockbookApi'
+import {
+  AddressResponse,
+  BlockbookAccountUtxo,
+  SubscribeNewBlockResponse
+} from './blockbookApi'
 import {
   addressTransactionsMessage,
   AddressTransactionsResponse,
+  asHeadersSubscribeResponse,
   broadcastTransactionMessage,
+  headersSubscribeMessage,
   listUnspentMessage,
   ListUnspentResponse,
   pingMessage
@@ -50,8 +57,8 @@ export interface ElectrumResponseMessage {
   error: { message: string } | undefined
 }
 
-const asResponseMessage = (raw: unknown): WsResponseMessage => {
-  const message = asJSON(
+const asElectrumMessage = asJSON(
+  asEither(
     asObject({
       id: asString,
       result: asUnknown,
@@ -61,8 +68,30 @@ const asResponseMessage = (raw: unknown): WsResponseMessage => {
           asObject({ connected: asString })
         )
       )
+    }),
+    // A subscription's notifications carry its method in place of an id:
+    asObject({
+      method: asString,
+      params: asArray(asUnknown)
     })
-  )(raw)
+  )
+)
+
+const { method: headersSubscribeMethod } = headersSubscribeMessage()
+
+const asResponseMessage = (raw: unknown): WsResponseMessage => {
+  const message = asElectrumMessage(raw)
+
+  // The socket files each subscription under its method name:
+  if ('method' in message) {
+    return { id: message.method, data: message.params[0] }
+  }
+
+  // Electrum answers a subscription with the current header, not the
+  // acknowledgement the socket waits for. fetchInfo reports that height:
+  if (message.id === headersSubscribeMethod && message.error == null) {
+    return { id: message.id, data: { subscribed: true } }
+  }
 
   return {
     id: message.id,
@@ -71,11 +100,20 @@ const asResponseMessage = (raw: unknown): WsResponseMessage => {
   }
 }
 
-const asResponse: Cleaner<WsResponse> = (raw: unknown) => {
+const makeAsResponse = (
+  isWatchingBlocks: () => boolean
+): Cleaner<WsResponse> => (raw: unknown) => {
   const payloadString = asString(raw).trimEnd()
   const messageStrings = payloadString.split('\n')
   const messages = messageStrings.map(asResponseMessage)
-  return messages
+
+  // fetchInfo's blockchain.headers.subscribe subscribes the connection to new
+  // blocks, so the server can announce one before watchBlocks files the
+  // subscription. The socket drops connections over messages it cannot route,
+  // so announcements until then are skipped. watchBlocks reports each block
+  // after it subscribes:
+  if (isWatchingBlocks()) return messages
+  return messages.filter(message => message.id !== headersSubscribeMethod)
 }
 
 export function makeBlockbookElectrum(
@@ -104,9 +142,10 @@ export function makeBlockbookElectrum(
     return scriptHash
   }
 
+  let isWatchingBlocks = false
   const instance = makeBlockbook({
     asAddress,
-    asResponse,
+    asResponse: makeAsResponse(() => isWatchingBlocks),
     connectionUri,
     engineEmitter,
     initOptions,
@@ -188,6 +227,14 @@ export function makeBlockbookElectrum(
     ping: async (): Promise<void> => {
       return await instance.promisifyWsMessage(pingMessage())
     },
+    subscribeNewBlockMessage: () => ({
+      ...headersSubscribeMessage(),
+      // Notifications hold the header itself, with no response envelope:
+      cleaner: (raw: unknown): SubscribeNewBlockResponse => {
+        const header = asHeadersSubscribeResponse(raw)
+        return { height: header.height, hash: headerToBlockHash(header.hex) }
+      }
+    }),
     socketEmitter,
     walletId
   })
@@ -206,18 +253,35 @@ export function makeBlockbookElectrum(
     throw new Error('fetchAddressUtxos not supported for Electrum connections')
   }
   instance.fetchInfo = async () => {
-    throw new Error('fetchInfo not supported for Electrum connections')
+    const header = await instance.promisifyWsMessage(headersSubscribeMessage())
+    return {
+      name: pluginInfo.currencyInfo.displayName, // unused
+      shortcut: pluginInfo.currencyInfo.currencyCode, // unused
+      decimals: 8, // unused
+      version: '', // unused
+      bestHeight: header.height,
+      bestHash: headerToBlockHash(header.hex),
+      block0Hash: '', // unused
+      testnet: false, // unused
+      backend: undefined // unused
+    }
   }
   instance.fetchTransaction = async () => {
     throw new Error('fetchTransaction not supported for Electrum connections')
   }
 
-  instance.watchAddresses = async () => {
-    return // Fail gracefully
+  const { watchBlocks } = instance
+  instance.watchBlocks = deferredBlockSub => {
+    isWatchingBlocks = true
+    watchBlocks(deferredBlockSub)
   }
-  instance.watchBlocks = async () => {
+  instance.watchAddresses = async () => {
     return // Fail gracefully
   }
 
   return instance
 }
+
+// A block's hash is its header's double SHA-256, in reverse byte order:
+const headerToBlockHash = (headerHex: string): string =>
+  crypto.hash256(Buffer.from(headerHex, 'hex')).reverse().toString('hex')
