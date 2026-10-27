@@ -6,6 +6,7 @@ import { EngineEmitter } from '../../../../src/common/plugin/EngineEmitter'
 import { info as bitcoin } from '../../../../src/common/utxobased/info/bitcoin'
 import { Blockbook } from '../../../../src/common/utxobased/network/Blockbook'
 import { makeBlockbookElectrum } from '../../../../src/common/utxobased/network/BlockbookElectrum'
+import { pingMessage } from '../../../../src/common/utxobased/network/electrumApi'
 import { WsTask } from '../../../../src/common/utxobased/network/Socket'
 import { SocketEmitter } from '../../../../src/common/utxobased/network/SocketEmitter'
 import { makeFakeLog } from '../../../utils'
@@ -40,8 +41,18 @@ describe('BlockbookElectrum with a dummy Electrum server', function () {
       ws.onmessage = event => {
         const request: ElectrumRequest = JSON.parse(event.data)
         requests.push(request)
+        // Fulcrum rejects named (object) params for server.ping:
         const body =
-          request.method === 'server.ping' ? { result: null } : answer(request)
+          request.method !== 'server.ping'
+            ? answer(request)
+            : Array.isArray(request.params)
+            ? { result: null }
+            : {
+                error: {
+                  code: -32602,
+                  message: 'Named params are not supported for this method'
+                }
+              }
         ws.send(JSON.stringify({ jsonrpc: '2.0', id: request.id, ...body }))
       }
     })
@@ -68,6 +79,15 @@ describe('BlockbookElectrum with a dummy Electrum server', function () {
   afterEach(async () => {
     await blockbook.disconnect()
     websocketServer.close()
+  })
+
+  it('pings with positional params', async () => {
+    await blockbook.promisifyWsMessage(pingMessage())
+
+    // The socket's own keepalive may have pinged too:
+    const pings = requests.filter(request => request.method === 'server.ping')
+    expect(pings).to.not.have.length(0)
+    for (const ping of pings) expect(ping.params).to.deep.equal([])
   })
 
   it('broadcasts with blockchain.transaction.broadcast', async () => {

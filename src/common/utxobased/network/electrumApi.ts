@@ -144,7 +144,9 @@ export const asElectrumResponse = <T>(asT: Cleaner<T>): Cleaner<T> => raw => {
 export const pingMessage = (): ElectrumTask<PingResponse> => {
   return {
     method: 'server.ping',
-    params: undefined,
+    // Electrum servers such as Fulcrum reject the `{}` the socket sends for
+    // missing params as named params, so an empty array is required:
+    params: [],
     cleaner: asElectrumResponse(asPingResponse)
   }
 }
