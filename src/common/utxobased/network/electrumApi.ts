@@ -222,6 +222,19 @@ export type TransactionResponse = ElectrumTransaction
 export const asTransactionResponse = asElectrumTransaction
 
 /**
+ * Get Raw Transaction
+ */
+export const rawTransactionMessage = (
+  txHash: string
+): ElectrumTask<RawTransactionResponse> => ({
+  method: 'blockchain.transaction.get',
+  params: [txHash, false],
+  cleaner: asElectrumResponse(asRawTransactionResponse)
+})
+export type RawTransactionResponse = ReturnType<typeof asRawTransactionResponse>
+export const asRawTransactionResponse = asString
+
+/**
  * Broadcast Transaction
  */
 export const broadcastTransactionMessage = (
