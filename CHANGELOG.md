@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.17.0 (2026-10-29)
+
 - added: Broadcast transactions through Electrum (`electrumws(s):`) servers with `blockchain.transaction.broadcast`, alongside the Blockbook servers that already receive them.
 - added: Track the block height through Electrum servers with `blockchain.headers.subscribe`, and confirm unconfirmed transactions on each new block from the history of a script they pay.
 - added: Fetch transactions through Electrum servers with `blockchain.transaction.get`, so legacy (bip44 and bip32) wallets can sync their UTXOs.
