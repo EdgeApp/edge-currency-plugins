@@ -9,6 +9,7 @@ import {
 import { info as bitcoin } from '../../../../src/common/utxobased/info/bitcoin'
 import { Blockbook } from '../../../../src/common/utxobased/network/Blockbook'
 import {
+  AddressResponse,
   BlockbookTransaction,
   transactionMessage
 } from '../../../../src/common/utxobased/network/blockbookApi'
@@ -275,6 +276,24 @@ describe('BlockbookElectrum with a dummy Electrum server', function () {
 
     expect(error).to.be.instanceOf(Error)
     expect((error as Error).message).to.equal('history too large')
+  })
+
+  it('counts the mempool transactions in an address history', async () => {
+    answer = () => ({
+      result: [
+        { tx_hash: TXID, height: 974000 },
+        { tx_hash: TXID, height: 0 },
+        { tx_hash: TXID, height: -1 }
+      ]
+    })
+
+    const response = (await runTask({
+      method: 'getAccountInfo',
+      params: { descriptor: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' }
+    })) as AddressResponse
+
+    expect(response.txs).to.equal(3)
+    expect(response.unconfirmedTxs).to.equal(2)
   })
 
   it('hands failed requests to the task that made them', async () => {

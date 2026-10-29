@@ -195,7 +195,8 @@ export function makeBlockbookElectrum(
         txs: electrumUtxos.length,
         unconfirmedBalance: '0', // unused
         unconfirmedTxs: electrumUtxos.reduce(
-          (sum, tx) => (sum + tx.height >= 0 ? 1 : 0),
+          // Electrum puts mempool transactions at height 0 or -1:
+          (sum, tx) => sum + (tx.height <= 0 ? 1 : 0),
           0
         ),
         txids: [], // unused
