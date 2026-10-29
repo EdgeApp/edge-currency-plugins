@@ -211,6 +211,17 @@ export interface CoinInfo {
   sighash?: number
 
   /**
+   * Optional nLockTime value set on every transaction. This is used by forks
+   * whose nodes treat a magic nLockTime as final while the parent chain reads
+   * it as an unreachable block height, making the fork's transactions
+   * impossible to replay on the parent chain.
+   *
+   * Transactions for these currencies always have a non-final input sequence,
+   * since nodes ignore nLockTime when every input sequence is final.
+   */
+  lockTime?: number
+
+  /**
    * A function to be passed to AltcoinJS `signInput` method. This is used to
    * get the input hash for the signature algorithm before signing the input.
    *

@@ -144,12 +144,31 @@ export const asElectrumResponse = <T>(asT: Cleaner<T>): Cleaner<T> => raw => {
 export const pingMessage = (): ElectrumTask<PingResponse> => {
   return {
     method: 'server.ping',
-    params: undefined,
+    // Electrum servers such as Fulcrum reject the `{}` the socket sends for
+    // missing params as named params, so an empty array is required:
+    params: [],
     cleaner: asElectrumResponse(asPingResponse)
   }
 }
 export type PingResponse = ReturnType<typeof asPingResponse>
 export const asPingResponse = asMaybe(asUndefined)
+
+/**
+ * Subscribe to Headers (Get Block Height)
+ */
+export const headersSubscribeMessage = (): ElectrumTask<HeadersSubscribeResponse> => ({
+  method: 'blockchain.headers.subscribe',
+  params: [],
+  cleaner: asElectrumResponse(asHeadersSubscribeResponse)
+})
+export type HeadersSubscribeResponse = ReturnType<
+  typeof asHeadersSubscribeResponse
+>
+// The chain tip's header, which the server also sends for each new tip:
+export const asHeadersSubscribeResponse = asObject({
+  height: asNumber,
+  hex: asString
+})
 
 /**
  * List Unspent (Get UTXOs)
@@ -201,3 +220,32 @@ export const transactionMessage = (
 })
 export type TransactionResponse = ElectrumTransaction
 export const asTransactionResponse = asElectrumTransaction
+
+/**
+ * Get Raw Transaction
+ */
+export const rawTransactionMessage = (
+  txHash: string
+): ElectrumTask<RawTransactionResponse> => ({
+  method: 'blockchain.transaction.get',
+  params: [txHash, false],
+  cleaner: asElectrumResponse(asRawTransactionResponse)
+})
+export type RawTransactionResponse = ReturnType<typeof asRawTransactionResponse>
+export const asRawTransactionResponse = asString
+
+/**
+ * Broadcast Transaction
+ */
+export const broadcastTransactionMessage = (
+  rawTx: string
+): ElectrumTask<BroadcastTransactionResponse> => ({
+  method: 'blockchain.transaction.broadcast',
+  params: [rawTx],
+  cleaner: asElectrumResponse(asBroadcastTransactionResponse)
+})
+export type BroadcastTransactionResponse = ReturnType<
+  typeof asBroadcastTransactionResponse
+>
+// The server answers with the transaction's txid:
+export const asBroadcastTransactionResponse = asString

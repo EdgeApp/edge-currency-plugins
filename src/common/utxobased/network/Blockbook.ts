@@ -103,6 +103,8 @@ interface BlockbookConfig {
   log: EdgeLog
   taskGeneratorFn: TaskGeneratorFn
   ping?: () => Promise<void>
+  /** The new-block subscription, for servers that are not Blockbook. */
+  subscribeNewBlockMessage?: () => BlockbookTask<SubscribeNewBlockResponse>
   socketEmitter: SocketEmitter
   walletId: string
   /** Socket timing overrides, for tests. */
@@ -232,7 +234,7 @@ export function makeBlockbook(config: BlockbookConfig): Blockbook {
         )
       }
       socket.subscribe({
-        ...subscribeNewBlockMessage(),
+        ...(config.subscribeNewBlockMessage ?? subscribeNewBlockMessage)(),
         cb: socketCb,
         deferred: deferredBlockSub,
         subscribed: false
