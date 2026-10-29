@@ -267,6 +267,23 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
     }
   }
 
+  // A task resumes with each response or failure, and then makes its next
+  // request or reports with a boolean that it is done:
+  const submitNextTask = <T>(
+    generator: WsTaskAsyncGenerator<T>,
+    resumed: Promise<IteratorResult<WsTask<T> | boolean, boolean>>
+  ): void => {
+    resumed
+      .then(result => {
+        const task = result.value
+        if (typeof task === 'boolean') return
+        instance.submitTask(task, generator)
+      })
+      .catch(e => {
+        log.error(e.message)
+      })
+  }
+
   const onTimer = (): void => {
     log(`socket timer with server ${uri} expired, check if healthCheck needed`)
     const now = Date.now() - TIMER_SLACK
@@ -283,11 +300,10 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
 
     for (const [id, request] of Object.entries(pendingRequests)) {
       if (request.startTime + timeout < now) {
-        request.generator
-          .throw(new Error(`Timeout for request ${id}`))
-          .catch(e => {
-            log.error(e.message)
-          })
+        submitNextTask(
+          request.generator,
+          request.generator.throw(new Error(`Timeout for request ${id}`))
+        )
         removeItem(pendingRequests, id)
       }
     }
@@ -358,23 +374,13 @@ export function makeSocket(uri: string, config: SocketConfig): Socket {
               } else {
                 nextValue = responseMessage.data
               }
-              request.generator
-                .next(nextValue)
-                .then(result => {
-                  const task = result.value
-                  if (typeof task === 'boolean') {
-                    return
-                  }
-                  instance.submitTask(task, request.generator)
-                })
-                .catch(e => {
-                  log.error(e.message)
-                })
+              submitNextTask(
+                request.generator,
+                request.generator.next(nextValue)
+              )
             } catch (error) {
               console.log({ uri, error, response: responseMessage, request })
-              request.generator.throw(error).catch(e => {
-                log.error(e.message)
-              })
+              submitNextTask(request.generator, request.generator.throw(error))
             }
             continue
           }
