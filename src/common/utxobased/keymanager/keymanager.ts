@@ -268,6 +268,28 @@ interface SignTxReturn {
   hex: string
 }
 
+export interface VerifyInputSignatureArgs {
+  /** The fully signed transaction, as parsed from its network hex */
+  tx: Transaction
+  inputIndex: number
+  /** The compressed public key (hex) that is expected to have signed */
+  pubkey: string
+  scriptType: ScriptTypeEnum
+  /** The value of the previous output being spent, in the smallest unit */
+  value: number
+  /** The previous transaction (hex); required for non-segwit inputs */
+  prevTxHex?: string
+  coin: string
+}
+
+/**
+ * Thrown by `verifyInputSignature` for inputs it cannot check at all, so a
+ * caller can tell "cannot judge" apart from "does not verify".
+ */
+export class CannotVerifyInputError extends Error {
+  name = 'CannotVerifyInputError'
+}
+
 type BitcoinJSNetwork = networks.Network
 
 export interface Bip32 {
@@ -1301,6 +1323,141 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
   return {
     id: tx.getId(coin.txHashFunction),
     hex: tx.toHex()
+  }
+}
+
+/**
+ * Checks that input `inputIndex` of `tx` carries a SIGHASH_ALL signature made
+ * by `pubkey` over this exact transaction.
+ *
+ * The engine uses this before it builds on a stored transaction record,
+ * since only a valid signature from the wallet's own key establishes that
+ * the wallet made the spend.
+ *
+ * The check itself is `Psbt.validateSignaturesOfInput`, the same library call
+ * `signTx` runs on every input it signs. The transaction is loaded into a
+ * PSBT the way `makeTx` builds one, the (signature, pubkey) pair is lifted
+ * out of the finalized scriptSig or witness into `partialSig`, and the
+ * library recomputes the digest (legacy, BIP-143, or fork-id) and verifies
+ * it against the key.
+ *
+ * Returns `false` when the signature is missing, malformed, made by another
+ * key, or does not cover this transaction. Throws `CannotVerifyInputError`
+ * when the input cannot be checked at all: a script type this function does
+ * not read, a legacy input with no previous transaction, or a coin whose
+ * signing digest the library's validator does not reproduce.
+ */
+export function verifyInputSignature(args: VerifyInputSignatureArgs): boolean {
+  const { tx, inputIndex, scriptType, value, prevTxHex } = args
+  const input = tx.ins[inputIndex]
+  if (input == null) return false
+
+  const coin = getCoinFromString(args.coin)
+  // The validator recomputes the digest from the signature's own hash-type
+  // byte, with the default hash function. A coin whose hash type does not fit
+  // in that byte (Bitcoin Gold) or that hashes differently (Groestlcoin)
+  // cannot be checked this way.
+  if (coin.sighashFunction != null || (coin.sighash ?? 0) > 0xff) {
+    throw new CannotVerifyInputError(
+      `Cannot verify signatures for ${coin.name}`
+    )
+  }
+  const expectedPubkey = Buffer.from(args.pubkey, 'hex')
+
+  // Where the (signature, pubkey) pair lives, and what the PSBT needs to
+  // know about the output being spent, per script type:
+  let sigAndPubkey: Buffer[]
+  const utxoFields: {
+    nonWitnessUtxo?: Buffer
+    witnessUtxo?: { script: Buffer; value: number }
+    redeemScript?: Buffer
+  } = {}
+  switch (scriptType) {
+    case ScriptTypeEnum.p2pkh: {
+      const chunks = bitcoinScript.decompile(input.script) ?? []
+      if (!chunks.every(chunk => Buffer.isBuffer(chunk))) return false
+      sigAndPubkey = chunks as Buffer[]
+      if (prevTxHex == null) {
+        throw new CannotVerifyInputError(
+          'Previous transaction is needed to verify a legacy input'
+        )
+      }
+      utxoFields.nonWitnessUtxo = Buffer.from(prevTxHex, 'hex')
+      break
+    }
+    case ScriptTypeEnum.p2wpkh: {
+      sigAndPubkey = input.witness
+      const { output } = payments.p2wpkh({ pubkey: expectedPubkey })
+      if (output == null) return false
+      utxoFields.witnessUtxo = { script: output, value }
+      break
+    }
+    case ScriptTypeEnum.p2wpkhp2sh: {
+      sigAndPubkey = input.witness
+      const redeem = payments.p2wpkh({ pubkey: expectedPubkey })
+      const { output } = payments.p2sh({ redeem })
+      if (output == null || redeem.output == null) return false
+      utxoFields.witnessUtxo = { script: output, value }
+      utxoFields.redeemScript = redeem.output
+      break
+    }
+    default:
+      throw new CannotVerifyInputError(
+        `Cannot verify signatures for script type ${scriptType}`
+      )
+  }
+  if (sigAndPubkey.length !== 2) return false
+  const [signature, pubkey] = sigAndPubkey
+
+  // Only a signature over every input and output proves the whole spend.
+  // This wallet never produces another kind, so refuse rather than reason
+  // about it.
+  let hashType: number
+  try {
+    ;({ hashType } = bitcoinScript.signature.decode(signature))
+  } catch (error: unknown) {
+    // A 64-byte Schnorr signature plus its hash-type byte. Chains that sign
+    // with a fork id (the Bitcoin Cash family) accept one in an ordinary
+    // input, so a wallet other than this one may have produced it there. The
+    // validator only reads DER, so that input cannot be judged either way.
+    // On every other chain a signature of that shape is not valid in the
+    // inputs handled here.
+    const signsWithForkId =
+      ((coin.sighash ?? 0) & Transaction.SIGHASH_BITCOINCASHBIP143) !== 0
+    if (signsWithForkId && signature.length === 65) {
+      throw new CannotVerifyInputError('Cannot verify a Schnorr signature')
+    }
+    return false
+  }
+  if ((hashType & 0x1f) !== Transaction.SIGHASH_ALL) return false
+  if ((hashType & Transaction.SIGHASH_ANYONECANPAY) !== 0) return false
+
+  const ECPair = getECPair()
+  try {
+    const psbt = new Psbt()
+    psbt.setVersion(tx.version)
+    psbt.setLocktime(tx.locktime)
+    for (const { hash, index, sequence } of tx.ins) {
+      psbt.addInput({ hash, index, sequence })
+    }
+    for (const { script, value } of tx.outs) {
+      psbt.addOutput({ script, value })
+    }
+    psbt.updateInput(inputIndex, {
+      ...utxoFields,
+      partialSig: [{ pubkey, signature }]
+    })
+    return psbt.validateSignaturesOfInput(
+      inputIndex,
+      (pubkey, msghash, signature) =>
+        ECPair.fromPublicKey(pubkey).verify(msghash, signature),
+      expectedPubkey
+    )
+  } catch {
+    // The library throws when the pubkey is not the expected one or is not
+    // in the script, when the previous transaction does not match the
+    // outpoint, or when the transaction itself is malformed.
+    return false
   }
 }
 

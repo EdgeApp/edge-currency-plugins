@@ -43,6 +43,7 @@ import { WsTask, WsTaskAsyncGenerator } from '../network/Socket'
 import AwaitLock from './await-lock'
 import { CACHE_THROTTLE } from './constants'
 import { makeServerStates, ServerState, ServerStates } from './ServerStates'
+import { verifyOwnInputSignatures } from './util/verifyOwnInputSignatures'
 import {
   getFormatSupportedBranches,
   getScriptTypeFromPurposeType,
@@ -1359,6 +1360,36 @@ async function* processAddressForTransactions(
       })
 
       const tx = processTransactionResponse(common, { txResponse })
+
+      // An unconfirmed transaction that spends from this wallet, seen for the
+      // first time, is dropped when its signatures are shown not to be the
+      // wallet's own. One the verifier cannot judge (no hex, an unsupported
+      // coin or script) is stored as before, so this keeps unverified spends
+      // out of the transaction list where it can, but is not a guarantee:
+      // `accelerate()` verifies again and refuses anything short of valid.
+      // Confirmed transactions are
+      // left to the chain, and a transaction already in the DataLayer keeps
+      // its first-seen data either way.
+      if (tx.blockHeight === 0 && existingTx == null) {
+        const verification = await verifyOwnInputSignatures({
+          dataLayer: common.dataLayer,
+          pluginInfo: common.pluginInfo,
+          walletTools: common.walletTools,
+          tx
+        }).catch((error: unknown) => {
+          // A verifier fault must not stall the address sync:
+          common.log.warn(`Cannot verify ${tx.txid}: ${String(error)}`)
+          return { status: 'unsupported', reason: String(error) } as const
+        })
+        if (verification.status === 'invalid') {
+          common.log.warn(
+            `Ignoring unconfirmed transaction ${tx.txid} from ${serverUri}: ` +
+              `${verification.reason ?? 'not signed by this wallet'}`
+          )
+          continue
+        }
+      }
+
       const processedTx = await common.dataLayer.saveTransaction({
         tx,
         scriptPubkeys: [scriptPubkey]
