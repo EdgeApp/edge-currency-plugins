@@ -677,5 +677,25 @@ describe('verifyOwnInputSignatures', function () {
         })
       ).to.include({ status: 'valid' })
     })
+
+    it('accepts a two-input spend whose stored inputs are out of order', async () => {
+      const fixtures = await makeFixtures()
+      const utxo = ownUtxo(fixtures.walletTools, 'bip84', '100000')
+      const other = await secondUtxo(fixtures)
+      const tx = await engineSend(fixtures, {
+        utxos: [other],
+        forceUseUtxo: [utxo],
+        targets: [{ address: RECIPIENT_ADDRESS, value: 120000 }]
+      })
+      expect(tx.inputs.length).to.equal(2)
+      // Each entry keeps its own index; only the order of the list changes:
+      tx.inputs.reverse()
+      const result = await verifyOwnInputSignatures({
+        ...fixtures,
+        pluginInfo: bitcoin,
+        tx
+      })
+      expect(result).to.include({ status: 'valid' })
+    })
   })
 })

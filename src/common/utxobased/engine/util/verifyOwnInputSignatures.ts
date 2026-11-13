@@ -12,6 +12,8 @@ import {
 import { getScriptTypeFromPurposeType, pathToPurposeType } from '../utils'
 import { UtxoWalletTools } from '../UtxoWalletTools'
 
+type StoredInput = TransactionData['inputs'][number]
+
 /**
  * - `none`: no input belongs to this wallet, so there is nothing to verify.
  * - `valid`: every wallet-owned input carries a signature from its key over
@@ -65,7 +67,7 @@ export const verifyOwnInputSignatures = async (
 
   // Which inputs are ours? Decide from our own tables: the address recorded
   // for the input, or the outpoint itself if it is a UTXO we hold.
-  const ownInputs: Array<{ index: number; address: AddressData }> = []
+  const ownInputs: Array<{ input: StoredInput; address: AddressData }> = []
   for (const input of tx.inputs) {
     if (input.txId === ZERO_TXID) continue // coinbase or private spend
     let address = await dataLayer.fetchAddress(input.scriptPubkey)
@@ -77,7 +79,7 @@ export const verifyOwnInputSignatures = async (
       address = await dataLayer.fetchAddress(utxo.scriptPubkey)
     }
     if (address?.path == null) continue
-    ownInputs.push({ index: input.n, address })
+    ownInputs.push({ input, address })
   }
   if (ownInputs.length === 0) return { status: 'none' }
 
@@ -166,7 +168,10 @@ export const verifyOwnInputSignatures = async (
 
   // Finally, the signatures:
   const ownInputValues = new Map<number, number>()
-  for (const { index, address } of ownInputs) {
+  for (const { input, address } of ownInputs) {
+    // The stored list is in whatever order it was reported, so the input is
+    // identified by its own index, never by its position in that list:
+    const index = input.n
     const { path } = address
     if (path == null) continue // narrowed above; keeps the type checker happy
     const purposeType = pathToPurposeType(path, engineInfo.scriptTemplates)
@@ -178,7 +183,6 @@ export const verifyOwnInputSignatures = async (
     }
     const scriptType = getScriptTypeFromPurposeType(purposeType)
     const pubkey = walletTools.getPubkey(path)
-    const input = tx.inputs[index]
     // Prefer the value we recorded for the UTXO over the reported one;
     // either way a wrong value only makes a genuine signature fail to verify.
     const [utxo] = await dataLayer.fetchUtxos({
