@@ -199,13 +199,14 @@ const makeOwnSpend = async (
 /**
  * A transaction spending the wallet's bip84 UTXO to the recipient, with
  * change back to the wallet, and a witness made by whoever `signer` is (or
- * none at all).
+ * none at all), with the given signature hash type.
  */
 const makeThirdPartySpend = (
   fixtures: Fixtures,
-  signer: 'nobody' | 'other' | 'other-claiming-our-pubkey'
+  signer: 'nobody' | 'other' | 'other-claiming-our-pubkey' | 'us',
+  hashType: number = Transaction.SIGHASH_ALL
 ): TransactionData => {
-  const { walletTools } = fixtures
+  const { walletTools, xprivs } = fixtures
   const utxo = ownUtxo(walletTools, 'bip84', '100000')
   const tx = new Transaction()
   tx.version = 2
@@ -213,7 +214,21 @@ const makeThirdPartySpend = (
   tx.addOutput(Buffer.from(RECIPIENT_SCRIPT, 'hex'), 94000)
   tx.addOutput(Buffer.from(utxo.scriptPubkey, 'hex'), 5000)
   if (signer !== 'nobody') {
-    const other = ECPair.makeRandom()
+    const other =
+      signer === 'us'
+        ? ECPair.fromPrivateKey(
+            Buffer.from(
+              xprivToPrivateKey({
+                xpriv: xprivs.bip84,
+                type: BIP43PurposeTypeEnum.Segwit,
+                bip44ChangeIndex: 0,
+                bip44AddressIndex: 0,
+                coin: 'bitcoin'
+              }),
+              'hex'
+            )
+          )
+        : ECPair.makeRandom()
     const ourPubkey = Buffer.from(
       walletTools.getPubkey({
         format: 'bip84',
@@ -226,15 +241,10 @@ const makeThirdPartySpend = (
     const p2wpkh = payments.p2wpkh({ pubkey: claimedPubkey })
     const scriptCode = payments.p2pkh({ hash: p2wpkh.hash }).output
     if (scriptCode == null) throw new Error('no script code')
-    const sighash = tx.hashForWitnessV0(
-      0,
-      scriptCode,
-      100000,
-      Transaction.SIGHASH_ALL
-    )
+    const sighash = tx.hashForWitnessV0(0, scriptCode, 100000, hashType)
     const signature = bitcoinScript.signature.encode(
       other.sign(sighash),
-      Transaction.SIGHASH_ALL
+      hashType
     )
     tx.setWitness(0, [signature, claimedPubkey])
   }
@@ -414,6 +424,108 @@ describe('verifyOwnInputSignatures', function () {
       tx
     })
     expect(result.status).to.equal('invalid')
+  })
+
+  it('cannot judge a spend the wallet signed without SIGHASH_ALL', async () => {
+    const fixtures = await makeFixtures()
+    // The signature is the wallet's own, so its coins are being spent, but
+    // this hash type does not commit to the outputs:
+    const tx = makeThirdPartySpend(
+      fixtures,
+      'us',
+      Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY
+    )
+    const result = await verifyOwnInputSignatures({
+      ...fixtures,
+      pluginInfo: bitcoin,
+      tx
+    })
+    expect(result).to.deep.equal({
+      status: 'unsupported',
+      reason: 'Input is not signed with SIGHASH_ALL'
+    })
+  })
+
+  it("rejects another key's signature whatever its hash type", async () => {
+    const fixtures = await makeFixtures()
+    const tx = makeThirdPartySpend(
+      fixtures,
+      'other-claiming-our-pubkey',
+      Transaction.SIGHASH_NONE
+    )
+    const result = await verifyOwnInputSignatures({
+      ...fixtures,
+      pluginInfo: bitcoin,
+      tx
+    })
+    expect(result).to.deep.equal({
+      status: 'invalid',
+      reason: 'input 0 is not signed by this wallet'
+    })
+  })
+
+  describe('a segwit spend reported without its input value', function () {
+    /** The wallet's own bip84 spend, as stored when no value was reported */
+    const makeSpendWithoutValue = async (
+      fixtures: Fixtures
+    ): Promise<TransactionData> => {
+      const tx = await makeOwnSpend(fixtures, 'bip84')
+      // The UTXO record is gone, and the stored amount is the 0 that stands
+      // in for a value the report left out:
+      await fixtures.dataLayer.removeUtxos([`${tx.inputs[0].txId}_0`])
+      tx.inputs[0].amount = '0'
+      return tx
+    }
+
+    it('takes the value from the stored previous transaction', async () => {
+      const fixtures = await makeFixtures()
+      const tx = await makeSpendWithoutValue(fixtures)
+      const utxo = ownUtxo(fixtures.walletTools, 'bip84', '100000')
+      await fixtures.dataLayer.saveTransaction({
+        tx: {
+          txid: utxo.txid,
+          hex: '',
+          blockHeight: 1,
+          date: 0,
+          fees: '0',
+          inputs: [],
+          outputs: [
+            { n: 0, scriptPubkey: utxo.scriptPubkey, amount: utxo.value }
+          ],
+          ourIns: [],
+          ourOuts: [],
+          ourAmount: utxo.value
+        },
+        scriptPubkeys: [utxo.scriptPubkey]
+      })
+      const result = await verifyOwnInputSignatures({
+        ...fixtures,
+        pluginInfo: bitcoin,
+        tx
+      })
+      expect(result).to.deep.equal({
+        status: 'valid',
+        ownInputValues: new Map([[0, 100000]])
+      })
+    })
+
+    it('does not accept the spend while the value is unknown', async () => {
+      const fixtures = await makeFixtures()
+      const tx = await makeSpendWithoutValue(fixtures)
+      // A segwit signature commits to the value, so without one there is
+      // nothing to check it against. The sync path sees the transaction
+      // again on its next pass, by which time the previous transaction is
+      // normally stored:
+      const result = await verifyOwnInputSignatures({
+        ...fixtures,
+        pluginInfo: bitcoin,
+        tx
+      })
+      expect(result).to.deep.equal({
+        status: 'invalid',
+        reason: 'input 0 is not signed by this wallet'
+      })
+    })
   })
 
   it('rejects a genuine transaction whose reported outputs were swapped', async () => {

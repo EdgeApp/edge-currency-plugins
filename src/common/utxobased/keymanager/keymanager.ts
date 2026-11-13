@@ -1343,9 +1343,11 @@ export async function signTx(args: SignTxArgs): Promise<SignTxReturn> {
  *
  * Returns `false` when the signature is missing, malformed, made by another
  * key, or does not cover this transaction. Throws `CannotVerifyInputError`
- * when the input cannot be checked at all: a script type this function does
- * not read, a legacy input with no previous transaction, or a coin whose
- * signing digest the library's validator does not reproduce.
+ * when the input cannot be judged as a SIGHASH_ALL spend: a script type this
+ * function does not read, a legacy input with no previous transaction, a coin
+ * whose signing digest the library's validator does not reproduce, or a
+ * signature that is the key's own but of another hash type, which proves
+ * the key spent the input without committing to the whole transaction.
  */
 export function verifyInputSignature(args: VerifyInputSignatureArgs): boolean {
   const { tx, inputIndex, scriptType, value, prevTxHex } = args
@@ -1429,10 +1431,8 @@ export function verifyInputSignature(args: VerifyInputSignatureArgs): boolean {
     }
     return false
   }
-  if ((hashType & 0x1f) !== Transaction.SIGHASH_ALL) return false
-  if ((hashType & Transaction.SIGHASH_ANYONECANPAY) !== 0) return false
-
   const ECPair = getECPair()
+  let signed: boolean
   try {
     const psbt = new Psbt()
     psbt.setVersion(tx.version)
@@ -1447,7 +1447,7 @@ export function verifyInputSignature(args: VerifyInputSignatureArgs): boolean {
       ...utxoFields,
       partialSig: [{ pubkey, signature }]
     })
-    return psbt.validateSignaturesOfInput(
+    signed = psbt.validateSignaturesOfInput(
       inputIndex,
       (pubkey, msghash, signature) =>
         ECPair.fromPublicKey(pubkey).verify(msghash, signature),
@@ -1459,6 +1459,19 @@ export function verifyInputSignature(args: VerifyInputSignatureArgs): boolean {
     // outpoint, or when the transaction itself is malformed.
     return false
   }
+  if (!signed) return false
+
+  // The key did sign this input. Only SIGHASH_ALL without ANYONECANPAY
+  // commits to every input and output, though. Any other hash type shows the
+  // key is spending the input (another wallet on the same seed may sign that
+  // way) without proving this is the whole transaction it agreed to.
+  if (
+    (hashType & 0x1f) !== Transaction.SIGHASH_ALL ||
+    (hashType & Transaction.SIGHASH_ANYONECANPAY) !== 0
+  ) {
+    throw new CannotVerifyInputError('Input is not signed with SIGHASH_ALL')
+  }
+  return true
 }
 
 // ---------------------------------------------------------------------

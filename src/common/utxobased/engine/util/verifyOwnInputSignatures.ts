@@ -20,9 +20,10 @@ type StoredInput = TransactionData['inputs'][number]
  *   this transaction, and the stored inputs/outputs match the hex.
  * - `invalid`: the transaction spends from this wallet but a signature is
  *   missing or wrong, or the stored data disagrees with the hex.
- * - `unsupported`: the transaction could not be checked (hex absent or not
- *   parseable, a script type or coin the verifier does not handle, or a
- *   legacy input whose previous transaction is not on hand).
+ * - `unsupported`: the transaction could not be judged (hex absent or not
+ *   parseable, a script type or coin the verifier does not handle, a legacy
+ *   input whose previous transaction is not on hand, or a signature that is
+ *   the wallet's own but does not commit to the whole transaction).
  */
 export type OwnInputSignatureStatus =
   | 'none'
@@ -200,18 +201,26 @@ export const verifyOwnInputSignatures = async (
     }
     const scriptType = getScriptTypeFromPurposeType(purposeType)
     const pubkey = walletTools.getPubkey(path)
-    // Prefer the value we recorded for the UTXO over the reported one;
-    // either way a wrong value only makes a genuine signature fail to verify.
-    const value = parseInt(utxo?.value ?? input.amount)
+    // The previous transaction paid this wallet, so it is normally in the
+    // transaction table even when the UTXO record is already gone:
+    const [prevTx] = await dataLayer.fetchTransactions({ txId: input.txId })
+    // The value of the spent output: what we recorded for the UTXO, else what
+    // the stored previous transaction says, else the reported amount (which
+    // is 0 when the report leaves it out). A wrong value cannot make a
+    // signature pass; it can only make a genuine segwit one fail.
+    const value = parseInt(
+      utxo?.value ??
+        prevTx?.outputs.find(output => output.n === input.outputIndex)
+          ?.amount ??
+        input.amount
+    )
     if (!Number.isFinite(value)) {
       return { status: 'invalid', reason: `input ${index} has no value` }
     }
     // A legacy input is verified against the previous transaction itself,
-    // which the engine keeps as a legacy UTXO's script, and in any case in
-    // the transaction table (the previous transaction paid this wallet):
+    // which the engine also keeps as a legacy UTXO's script:
     let prevTxHex: string | undefined
     if (scriptType === ScriptTypeEnum.p2pkh) {
-      const [prevTx] = await dataLayer.fetchTransactions({ txId: input.txId })
       prevTxHex =
         utxo?.scriptType === ScriptTypeEnum.p2pkh ? utxo.script : prevTx?.hex
     }
