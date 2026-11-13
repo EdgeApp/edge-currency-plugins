@@ -2,7 +2,7 @@ import { Transaction } from 'altcoin-js'
 
 import { PluginInfo } from '../../../plugin/types'
 import { DataLayer } from '../../db/DataLayer'
-import { AddressData, TransactionData } from '../../db/types'
+import { AddressData, TransactionData, UtxoData } from '../../db/types'
 import {
   BIP43PurposeTypeEnum,
   CannotVerifyInputError,
@@ -67,19 +67,34 @@ export const verifyOwnInputSignatures = async (
 
   // Which inputs are ours? Decide from our own tables: the address recorded
   // for the input, or the outpoint itself if it is a UTXO we hold.
-  const ownInputs: Array<{ input: StoredInput; address: AddressData }> = []
+  // One read of the UTXO table serves this check and the signature check
+  // below (an empty id list would fetch the whole table, hence the guard):
+  const outpointOf = (input: StoredInput): string =>
+    `${input.txId}_${input.outputIndex}`
+  const utxosByOutpoint = new Map<string, UtxoData>()
+  if (tx.inputs.length > 0) {
+    const utxos = await dataLayer.fetchUtxos({
+      utxoIds: tx.inputs.map(outpointOf)
+    })
+    for (const utxo of utxos) {
+      if (utxo != null) utxosByOutpoint.set(utxo.id, utxo)
+    }
+  }
+  const ownInputs: Array<{
+    input: StoredInput
+    address: AddressData
+    utxo?: UtxoData
+  }> = []
   for (const input of tx.inputs) {
     if (input.txId === ZERO_TXID) continue // coinbase or private spend
+    const utxo = utxosByOutpoint.get(outpointOf(input))
     let address = await dataLayer.fetchAddress(input.scriptPubkey)
     if (address?.path == null) {
-      const [utxo] = await dataLayer.fetchUtxos({
-        utxoIds: [`${input.txId}_${input.outputIndex}`]
-      })
       if (utxo == null) continue
       address = await dataLayer.fetchAddress(utxo.scriptPubkey)
     }
     if (address?.path == null) continue
-    ownInputs.push({ input, address })
+    ownInputs.push({ input, address, utxo })
   }
   if (ownInputs.length === 0) return { status: 'none' }
 
@@ -168,7 +183,7 @@ export const verifyOwnInputSignatures = async (
 
   // Finally, the signatures:
   const ownInputValues = new Map<number, number>()
-  for (const { input, address } of ownInputs) {
+  for (const { input, address, utxo } of ownInputs) {
     // The stored list is in whatever order it was reported, so the input is
     // identified by its own index, never by its position in that list:
     const index = input.n
@@ -185,9 +200,6 @@ export const verifyOwnInputSignatures = async (
     const pubkey = walletTools.getPubkey(path)
     // Prefer the value we recorded for the UTXO over the reported one;
     // either way a wrong value only makes a genuine signature fail to verify.
-    const [utxo] = await dataLayer.fetchUtxos({
-      utxoIds: [`${input.txId}_${input.outputIndex}`]
-    })
     const value = parseInt(utxo?.value ?? input.amount)
     if (!Number.isFinite(value)) {
       return { status: 'invalid', reason: `input ${index} has no value` }
