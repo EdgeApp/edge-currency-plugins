@@ -13,6 +13,7 @@ import {
   BIP43PurposeTypeEnum,
   derivationLevelScriptHash,
   isPathUsingDerivationLevelScriptHash,
+  scriptPubkeyToAddress,
   ScriptTypeEnum,
   seedOrMnemonicToXPriv,
   toNewFormat,
@@ -74,6 +75,40 @@ export const getScriptTypeFromPurposeType = (
 
     case BIP43PurposeTypeEnum.ReplayProtection:
       return ScriptTypeEnum.replayProtection
+  }
+}
+
+/**
+ * Converts a scriptPubkey to an address when the script is one of the
+ * standard single-key or script-hash forms, and returns `undefined` for
+ * anything else (OP_RETURN, bare multisig, ...). Used where the engine has
+ * only a script, such as an output it is about to pay, and wants to name
+ * the payee for the user.
+ */
+export const addressFromScriptPubkey = (args: {
+  scriptPubkey: string
+  coin: string
+  includeCashaddrPrefix?: boolean
+}): string | undefined => {
+  const { scriptPubkey, coin, includeCashaddrPrefix } = args
+  const addressType = ((): AddressTypeEnum | undefined => {
+    if (/^76a914[0-9a-f]{40}88ac$/.test(scriptPubkey))
+      return AddressTypeEnum.p2pkh
+    if (/^a914[0-9a-f]{40}87$/.test(scriptPubkey)) return AddressTypeEnum.p2sh
+    if (/^0014[0-9a-f]{40}$/.test(scriptPubkey)) return AddressTypeEnum.p2wpkh
+    if (/^0020[0-9a-f]{64}$/.test(scriptPubkey)) return AddressTypeEnum.p2wsh
+    if (/^5120[0-9a-f]{64}$/.test(scriptPubkey)) return AddressTypeEnum.p2tr
+  })()
+  if (addressType == null) return
+  try {
+    return scriptPubkeyToAddress({
+      scriptPubkey,
+      addressType,
+      coin,
+      includeCashaddrPrefix
+    }).address
+  } catch {
+    return
   }
 }
 

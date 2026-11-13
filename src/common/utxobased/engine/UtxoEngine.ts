@@ -1,3 +1,4 @@
+import { Transaction } from 'altcoin-js'
 import * as bs from 'biggystring'
 import { asMaybe } from 'cleaners'
 import { makeMemoryDisklet } from 'disklet'
@@ -59,7 +60,9 @@ import {
   UtxoTxOtherParams
 } from './types'
 import { getOwnUtxosFromTx } from './util/getOwnUtxosFromTx'
+import { verifyOwnInputSignatures } from './util/verifyOwnInputSignatures'
 import {
+  addressFromScriptPubkey,
   fetchOrDeriveXprivFromKeys,
   getAddressTypeFromPurposeType,
   pathToPurposeType,
@@ -187,13 +190,49 @@ export async function makeUtxoEngine(
         return null
       // Must not be confirmed or dropped.
       if (replacedTx.blockHeight !== 0) return null
+      // Must carry this wallet's signatures. The replacement is rebuilt from
+      // the stored inputs and outputs, so the record must first be shown to
+      // be a transaction this wallet signed, with stored data that matches
+      // the signed hex. A transaction that cannot be verified is not offered
+      // for acceleration.
+      const verification = await verifyOwnInputSignatures({
+        dataLayer,
+        pluginInfo,
+        walletTools,
+        tx: replacedTx
+      })
+      if (verification.status !== 'valid') {
+        log.warn(
+          `accelerate: refusing ${replacedTxid}: ${verification.status}` +
+            (verification.status === 'none' ? '' : ` (${verification.reason})`)
+        )
+        return null
+      }
+      // Every input must be ours, since the replacement re-signs them all,
+      // and its value must be the verified one, since the stored amounts and
+      // fee are reported values that nothing has checked:
+      const replacedTxInputValues: number[] = []
+      for (const input of replacedTx.inputs) {
+        const value = verification.ownInputValues.get(input.n)
+        if (value == null) {
+          log.warn(`accelerate: refusing ${replacedTxid}: foreign inputs`)
+          return null
+        }
+        replacedTxInputValues.push(value)
+      }
+      let replacedTxFee = 0
+      for (const value of replacedTxInputValues) replacedTxFee += value
+      for (const output of replacedTx.outputs) {
+        replacedTxFee -= parseInt(output.amount)
+      }
+      // The verified hex supplies each output's script. The stored record
+      // holds 'unknown' for a script the engine could not derive from the
+      // reported address, which would rebuild as an empty script.
+      const replacedTxOuts = Transaction.fromHex(replacedTx.hex).outs
 
       // Double the fee rate used by the replaced transaction:
       const vBytes = transactionSizeFromHex(replacedTx.hex)
-      const newFeeRate = calcReplacementFeeRate(
-        parseInt(replacedTx.fees),
-        vBytes
-      )
+      const newFeeRate = calcReplacementFeeRate(replacedTxFee, vBytes)
 
       const replacedTxInputs = replacedTx.inputs
       // Recreate UTXOs from DataLayer transaction and mark them as unspent:
@@ -206,6 +245,7 @@ export async function makeUtxoEngine(
           )
           // Mark as unspent because we're going to reuse replaced tx's UTXOs
           utxo.spent = false
+          utxo.value = String(replacedTxInputValues[index])
           return utxo
         })
       )
@@ -219,13 +259,14 @@ export async function makeUtxoEngine(
       const newOurReceiveAddresses: string[] = []
       let foundChangeAddress: string | undefined
       for (const output of replacedTx.outputs) {
+        const scriptPubkey = replacedTxOuts[output.n].script.toString('hex')
         // Fetch address by output's scriptPubkey to determine output ownership
-        const ourAddress = await dataLayer.fetchAddress(output.scriptPubkey)
+        const ourAddress = await dataLayer.fetchAddress(scriptPubkey)
 
         // This isn't our output, so include it as a target
         if (ourAddress == null) {
           targets.push({
-            scriptPubkey: output.scriptPubkey,
+            scriptPubkey,
             value: parseInt(output.amount)
           })
           continue
@@ -257,7 +298,7 @@ export async function makeUtxoEngine(
           // This isn't our change address, so include it as a target.
           // The transaction must have been a spend-to-self.
           targets.push({
-            scriptPubkey: output.scriptPubkey,
+            scriptPubkey,
             value: parseInt(output.amount)
           })
         }
@@ -332,14 +373,30 @@ export async function makeUtxoEngine(
         input.scriptPubkey.toString('hex')
       )
 
-      // Calculate transaction spend amount:
+      // Calculate transaction spend amount, and name every payee so the
+      // confirmation can show the user where the accelerated funds go:
       let nativeAmount = '0'
+      const spendTargets: EdgeTransaction['spendTargets'] = []
       for (const output of newTx.outputs) {
         const scriptPubkey = output.scriptPubkey.toString('hex')
         const own = await dataLayer.fetchAddress(scriptPubkey)
         if (own == null) {
           // Not our output
           nativeAmount = bs.sub(nativeAmount, output.value.toString())
+          // A memo output (OP_RETURN) pays nobody, so it names no payee:
+          if (scriptPubkey.startsWith('6a')) continue
+          spendTargets.push({
+            currencyCode: currencyInfo.currencyCode,
+            nativeAmount: output.value.toString(),
+            publicAddress:
+              addressFromScriptPubkey({
+                scriptPubkey,
+                coin: coinInfo.name,
+                includeCashaddrPrefix: coinInfo.includeCashaddrPrefix
+              }) ?? scriptPubkey,
+            memo: undefined,
+            uniqueIdentifier: undefined
+          })
         } else {
           // Our output
           newOurScriptPubkeys.push(scriptPubkey)
@@ -376,6 +433,7 @@ export async function makeUtxoEngine(
         ourReceiveAddresses: newOurReceiveAddresses,
         parentNetworkFee: undefined,
         signedTx: '',
+        spendTargets,
         txid: '',
         walletId: walletInfo.id
       }
