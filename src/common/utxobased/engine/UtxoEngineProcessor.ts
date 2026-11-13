@@ -1295,7 +1295,7 @@ async function* processCheckTransactionConfirmation(
  * Processes an address for transactions by querying the network for the
  * transaction data.
  */
-async function* processAddressForTransactions(
+export async function* processAddressForTransactions(
   common: CommonParams,
   args: {
     address: string
