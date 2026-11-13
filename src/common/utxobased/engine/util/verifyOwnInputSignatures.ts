@@ -30,17 +30,19 @@ export type OwnInputSignatureStatus =
   | 'invalid'
   | 'unsupported'
 
-export interface VerifyOwnInputSignaturesResult {
-  status: OwnInputSignatureStatus
-  reason?: string
-  /**
-   * Set when `status` is `valid`: the value of each wallet-owned input,
-   * keyed by input index, as proven by its signature (segwit) or by the
-   * previous transaction (legacy). The stored `amount` and `fees` are
-   * reported values and are not proven by anything.
-   */
-  ownInputValues?: Map<number, number>
-}
+export type VerifyOwnInputSignaturesResult =
+  | { status: 'none' }
+  | {
+      status: 'valid'
+      /**
+       * The value of each wallet-owned input, keyed by input index, as
+       * proven by its signature (segwit) or by the previous transaction
+       * (legacy). The stored `amount` and `fees` are reported values and
+       * are not proven by anything.
+       */
+      ownInputValues: Map<number, number>
+    }
+  | { status: 'invalid' | 'unsupported'; reason: string }
 
 export interface VerifyOwnInputSignaturesArgs {
   dataLayer: DataLayer

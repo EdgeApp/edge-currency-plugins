@@ -1384,7 +1384,7 @@ async function* processAddressForTransactions(
         if (verification.status === 'invalid') {
           common.log.warn(
             `Ignoring unconfirmed transaction ${tx.txid} from ${serverUri}: ` +
-              `${verification.reason ?? 'not signed by this wallet'}`
+              verification.reason
           )
           continue
         }

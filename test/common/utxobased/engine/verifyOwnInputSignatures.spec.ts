@@ -253,10 +253,12 @@ describe('verifyOwnInputSignatures', function () {
         pluginInfo: bitcoin,
         tx
       })
-      expect(result.status).to.equal('valid')
       // The value of the spent output, as the signature or the previous
       // transaction proves it:
-      expect(result.ownInputValues).to.deep.equal(new Map([[0, 100000]]))
+      expect(result).to.deep.equal({
+        status: 'valid',
+        ownInputValues: new Map([[0, 100000]])
+      })
     })
   }
 
@@ -275,8 +277,10 @@ describe('verifyOwnInputSignatures', function () {
       pluginInfo: bitcoin,
       tx
     })
-    expect(result.status).to.equal('valid')
-    expect(result.ownInputValues).to.deep.equal(new Map([[0, 100000]]))
+    expect(result).to.deep.equal({
+      status: 'valid',
+      ownInputValues: new Map([[0, 100000]])
+    })
   })
 
   it('rejects a Schnorr-shaped signature on a chain without a fork id', async () => {
@@ -384,8 +388,10 @@ describe('verifyOwnInputSignatures', function () {
       pluginInfo: bitcoin,
       tx
     })
-    expect(result.status).to.equal('invalid')
-    expect(result.reason).to.match(/not signed by this wallet/)
+    expect(result).to.deep.equal({
+      status: 'invalid',
+      reason: 'input 0 is not signed by this wallet'
+    })
   })
 
   it('rejects a spend of our UTXO signed by another key', async () => {

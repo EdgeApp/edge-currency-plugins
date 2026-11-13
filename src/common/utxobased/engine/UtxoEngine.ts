@@ -204,20 +204,24 @@ export async function makeUtxoEngine(
       if (verification.status !== 'valid') {
         log.warn(
           `accelerate: refusing ${replacedTxid}: ${verification.status}` +
-            (verification.reason != null ? ` (${verification.reason})` : '')
+            (verification.status === 'none' ? '' : ` (${verification.reason})`)
         )
         return null
       }
       // Every input must be ours, since the replacement re-signs them all,
       // and its value must be the verified one, since the stored amounts and
       // fee are reported values that nothing has checked:
-      const { ownInputValues = new Map<number, number>() } = verification
-      if (ownInputValues.size !== replacedTx.inputs.length) {
-        log.warn(`accelerate: refusing ${replacedTxid}: foreign inputs`)
-        return null
+      const replacedTxInputValues: number[] = []
+      for (const input of replacedTx.inputs) {
+        const value = verification.ownInputValues.get(input.n)
+        if (value == null) {
+          log.warn(`accelerate: refusing ${replacedTxid}: foreign inputs`)
+          return null
+        }
+        replacedTxInputValues.push(value)
       }
       let replacedTxFee = 0
-      for (const value of ownInputValues.values()) replacedTxFee += value
+      for (const value of replacedTxInputValues) replacedTxFee += value
       for (const output of replacedTx.outputs) {
         replacedTxFee -= parseInt(output.amount)
       }
@@ -241,7 +245,7 @@ export async function makeUtxoEngine(
           )
           // Mark as unspent because we're going to reuse replaced tx's UTXOs
           utxo.spent = false
-          utxo.value = String(ownInputValues.get(replacedTx.inputs[index].n))
+          utxo.value = String(replacedTxInputValues[index])
           return utxo
         })
       )
