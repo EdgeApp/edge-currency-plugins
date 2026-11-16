@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added: `accelerate` returns `spendTargets` naming the recipients of the replacement transaction.
+- fixed: Unconfirmed spends are checked for the wallet's own signatures before they are recorded during sync or offered for RBF acceleration.
+- fixed: RBF acceleration re-uses the largest input of the replaced transaction, where it could pick a smaller one before.
+
 ## 3.17.0 (2026-10-29)
 
 - added: Broadcast transactions through Electrum (`electrumws(s):`) servers with `blockchain.transaction.broadcast`, alongside the Blockbook servers that already receive them.
