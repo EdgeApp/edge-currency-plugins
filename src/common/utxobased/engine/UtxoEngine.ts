@@ -211,7 +211,8 @@ export async function makeUtxoEngine(
       )
       // Get the largest input from the transaction to re-use:
       const replacedTxMaxUtxo = replacedTxUtxos.reduce((maxUtxo, utxo) => {
-        if (utxo.value > maxUtxo.value) return utxo
+        // The values are decimal strings, so compare amounts, not text:
+        if (bs.gt(utxo.value, maxUtxo.value)) return utxo
         return maxUtxo
       })
 

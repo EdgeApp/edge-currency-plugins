@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: RBF acceleration re-uses the largest input of the replaced transaction, where it could pick a smaller one before.
+
 ## 3.17.0 (2026-10-29)
 
 - added: Broadcast transactions through Electrum (`electrumws(s):`) servers with `blockchain.transaction.broadcast`, alongside the Blockbook servers that already receive them.
