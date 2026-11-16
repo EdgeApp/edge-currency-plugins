@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.18.0 (2026-11-16)
+
 - added: `accelerate` returns `spendTargets` naming the recipients of the replacement transaction.
 - fixed: Unconfirmed spends are checked for the wallet's own signatures before they are recorded during sync or offered for RBF acceleration.
 - fixed: RBF acceleration re-uses the largest input of the replaced transaction, where it could pick a smaller one before.
